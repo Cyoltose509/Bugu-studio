@@ -1,0 +1,32 @@
+version: "3.9"
+
+# 本地开发 compose（覆盖生产配置）
+# 使用方式: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  db:
+    ports:
+      - "5432:5432"  # 暴露数据库端口供本地工具连接
+
+  app:
+    build:
+      target: deps  # 只构建依赖层
+    command: npm run dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://gameclub:devpassword@db:5432/gameclub_dev
+
+  # 开发环境不需要 nginx
+  nginx:
+    profiles:
+      - nginx  # 默认不启动
+
+  backup:
+    profiles:
+      - backup  # 默认不启动

@@ -1,0 +1,116 @@
+# ============================================================
+# docker-compose.yml
+# 布谷工作室 - 生产部署
+# ============================================================
+services:
+  # ============================
+  # PostgreSQL 数据库
+  # ============================
+  db:
+    image: postgres:16-alpine
+    container_name: bugu_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-bugu}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-bugu_db}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-bugu} -d ${DB_NAME:-bugu_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+    # 本地调试时暴露端口（迁移文件生成需要直连）
+    ports:
+      - "5432:5432"
+
+  # ============================
+  # Next.js 应用
+  # ============================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bugu_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-bugu}:${DB_PASSWORD}@db:5432/${DB_NAME:-bugu_db}?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      AUTH_URL: ${AUTH_URL:-https://yourclub.com}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-bugu-assets}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://yourclub.com}
+      NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-布谷工作室}
+      NEXT_PUBLIC_CLUB_FOUNDED_YEAR: ${NEXT_PUBLIC_CLUB_FOUNDED_YEAR:-2018}
+    networks:
+      - internal
+      - proxy
+
+  # ============================
+  # Nginx 反向代理（不使用 Traefik 时的替代方案）
+  # ============================
+  nginx:
+    image: nginx:alpine
+    container_name: bugu_nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./public:/var/www/static:ro
+    networks:
+      - internal
+      - proxy
+
+  # ============================
+  # 定时备份（生产环境启用。本地测试可注释掉）
+  # ============================
+  # backup:
+  #   image: postgres:16-alpine
+  #   container_name: bugu_backup
+  #   restart: unless-stopped
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     PGPASSWORD: ${DB_PASSWORD}
+  #     DB_USER: ${DB_USER:-bugu}
+  #     DB_NAME: ${DB_NAME:-bugu_db}
+  #   volumes:
+  #     - ./backups:/backups
+  #     - ./scripts/backup.sh:/backup.sh:ro
+  #   networks:
+  #     - internal
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command: >
+  #     "echo '0 2 * * * /backup.sh >> /backups/backup.log 2>&1' | crontab - && crond -f"
+
+volumes:
+  db_data:
+    name: bugu_db_data
+
+networks:
+  internal:
+    name: bugu_internal
+    internal: true
+  proxy:
+    name: bugu_proxy

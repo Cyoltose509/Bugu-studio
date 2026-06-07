@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大学游戏开发社团官网 — 完整架构设计</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8f8f6;
+    --border: rgba(0,0,0,0.1);
+    --text: #1a1a18;
+    --text-muted: #6b6b68;
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --green: #27500A;
+    --green-bg: #EAF3DE;
+    --amber: #633806;
+    --amber-bg: #FAEEDA;
+    --purple: #3C3489;
+    --purple-bg: #EEEDFE;
+    --coral: #712B13;
+    --coral-bg: #FAECE7;
+    --pink: #72243E;
+    --pink-bg: #FBEAF0;
+    --teal: #085041;
+    --teal-bg: #E1F5EE;
+    --red: #791F1F;
+    --red-bg: #FCEBEB;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
+  
+  .nav { background: var(--text); color: #fff; padding: 0 2rem; display: flex; align-items: center; gap: 2rem; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .nav-brand { font-size: 15px; font-weight: 500; white-space: nowrap; }
+  .nav-links { display: flex; gap: 1.5rem; overflow-x: auto; }
+  .nav-links a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; white-space: nowrap; }
+  .nav-links a:hover { color: #fff; }
+
+  .hero { background: var(--text); color: #fff; padding: 4rem 2rem 3rem; text-align: center; }
+  .hero h1 { font-size: 28px; font-weight: 500; margin-bottom: 0.75rem; }
+  .hero p { color: rgba(255,255,255,0.65); font-size: 14px; max-width: 560px; margin: 0 auto; }
+  .hero-meta { display: flex; gap: 2rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap; }
+  .hero-meta span { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .hero-meta strong { color: rgba(255,255,255,0.85); display: block; font-size: 15px; font-weight: 500; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+
+  section { padding: 3rem 0; border-bottom: 0.5px solid var(--border); }
+  section:last-child { border-bottom: none; }
+  
+  h2 { font-size: 20px; font-weight: 500; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+  h2 .badge { font-size: 11px; font-weight: 400; padding: 2px 8px; border-radius: 20px; }
+  h3 { font-size: 15px; font-weight: 500; margin-bottom: 0.75rem; color: var(--text); }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+
+  .card { border: 0.5px solid var(--border); border-radius: 10px; padding: 1.25rem; background: var(--bg); }
+  .card-blue { background: var(--blue-bg); border-color: #B5D4F4; }
+  .card-green { background: var(--green-bg); border-color: #C0DD97; }
+  .card-amber { background: var(--amber-bg); border-color: #FAC775; }
+  .card-purple { background: var(--purple-bg); border-color: #CECBF6; }
+  .card-coral { background: var(--coral-bg); border-color: #F0997B; }
+  .card-pink { background: var(--pink-bg); border-color: #ED93B1; }
+  .card-teal { background: var(--teal-bg); border-color: #5DCAA5; }
+  .card-red { background: var(--red-bg); border-color: #F09595; }
+  .card-surface { background: var(--surface); }
+  
+  .card h3 { margin-bottom: 0.5rem; }
+  .card-blue h3 { color: var(--blue); }
+  .card-green h3 { color: var(--green); }
+  .card-amber h3 { color: var(--amber); }
+  .card-purple h3 { color: var(--purple); }
+  .card-coral h3 { color: var(--coral); }
+  .card-pink h3 { color: var(--pink); }
+  .card-teal h3 { color: var(--teal); }
+  .card-red h3 { color: var(--red); }
+
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin: 2px; border: 0.5px solid transparent; }
+  .tag-blue { background: var(--blue-bg); color: var(--blue); border-color: #85B7EB; }
+  .tag-green { background: var(--green-bg); color: var(--green); border-color: #97C459; }
+  .tag-amber { background: var(--amber-bg); color: var(--amber); border-color: #EF9F27; }
+  .tag-purple { background: var(--purple-bg); color: var(--purple); border-color: #AFA9EC; }
+  .tag-coral { background: var(--coral-bg); color: var(--coral); border-color: #F0997B; }
+  .tag-red { background: var(--red-bg); color: var(--red); border-color: #F09595; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 12px; }
+  td { padding: 8px 12px; border-bottom: 0.5px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface); }
+
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+  .flow-step { background: var(--surface); border: 0.5px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
+  .flow-arrow { color: var(--text-muted); padding: 0 8px; font-size: 16px; }
+
+  .permission-grid { display: grid; grid-template-columns: 160px repeat(5, 1fr); font-size: 12px; }
+  .perm-header { background: var(--surface); font-weight: 500; padding: 8px; text-align: center; border: 0.5px solid var(--border); font-size: 11px; }
+  .perm-cell { padding: 8px; text-align: center; border: 0.5px solid var(--border); }
+  .perm-label { padding: 8px 10px; border: 0.5px solid var(--border); font-size: 12px; color: var(--text-muted); }
+  .check { color: #3B6D11; font-size: 14px; }
+  .cross { color: #A32D2D; font-size: 14px; }
+
+  .timeline { position: relative; padding-left: 2rem; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 1px; background: var(--border); }
+  .tl-item { position: relative; padding-bottom: 1.5rem; }
+  .tl-dot { position: absolute; left: -1.75rem; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid; }
+  .tl-dot-blue { background: var(--blue-bg); border-color: var(--blue); }
+  .tl-dot-green { background: var(--green-bg); border-color: var(--green); }
+  .tl-dot-amber { background: var(--amber-bg); border-color: var(--amber); }
+  .tl-title { font-weight: 500; font-size: 14px; }
+  .tl-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .tl-tags { margin-top: 6px; }
+
+  .code-block { background: #1e1e1e; color: #d4d4d4; border-radius: 8px; padding: 1rem 1.25rem; font-family: 'Consolas', 'Monaco', monospace; font-size: 12px; line-height: 1.6; overflow-x: auto; margin: 0.5rem 0; }
+  .code-block .kw { color: #569cd6; }
+  .code-block .str { color: #ce9178; }
+  .code-block .cm { color: #6a9955; }
+  .code-block .fn { color: #dcdcaa; }
+
+  .alert { border-radius: 8px; padding: 0.75rem 1rem; font-size: 13px; border: 0.5px solid; margin-bottom: 0.75rem; }
+  .alert-red { background: var(--red-bg); border-color: #F09595; color: var(--red); }
+  .alert-amber { background: var(--amber-bg); border-color: #FAC775; color: var(--amber); }
+  .alert-green { background: var(--green-bg); border-color: #C0DD97; color: var(--green); }
+
+  .section-intro { color: var(--text-muted); font-size: 13px; margin-bottom: 1.5rem; max-width: 640px; }
+
+  @media (max-width: 640px) {
+    .permission-grid { grid-template-columns: 120px repeat(5, 1fr); font-size: 10px; }
+    .hero h1 { font-size: 22px; }
+    .hero-meta { gap: 1rem; }
+    .flow { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-brand">游戏社团官网 · 架构设计</span>
+  <div class="nav-links">
+    <a href="#prd">PRD</a>
+    <a href="#architecture">架构</a>
+    <a href="#database">数据库</a>
+    <a href="#api">API</a>
+    <a href="#rbac">权限</a>
+    <a href="#security">安全</a>
+    <a href="#structure">目录</a>
+    <a href="#docker">Docker</a>
+    <a href="#backup">备份</a>
+    <a href="#handover">交接</a>
+    <a href="#roadmap">路线图</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>大学游戏开发社团官方网站</h1>
+  <p>完整生产级架构设计 — 面向5年以上持续运营</p>
+  <div class="hero-meta">
+    <div><strong>Next.js + TypeScript</strong><span>前端框架</span></div>
+    <div><strong>PostgreSQL + Prisma</strong><span>数据层</span></div>
+    <div><strong>Docker Compose</strong><span>部署方案</span></div>
+    <div><strong>OWASP Top 10</strong><span>安全标准</span></div>
+    <div><strong>5 角色 RBAC</strong><span>权限模型</span></div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ① PRD -->
+<section id="prd">
+  <h2>① 产品需求文档 (PRD) <span class="badge tag-blue">核心</span></h2>
+  <p class="section-intro">定位：社团作品档案馆 + 对外门户网站。不是下载站、不是社交平台、不是网盘。</p>
+
+  <div class="grid-3" style="margin-bottom:1.5rem">
+    <div class="card card-blue">
+      <h3>历史保存</h3>
+      <p style="font-size:13px;color:#185FA5">将分散在 Steam/GitHub/网盘的作品归档至统一数据库，形成传承资产。</p>
+    </div>
+    <div class="card card-green">
+      <h3>对外展示</h3>
+      <p style="font-size:13px;color:#3B6D11">迎新宣传权威入口，展示社团历年实力与文化积淀。</p>
+    </div>
+    <div class="card card-amber">
+      <h3>传承交接</h3>
+      <p style="font-size:13px;color:#854F0B">每届社长可平滑交接，持续运营5年以上，标准化运维文档支持。</p>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:0.75rem">网站模块</h3>
+  <div class="grid-4">
+    <div class="card card-surface">
+      <h3>首页</h3>
+      <ul style="font-size:12px;color:var(--text-muted);padding-left:1rem">
+        <li>社团介绍 + 统计数据</li>
+        <li>精选作品轮播</li>
+        <li>最新公告</li>
+        <li>历年成果时间线</li>
+      </ul>
+    </div>
+    <div class="card card-surface">
+      <h3>作品库</h3>
+      <ul style="font-size:12px;color:var(--text-muted);padding-left:1rem">
+        <li>封面/截图/标签</li>
+        <li>搜索 + 多维筛选</li>
+        <li>外链（Steam/GitHub）</li>
+        <li>开发日志（Markdown）</li>
+      </ul>
+    </div>
+    <div class="card card-surface">
+      <h3>成员页</h3>
+      <ul style="font-size:12px;color:var(--text-muted);padding-left:1rem">
+        <li>按届年份分组</li>
+        <li>参与项目展示</li>
+        <li>在读/毕业状态</li>
+        <li>隐私保护（只显示昵称）</li>
+      </ul>
+    </div>
+    <div class="card card-surface">
+      <h3>历史页</h3>
+      <ul style="font-size:12px;color:var(--text-muted);padding-left:1rem">
+        <li>按学年展示</li>
+        <li>成员/项目/活动</li>
+        <li>大事件时间轴</li>
+        <li>Admin 可添加备注</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ② 架构图（文字描述版） -->
+<section id="architecture">
+  <h2>② 系统架构</h2>
+  <p class="section-intro">5 层架构：客户端 → API → 业务逻辑 → 数据/存储 → 部署基础设施。</p>
+
+  <div class="grid-2">
+    <div>
+      <div class="card card-blue" style="margin-bottom:0.75rem">
+        <h3>客户端层</h3>
+        <div>
+          <span class="tag tag-blue">Next.js 14</span>
+          <span class="tag tag-blue">TypeScript</span>
+          <span class="tag tag-blue">TailwindCSS</span>
+          <span class="tag tag-blue">Auth.js</span>
+        </div>
+        <p style="font-size:12px;margin-top:0.5rem;color:#185FA5">App Router + Server Components，SSG/SSR 按页面需求选择。作品库列表 SSR（含筛选参数），详情页 ISR（60s 缓存）。</p>
+      </div>
+      <div class="card card-green" style="margin-bottom:0.75rem">
+        <h3>API 层（Next.js API Routes）</h3>
+        <div>
+          <span class="tag tag-green">RBAC 中间件</span>
+          <span class="tag tag-green">Rate Limiter</span>
+          <span class="tag tag-green">Audit Logger</span>
+          <span class="tag tag-green">Zod Validator</span>
+        </div>
+        <p style="font-size:12px;margin-top:0.5rem;color:#3B6D11">所有请求先过中间件链：认证校验 → 权限校验 → 限流 → 输入验证 → 业务处理 → 审计记录。</p>
+      </div>
+      <div class="card card-amber" style="margin-bottom:0.75rem">
+        <h3>业务逻辑层（Service Layer）</h3>
+        <div>
+          <span class="tag tag-amber">ProjectService</span>
+          <span class="tag tag-amber">UserService</span>
+          <span class="tag tag-amber">ReviewService</span>
+          <span class="tag tag-amber">StorageService</span>
+        </div>
+        <p style="font-size:12px;margin-top:0.5rem;color:#854F0B">独立 Service 类封装业务规则，API Route 只做参数解析和响应格式化，不含业务逻辑。</p>
+      </div>
+    </div>
+    <div>
+      <div class="card card-purple" style="margin-bottom:0.75rem">
+        <h3>数据层</h3>
+        <div>
+          <span class="tag tag-purple">PostgreSQL 15</span>
+          <span class="tag tag-purple">Prisma ORM</span>
+        </div>
+        <p style="font-size:12px;margin-top:0.5rem;color:#534AB7">全部通过 Prisma Client 参数化查询，禁止原始 SQL 拼接。关键表建立复合索引支持多维筛选。</p>
+      </div>
+      <div class="card card-pink" style="margin-bottom:0.75rem">
+        <h3>文件存储层</h3>
+        <div>
+          <span class="tag" style="background:var(--pink-bg);color:var(--pink);border-color:#ED93B1">Cloudflare R2</span>
+          <span class="tag" style="background:var(--pink-bg);color:var(--pink);border-color:#ED93B1">CDN 分发</span>
+          <span class="tag" style="background:var(--pink-bg);color:var(--pink);border-color:#ED93B1">预签名 URL</span>
+        </div>
+        <p style="font-size:12px;margin-top:0.5rem;color:#993556">客户端直传 R2（不经过应用服务器），通过预签名 URL 控制上传权限。只存封面/截图/头像，游戏本体走外链。</p>
+      </div>
+      <div class="card card-red" style="margin-bottom:0.75rem">
+        <h3>部署层（Docker Compose）</h3>
+        <div>
+          <span class="tag tag-red">app 容器</span>
+          <span class="tag tag-red">postgres 容器</span>
+          <span class="tag tag-red">nginx 容器</span>
+          <span class="tag tag-red">backup 容器</span>
+        </div>
+        <p style="font-size:12px;margin-top:0.5rem;color:#A32D2D">postgres 容器仅在内部网络暴露，对外只有 nginx 80/443 端口。backup 容器每日凌晨 3 点自动备份。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ 数据库 -->
+<section id="database">
+  <h2>③ 数据库设计</h2>
+  <p class="section-intro">PostgreSQL 15，Prisma ORM。核心表12张，UUID 主键，严格外键约束，关键查询字段建索引。</p>
+
+  <div class="grid-3" style="margin-bottom:1.5rem">
+    <div class="card card-surface">
+      <h3>用户与权限</h3>
+      <table>
+        <tr><td><strong>users</strong></td><td style="font-size:11px;color:var(--text-muted)">邮箱/密码哈希/状态</td></tr>
+        <tr><td><strong>roles</strong></td><td style="font-size:11px;color:var(--text-muted)">5个角色定义</td></tr>
+        <tr><td><strong>permissions</strong></td><td style="font-size:11px;color:var(--text-muted)">权限资源+动作</td></tr>
+        <tr><td><strong>user_roles</strong></td><td style="font-size:11px;color:var(--text-muted)">多对多关联</td></tr>
+        <tr><td><strong>role_permissions</strong></td><td style="font-size:11px;color:var(--text-muted)">角色权限关联</td></tr>
+      </table>
+    </div>
+    <div class="card card-surface">
+      <h3>作品与内容</h3>
+      <table>
+        <tr><td><strong>projects</strong></td><td style="font-size:11px;color:var(--text-muted)">作品主表（类型/状态/外链）</td></tr>
+        <tr><td><strong>project_images</strong></td><td style="font-size:11px;color:var(--text-muted)">截图画廊（最多10张）</td></tr>
+        <tr><td><strong>project_members</strong></td><td style="font-size:11px;color:var(--text-muted)">作品参与成员+角色</td></tr>
+        <tr><td><strong>tags</strong></td><td style="font-size:11px;color:var(--text-muted)">标签名+颜色</td></tr>
+        <tr><td><strong>project_tags</strong></td><td style="font-size:11px;color:var(--text-muted)">作品标签多对多</td></tr>
+      </table>
+    </div>
+    <div class="card card-surface">
+      <h3>运营与安全</h3>
+      <table>
+        <tr><td><strong>members</strong></td><td style="font-size:11px;color:var(--text-muted)">成员档案（年级/届次）</td></tr>
+        <tr><td><strong>announcements</strong></td><td style="font-size:11px;color:var(--text-muted)">公告（支持置顶）</td></tr>
+        <tr><td><strong>audit_logs</strong></td><td style="font-size:11px;color:var(--text-muted)">全量操作审计</td></tr>
+        <tr><td><strong>member_requests</strong></td><td style="font-size:11px;color:var(--text-muted)">成员身份申请流程</td></tr>
+        <tr><td><strong>notifications</strong></td><td style="font-size:11px;color:var(--text-muted)">站内通知</td></tr>
+        <tr><td><strong>login_attempts</strong></td><td style="font-size:11px;color:var(--text-muted)">登录记录（防暴力破解）</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:0.75rem">关键字段设计（projects 表）</h3>
+  <table>
+    <thead><tr><th>字段</th><th>类型</th><th>约束</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>UUID</td><td>PK, default uuid()</td><td>主键，防枚举攻击</td></tr>
+      <tr><td>title</td><td>VARCHAR(255)</td><td>NOT NULL</td><td>作品标题</td></tr>
+      <tr><td>project_type</td><td>ENUM</td><td>NOT NULL</td><td>STEAM_PUBLISHED / GAME_JAM / DEMO 等</td></tr>
+      <tr><td>status</td><td>ENUM</td><td>default DRAFT</td><td>DRAFT / PENDING_REVIEW / PUBLISHED / REJECTED</td></tr>
+      <tr><td>cover_image_url</td><td>TEXT</td><td>NOT NULL</td><td>Cloudflare R2 CDN URL</td></tr>
+      <tr><td>steam_url / github_url</td><td>TEXT</td><td>NULLABLE</td><td>外链，提交时格式校验</td></tr>
+      <tr><td>dev_log</td><td>TEXT</td><td>NULLABLE</td><td>Markdown 格式，渲染时 XSS Sanitize</td></tr>
+      <tr><td>submitted_by_id</td><td>UUID</td><td>FK → users.id</td><td>提交者，可为 NULL（Admin 录入）</td></tr>
+      <tr><td>reviewed_by_id</td><td>UUID</td><td>FK → users.id</td><td>审核人</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin:1.25rem 0 0.75rem">索引策略</h3>
+  <table>
+    <thead><tr><th>表</th><th>索引列</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>projects</td><td>(status, project_type, development_year)</td><td>作品库三维筛选</td></tr>
+      <tr><td>projects</td><td>(published_at DESC)</td><td>最新作品排序</td></tr>
+      <tr><td>members</td><td>(join_year)</td><td>历史页按届分组</td></tr>
+      <tr><td>audit_logs</td><td>(user_id), (resource_type, resource_id), (created_at)</td><td>审计查询三维度</td></tr>
+      <tr><td>login_attempts</td><td>(email, created_at), (ip_address, created_at)</td><td>暴力破解检测窗口查询</td></tr>
+      <tr><td>notifications</td><td>(user_id, is_read)</td><td>未读通知列表</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ④ API -->
+<section id="api">
+  <h2>④ API 设计</h2>
+  <p class="section-intro">RESTful，基础路径 /api/v1，统一 JSON 响应格式，错误码标准化。</p>
+
+  <div class="grid-2" style="margin-bottom:1.5rem">
+    <div>
+      <h3 style="margin-bottom:0.75rem">核心端点</h3>
+      <table>
+        <thead><tr><th>方法</th><th>路径</th><th>权限</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-green" style="font-size:10px">GET</span></td><td>/api/v1/projects</td><td>Public</td></tr>
+          <tr><td><span class="tag tag-green" style="font-size:10px">GET</span></td><td>/api/v1/projects/:id</td><td>Public</td></tr>
+          <tr><td><span class="tag tag-blue" style="font-size:10px">POST</span></td><td>/api/v1/projects</td><td>Member</td></tr>
+          <tr><td><span class="tag tag-amber" style="font-size:10px">PATCH</span></td><td>/api/v1/projects/:id</td><td>Member/Admin</td></tr>
+          <tr><td><span class="tag tag-blue" style="font-size:10px">POST</span></td><td>/api/v1/projects/:id/submit</td><td>Member</td></tr>
+          <tr><td><span class="tag tag-blue" style="font-size:10px">POST</span></td><td>/api/v1/projects/:id/review</td><td>Reviewer</td></tr>
+          <tr><td><span class="tag tag-green" style="font-size:10px">GET</span></td><td>/api/v1/members</td><td>Public</td></tr>
+          <tr><td><span class="tag tag-blue" style="font-size:10px">POST</span></td><td>/api/v1/upload/presign</td><td>Member</td></tr>
+          <tr><td><span class="tag tag-green" style="font-size:10px">GET</span></td><td>/api/v1/admin/audit-logs</td><td>Admin</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3 style="margin-bottom:0.75rem">限流策略</h3>
+      <table>
+        <thead><tr><th>端点</th><th>限制</th><th>窗口</th></tr></thead>
+        <tbody>
+          <tr><td>POST /auth/register</td><td>5次/IP</td><td>1小时</td></tr>
+          <tr><td>POST /auth/login</td><td>10次/IP，5次/账号</td><td>15分钟</td></tr>
+          <tr><td>GET /projects</td><td>60次</td><td>1分钟</td></tr>
+          <tr><td>POST /projects</td><td>10次/用户</td><td>1小时</td></tr>
+          <tr><td>POST /upload/presign</td><td>20次/用户</td><td>1分钟</td></tr>
+          <tr><td>全局 fallback</td><td>100次/IP</td><td>1分钟</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin:1rem 0 0.75rem">统一响应格式</h3>
+      <div class="code-block"><span class="cm">// 成功</span>
+{ <span class="str">"success"</span>: <span class="kw">true</span>, <span class="str">"data"</span>: {...},
+  <span class="str">"meta"</span>: { <span class="str">"total"</span>: 42, <span class="str">"page"</span>: 1 } }
+
+<span class="cm">// 错误</span>
+{ <span class="str">"success"</span>: <span class="kw">false</span>, <span class="str">"error"</span>: {
+  <span class="str">"code"</span>: <span class="str">"VALIDATION_ERROR"</span>,
+  <span class="str">"message"</span>: <span class="str">"字段验证失败"</span> } }</div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑤ RBAC -->
+<section id="rbac">
+  <h2>⑤ 权限模型（RBAC）</h2>
+  <p class="section-intro">5个角色，数据库驱动权限配置，支持运营期间动态调整而无需改代码。</p>
+
+  <div class="grid-2" style="margin-bottom:1.5rem">
+    <div>
+      <div class="card card-surface" style="margin-bottom:0.75rem">
+        <h3>角色说明</h3>
+        <table>
+          <tr><td><span class="tag tag-green">Guest</span></td><td style="font-size:12px">浏览公开内容，无需登录</td></tr>
+          <tr><td><span class="tag tag-blue">User</span></td><td style="font-size:12px">注册用户，完善个人资料</td></tr>
+          <tr><td><span class="tag tag-amber">Member</span></td><td style="font-size:12px">社团成员，需管理员手动审批授予</td></tr>
+          <tr><td><span class="tag tag-purple">Reviewer</span></td><td style="font-size:12px">审核员，审核作品和资料变更</td></tr>
+          <tr><td><span class="tag tag-red">Admin</span></td><td style="font-size:12px">全权管理，用户/权限/内容/设置</td></tr>
+        </table>
+      </div>
+
+      <div class="alert alert-amber">
+        <strong>重要：Member 身份不可自助获取。</strong>流程：注册账号 → 线下核实真实社员身份 → 管理员在后台手动授予 Member 角色。
+      </div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:0.75rem">权限矩阵</h3>
+      <div class="permission-grid">
+        <div class="perm-header">操作</div>
+        <div class="perm-header">Guest</div>
+        <div class="perm-header">User</div>
+        <div class="perm-header">Member</div>
+        <div class="perm-header">Reviewer</div>
+        <div class="perm-header">Admin</div>
+
+        <div class="perm-label">浏览已发布作品</div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+
+        <div class="perm-label">完善个人资料</div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+
+        <div class="perm-label">提交作品</div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+
+        <div class="perm-label">编辑自己作品</div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+
+        <div class="perm-label">审核作品</div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+
+        <div class="perm-label">编辑任意作品</div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+
+        <div class="perm-label">用户权限管理</div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="cross">✗</span></div>
+        <div class="perm-cell"><span class="check">✓</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:0.75rem">Member 审批流程</h3>
+  <div class="flow">
+    <div class="flow-step">用户注册</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">邮箱验证</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">提交 Member 申请</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">管理员线下核实</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:var(--green-bg);border-color:#C0DD97;color:var(--green)">授予 Member 角色</div>
+  </div>
+</section>
+
+<!-- ⑥ 安全 -->
+<section id="security">
+  <h2>⑥ 安全设计方案 <span class="badge tag-red">OWASP Top 10</span></h2>
+
+  <div class="grid-2">
+    <div>
+      <div class="card card-red" style="margin-bottom:0.75rem">
+        <h3>登录安全</h3>
+        <ul style="font-size:12px;color:var(--red);padding-left:1rem">
+          <li><strong>Argon2id</strong> 哈希密码（64MB 内存，3次迭代）</li>
+          <li>邮箱验证（32字节随机 token，24h 有效）</li>
+          <li>登录限流：5次/账号 + 10次/IP（15分钟窗口）</li>
+          <li>Session 存数据库，支持主动吊销</li>
+          <li>Cookie: HttpOnly + Secure + SameSite=Lax</li>
+        </ul>
+      </div>
+      <div class="card card-amber" style="margin-bottom:0.75rem">
+        <h3>XSS 防护</h3>
+        <ul style="font-size:12px;color:var(--amber);padding-left:1rem">
+          <li>React 默认转义 JSX 内容</li>
+          <li>dangerouslySetInnerHTML 前必须 DOMPurify.sanitize</li>
+          <li>Markdown 渲染：marked + DOMPurify 白名单标签</li>
+          <li>Content Security Policy (CSP) Headers</li>
+          <li>禁止 script/object/embed 等危险标签</li>
+        </ul>
+      </div>
+      <div class="card card-blue" style="margin-bottom:0.75rem">
+        <h3>SQL 注入防护</h3>
+        <ul style="font-size:12px;color:var(--blue);padding-left:1rem">
+          <li>全部使用 Prisma 参数化查询</li>
+          <li>禁止 $queryRawUnsafe</li>
+          <li>ESLint eslint-plugin-security 检测拼接 SQL</li>
+          <li>代码审查强制检查项</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card card-green" style="margin-bottom:0.75rem">
+        <h3>文件上传安全</h3>
+        <ul style="font-size:12px;color:var(--green);padding-left:1rem">
+          <li>白名单 MIME 类型：jpeg / png / webp</li>
+          <li>文件大小限制：最大 5MB</li>
+          <li>随机 UUID 文件名（防路径猜测）</li>
+          <li>预签名 URL 直传 R2（不经服务器）</li>
+          <li>R2 Bucket 禁止目录列表</li>
+          <li>禁止上传 .html/.js/.php 可执行文件</li>
+        </ul>
+      </div>
+      <div class="card card-purple" style="margin-bottom:0.75rem">
+        <h3>API 安全</h3>
+        <ul style="font-size:12px;color:var(--purple);padding-left:1rem">
+          <li>全局 Rate Limit（LRU Cache sliding window）</li>
+          <li>所有写操作记录 AuditLog</li>
+          <li>越权尝试记录 + 告警</li>
+          <li>安全 HTTP Headers（HSTS / X-Frame-Options）</li>
+          <li>Origin 校验防 CSRF</li>
+        </ul>
+      </div>
+      <div class="card card-teal">
+        <h3>环境变量安全</h3>
+        <ul style="font-size:12px;color:var(--teal);padding-left:1rem">
+          <li>.env* 全部加入 .gitignore</li>
+          <li>NEXTAUTH_SECRET 每学期轮换</li>
+          <li>生产环境通过服务器环境变量注入</li>
+          <li>代码中无任何硬编码密钥</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑦ 目录结构 -->
+<section id="structure">
+  <h2>⑦ 项目目录结构</h2>
+  <p class="section-intro">按关注点分层：app（页面）/ pages/api（接口）/ components / lib / services / middleware / schemas。</p>
+  <div class="code-block">game-dev-club/
+├── <span class="kw">prisma/</span>          schema + migrations + seed
+├── <span class="kw">src/app/</span>         Next.js 页面（App Router）
+│   ├── works/       作品库 + 详情
+│   ├── members/     成员列表 + 详情
+│   ├── history/     历史页
+│   ├── auth/        登录/注册/验证邮箱
+│   ├── dashboard/   用户工作台（投稿/资料）
+│   └── admin/       管理后台（全功能）
+├── <span class="kw">src/pages/api/v1/</span> RESTful API Routes
+│   ├── projects/    作品 CRUD + 提交 + 审核
+│   ├── members/     成员查询
+│   ├── upload/      预签名 URL 生成
+│   └── admin/       用户管理 + 审计日志
+├── <span class="kw">src/components/</span>  UI 组件（ui/ layout/ works/ members/ admin/）
+├── <span class="kw">src/lib/</span>         基础设施（prisma / auth / r2 / security/）
+├── <span class="kw">src/services/</span>    业务逻辑层（project / user / review / storage）
+├── <span class="kw">src/middleware/</span>  API 中间件（rbac / audit / validate / errorHandler）
+├── <span class="kw">src/schemas/</span>     Zod 验证 Schema
+├── <span class="kw">docker/</span>          Dockerfile + nginx.conf + backup.sh
+├── docker-compose.yml
+└── <span class="kw">docs/</span>            deployment + maintenance + handover + runbook</div>
+</section>
+
+<!-- ⑧ Docker -->
+<section id="docker">
+  <h2>⑧ Docker 部署方案</h2>
+
+  <div class="grid-2" style="margin-bottom:1.25rem">
+    <div class="card card-surface">
+      <h3>容器组成</h3>
+      <table>
+        <tr><td><strong>app</strong></td><td style="font-size:12px">Next.js 应用，非 root 用户运行，内存限 512M</td></tr>
+        <tr><td><strong>postgres</strong></td><td style="font-size:12px">PostgreSQL 15 Alpine，仅 internal 网络可达</td></tr>
+        <tr><td><strong>nginx</strong></td><td style="font-size:12px">反向代理，SSL 终止，静态资源缓存</td></tr>
+        <tr><td><strong>backup</strong></td><td style="font-size:12px">每日凌晨 3 点 pg_dump + gzip，保留 30 天</td></tr>
+      </table>
+    </div>
+    <div class="card card-surface">
+      <h3>部署操作</h3>
+      <div class="code-block" style="font-size:11px"><span class="cm"># 首次部署</span>
+cp .env.example .env.production
+docker compose build
+docker compose up -d
+docker compose exec app npx prisma db seed
+
+<span class="cm"># 日常更新</span>
+git pull origin main
+docker compose up -d --no-deps --build app
+
+<span class="cm"># 健康检查</span>
+curl http://localhost/api/health</div>
+    </div>
+  </div>
+
+  <div class="alert alert-green">
+    <strong>安全设计：</strong> postgres 容器仅在 docker internal 网络内部可达，对公网完全隔离。nginx 是唯一的流量入口（80/443），所有 API 请求通过 X-Forwarded-For 传递真实 IP 用于限流。
+  </div>
+</section>
+
+<!-- ⑨ 备份 -->
+<section id="backup">
+  <h2>⑨ 数据备份方案</h2>
+
+  <div class="grid-4" style="margin-bottom:1.25rem">
+    <div class="card card-green">
+      <h3>每日全量</h3>
+      <p style="font-size:12px;color:var(--green)">凌晨 3:00 自动 pg_dump + gzip，保留 30 天</p>
+    </div>
+    <div class="card card-blue">
+      <h3>每 6 小时</h3>
+      <p style="font-size:12px;color:var(--blue)">增量备份，保留 7 天（V2 后启用）</p>
+    </div>
+    <div class="card card-pink">
+      <h3>R2 文件</h3>
+      <p style="font-size:12px;color:var(--pink)">Cloudflare R2 自动多副本冗余，无需额外备份</p>
+    </div>
+    <div class="card card-amber">
+      <h3>代码</h3>
+      <p style="font-size:12px;color:var(--amber)">Git + GitHub 永久保存所有历史</p>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:0.75rem">恢复流程</h3>
+  <div class="flow">
+    <div class="flow-step">确定目标备份文件</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">停止 app 容器（可选）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">gunzip | psql 恢复</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">验证数据完整性</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">重启 app 容器</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:var(--green-bg);border-color:#C0DD97;color:var(--green)">prisma migrate deploy</div>
+  </div>
+
+  <div class="alert alert-amber" style="margin-top:1rem">
+    <strong>每学期必须执行一次恢复演练：</strong>从备份文件恢复到隔离测试环境，验证数据完整性和应用正常启动。不做演练的备份等于没有备份。
+  </div>
+</section>
+
+<!-- ⑩ 交接 -->
+<section id="handover">
+  <h2>⑩ 交接维护文档</h2>
+
+  <div class="grid-2" style="margin-bottom:1.25rem">
+    <div>
+      <h3 style="margin-bottom:0.75rem">换届交接清单</h3>
+      <table>
+        <tr><td style="font-size:12px">服务器 SSH Key</td><td><span class="tag tag-red">必须</span></td></tr>
+        <tr><td style="font-size:12px">域名管理账号</td><td><span class="tag tag-red">必须</span></td></tr>
+        <tr><td style="font-size:12px">Cloudflare 账号</td><td><span class="tag tag-red">必须</span></td></tr>
+        <tr><td style="font-size:12px">GitHub 仓库 Owner 权限</td><td><span class="tag tag-red">必须</span></td></tr>
+        <tr><td style="font-size:12px">网站管理员账号密码</td><td><span class="tag tag-red">必须</span></td></tr>
+        <tr><td style="font-size:12px">NEXTAUTH_SECRET 轮换</td><td><span class="tag tag-red">必须</span></td></tr>
+        <tr><td style="font-size:12px">旧任管理员账号降级</td><td><span class="tag tag-amber">必须</span></td></tr>
+        <tr><td style="font-size:12px">更新 HANDOVER.md</td><td><span class="tag tag-amber">必须</span></td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 style="margin-bottom:0.75rem">定期维护计划</h3>
+      <table>
+        <tr><td style="font-size:12px"><strong>每月</strong></td><td style="font-size:12px">磁盘使用率 &lt; 70%，SSL 证书 &gt; 30天，备份验证</td></tr>
+        <tr><td style="font-size:12px"><strong>每学期</strong></td><td style="font-size:12px">更新 Node.js / PostgreSQL 版本，轮换 NEXTAUTH_SECRET，npm audit，恢复演练</td></tr>
+        <tr><td style="font-size:12px"><strong>换届时</strong></td><td style="font-size:12px">完整交接清单，新成员录入，旧账号清理，历史页更新</td></tr>
+      </table>
+
+      <h3 style="margin:1rem 0 0.75rem">运维文档结构</h3>
+      <div class="code-block" style="font-size:11px">docs/
+├── deployment.md   <span class="cm"># 首次部署全流程</span>
+├── maintenance.md  <span class="cm"># 日常运维操作手册</span>
+├── handover.md     <span class="cm"># 换届交接模板</span>
+└── runbook.md      <span class="cm"># 故障处理手册（含常见问题）</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑪ 路线图 -->
+<section id="roadmap">
+  <h2>⑪ MVP 开发路线图</h2>
+
+  <div class="grid-3" style="margin-bottom:1.5rem">
+    <div class="card card-blue">
+      <h3>V1 — 迎新前上线</h3>
+      <p style="font-size:11px;color:var(--blue);margin-bottom:0.5rem">目标：6-8 周</p>
+      <ul style="font-size:12px;padding-left:1rem;color:#185FA5">
+        <li>首页 + 作品库（展示+搜索）</li>
+        <li>成员页 + 历史页</li>
+        <li>管理员后台（CRUD）</li>
+        <li>图片上传（R2 预签名）</li>
+        <li>基础 RBAC（Guest + Admin）</li>
+        <li>Docker 部署 + 每日备份</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <h3>V2 — 正式运营</h3>
+      <p style="font-size:11px;color:var(--green);margin-bottom:0.5rem">目标：V1 后 8 周</p>
+      <ul style="font-size:12px;padding-left:1rem;color:#3B6D11">
+        <li>用户注册 + 邮箱验证</li>
+        <li>Member 申请 + 管理员审批</li>
+        <li>Member 分步投稿表单</li>
+        <li>审核工作流（Reviewer）</li>
+        <li>站内通知系统</li>
+        <li>个人资料页</li>
+      </ul>
+    </div>
+    <div class="card card-amber">
+      <h3>V3 — 生态完善</h3>
+      <p style="font-size:11px;color:var(--amber);margin-bottom:0.5rem">目标：V2 后 12 周</p>
+      <ul style="font-size:12px;padding-left:1rem;color:#854F0B">
+        <li>活动/赛事系统</li>
+        <li>Game Jam 专属页</li>
+        <li>作品收藏（User 角色）</li>
+        <li>RSS 订阅</li>
+        <li>社团年报自动生成</li>
+        <li>开放只读 API</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:0.75rem">关键决策记录</h3>
+  <table>
+    <thead><tr><th>决策</th><th>原因</th></tr></thead>
+    <tbody>
+      <tr><td>V1 不做用户注册</td><td>优先完成数据录入，快速上线迎新，减少 V1 复杂度</td></tr>
+      <tr><td>文件不托管在服务器</td><td>R2 零出口费用 + CDN，外链策略可持续 5 年以上</td></tr>
+      <tr><td>数据库 Session（非 JWT）</td><td>支持主动吊销 Session，换届时可强制下线旧账号</td></tr>
+      <tr><td>Docker Compose 而非 K8s</td><td>大学社团运维能力有限，Compose 够用且交接成本低</td></tr>
+      <tr><td>PostgreSQL 而非 MySQL</td><td>更好的 JSON 支持、全文搜索、ENUM 类型、Prisma 生态</td></tr>
+      <tr><td>预签名 URL 上传</td><td>文件直达 R2，减轻服务器带宽，服务器无需处理大文件</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div>
+
+<footer style="background:var(--surface);border-top:0.5px solid var(--border);padding:2rem;text-align:center;color:var(--text-muted);font-size:12px;margin-top:2rem">
+  大学游戏开发社团官网 · 完整架构设计文档 · 版本 1.0.0 · 2026-06-07
+</footer>
+
+</body>
+</html>

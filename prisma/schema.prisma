@@ -1,0 +1,395 @@
+// ============================================================
+// Prisma Schema - 布谷工作室
+// 版本: 1.0.0
+// ============================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets  = ["native", "linux-musl-openssl-3.0.x", "darwin-arm64", "windows"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 枚举类型
+// ============================================================
+
+enum UserRole {
+  GUEST    // 游客（未注册，概念性）
+  USER     // 注册用户
+  MEMBER   // 社团成员（需管理员审批）
+  REVIEWER // 审核员
+  ADMIN    // 管理员
+}
+
+enum ProjectStatus {
+  DRAFT     // 草稿（作者编辑中）
+  PENDING   // 待审核
+  PUBLISHED // 已发布（公开）
+  REJECTED  // 审核失败
+  ARCHIVED  // 已归档
+}
+
+enum ProjectType {
+  STEAM      // Steam 发布
+  INDIE      // 独立游戏
+  GAME_JAM   // Game Jam 作品
+  DEMO       // Demo 演示
+  PROTOTYPE  // 原型项目
+  GRADUATION // 毕业设计
+  OTHER      // 其他
+}
+
+enum AuditAction {
+  USER_REGISTER
+  USER_LOGIN
+  USER_LOGOUT
+  USER_ROLE_CHANGE
+  PROJECT_CREATE
+  PROJECT_UPDATE
+  PROJECT_DELETE
+  PROJECT_SUBMIT
+  PROJECT_APPROVE
+  PROJECT_REJECT
+  FILE_UPLOAD
+  FILE_DELETE
+  ADMIN_ACTION
+  RATE_LIMIT_HIT
+  SUSPICIOUS_REQUEST
+}
+
+enum AnnouncementType {
+  INFO    // 普通通知
+  SUCCESS // 成功通知
+  WARNING // 警告通知
+  DANGER  // 危险通知
+}
+
+// ============================================================
+// 用户 & 认证
+// ============================================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified DateTime?
+  name          String?
+  passwordHash  String?  // scrypt hash
+  image         String?  // 头像 URL（R2）
+  role          UserRole @default(USER)
+  isActive      Boolean  @default(true)
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  member        ClubMember?
+  submittedProjects Project[] @relation("ProjectSubmitter")
+  reviewedProjects  Review[]
+  auditLogs     AuditLog[] @relation("AuditUser")
+  loginAttempts LoginAttempt[]
+  sessions      Session[]
+  accounts      Account[]
+
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
+}
+
+// Auth.js 所需表
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expires])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// 登录失败记录（防暴力破解）
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  ipAddress String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+}
+
+// ============================================================
+// 社团成员
+// ============================================================
+
+model ClubMember {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String                    // 展示名
+  avatar      String?                   // 头像 URL（R2）
+  bio         String?  @db.Text
+  grade       String?                   // 年级，如 "2021级"
+  joinYear    Int                       // 入社年份
+  graduateYear Int?                     // 毕业年份（null = 在读）
+  skills      String[] @default([])     // 技能标签
+  githubUrl   String?
+  itchUrl     String?
+  website     String?
+  isActive    Boolean  @default(true)   // 是否在读/活跃
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectMembers  ProjectMember[]
+
+  @@index([joinYear])
+  @@index([isActive])
+}
+
+// ============================================================
+// 作品 & 项目
+// ============================================================
+
+model Project {
+  id           String        @id @default(cuid())
+  slug         String        @unique  // URL 友好标识符
+  title        String
+  subtitle     String?
+  description  String        @db.Text
+  coverImage   String?                // 封面图 URL（R2）
+  status       ProjectStatus @default(DRAFT)
+  type         ProjectType
+  developYear  Int                    // 开发年份
+  publishedAt  DateTime?              // 实际发布时间
+
+  // 外部链接
+  steamUrl      String?
+  githubUrl     String?
+  itchUrl       String?
+  panUrl        String?    // 百度网盘
+  driveUrl      String?    // Google Drive
+  onedriveUrl   String?
+  videoUrl      String?    // 演示视频
+  websiteUrl    String?    // 作品官网
+
+  // 内容
+  devlog       String?  @db.Text  // 开发日志（Markdown）
+  techStack    String[] @default([])
+  isFeatured   Boolean  @default(false)   // 精选作品
+
+  // 提交信息
+  submitterId  String
+  submittedAt  DateTime?
+  reviewNote   String?  @db.Text  // 审核意见
+
+  // 统计（非实时，定期更新）
+  viewCount    Int @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  submitter    User @relation("ProjectSubmitter", fields: [submitterId], references: [id])
+  images       ProjectImage[]
+  members      ProjectMember[]
+  tags         ProjectTag[]
+  reviews      Review[]
+
+  @@index([status])
+  @@index([type])
+  @@index([developYear])
+  @@index([isFeatured])
+  @@index([createdAt])
+  @@index([slug])
+}
+
+// 作品截图
+model ProjectImage {
+  id        String   @id @default(cuid())
+  projectId String
+  url       String               // R2 URL
+  altText   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// 作品-成员多对多（含角色）
+model ProjectMember {
+  id       String @id @default(cuid())
+  projectId String
+  memberId  String
+  role      String   // 如 "主程序员", "美术", "策划", "音效"
+  sortOrder Int @default(0)
+
+  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId])
+  @@index([projectId])
+  @@index([memberId])
+}
+
+// ============================================================
+// 标签系统
+// ============================================================
+
+model Tag {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  color       String  @default("#6366f1") // 十六进制颜色
+  description String?
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  projects ProjectTag[]
+
+  @@index([slug])
+}
+
+model ProjectTag {
+  projectId String
+  tagId     String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, tagId])
+  @@index([tagId])
+}
+
+// ============================================================
+// 审核系统
+// ============================================================
+
+model Review {
+  id         String   @id @default(cuid())
+  projectId  String
+  reviewerId String
+  approved   Boolean
+  note       String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reviewer User    @relation(fields: [reviewerId], references: [id])
+
+  @@index([projectId])
+  @@index([reviewerId])
+}
+
+// ============================================================
+// 公告系统
+// ============================================================
+
+model Announcement {
+  id        String           @id @default(cuid())
+  title     String
+  content   String           @db.Text
+  type      AnnouncementType @default(INFO)
+  isActive  Boolean          @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([isActive, createdAt])
+}
+
+// ============================================================
+// 历史档案
+// ============================================================
+
+// 每年的社团活动/大事记
+model YearEvent {
+  id          String   @id @default(cuid())
+  year        Int
+  title       String
+  description String?  @db.Text
+  eventDate   DateTime?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([year])
+}
+
+// ============================================================
+// 系统配置
+// ============================================================
+
+model SiteSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+// ============================================================
+// 审计日志
+// ============================================================
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  userId     String?
+  targetType String?    // 目标资源类型，如 "Project", "User"
+  targetId   String?    // 目标资源 ID
+  metadata   Json?      // 额外上下文信息
+  ipAddress  String?
+  userAgent  String?
+  statusCode Int?
+  createdAt  DateTime   @default(now())
+
+  user User? @relation("AuditUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([action, createdAt])
+  @@index([userId, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
