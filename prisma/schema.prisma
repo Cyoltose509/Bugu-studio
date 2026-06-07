@@ -9,8 +9,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================
@@ -34,13 +35,10 @@ enum ProjectStatus {
 }
 
 enum ProjectType {
-  STEAM      // Steam 发布
-  INDIE      // 独立游戏
-  GAME_JAM   // Game Jam 作品
-  DEMO       // Demo 演示
-  PROTOTYPE  // 原型项目
-  GRADUATION // 毕业设计
-  OTHER      // 其他
+  DEMO  // Demo 演示
+  STEAM // Steam 发布
+  ITCH  // itch.io 发布
+  OTHER // 其他
 }
 
 enum AuditAction {
@@ -251,6 +249,7 @@ model Project {
   // Relations
   submitter    User @relation("ProjectSubmitter", fields: [submitterId], references: [id])
   images       ProjectImage[]
+  links        ProjectLink[]
   members      ProjectMember[]
   tags         ProjectTag[]
   reviews      Review[]
@@ -291,6 +290,20 @@ model ProjectMember {
   @@unique([projectId, memberId])
   @@index([projectId])
   @@index([memberId])
+}
+
+// 作品外部链接（动态添加，如 Steam、itch.io、官网、网盘等）
+model ProjectLink {
+  id        String   @id @default(cuid())
+  projectId String
+  label     String            // 显示标签，如 "Steam", "itch.io", "官网", "百度网盘"
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 // ============================================================
