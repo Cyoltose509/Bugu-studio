@@ -1,40 +1,16 @@
-/**
- * 作品库页面
- * 支持搜索、标签筛选、分类浏览
- */
-
-import { Metadata } from "next";
+﻿import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 
-export const metadata: Metadata = {
-  title: "作品库",
-  description: "浏览历届社员创作的所有游戏作品",
-};
-
+export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
+export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
-interface PageProps {
-  searchParams: Promise<{
-    q?: string;
-    type?: string;
-    tag?: string;
-    year?: string;
-    page?: string;
-  }>;
-}
+interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string }>; }
 
-const PROJECT_TYPE_LABELS: Record<string, string> = {
-  STEAM: "Steam",
-  INDIE: "独立游戏",
-  GAME_JAM: "Game Jam",
-  DEMO: "Demo",
-  PROTOTYPE: "原型",
-  GRADUATION: "毕业设计",
-  OTHER: "其他",
-};
+const TYPE_LABELS: Record<string, string> = { STEAM: "Steam", INDIE: "独立游戏", GAME_JAM: "Game Jam", DEMO: "Demo", PROTOTYPE: "原型", GRADUATION: "毕业设计", OTHER: "其他" };
 
 export default async function WorksPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -42,184 +18,85 @@ export default async function WorksPage({ searchParams }: PageProps) {
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
 
-  const [tags, projects, total] = await Promise.all([
-    // 获取所有标签
-    prisma.tag.findMany({
-      orderBy: { sortOrder: "asc" },
-      include: {
-        _count: {
-          select: { projects: { where: { project: { status: "PUBLISHED" } } } },
-        },
-      },
-    }),
-    // 获取作品列表
-    prisma.project.findMany({
-      where: {
-        status: ProjectStatus.PUBLISHED,
-        ...(params.type && { type: params.type as any }),
-        ...(params.year && { developYear: parseInt(params.year) }),
-        ...(params.q && {
-          OR: [
-            { title: { contains: params.q, mode: "insensitive" } },
-            { description: { contains: params.q, mode: "insensitive" } },
-          ],
-        }),
-        ...(params.tag && {
-          tags: { some: { tag: { slug: params.tag } } },
-        }),
-      },
-      skip,
-      take: pageSize,
-      orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-      include: {
-        tags: { include: { tag: true } },
-        members: {
-          take: 3,
-          include: { member: { select: { displayName: true, avatar: true } } },
-        },
-      },
-    }),
-    // 总数
-    prisma.project.count({
-      where: {
-        status: ProjectStatus.PUBLISHED,
-        ...(params.type && { type: params.type as any }),
-        ...(params.year && { developYear: parseInt(params.year) }),
-        ...(params.q && {
-          OR: [
-            { title: { contains: params.q, mode: "insensitive" } },
-            { description: { contains: params.q, mode: "insensitive" } },
-          ],
-        }),
-        ...(params.tag && {
-          tags: { some: { tag: { slug: params.tag } } },
-        }),
-      },
-    }),
+  const where: any = { status: ProjectStatus.PUBLISHED };
+  if (params.type) where.type = params.type;
+  if (params.year) where.developYear = parseInt(params.year);
+  if (params.q) where.OR = [{ title: { contains: params.q, mode: "insensitive" } }, { description: { contains: params.q, mode: "insensitive" } }];
+  if (params.tag) where.tags = { some: { tag: { slug: params.tag } } };
+
+  const [tags, projects, total, years] = await Promise.all([
+    prisma.tag.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { projects: { where: { project: { status: "PUBLISHED" } } } } } } }),
+    prisma.project.findMany({ where, skip, take: pageSize, orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }], include: { tags: { include: { tag: true } }, members: { take: 3, include: { member: { select: { displayName: true, avatar: true } } } } } }),
+    prisma.project.count({ where }),
+    prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } }),
   ]);
 
   const totalPages = Math.ceil(total / pageSize);
 
-  // 获取可用年份
-  const years = await prisma.project.groupBy({
-    by: ["developYear"],
-    where: { status: ProjectStatus.PUBLISHED },
-    orderBy: { developYear: "desc" },
-  });
-
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">作品库</h1>
-        <p className="text-gray-400 mt-2">共 {total} 件作品</p>
+        <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>作品库</h1>
+        <p style={{ color: "#777" }} className="mt-2">共 {total} 件作品</p>
       </div>
-
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* 侧边栏过滤器 */}
         <aside className="lg:w-56 shrink-0">
-          <FilterPanel
-            tags={tags}
-            years={years.map((y) => y.developYear)}
-            currentParams={params}
-          />
-        </aside>
-
-        {/* 作品网格 */}
-        <div className="flex-1">
-          {/* 搜索框 */}
-          <form className="mb-6">
-            <input
-              type="search"
-              name="q"
-              defaultValue={params.q}
-              placeholder="搜索作品名称或简介..."
-              className="w-full bg-gray-900 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-            />
-          </form>
-
-          {projects.length === 0 ? (
-            <div className="text-center py-20 text-gray-500">
-              <div className="text-4xl mb-4">🔍</div>
-              <p>没有找到匹配的作品</p>
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>类型</h3>
+              <div className="space-y-1.5">
+                <FilterLink href={buildUrl(params, { type: void 0, page: 1 })} active={!params.type} label="全部" />
+                {Object.entries(TYPE_LABELS).map(([v, l]) => <FilterLink key={v} href={buildUrl(params, { type: v, page: 1 })} active={params.type === v} label={l} />)}
+              </div>
             </div>
+            {years.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>年份</h3>
+                <div className="space-y-1.5">
+                  <FilterLink href={buildUrl(params, { year: void 0, page: 1 })} active={!params.year} label="全部年份" />
+                  {years.map(y => <FilterLink key={y.developYear} href={buildUrl(params, { year: String(y.developYear), page: 1 })} active={params.year === String(y.developYear)} label={String(y.developYear)} />)}
+                </div>
+              </div>
+            )}
+            <div>
+              <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>标签</h3>
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <Link key={tag.slug} href={buildUrl(params, { tag: params.tag === tag.slug ? void 0 : tag.slug, page: 1 })} className={`text-xs px-2 py-1 rounded transition-all ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1 ring-offset-[#F0F5F9]" : "opacity-70 hover:opacity-100"}`} style={{ backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232" }}>
+                    {tag.name} ({tag._count.projects})
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+        <div className="flex-1">
+          <form className="mb-6">
+            <input type="search" name="q" defaultValue={params.q} placeholder="搜索作品名称或简介..." className="w-full bg-white border rounded-lg px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent" style={{ borderColor: "#D0DEE8", color: "#333" }} />
+          </form>
+          {projects.length === 0 ? (
+            <div className="text-center py-20" style={{ color: "#999" }}><div className="text-4xl mb-4">🔍</div><p>没有找到匹配的作品</p></div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              {projects.map((project) => (
-                <Link
-                  key={project.id}
-                  href={`/works/${project.slug}`}
-                  className="game-card group bg-gray-900 rounded-xl overflow-hidden border border-white/10 hover:border-indigo-500/50"
-                >
-                  <div className="relative aspect-video bg-gray-800">
-                    {project.coverImage ? (
-                      <Image
-                        src={project.coverImage}
-                        alt={project.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl">
-                        🎮
-                      </div>
-                    )}
-                    <div className="absolute top-2 left-2">
-                      <span className="text-xs bg-black/60 text-white px-2 py-0.5 rounded">
-                        {PROJECT_TYPE_LABELS[project.type]}
-                      </span>
-                    </div>
-                    {project.isFeatured && (
-                      <div className="absolute top-2 right-2">
-                        <span className="text-xs bg-amber-500/80 text-white px-2 py-0.5 rounded">
-                          精选
-                        </span>
-                      </div>
-                    )}
+              {projects.map(p => (
+                <Link key={p.id} href={`/works/${p.slug}`} className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>
+                  <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
+                    {p.coverImage ? <Image src={p.coverImage} alt={p.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:640px) 100vw,33vw" /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
+                    <div className="absolute top-2 left-2"><span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">{TYPE_LABELS[p.type]}</span></div>
+                    {p.isFeatured && <div className="absolute top-2 right-2"><span className="text-xs px-2 py-0.5 rounded text-white" style={{ background: "#E38043" }}>精选</span></div>}
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
-                      {project.title}
-                    </h3>
-                    <p className="text-gray-400 text-sm mt-1 line-clamp-2">
-                      {project.description}
-                    </p>
+                    <h3 className="font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>{p.title}</h3>
+                    <p className="text-sm mt-1 line-clamp-2" style={{ color: "#777" }}>{p.description}</p>
                     <div className="flex flex-wrap gap-1.5 mt-3">
-                      {project.tags.slice(0, 3).map(({ tag }) => (
-                        <span
-                          key={tag.slug}
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            backgroundColor: `${tag.color}22`,
-                            color: tag.color,
-                          }}
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
+                      {p.tags.slice(0, 3).map(({ tag }) => <span key={tag.slug} className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232" }}>{tag.name}</span>)}
                     </div>
                     <div className="flex justify-between items-center mt-3">
-                      <span className="text-xs text-gray-500">
-                        {project.developYear}
-                      </span>
+                      <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
                       <div className="flex -space-x-1">
-                        {project.members.slice(0, 3).map(({ member }) => (
-                          <div
-                            key={member.displayName}
-                            className="w-5 h-5 rounded-full bg-indigo-600 border border-gray-900 flex items-center justify-center text-xs"
-                            title={member.displayName}
-                          >
-                            {member.avatar ? (
-                              <Image
-                                src={member.avatar}
-                                alt={member.displayName}
-                                width={20}
-                                height={20}
-                                className="rounded-full"
-                              />
-                            ) : (
-                              member.displayName[0]
-                            )}
+                        {p.members.slice(0, 3).map(({ member }) => (
+                          <div key={member.displayName} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white" style={{ background: "#E38043" }} title={member.displayName}>
+                            {member.avatar ? <Image src={member.avatar} alt={member.displayName} width={20} height={20} className="rounded-full" /> : member.displayName[0]}
                           </div>
                         ))}
                       </div>
@@ -229,29 +106,11 @@ export default async function WorksPage({ searchParams }: PageProps) {
               ))}
             </div>
           )}
-
-          {/* 分页 */}
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-10">
-              {page > 1 && (
-                <Link
-                  href={buildUrl(params, { page: page - 1 })}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm"
-                >
-                  上一页
-                </Link>
-              )}
-              <span className="px-4 py-2 text-gray-400 text-sm">
-                {page} / {totalPages}
-              </span>
-              {page < totalPages && (
-                <Link
-                  href={buildUrl(params, { page: page + 1 })}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm"
-                >
-                  下一页
-                </Link>
-              )}
+              {page > 1 && <Link href={buildUrl(params, { page: page - 1 })} className="btn-secondary px-4 py-2 rounded-lg text-sm">上一页</Link>}
+              <span className="px-4 py-2 text-sm" style={{ color: "#777" }}>{page} / {totalPages}</span>
+              {page < totalPages && <Link href={buildUrl(params, { page: page + 1 })} className="btn-secondary px-4 py-2 rounded-lg text-sm">下一页</Link>}
             </div>
           )}
         </div>
@@ -260,130 +119,18 @@ export default async function WorksPage({ searchParams }: PageProps) {
   );
 }
 
-// ============================================================
-// 侧边栏过滤组件
-// ============================================================
-
-type Tag = { slug: string; name: string; color: string; _count: { projects: number } };
-
-function FilterPanel({
-  tags,
-  years,
-  currentParams,
-}: {
-  tags: Tag[];
-  years: number[];
-  currentParams: Record<string, string | undefined>;
-}) {
+function FilterLink({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
-    <div className="space-y-6">
-      {/* 类型筛选 */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">类型</h3>
-        <div className="space-y-1.5">
-          <FilterLink
-            href={buildUrl(currentParams, { type: undefined, page: 1 })}
-            active={!currentParams.type}
-            label="全部"
-          />
-          {Object.entries(PROJECT_TYPE_LABELS).map(([value, label]) => (
-            <FilterLink
-              key={value}
-              href={buildUrl(currentParams, { type: value, page: 1 })}
-              active={currentParams.type === value}
-              label={label}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* 年份筛选 */}
-      {years.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-300 mb-3">年份</h3>
-          <div className="space-y-1.5">
-            <FilterLink
-              href={buildUrl(currentParams, { year: undefined, page: 1 })}
-              active={!currentParams.year}
-              label="全部年份"
-            />
-            {years.map((year) => (
-              <FilterLink
-                key={year}
-                href={buildUrl(currentParams, { year: String(year), page: 1 })}
-                active={currentParams.year === String(year)}
-                label={String(year)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 标签筛选 */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">标签</h3>
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <Link
-              key={tag.slug}
-              href={buildUrl(currentParams, {
-                tag: currentParams.tag === tag.slug ? undefined : tag.slug,
-                page: 1,
-              })}
-              className={`text-xs px-2 py-1 rounded transition-all ${
-                currentParams.tag === tag.slug
-                  ? "ring-1 ring-offset-1 ring-offset-gray-950"
-                  : "opacity-70 hover:opacity-100"
-              }`}
-              style={{
-                backgroundColor: `${tag.color}22`,
-                color: tag.color,
-                ...(currentParams.tag === tag.slug && { ringColor: tag.color }),
-              }}
-            >
-              {tag.name} ({tag._count.projects})
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FilterLink({
-  href,
-  active,
-  label,
-}: {
-  href: string;
-  active: boolean;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`block text-sm px-3 py-1.5 rounded transition-colors ${
-        active
-          ? "bg-indigo-600/20 text-indigo-300"
-          : "text-gray-400 hover:text-white hover:bg-white/5"
-      }`}
-    >
+    <Link href={href} className={`block text-sm px-3 py-1.5 rounded transition-colors ${active ? "font-medium" : ""}`} style={active ? { background: "rgba(37,84,122,0.07)", color: "#25547A" } : { color: "#777" }}>
       {label}
     </Link>
   );
 }
 
-function buildUrl(
-  current: Record<string, string | undefined>,
-  overrides: Record<string, string | number | undefined>
-): string {
+function buildUrl(current: Record<string, any>, overrides: Record<string, any>): string {
   const params = new URLSearchParams();
   const merged = { ...current, ...overrides };
-  for (const [key, value] of Object.entries(merged)) {
-    if (value !== undefined && value !== null && value !== "") {
-      params.set(key, String(value));
-    }
-  }
+  for (const [k, v] of Object.entries(merged)) { if (v !== void 0 && v !== null && v !== "") params.set(k, String(v)); }
   const qs = params.toString();
   return `/works${qs ? `?${qs}` : ""}`;
 }

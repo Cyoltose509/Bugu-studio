@@ -24,6 +24,7 @@ export const registerSchema = z.object({
       "密码必须包含大小写字母和数字"
     ),
   name: z.string().min(1, "昵称不能为空").max(50),
+  inviteCode: z.string().max(50).optional(),
 });
 
 export const changePasswordSchema = z

@@ -4,24 +4,25 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 263.4 70% 50.4%;
+    --background: 207 45% 94%;
+    --background-end: 210 50% 96%;
+    --foreground: 0 0% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+    --primary: 24 73% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 201 57% 47%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 94%;
+    --muted-foreground: 0 0% 47%;
+    --accent: 85 60% 48%;
+    --accent-foreground: 0 0% 100%;
+    --border: 208 30% 85%;
+    --input: 208 30% 85%;
+    --ring: 201 57% 47%;
     --radius: 0.5rem;
+    --navbar: 201 53% 31%;
+    --navbar-foreground: 0 0% 100%;
   }
 }
 
@@ -30,46 +31,25 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    background: linear-gradient(180deg, #E6F0F8 0%, #F0F5F9 100%);
+    min-height: 100vh;
+    @apply text-foreground;
   }
 }
 
-/* 自定义滚动条 */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #E6F0F8; }
+::-webkit-scrollbar-thumb { background: #B0C4D8; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #90A8C0; }
 
-/* 动画 */
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out;
-}
+.animate-fade-in { animation: fade-in 0.4s ease-out; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+.game-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.game-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37,84,122,0.12); }
 
-/* 游戏卡片悬停效果 */
-.game-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.game-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
-}
+.btn-primary { background: linear-gradient(135deg,#E38043,#F09055); color: #fff; transition: opacity .2s,transform .15s; }
+.btn-primary:hover { opacity: .92; transform: translateY(-1px); }
+
+.btn-secondary { background: transparent; color: #3388BB; border: 1.5px solid #3388BB; transition: all .2s; }
+.btn-secondary:hover { background: #fff; color: #3388BB; border-color: #3388BB; }

@@ -12,6 +12,7 @@ RUN npm ci --frozen-lockfile
 
 # 阶段2: 构建
 FROM node:22-alpine AS builder
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules

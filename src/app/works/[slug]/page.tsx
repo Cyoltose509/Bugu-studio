@@ -9,6 +9,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -58,25 +60,25 @@ export default async function WorkDetailPage({ params }: PageProps) {
   if (!project) notFound();
 
   const externalLinks = [
-    { label: "Steam", url: project.steamUrl, emoji: "🎮" },
-    { label: "GitHub", url: project.githubUrl, emoji: "💻" },
-    { label: "Itch.io", url: project.itchUrl, emoji: "🕹️" },
-    { label: "网盘下载", url: project.panUrl, emoji: "📦" },
-    { label: "Google Drive", url: project.driveUrl, emoji: "📁" },
-    { label: "OneDrive", url: project.onedriveUrl, emoji: "☁️" },
-    { label: "视频演示", url: project.videoUrl, emoji: "▶️" },
-    { label: "官方网站", url: project.websiteUrl, emoji: "🌐" },
+    { label: "Steam", url: project.steamUrl, icon: "🎮" },
+    { label: "GitHub", url: project.githubUrl, icon: "💻" },
+    { label: "Itch.io", url: project.itchUrl, icon: "🕹️" },
+    { label: "网盘下载", url: project.panUrl, icon: "📦" },
+    { label: "Google Drive", url: project.driveUrl, icon: "📁" },
+    { label: "OneDrive", url: project.onedriveUrl, icon: "☁️" },
+    { label: "视频演示", url: project.videoUrl, icon: "▶️" },
+    { label: "官方网站", url: project.websiteUrl, icon: "🌐" },
   ].filter((l) => l.url);
 
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
       {/* 面包屑 */}
-      <nav className="text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-white">首页</Link>
+      <nav className="text-sm mb-6" style={{ color: "#999" }}>
+        <Link href="/" className="hover:underline" style={{ color: "#777" }}>首页</Link>
         <span className="mx-2">/</span>
-        <Link href="/works" className="hover:text-white">作品库</Link>
+        <Link href="/works" className="hover:underline" style={{ color: "#777" }}>作品库</Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-300">{project.title}</span>
+        <span style={{ color: "#555" }}>{project.title}</span>
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -84,7 +86,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
         <div className="lg:col-span-2">
           {/* 封面 */}
           {project.coverImage && (
-            <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-6">
+            <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
               <Image
                 src={project.coverImage}
                 alt={project.title}
@@ -95,9 +97,9 @@ export default async function WorkDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          <h1 className="text-3xl font-bold text-white mb-2">{project.title}</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "#25547A" }}>{project.title}</h1>
           {project.subtitle && (
-            <p className="text-gray-400 text-lg mb-4">{project.subtitle}</p>
+            <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>
           )}
 
           {/* 标签 */}
@@ -115,9 +117,9 @@ export default async function WorkDetailPage({ params }: PageProps) {
           </div>
 
           {/* 简介 */}
-          <div className="prose prose-invert max-w-none mb-8">
-            <h2 className="text-xl font-semibold text-white mb-3">作品简介</h2>
-            <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>作品简介</h2>
+            <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>
               {project.description}
             </p>
           </div>
@@ -125,10 +127,10 @@ export default async function WorkDetailPage({ params }: PageProps) {
           {/* 截图画廊 */}
           {project.images.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-white mb-4">游戏截图</h2>
+              <h2 className="text-xl font-semibold mb-4" style={{ color: "#25547A" }}>游戏截图</h2>
               <div className="grid grid-cols-2 gap-3">
                 {project.images.map((img) => (
-                  <div key={img.id} className="relative aspect-video rounded-lg overflow-hidden">
+                  <div key={img.id} className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ borderColor: "#D0DEE8" }}>
                     <Image
                       src={img.url}
                       alt={img.altText || project.title}
@@ -144,8 +146,8 @@ export default async function WorkDetailPage({ params }: PageProps) {
           {/* 开发日志 */}
           {project.devlog && (
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-white mb-4">开发日志</h2>
-              <div className="bg-gray-900 rounded-xl p-6 text-gray-300 whitespace-pre-wrap leading-relaxed border border-white/10">
+              <h2 className="text-xl font-semibold mb-4" style={{ color: "#25547A" }}>开发日志</h2>
+              <div className="rounded-xl p-6 whitespace-pre-wrap leading-relaxed border" style={{ background: "#F0F5F9", color: "#555", borderColor: "#D0DEE8" }}>
                 {project.devlog}
               </div>
             </div>
@@ -156,8 +158,8 @@ export default async function WorkDetailPage({ params }: PageProps) {
         <aside className="space-y-6">
           {/* 外部链接 */}
           {externalLinks.length > 0 && (
-            <div className="bg-gray-900 rounded-xl p-5 border border-white/10">
-              <h3 className="font-semibold text-white mb-3">获取游戏</h3>
+            <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
+              <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>获取游戏</h3>
               <div className="space-y-2">
                 {externalLinks.map((link) => (
                   <a
@@ -165,11 +167,12 @@ export default async function WorkDetailPage({ params }: PageProps) {
                     href={link.url!}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors hover:shadow-sm hover:bg-[#D0DEE8]"
+                    style={{ color: "#333", background: "#E6F0F8" }}
                   >
-                    <span>{link.emoji}</span>
+                    <span>{link.icon}</span>
                     <span>{link.label}</span>
-                    <span className="ml-auto text-gray-500">↗</span>
+                    <span className="ml-auto" style={{ color: "#999" }}>↗</span>
                   </a>
                 ))}
               </div>
@@ -177,19 +180,20 @@ export default async function WorkDetailPage({ params }: PageProps) {
           )}
 
           {/* 项目信息 */}
-          <div className="bg-gray-900 rounded-xl p-5 border border-white/10">
-            <h3 className="font-semibold text-white mb-3">项目信息</h3>
+          <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
+            <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>项目信息</h3>
             <dl className="space-y-2.5 text-sm">
               <InfoRow label="类型" value={project.type} />
               <InfoRow label="开发年份" value={String(project.developYear)} />
               {project.techStack.length > 0 && (
                 <div>
-                  <dt className="text-gray-500 mb-1">技术栈</dt>
+                  <dt className="mb-1" style={{ color: "#777" }}>技术栈</dt>
                   <dd className="flex flex-wrap gap-1.5">
                     {project.techStack.map((tech) => (
                       <span
                         key={tech}
-                        className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded"
+                        className="text-xs px-2 py-0.5 rounded"
+                        style={{ background: "#E6F0F8", color: "#3388BB" }}
                       >
                         {tech}
                       </span>
@@ -202,16 +206,17 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
           {/* 开发团队 */}
           {project.members.length > 0 && (
-            <div className="bg-gray-900 rounded-xl p-5 border border-white/10">
-              <h3 className="font-semibold text-white mb-3">开发团队</h3>
+            <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
+              <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>开发团队</h3>
               <div className="space-y-3">
                 {project.members.map(({ member, role }) => (
                   <Link
                     key={member.id}
                     href={`/members/${member.id}`}
-                    className="flex items-center gap-3 hover:bg-white/5 rounded-lg p-1.5 -mx-1.5 transition-colors"
+                    className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5 transition-colors hover:bg-[#E6F0F8]"
                   >
-                    <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden"
+                      style={{ background: "linear-gradient(135deg, #E38043, #F09055)" }}>
                       {member.avatar ? (
                         <Image
                           src={member.avatar}
@@ -224,8 +229,8 @@ export default async function WorkDetailPage({ params }: PageProps) {
                       )}
                     </div>
                     <div>
-                      <div className="text-sm text-white">{member.displayName}</div>
-                      <div className="text-xs text-gray-500">{role}</div>
+                      <div className="text-sm font-medium" style={{ color: "#333" }}>{member.displayName}</div>
+                      <div className="text-xs" style={{ color: "#999" }}>{role}</div>
                     </div>
                   </Link>
                 ))}
@@ -241,8 +246,8 @@ export default async function WorkDetailPage({ params }: PageProps) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="text-gray-200">{value}</dd>
+      <dt style={{ color: "#777" }}>{label}</dt>
+      <dd style={{ color: "#333" }}>{value}</dd>
     </div>
   );
 }

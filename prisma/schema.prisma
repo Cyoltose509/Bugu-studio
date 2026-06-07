@@ -144,6 +144,24 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// 邀请码（注册时赋予对应角色）
+model InviteCode {
+  id          String   @id @default(cuid())
+  code        String   @unique           // 如 "BUGU-MEMBER-ABC123"
+  role        UserRole @default(MEMBER)  // 注册后赋予的角色
+  maxUses     Int?                      // null = 无限次
+  usedCount   Int      @default(0)
+  expiresAt   DateTime?                 // null = 永不过期
+  description String?                   // 备注（谁发的，用途等）
+  isActive    Boolean  @default(true)
+  createdBy   String?                   // 创建者 userId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+}
+
 // 登录失败记录（防暴力破解）
 model LoginAttempt {
   id        String   @id @default(cuid())
