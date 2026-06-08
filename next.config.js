@@ -25,9 +25,9 @@ const nextConfig = {
         "www.bugu-studio.com",
       ],
     },
-    // jose 在 Edge Runtime 会引用 Node.js API，标为外部包避免打包进 Edge bundle
-    serverExternalPackages: ["jose"],
   },
+  // jose 在 Edge Runtime 会引用 Node.js API，标为外部包避免打包进 Edge bundle
+  serverExternalPackages: ["jose"],
   // Security headers
   async headers() {
     return [

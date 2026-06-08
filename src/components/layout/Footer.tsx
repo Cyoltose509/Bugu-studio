@@ -15,7 +15,7 @@ export function Footer() {
               <span className="font-bold" style={{ color: "#25547A" }}>布谷工作室</span>
             </div>
             <p className="text-sm" style={{ color: "#777" }}>
-              成立于 {foundedYear} 年，致力于游戏开发的探索与创造。
+              致力于游戏开发的探索与创造。
             </p>
           </div>
           <div>

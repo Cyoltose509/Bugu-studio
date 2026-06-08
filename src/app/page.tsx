@@ -47,9 +47,9 @@ export default async function HomePage() {
         <div className="container mx-auto max-w-3xl relative">
           <Image src="/images/logo.png" alt="布谷工作室" width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg" />
           <h1 className="text-4xl md:text-6xl font-bold mb-4" style={{ color: "#25547A" }}>布谷工作室</h1>
-          <p className="text-xl mb-3" style={{ color: "#555" }}>成立于 {stats.foundedYear} 年 · 作品档案馆</p>
+          <p className="text-xl mb-3" style={{ color: "#555" }}>作品档案馆</p>
           <p className="mb-8 max-w-xl mx-auto" style={{ color: "#777" }}>
-            我们是一群热爱游戏开发的同学，用代码和创意共同构建虚拟世界。这里存档了历届社员的每一份作品与心血。
+            我们是一群热爱游戏开发的同学，这里存档了历届社员的每一份作品与心血。
           </p>
           <div className="flex justify-center gap-4">
             <Link href="/works" className="btn-primary px-6 py-3 rounded-lg font-medium text-sm">浏览作品</Link>

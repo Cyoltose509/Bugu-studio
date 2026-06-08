@@ -70,15 +70,19 @@ export const authConfig = {
         session.user.role = token.role as any;
         session.user.email = token.email as string;
 
-        // 每次读取 session 时校验 isActive（仅 Node.js 环境）
+        // 每次读取 session 时校验 isActive，并同步 image/name（仅 Node.js 环境）
         try {
           const { prisma } = await import("@/lib/db/prisma");
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { isActive: true },
+            select: { isActive: true, image: true, name: true },
           });
           if (!dbUser?.isActive) {
             session.user = undefined as any;
+          } else {
+            // 同步最新的头像和名称到 session（用户可能刚修改过）
+            if (dbUser.image) session.user.image = dbUser.image;
+            if (dbUser.name) session.user.name = dbUser.name;
           }
         } catch {
           // Edge runtime 降级：信任 JWT（prisma 不可用）

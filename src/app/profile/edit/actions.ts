@@ -16,6 +16,8 @@ const schema = z.object({
   website: z.string().url().optional().or(z.literal("")),
 });
 
+const NAME_CHANGE_DAYS = 7;
+
 export async function saveProfile(formData: FormData) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
@@ -39,10 +41,34 @@ export async function saveProfile(formData: FormData) {
 
   const { name, bio, grade, skills, githubUrl, itchUrl, website } = result.data;
 
-  // 更新 User.name
+  // ═══ 名称修改速率限制（7 天一次）═══
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { name: true, nameChangedAt: true },
+  });
+
+  if (name !== dbUser?.name && dbUser?.nameChangedAt) {
+    const cooldownEnd = new Date(
+      dbUser.nameChangedAt.getTime() + NAME_CHANGE_DAYS * 24 * 3600 * 1000
+    );
+    if (cooldownEnd > new Date()) {
+      const remainingDays = Math.ceil(
+        (cooldownEnd.getTime() - Date.now()) / (1000 * 86400)
+      );
+      return {
+        error: `显示名称每 ${NAME_CHANGE_DAYS} 天只能修改一次，还需等待 ${remainingDays} 天`,
+      };
+    }
+  }
+
+  // 更新 User.name（仅在名称变化时更新 nameChangedAt）
+  const userUpdateData: any = { name };
+  if (name !== dbUser?.name) {
+    userUpdateData.nameChangedAt = new Date();
+  }
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { name },
+    data: userUpdateData,
   });
 
   // 更新 ClubMember（如果存在）
@@ -55,7 +81,6 @@ export async function saveProfile(formData: FormData) {
       where: { id: member.id },
       data: {
         ...(bio !== undefined && { bio: bio || null }),
-        // 仅管理员可修改年级
         ...(isAdmin && grade !== undefined && { grade: grade || null }),
         ...(skills !== undefined && {
           skills: skills
@@ -71,4 +96,88 @@ export async function saveProfile(formData: FormData) {
 
   revalidatePath("/profile");
   redirect("/profile");
+}
+
+/**
+ * 兑换邀请码升级身份（独立 Server Action）
+ */
+export async function redeemInviteCode(inviteCode: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "请先登录" };
+  }
+
+  if (!inviteCode?.trim()) {
+    return { error: "请输入邀请码" };
+  }
+
+  const code = await prisma.inviteCode.findUnique({
+    where: { code: inviteCode.trim().toUpperCase() },
+  });
+
+  if (!code || !code.isActive) {
+    return { error: "邀请码无效" };
+  }
+
+  if (code.expiresAt && code.expiresAt < new Date()) {
+    return { error: "邀请码已过期" };
+  }
+
+  if (code.maxUses && code.usedCount >= code.maxUses) {
+    return { error: "邀请码已达使用上限" };
+  }
+
+  const targetRole = code.role as "USER" | "MEMBER" | "ADMIN";
+  const roleHierarchy: Record<string, number> = { USER: 0, MEMBER: 1, ADMIN: 2 };
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  if (roleHierarchy[currentUser!.role] >= roleHierarchy[targetRole]) {
+    const roleLabels: Record<string, string> = {
+      ADMIN: "管理员",
+      MEMBER: "社团成员",
+      USER: "普通用户",
+    };
+    return {
+      error: `你当前的「${roleLabels[currentUser!.role]}」身份已等于或高于邀请码等级`,
+    };
+  }
+
+  // 使用邀请码
+  await prisma.inviteCode.update({
+    where: { id: code.id },
+    data: { usedCount: { increment: 1 } },
+  });
+
+  // 更新角色
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { role: targetRole },
+  });
+
+  // 同步 ClubMember
+  if (targetRole === "MEMBER" || targetRole === "ADMIN") {
+    const existing = await prisma.clubMember.findUnique({
+      where: { userId: session.user.id },
+    });
+    if (!existing) {
+      await prisma.clubMember.create({
+        data: {
+          userId: session.user.id,
+          displayName: session.user.name ?? "新成员",
+          joinYear: new Date().getFullYear(),
+        },
+      });
+    }
+  }
+
+  const messages: Record<string, string> = {
+    ADMIN: "已升级为管理员",
+    MEMBER: "已升级为社团成员",
+  };
+
+  return { success: true, role: targetRole, message: messages[targetRole] };
 }

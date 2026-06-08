@@ -122,7 +122,7 @@ function RegisterForm() {
               <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="password">密码</label>
               <input id="password" type="password" required autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)}
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                style={{ borderColor: "#D0DEE8", color: "#333" }} placeholder="至少8位，含大小写字母和数字" />
+                style={{ borderColor: "#D0DEE8", color: "#333" }} placeholder="至少8位" />
             </div>
             <div>
               <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="confirmPassword">确认密码</label>

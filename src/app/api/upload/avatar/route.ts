@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { uploadToR2 } from "@/lib/utils/upload";
-import { isRateLimited, resetRateLimit } from "@/lib/utils/rateLimit";
+import { isRateLimited, getRateLimitRemaining, resetRateLimit } from "@/lib/utils/rateLimit";
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "avatars");
 const AVATAR_CHANGE_DAYS = 7;

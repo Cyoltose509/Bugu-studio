@@ -78,6 +78,7 @@ model User {
   passwordHash     String?  // scrypt hash
   image            String?  // 头像 URL（R2）
   avatarChangedAt  DateTime? // 上次更换头像时间（限制7天一次）
+  nameChangedAt    DateTime? // 上次修改名称时间（限制7天一次）
   role             UserRole @default(USER)
   isActive         Boolean  @default(true)
   lastLoginAt      DateTime?

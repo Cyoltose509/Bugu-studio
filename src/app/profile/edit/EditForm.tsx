@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState, useRef, useCallback } from "react";
-import { saveProfile } from "./actions";
+import { useSession } from "next-auth/react";
+import { saveProfile, redeemInviteCode } from "./actions";
 import Cropper from "react-easy-crop";
 import { getCroppedImg, readFileAsDataURL } from "@/lib/utils/imageCrop";
 
@@ -26,6 +27,8 @@ export default function EditForm({
   member: MemberSnippet | null;
   isAdmin: boolean;
 }) {
+  const { update: updateSession } = useSession();
+
   const [state, formAction, pending] = useActionState(
     async (_prev: any, formData: FormData) => {
       return saveProfile(formData);
@@ -44,6 +47,7 @@ export default function EditForm({
   );
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+  const [avatarSuccess, setAvatarSuccess] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   // 裁剪状态
@@ -52,6 +56,12 @@ export default function EditForm({
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedPixels, setCroppedPixels] = useState<any>(null);
+
+  // 邀请码
+  const [inviteInput, setInviteInput] = useState("");
+  const [invitePending, setInvitePending] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState("");
+  const [inviteError, setInviteError] = useState("");
 
   function addSkill() {
     const v = skillInput.trim();
@@ -70,6 +80,7 @@ export default function EditForm({
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarError("");
+    setAvatarSuccess("");
     try {
       const dataUrl = await readFileAsDataURL(file);
       setCropSrc(dataUrl);
@@ -86,20 +97,25 @@ export default function EditForm({
     if (!cropSrc || !croppedPixels) return;
     setAvatarUploading(true);
     setShowCrop(false);
+    setAvatarError("");
+    setAvatarSuccess("");
     try {
       const { blob, url: croppedUrl } = await getCroppedImg(
         cropSrc,
         croppedPixels,
-        400,  // 头像最大宽度
-        0.85  // JPEG 质量
+        400,
+        0.85
       );
-      // 上传到 API
       const fd = new FormData();
       fd.append("file", new File([blob], "avatar.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/upload/avatar", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "上传失败");
       setAvatarPreview(json.url);
+      setAvatarSuccess("头像已更新");
+
+      // 刷新 session，让导航栏等位置立刻显示新头像
+      await updateSession();
     } catch (err: any) {
       setAvatarError(err.message || "上传失败");
     } finally {
@@ -111,6 +127,29 @@ export default function EditForm({
   function handleCropCancel() {
     setShowCrop(false);
     setCropSrc(null);
+  }
+
+  // 兑换邀请码
+  async function handleRedeemInvite() {
+    if (!inviteInput.trim()) return;
+    setInvitePending(true);
+    setInviteError("");
+    setInviteMsg("");
+    try {
+      const result = await redeemInviteCode(inviteInput.trim());
+      if (result.error) {
+        setInviteError(result.error);
+      } else {
+        setInviteMsg(result.message!);
+        setInviteInput("");
+        // 刷新 session 以获取新角色
+        await updateSession();
+      }
+    } catch {
+      setInviteError("兑换失败，请稍后重试");
+    } finally {
+      setInvitePending(false);
+    }
   }
 
   return (
@@ -144,7 +183,9 @@ export default function EditForm({
             )}
           </div>
           <div className="flex-1 space-y-1">
-            <p className="text-sm" style={{ color: "#555" }}>头像</p>
+            <p className="text-sm" style={{ color: "#555" }}>
+              头像 <span className="text-xs" style={{ color: "#999" }}>(7天内只能更换一次)</span>
+            </p>
             <input
               ref={fileRef}
               type="file"
@@ -162,8 +203,8 @@ export default function EditForm({
               >
                 {avatarUploading ? "处理中..." : "更换头像"}
               </button>
-              {avatarPreview && (
-                <span className="text-xs" style={{ color: "#88C232" }}>✓ 已上传</span>
+              {avatarSuccess && (
+                <span className="text-xs" style={{ color: "#88C232" }}>✓ {avatarSuccess}</span>
               )}
             </div>
             {avatarError && (
@@ -175,7 +216,7 @@ export default function EditForm({
         {/* 姓名 */}
         <div>
           <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="name">
-            显示名称
+            显示名称 <span className="text-xs" style={{ color: "#999" }}>(7天内只能修改一次)</span>
           </label>
           <input
             id="name"
@@ -322,6 +363,38 @@ export default function EditForm({
             </div>
           </>
         )}
+
+        {/* ══════════ 邀请码兑换 ══════════ */}
+        <div className="border-t pt-4" style={{ borderColor: "#E8F0F8" }}>
+          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>
+            邀请码兑换 <span className="text-xs" style={{ color: "#999" }}>(升级为社团成员或管理员)</span>
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={inviteInput}
+              onChange={(e) => setInviteInput(e.target.value)}
+              placeholder="输入邀请码"
+              className="flex-1 rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+              style={{ borderColor: "#D0DEE8", color: "#333" }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleRedeemInvite(); } }}
+            />
+            <button
+              type="button"
+              onClick={handleRedeemInvite}
+              disabled={invitePending || !inviteInput.trim()}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 whitespace-nowrap"
+              style={{ background: "#E38043" }}
+            >
+              {invitePending ? "兑换中..." : "兑换"}
+            </button>
+          </div>
+          {inviteMsg && (
+            <p className="text-xs mt-1" style={{ color: "#88C232" }}>{inviteMsg}</p>
+          )}
+          {inviteError && (
+            <p className="text-xs mt-1" style={{ color: "#E38043" }}>{inviteError}</p>
+          )}
+        </div>
 
         {/* 错误提示 */}
         {state?.error && (
