@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import { auth } from "@/lib/auth/auth";
 import { ProjectStatus } from "@prisma/client";
 import EditButton from "./EditButton";
 
@@ -59,7 +60,20 @@ export default async function WorkDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const project = await getProject(slug);
 
-  if (!project || project.status !== ProjectStatus.PUBLISHED) notFound();
+  if (!project) notFound();
+
+  // 非 PUBLISHED 作品：仅提交者 / ADMIN / REVIEWER 可查看
+  const session = project.status !== ProjectStatus.PUBLISHED ? await auth() : null;
+  if (!session && project.status !== ProjectStatus.PUBLISHED) notFound();
+  if (project.status !== ProjectStatus.PUBLISHED) {
+    const role = session!.user?.role as string | undefined;
+    const userId = session!.user?.id;
+    const isSubmitter = userId === project.submitterId;
+    const isStaff = role === "ADMIN" || role === "REVIEWER";
+    if (!isSubmitter && !isStaff) notFound();
+  }
+
+  const isPending = project.status !== ProjectStatus.PUBLISHED;
 
   const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
     DRAFT:    { bg: "#F5F5F5", color: "#777",   label: "草稿" },
@@ -90,6 +104,30 @@ export default async function WorkDetailPage({ params }: PageProps) {
         <span className="mx-2">/</span>
         <span style={{ color: "#555" }}>{project.title}</span>
       </nav>
+
+      {/* 待审核横幅 */}
+      {isPending && (
+        <div className="rounded-xl border p-4 mb-6 flex items-center gap-3" style={{ borderColor: "#FFCC80", background: "#FFF8E1" }}>
+          <span className="text-xl">⏳</span>
+          <div>
+            <div className="font-medium text-sm" style={{ color: "#E65100" }}>
+              {project.status === "PENDING" ? "待审核" : project.status === "DRAFT" ? "草稿" : project.status === "REJECTED" ? "已拒绝" : project.status}
+            </div>
+            <div className="text-xs mt-0.5" style={{ color: "#BF360C" }}>
+              {project.status === "PENDING" ? "此作品正在等待管理员审核，仅你和审核人员可查看。" :
+               project.status === "DRAFT" ? "此作品为草稿状态，尚未提交审核。" :
+               "此作品已被拒绝，你可以修改后重新提交。"}
+            </div>
+          </div>
+          <div className="ml-auto">
+            <Link href={`/works/${project.slug}/edit`}
+              className="text-sm px-4 py-2 rounded-lg font-medium text-white"
+              style={{ background: "#3388BB" }}>
+              ✏️ 编辑
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2">

@@ -582,17 +582,27 @@ export default function SubmitForm({ tags }: Props) {
               <option value="__custom__">自定义...</option>
             </select>
           ) : (
-            <input
-              type="text"
-              value={newLinkLabel}
-              onChange={(e) => setNewLinkLabel(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); addLink(); }
-              }}
-              placeholder="链接标签"
-              className={`${inputClass} w-36`}
-              style={inputStyle}
-            />
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={newLinkLabel}
+                onChange={(e) => setNewLinkLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); addLink(); }
+                }}
+                placeholder="链接标签"
+                className={`${inputClass} w-36`}
+                style={inputStyle}
+              />
+              <button
+                type="button"
+                onClick={() => { setShowCustomLabel(false); setNewLinkLabel(""); }}
+                className="text-xs px-2 py-1.5 rounded hover:bg-gray-100 whitespace-nowrap"
+                style={{ color: "#3388BB" }}
+              >
+                ← 预设
+              </button>
+            </div>
           )}
           <input
             type="url"

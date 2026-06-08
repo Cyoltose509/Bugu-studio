@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +64,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         orderBy: { createdAt: "desc" },
         select: {
           id: true, slug: true, title: true, status: true,
-          type: true, developYear: true, createdAt: true,
+          type: true, developYear: true, coverImage: true, createdAt: true,
         },
-        take: 10,
+        take: 12,
       })
     , 30),
   ]);
@@ -263,34 +264,55 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         );
       })()}
 
-      {/* 作品列表 */}
+      {/* 作品列表 — 橱窗形式 */}
       <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
         <h2 className="font-semibold mb-4" style={{ color: "#25547A" }}>我的作品</h2>
         {userProjects.length === 0 ? (
-          <div className="text-center py-8 text-sm" style={{ color: "#777" }}>
+          <div className="text-center py-10 text-sm" style={{ color: "#777" }}>
             暂无作品
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {userProjects.map(p => (
               <Link key={p.id} href={`/works/${p.slug}`}
-                className="flex items-center justify-between p-3 rounded-lg border hover:border-[#3388BB] hover:shadow-sm transition-all"
-                style={{ borderColor: "#EEE" }}>
-                <div>
-                  <div className="font-medium text-sm" style={{ color: "#333" }}>{p.title}</div>
-                  <div className="flex items-center gap-2 mt-1">
+                className="group block rounded-xl border overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5"
+                style={{ borderColor: "#E8EEF4" }}>
+                {/* 封面 */}
+                <div className="relative aspect-video bg-gray-100 overflow-hidden">
+                  {p.coverImage ? (
+                    <Image
+                      src={p.coverImage}
+                      alt={p.title}
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E6F0F8, #F0F5F9)" }}>
+                      <span className="text-2xl opacity-30">🎮</span>
+                    </div>
+                  )}
+                  {/* 状态角标 */}
+                  <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm shadow-sm"
+                    style={{
+                      background: p.status === "PUBLISHED" ? "rgba(46,125,50,0.85)" : "rgba(230,81,0,0.85)",
+                      color: "#fff",
+                    }}>
+                    {p.status === "PUBLISHED" ? "已发布" : p.status === "PENDING" ? "待审核" : p.status}
+                  </span>
+                </div>
+                {/* 信息 */}
+                <div className="p-3">
+                  <div className="font-medium text-sm truncate group-hover:text-[#3388BB]" style={{ color: "#333" }}>
+                    {p.title}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "#E6F0F8", color: "#25547A" }}>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#E6F0F8", color: "#25547A" }}>
                       {p.type.replace("_", " ")}
                     </span>
                   </div>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{
-                  background: p.status === "PUBLISHED" ? "#E8F5E9" : p.status === "PENDING" ? "#FFF3E0" : "#F5F5F5",
-                  color: p.status === "PUBLISHED" ? "#2E7D32" : p.status === "PENDING" ? "#E65100" : "#777",
-                }}>
-                  {p.status === "PUBLISHED" ? "已发布" : p.status === "PENDING" ? "待审核" : p.status}
-                </span>
               </Link>
             ))}
           </div>

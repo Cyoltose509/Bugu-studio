@@ -654,6 +654,8 @@ export default function EditForm({
                                 crop={crop}
                                 zoom={zoom}
                                 aspect={1}
+                                cropShape="round"
+                                showGrid={false}
                                 onCropChange={setCrop}
                                 onZoomChange={setZoom}
                                 onCropComplete={(_, croppedAreaPixels) => setCroppedPixels(croppedAreaPixels)}
