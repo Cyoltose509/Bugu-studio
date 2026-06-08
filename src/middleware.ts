@@ -36,18 +36,7 @@ export default async function middleware(req: NextRequest) {
   }
 
   // ══════════════════════════════════════════════════
-  // 2. 规范域名：www.bugu-studio.com → bugu-studio.com
-  //    RSC 请求也重定向（同项目内的重定向对 Next.js 无害）
-  // ══════════════════════════════════════════════════
-  const host = req.headers.get("host") || "";
-  if (host.startsWith("www.")) {
-    const url = req.nextUrl.clone();
-    url.host = host.replace("www.", "");
-    return NextResponse.redirect(url, 301);
-  }
-
-  // ══════════════════════════════════════════════════
-  // 3. 获取会话（直接调用 auth()，不使用 wrapper）
+  // 2. 获取会话（直接调用 auth()，不使用 wrapper）
   // ══════════════════════════════════════════════════
   const session = await auth();
   const user = session?.user;
