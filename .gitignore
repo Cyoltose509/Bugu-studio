@@ -44,3 +44,5 @@ Thumbs.db
 # 本地上传临时文件
 uploads/
 tmp/
+
+nul
