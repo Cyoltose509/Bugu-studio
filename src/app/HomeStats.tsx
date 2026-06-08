@@ -1,15 +1,16 @@
 /**
- * 首页统计数据 — 直接查询，较快
+ * 首页统计数据 — 使用缓存减少数据库查询
  */
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 export default async function HomeStats() {
   const foundedYear = parseInt(process.env.NEXT_PUBLIC_CLUB_FOUNDED_YEAR || "2018");
   const [memberCount, projectCount, steamCount] = await Promise.all([
-    prisma.clubMember.count(),
-    prisma.project.count({ where: { status: ProjectStatus.PUBLISHED } }),
-    prisma.project.count({ where: { status: ProjectStatus.PUBLISHED, type: "STEAM" } }),
+    cachedQuery('stats:memberCount', () => prisma.clubMember.count(), 300),
+    cachedQuery('stats:projectCount', () => prisma.project.count({ where: { status: ProjectStatus.PUBLISHED } }), 300),
+    cachedQuery('stats:steamCount', () => prisma.project.count({ where: { status: ProjectStatus.PUBLISHED, type: "STEAM" } }), 300),
   ]);
 
   return (

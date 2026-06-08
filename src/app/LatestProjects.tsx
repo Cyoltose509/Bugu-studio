@@ -4,31 +4,34 @@
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 type ProjectWithRelations = Awaited<ReturnType<typeof getProjects>>[number];
 
 async function getProjects() {
-  return prisma.project.findMany({
-    where: { status: ProjectStatus.PUBLISHED },
-    orderBy: { publishedAt: "desc" },
-    take: 4,
-    include: {
-      tags: { include: { tag: true } },
-      members: {
-        take: 3,
-        include: {
-          member: {
-            select: {
-              displayName: true,
-              avatar: true,
-              user: { select: { image: true } },
+  return cachedQuery('projects:latest', () =>
+    prisma.project.findMany({
+      where: { status: ProjectStatus.PUBLISHED },
+      orderBy: { publishedAt: "desc" },
+      take: 4,
+      include: {
+        tags: { include: { tag: true } },
+        members: {
+          take: 3,
+          include: {
+            member: {
+              select: {
+                displayName: true,
+                avatar: true,
+                user: { select: { image: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    })
+  , 60);
 }
 
 export default async function LatestProjects() {
