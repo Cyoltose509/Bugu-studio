@@ -190,10 +190,7 @@ model ClubMember {
   grade       String?                   // 年级，如 "2021级"
   joinYear    Int                       // 入社年份
   graduateYear Int?                     // 毕业年份（null = 在读）
-  skills      String[] @default([])     // 技能标签
-  githubUrl   String?
-  itchUrl     String?
-  website     String?
+  skills      String[] @default([])     // 职能标签
   isActive    Boolean  @default(true)   // 是否在读/活跃
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
@@ -201,9 +198,24 @@ model ClubMember {
 
   user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectMembers  ProjectMember[]
+  socialLinks     MemberLink[]
 
   @@index([joinYear])
   @@index([isActive])
+}
+
+// 成员自定义链接（可自由添加多个）
+model MemberLink {
+  id        String   @id @default(cuid())
+  memberId  String
+  label     String   // 显示标签，如 "GitHub", "B站", "个人网站"
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  member ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
 }
 
 // ============================================================

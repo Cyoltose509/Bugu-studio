@@ -48,9 +48,10 @@ export async function GET(request: NextRequest) {
         graduateYear: true,
         bio: true,
         skills: true,
-        githubUrl: true,
-        itchUrl: true,
-        website: true,
+        socialLinks: {
+          select: { id: true, label: true, url: true },
+          orderBy: { sortOrder: "asc" },
+        },
         isActive: true,
         _count: { select: { projectMembers: true } },
       },

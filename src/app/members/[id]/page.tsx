@@ -33,7 +33,8 @@ export default async function MemberDetailPage({ params }: PageProps) {
   const member = await prisma.clubMember.findUnique({
     where: { id },
     include: {
-      user: { select: { role: true } },
+      user: { select: { role: true, image: true } },
+      socialLinks: { orderBy: { sortOrder: "asc" } },
       projectMembers: {
         orderBy: { sortOrder: "asc" },
         include: {
@@ -54,11 +55,17 @@ export default async function MemberDetailPage({ params }: PageProps) {
 
   if (!member) notFound();
 
-  const links = [
-    { label: "GitHub", url: member.githubUrl, icon: "💻" },
-    { label: "Itch.io", url: member.itchUrl, icon: "🕹️" },
-    { label: "个人网站", url: member.website, icon: "🌐" },
-  ].filter((l) => l.url);
+  const LINK_ICONS: Record<string, string> = {
+    "GitHub": "💻", "B站": "▶️", "个人网站": "🌐", "知乎": "📝",
+    "小红书": "📕", "微博": "📢", "抖音": "🎵", "CSDN": "📋",
+    "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
+  };
+
+  const links = (member.socialLinks ?? []).map((l) => ({
+    label: l.label,
+    url: l.url,
+    icon: LINK_ICONS[l.label] || "🔗",
+  }));
 
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">

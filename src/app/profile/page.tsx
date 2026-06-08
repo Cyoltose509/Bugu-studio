@@ -9,6 +9,12 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+const LINK_ICONS: Record<string, string> = {
+  "GitHub": "💻", "B站": "▶️", "个人网站": "🌐", "知乎": "📝",
+  "小红书": "📕", "微博": "📢", "抖音": "🎵", "CSDN": "📋",
+  "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
+};
+
 export default async function ProfilePage() {
   const session = await auth();
 
@@ -37,8 +43,8 @@ export default async function ProfilePage() {
       select: {
         id: true, displayName: true, bio: true, grade: true,
         joinYear: true, graduateYear: true, skills: true,
-        githubUrl: true, itchUrl: true, website: true,
         isActive: true,
+        socialLinks: { orderBy: { sortOrder: "asc" } },
       },
     }),
     prisma.project.findMany({
@@ -182,13 +188,15 @@ export default async function ProfilePage() {
             </div>
           )}
 
-          {(member.githubUrl || member.itchUrl || member.website) && (
+          {(member.socialLinks?.length ?? 0) > 0 && (
             <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-              <div className="text-xs mb-2" style={{ color: "#999" }}>外部链接</div>
+              <div className="text-xs mb-2" style={{ color: "#999" }}>个人链接</div>
               <div className="flex flex-wrap gap-3">
-                {member.githubUrl && <Link href={member.githubUrl} target="_blank" className="text-sm hover:underline" style={{ color: "#3388BB" }}>GitHub</Link>}
-                {member.itchUrl && <Link href={member.itchUrl} target="_blank" className="text-sm hover:underline" style={{ color: "#3388BB" }}>itch.io</Link>}
-                {member.website && <Link href={member.website} target="_blank" className="text-sm hover:underline" style={{ color: "#3388BB" }}>个人网站</Link>}
+                {member.socialLinks!.map((l) => (
+                  <Link key={l.id} href={l.url} target="_blank" className="text-sm hover:underline flex items-center gap-1" style={{ color: "#3388BB" }}>
+                    {LINK_ICONS[l.label] || "🔗"} {l.label}
+                  </Link>
+                ))}
               </div>
             </div>
           )}

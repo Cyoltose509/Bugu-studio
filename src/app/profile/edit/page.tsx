@@ -34,9 +34,7 @@ export default async function EditProfilePage() {
         bio: true,
         grade: true,
         skills: true,
-        githubUrl: true,
-        itchUrl: true,
-        website: true,
+        socialLinks: { orderBy: { sortOrder: "asc" } },
       },
     }),
   ]);

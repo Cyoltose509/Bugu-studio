@@ -91,9 +91,6 @@ export const memberUpdateSchema = z.object({
   joinYear: z.number().int().min(2000).max(2100).optional(),
   graduateYear: z.number().int().min(2000).max(2100).nullable().optional(),
   skills: z.array(z.string().max(30)).max(20).optional(),
-  githubUrl: z.string().url().optional().or(z.literal("")),
-  itchUrl: z.string().url().optional().or(z.literal("")),
-  website: z.string().url().optional().or(z.literal("")),
 });
 
 // ============================================================

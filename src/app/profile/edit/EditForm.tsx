@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useState, useRef } from "react";
-import { useSession } from "next-auth/react";
-import { saveProfile, redeemInviteCode } from "./actions";
+import {useActionState, useState, useRef, useEffect} from "react";
+import {useSession} from "next-auth/react";
+import {saveProfile, redeemInviteCode} from "./actions";
 import Cropper from "react-easy-crop";
-import { getCroppedImg, readFileAsDataURL } from "@/lib/utils/imageCrop";
+import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
 
 type UserSnippet = { id: string; name: string | null; image: string | null };
 type MemberSnippet = {
@@ -13,11 +13,13 @@ type MemberSnippet = {
   bio: string | null;
   grade: string | null;
   skills: string[];
-  githubUrl: string | null;
-  itchUrl: string | null;
-  website: string | null;
+  socialLinks: { id: string; label: string; url: string; sortOrder: number }[];
 };
 type CooldownInfo = { canEdit: boolean; remainingDays: number };
+
+interface LinkEntry { label: string; url: string; }
+
+const LINK_LABEL_PRESETS = ["GitHub", "B站", "个人网站", "知乎", "小红书", "微博", "抖音", "CSDN", "掘金", "Steam", "itch.io"];
 
 export default function EditForm({
   user,
@@ -32,7 +34,7 @@ export default function EditForm({
   avatarCooldown: CooldownInfo;
   nameCooldown: CooldownInfo;
 }) {
-  const { update: updateSession } = useSession();
+  const {update: updateSession} = useSession();
 
   const [state, formAction, pending] = useActionState(
     async (_prev: any, formData: FormData) => {
@@ -45,9 +47,7 @@ export default function EditForm({
   const originalName = user.name ?? "";
   const originalBio = member?.bio ?? "";
   const originalSkills = member?.skills ?? [];
-  const originalGithub = member?.githubUrl ?? "";
-  const originalItch = member?.itchUrl ?? "";
-  const originalWebsite = member?.website ?? "";
+  const originalLinks: LinkEntry[] = (member?.socialLinks ?? []).map(l => ({ label: l.label, url: l.url }));
 
   const [skillInput, setSkillInput] = useState("");
   const [skills, setSkills] = useState<string[]>(originalSkills);
@@ -66,7 +66,7 @@ export default function EditForm({
   // 裁剪状态
   const [showCrop, setShowCrop] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [crop, setCrop] = useState({x: 0, y: 0});
   const [zoom, setZoom] = useState(1);
   const [croppedPixels, setCroppedPixels] = useState<any>(null);
 
@@ -76,22 +76,26 @@ export default function EditForm({
   const [inviteMsg, setInviteMsg] = useState("");
   const [inviteError, setInviteError] = useState("");
 
-  // 检测表单是否有修改
+  // 表单值
   const [nameValue, setNameValue] = useState(originalName);
   const [bioValue, setBioValue] = useState(originalBio);
-  const [githubValue, setGithubValue] = useState(originalGithub);
-  const [itchValue, setItchValue] = useState(originalItch);
-  const [websiteValue, setWebsiteValue] = useState(originalWebsite);
 
+  // 自定义链接
+  const [socialLinks, setSocialLinks] = useState<LinkEntry[]>(originalLinks);
+  const [newLinkLabel, setNewLinkLabel] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [showCustomLabel, setShowCustomLabel] = useState(false);
+
+  // dirty state 检测
   const hasChanged =
     nameValue !== originalName ||
     (member && bioValue !== originalBio) ||
-    (member && githubValue !== originalGithub) ||
-    (member && itchValue !== originalItch) ||
-    (member && websiteValue !== originalWebsite) ||
-    JSON.stringify(skills) !== JSON.stringify(originalSkills);
+    JSON.stringify(skills) !== JSON.stringify(originalSkills) ||
+    JSON.stringify(socialLinks.map(({label, url}) => ({label, url}))) !==
+    JSON.stringify(originalLinks.map(({label, url}) => ({label, url})));
 
   const canSave = hasChanged && !pending;
+  const canEditLinks = !!member;
 
   function addSkill() {
     const v = skillInput.trim();
@@ -103,6 +107,20 @@ export default function EditForm({
 
   function removeSkill(s: string) {
     setSkills(skills.filter((x) => x !== s));
+  }
+
+  function addLink() {
+    const label = newLinkLabel.trim();
+    const url = newLinkUrl.trim();
+    if (!label || !url) return;
+    setSocialLinks([...socialLinks, { label, url }]);
+    setNewLinkLabel("");
+    setNewLinkUrl("");
+    setShowCustomLabel(false);
+  }
+
+  function removeLink(index: number) {
+    setSocialLinks(socialLinks.filter((_, i) => i !== index));
   }
 
   // 文件选择 → 打开裁剪弹窗
@@ -130,16 +148,14 @@ export default function EditForm({
     setAvatarError("");
     setAvatarSuccess("");
     try {
-      const { blob } = await getCroppedImg(cropSrc, croppedPixels, 400, 0.85);
+      const {blob} = await getCroppedImg(cropSrc, croppedPixels, 400, 0.85);
       const fd = new FormData();
-      fd.append("file", new File([blob], "avatar.jpg", { type: "image/jpeg" }));
-      const res = await fetch("/api/upload/avatar", { method: "POST", body: fd });
+      fd.append("file", new File([blob], "avatar.jpg", {type: "image/jpeg"}));
+      const res = await fetch("/api/upload/avatar", {method: "POST", body: fd});
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "上传失败");
       setAvatarPreview(json.url);
       setAvatarSuccess("头像已更新");
-
-      // 刷新 session，让导航栏等位置立刻显示新头像
       await updateSession();
     } catch (err: any) {
       setAvatarError(err.message || "上传失败");
@@ -182,10 +198,11 @@ export default function EditForm({
         action={(fd) => {
           fd.set("name", fd.get("name") ?? originalName);
           fd.set("skills", skills.join(","));
+          fd.set("socialLinks", JSON.stringify(socialLinks));
           formAction(fd);
         }}
         className="space-y-6 bg-white p-6 rounded-xl border"
-        style={{ borderColor: "#D0DEE8" }}
+        style={{borderColor: "#D0DEE8"}}
       >
         {/* ══════════ 头像 ══════════ */}
         <div className="flex items-center gap-6">
@@ -195,24 +212,24 @@ export default function EditForm({
                 src={avatarPreview}
                 alt="头像预览"
                 className="w-20 h-20 rounded-full object-cover border-2"
-                style={{ borderColor: "#3388BB" }}
+                style={{borderColor: "#3388BB"}}
               />
             ) : (
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold"
-                style={{ background: "#25547A" }}
+                style={{background: "#25547A"}}
               >
                 {(user.name ?? "用")[0]}
               </div>
             )}
           </div>
           <div className="flex-1 space-y-1">
-            <p className="text-sm" style={{ color: "#555" }}>
+            <p className="text-sm" style={{color: "#555"}}>
               头像{" "}
               {avatarCooldown.canEdit ? (
-                <span className="text-xs" style={{ color: "#999" }}>(7天内只能更换一次)</span>
+                <span className="text-xs" style={{color: "#999"}}>(7天内只能更换一次)</span>
               ) : (
-                <span className="text-xs font-medium" style={{ color: "#E38043" }}>
+                <span className="text-xs font-medium" style={{color: "#E38043"}}>
                   冷却中 — {avatarCooldown.remainingDays} 天后可更换
                 </span>
               )}
@@ -230,28 +247,28 @@ export default function EditForm({
                 onClick={() => fileRef.current?.click()}
                 disabled={avatarUploading || !avatarCooldown.canEdit}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50"
-                style={{ background: avatarCooldown.canEdit ? "#3388BB" : "#999" }}
+                style={{background: avatarCooldown.canEdit ? "#3388BB" : "#999"}}
               >
                 {avatarUploading ? "处理中..." : "更换头像"}
               </button>
               {avatarSuccess && (
-                <span className="text-xs" style={{ color: "#88C232" }}>✓ {avatarSuccess}</span>
+                <span className="text-xs" style={{color: "#88C232"}}>✓ {avatarSuccess}</span>
               )}
             </div>
             {avatarError && (
-              <p className="text-xs" style={{ color: "#E38043" }}>{avatarError}</p>
+              <p className="text-xs" style={{color: "#E38043"}}>{avatarError}</p>
             )}
           </div>
         </div>
 
         {/* 姓名 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="name">
+          <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="name">
             显示名称{" "}
             {nameCooldown.canEdit ? (
-              <span className="text-xs" style={{ color: "#999" }}>(7天内只能修改一次)</span>
+              <span className="text-xs" style={{color: "#999"}}>(7天内只能修改一次)</span>
             ) : (
-              <span className="text-xs font-medium" style={{ color: "#E38043" }}>
+              <span className="text-xs font-medium" style={{color: "#E38043"}}>
                 冷却中 — {nameCooldown.remainingDays} 天后可修改
               </span>
             )}
@@ -264,7 +281,7 @@ export default function EditForm({
             required
             disabled={!nameCooldown.canEdit}
             className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-            style={{ borderColor: nameCooldown.canEdit ? "#D0DEE8" : "#E38043", color: nameCooldown.canEdit ? "#333" : "#999" }}
+            style={{borderColor: nameCooldown.canEdit ? "#D0DEE8" : "#E38043", color: nameCooldown.canEdit ? "#333" : "#999"}}
           />
         </div>
 
@@ -273,7 +290,7 @@ export default function EditForm({
           <>
             {/* 个人简介 */}
             <div>
-              <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="bio">
+              <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="bio">
                 个人简介
               </label>
               <textarea
@@ -283,16 +300,16 @@ export default function EditForm({
                 onChange={(e) => setBioValue(e.target.value)}
                 rows={4}
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent resize-y"
-                style={{ borderColor: "#D0DEE8", color: "#333" }}
+                style={{borderColor: "#D0DEE8", color: "#333"}}
                 placeholder="介绍一下自己..."
               />
             </div>
 
             {/* 年级 */}
             <div>
-              <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="grade">
+              <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="grade">
                 年级
-                {!isAdmin && <span className="text-xs ml-1" style={{ color: "#999" }}>(管理员设置)</span>}
+                {!isAdmin && <span className="text-xs ml-1" style={{color: "#999"}}>(管理员设置)</span>}
               </label>
               {isAdmin ? (
                 <select
@@ -300,11 +317,11 @@ export default function EditForm({
                   name="grade"
                   defaultValue={member.grade ?? ""}
                   className="w-full rounded-lg bg-white border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
-                  style={{ borderColor: "#D0DEE8", color: "#333" }}
+                  style={{borderColor: "#D0DEE8", color: "#333"}}
                 >
                   <option value="">请选择年级</option>
                   {Array.from(
-                    { length: new Date().getFullYear() - 2017 + 2 },
+                    {length: new Date().getFullYear() - 2017},
                     (_, i) => 2018 + i
                   ).map((y) => (
                     <option key={y} value={`${y}级`}>{y}级</option>
@@ -313,7 +330,7 @@ export default function EditForm({
               ) : (
                 <div
                   className="w-full rounded-lg bg-gray-50 border px-4 py-2.5 text-sm"
-                  style={{ borderColor: "#D0DEE8", color: "#666" }}
+                  style={{borderColor: "#D0DEE8", color: "#666"}}
                 >
                   {member.grade || "未设置（联系管理员）"}
                 </div>
@@ -322,7 +339,7 @@ export default function EditForm({
 
             {/* 职能标签 */}
             <div>
-              <label className="block text-sm mb-1.5" style={{ color: "#555" }}>职能标签</label>
+              <label className="block text-sm mb-1.5" style={{color: "#555"}}>职能标签</label>
               {/* 快捷预设 */}
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {["程序", "策划", "美术", "音效", "制作人"].filter(t => !skills.includes(t)).map((tag) => (
@@ -331,7 +348,7 @@ export default function EditForm({
                     type="button"
                     onClick={() => setSkills([...skills, tag])}
                     className="text-xs px-2 py-0.5 rounded border transition-colors hover:bg-[#E6F0F8] hover:border-[#3388BB] hover:text-[#3388BB]"
-                    style={{ borderColor: "#D0DEE8", color: "#888" }}
+                    style={{borderColor: "#D0DEE8", color: "#888"}}
                   >
                     + {tag}
                   </button>
@@ -343,7 +360,7 @@ export default function EditForm({
                   <span
                     key={s}
                     className="text-xs px-2 py-0.5 rounded cursor-pointer select-none"
-                    style={{ background: "#E6F0F8", color: "#3388BB" }}
+                    style={{background: "#E6F0F8", color: "#3388BB"}}
                     onClick={() => removeSkill(s)}
                   >
                     {s} ×
@@ -356,108 +373,140 @@ export default function EditForm({
                   onChange={(e) => setSkillInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
                   className="flex-1 rounded-lg bg-white border px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
-                  style={{ borderColor: "#D0DEE8", color: "#333" }}
+                  style={{borderColor: "#D0DEE8", color: "#333"}}
                   placeholder="输入自定义职能后回车添加"
                 />
                 <button
                   type="button"
                   onClick={addSkill}
                   className="px-3 py-2 rounded-lg text-sm font-medium text-white"
-                  style={{ background: "#E38043" }}
+                  style={{background: "#E38043"}}
                 >
                   添加
                 </button>
               </div>
             </div>
 
-            {/* GitHub */}
+            {/* ══════════ 自定义链接 ══════════ */}
             <div>
-              <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="githubUrl">
-                GitHub 主页
+              <label className="block text-sm mb-1.5" style={{color: "#555"}}>
+                个人链接 <span className="text-xs" style={{color: "#999"}}>(可添加多个，如 GitHub、B站、个人网站等)</span>
               </label>
-              <input
-                id="githubUrl"
-                name="githubUrl"
-                type="url"
-                value={githubValue}
-                onChange={(e) => setGithubValue(e.target.value)}
-                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                style={{ borderColor: "#D0DEE8", color: "#333" }}
-                placeholder="https://github.com/..."
-              />
-            </div>
 
-            {/* Itch.io */}
-            <div>
-              <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="itchUrl">
-                Itch.io 主页
-              </label>
-              <input
-                id="itchUrl"
-                name="itchUrl"
-                type="url"
-                value={itchValue}
-                onChange={(e) => setItchValue(e.target.value)}
-                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                style={{ borderColor: "#D0DEE8", color: "#333" }}
-                placeholder="https://yourname.itch.io/..."
-              />
-            </div>
+              {/* 已添加的链接 */}
+              {socialLinks.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {socialLinks.map((link, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border text-sm" style={{borderColor: "#D0DEE8", background: "#FAFBFC"}}>
+                      <span className="text-xs px-2 py-0.5 rounded font-medium shrink-0" style={{background: "#25547A", color: "#fff"}}>
+                        {link.label}
+                      </span>
+                      <span className="flex-1 truncate" style={{color: "#777"}}>{link.url}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeLink(i)}
+                        className="text-xs shrink-0 hover:underline"
+                        style={{color: "#E38043"}}
+                      >
+                        移除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {/* 个人网站 */}
-            <div>
-              <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="website">
-                个人网站
-              </label>
-              <input
-                id="website"
-                name="website"
-                type="url"
-                value={websiteValue}
-                onChange={(e) => setWebsiteValue(e.target.value)}
-                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                style={{ borderColor: "#D0DEE8", color: "#333" }}
-                placeholder="https://..."
-              />
+              {/* 添加链接 */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                {/* 标签选择 */}
+                <div className="sm:w-28 shrink-0">
+                  {showCustomLabel ? (
+                    <input
+                      value={newLinkLabel}
+                      onChange={(e) => setNewLinkLabel(e.target.value)}
+                      placeholder="自定义标签"
+                      className="w-full rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                      style={{borderColor: "#D0DEE8", color: "#333"}}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
+                    />
+                  ) : (
+                    <select
+                      value={newLinkLabel}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "__custom__") { setShowCustomLabel(true); setNewLinkLabel(""); }
+                        else setNewLinkLabel(v);
+                      }}
+                      className="w-full rounded-lg bg-white border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                      style={{borderColor: "#D0DEE8", color: "#333"}}
+                    >
+                      <option value="">选择标签</option>
+                      {LINK_LABEL_PRESETS.map((l) => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                      <option value="__custom__">自定义...</option>
+                    </select>
+                  )}
+                </div>
+                {/* URL 输入 */}
+                <input
+                  value={newLinkUrl}
+                  onChange={(e) => setNewLinkUrl(e.target.value)}
+                  type="url"
+                  placeholder="https://..."
+                  className="flex-1 rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                  style={{borderColor: "#D0DEE8", color: "#333"}}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
+                />
+                {/* 添加按钮 */}
+                <button
+                  type="button"
+                  onClick={addLink}
+                  disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 shrink-0"
+                  style={{background: "#3388BB"}}
+                >
+                  添加
+                </button>
+              </div>
             </div>
           </>
         )}
 
-        {/* ══════════ 邀请码兑换 ══════════ */}
-        <div className="border-t pt-4" style={{ borderColor: "#E8F0F8" }}>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>
-            邀请码兑换 <span className="text-xs" style={{ color: "#999" }}>(升级为社团成员或管理员)</span>
-          </label>
-          <div className="flex gap-2">
-            <input
-              value={inviteInput}
-              onChange={(e) => setInviteInput(e.target.value)}
-              placeholder="输入邀请码"
-              className="flex-1 rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-              style={{ borderColor: "#D0DEE8", color: "#333" }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleRedeemInvite(); } }}
-            />
-            <button
-              type="button"
-              onClick={handleRedeemInvite}
-              disabled={invitePending || !inviteInput.trim()}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 whitespace-nowrap"
-              style={{ background: "#E38043" }}
-            >
-              {invitePending ? "兑换中..." : "兑换"}
-            </button>
+        {/* ══════════ 邀请码兑换（仅非管理员/非成员显示）══════════ */}
+        {!isAdmin && !member && (
+          <div className="border-t pt-4" style={{borderColor: "#E8F0F8"}}>
+            <label className="block text-sm mb-1.5" style={{color: "#555"}}>
+              邀请码兑换 <span className="text-xs" style={{color: "#999"}}>(升级为社团成员或管理员)</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={inviteInput}
+                onChange={(e) => setInviteInput(e.target.value)}
+                placeholder="输入邀请码"
+                className="flex-1 rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                style={{borderColor: "#D0DEE8", color: "#333"}}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleRedeemInvite(); }
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleRedeemInvite}
+                disabled={invitePending || !inviteInput.trim()}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 whitespace-nowrap"
+                style={{background: "#E38043"}}
+              >
+                {invitePending ? "兑换中..." : "兑换"}
+              </button>
+            </div>
+            {inviteMsg && <p className="text-xs mt-1" style={{color: "#88C232"}}>{inviteMsg}</p>}
+            {inviteError && <p className="text-xs mt-1" style={{color: "#E38043"}}>{inviteError}</p>}
           </div>
-          {inviteMsg && (
-            <p className="text-xs mt-1" style={{ color: "#88C232" }}>{inviteMsg}</p>
-          )}
-          {inviteError && (
-            <p className="text-xs mt-1" style={{ color: "#E38043" }}>{inviteError}</p>
-          )}
-        </div>
+        )}
 
         {/* 错误提示 */}
         {state?.error && (
-          <div className="text-sm px-4 py-2.5 rounded-lg" style={{ background: "#FDE8E8", color: "#C62828" }}>
+          <div className="text-sm px-4 py-2.5 rounded-lg" style={{background: "#FDE8E8", color: "#C62828"}}>
             {state.error}
           </div>
         )}
@@ -505,7 +554,7 @@ export default function EditForm({
                 <button
                   type="button" onClick={handleCropConfirm}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                  style={{ background: "#3388BB" }}
+                  style={{background: "#3388BB"}}
                 >
                   确认裁剪
                 </button>

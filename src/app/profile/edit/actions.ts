@@ -6,14 +6,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+const linkEntrySchema = z.object({
+  label: z.string().min(1, "链接标签不能为空").max(50),
+  url: z.string().url("请输入有效的 URL"),
+});
+
 const schema = z.object({
   name: z.string().min(1, "名称不能为空").max(50),
   bio: z.string().max(2000).optional().or(z.literal("")),
   grade: z.string().max(20).optional().or(z.literal("")),
   skills: z.string().max(500).optional().or(z.literal("")),
-  githubUrl: z.string().url().optional().or(z.literal("")),
-  itchUrl: z.string().url().optional().or(z.literal("")),
-  website: z.string().url().optional().or(z.literal("")),
+  socialLinks: z.string().optional().or(z.literal("")),
 });
 
 const NAME_CHANGE_DAYS = 7;
@@ -29,9 +32,7 @@ export async function saveProfile(formData: FormData) {
     bio: (formData.get("bio") as string) || "",
     grade: (formData.get("grade") as string) || "",
     skills: (formData.get("skills") as string) || "",
-    githubUrl: (formData.get("githubUrl") as string) || "",
-    itchUrl: (formData.get("itchUrl") as string) || "",
-    website: (formData.get("website") as string) || "",
+    socialLinks: (formData.get("socialLinks") as string) || "",
   };
 
   const result = schema.safeParse(raw);
@@ -39,7 +40,21 @@ export async function saveProfile(formData: FormData) {
     return { error: result.error.errors[0].message };
   }
 
-  const { name, bio, grade, skills, githubUrl, itchUrl, website } = result.data;
+  const { name, bio, grade, skills, socialLinks: socialLinksJson } = result.data;
+
+  // 解析链接 JSON
+  let socialLinks: { label: string; url: string }[] = [];
+  if (socialLinksJson) {
+    try {
+      const parsed = JSON.parse(socialLinksJson);
+      if (Array.isArray(parsed)) {
+        for (const item of parsed) {
+          const parsedItem = linkEntrySchema.safeParse(item);
+          if (parsedItem.success) socialLinks.push(parsedItem.data);
+        }
+      }
+    } catch { /* ignore malformed JSON */ }
+  }
 
   // ═══ 名称修改速率限制（7 天一次）═══
   const dbUser = await prisma.user.findUnique({
@@ -61,7 +76,7 @@ export async function saveProfile(formData: FormData) {
     }
   }
 
-  // 更新 User.name（仅在名称变化时更新 nameChangedAt）
+  // 更新 User.name
   const userUpdateData: any = { name };
   if (name !== dbUser?.name) {
     userUpdateData.nameChangedAt = new Date();
@@ -77,6 +92,9 @@ export async function saveProfile(formData: FormData) {
   });
 
   if (member) {
+    // 删除旧链接，重建新链接
+    await prisma.memberLink.deleteMany({ where: { memberId: member.id } });
+
     await prisma.clubMember.update({
       where: { id: member.id },
       data: {
@@ -87,9 +105,13 @@ export async function saveProfile(formData: FormData) {
             ? skills.split(",").map((s: string) => s.trim()).filter(Boolean)
             : [],
         }),
-        githubUrl: githubUrl || null,
-        itchUrl: itchUrl || null,
-        website: website || null,
+        socialLinks: {
+          create: socialLinks.map((l, i) => ({
+            label: l.label,
+            url: l.url,
+            sortOrder: i,
+          })),
+        },
       },
     });
   }
