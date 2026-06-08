@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
+import { requireAdmin } from "@/lib/auth/adminGuard";
 import { revalidatePath } from "next/cache";
 
 export async function createInviteCode(formData: FormData) {
+  await requireAdmin();
   const role = formData.get("role") as string;
   const maxUses = formData.get("maxUses") as string;
   const expiresDays = formData.get("expiresDays") as string;
@@ -28,11 +30,13 @@ export async function createInviteCode(formData: FormData) {
 }
 
 export async function toggleInviteCode(id: string, isActive: boolean) {
+  await requireAdmin();
   await prisma.inviteCode.update({ where: { id }, data: { isActive } });
   revalidatePath("/admin/invites");
 }
 
 export async function deleteInviteCode(id: string) {
+  await requireAdmin();
   await prisma.inviteCode.delete({ where: { id } });
   revalidatePath("/admin/invites");
 }

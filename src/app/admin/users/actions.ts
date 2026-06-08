@@ -5,17 +5,9 @@
 
 "use server";
 
-import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
+import { requireAdmin } from "@/lib/auth/adminGuard";
 import { revalidatePath } from "next/cache";
-
-/** 确保当前用户是管理员，否则抛异常 */
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
-    throw new Error("权限不足：仅管理员可执行此操作");
-  }
-}
 
 export async function updateUserRole(id: string, formData: FormData) {
   await requireAdmin();

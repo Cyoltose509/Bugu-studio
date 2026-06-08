@@ -1,12 +1,12 @@
 /**
  * 管理后台 - 成员管理
- * 列出所有社团成员，支持激活/停用、删除
+ * 列出所有社团成员，支持年级/身份/状态编辑、删除
  */
 
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { toggleMemberActive } from "./actions";
+import { toggleMemberActive, updateMemberDetails } from "./actions";
 import DeleteMemberButton from "./DeleteMemberButton";
 
 export const metadata: Metadata = { title: "成员管理 - 管理后台" };
@@ -15,6 +15,17 @@ export const dynamic = "force-dynamic";
 interface PageProps {
   searchParams: Promise<{ page?: string }>;
 }
+
+const GRADE_OPTIONS = Array.from(
+  { length: new Date().getFullYear() - 2017 },
+  (_, i) => 2018 + i
+);
+
+const POSITION_OPTIONS: { value: string; label: string }[] = [
+  { value: "MEMBER", label: "成员" },
+  { value: "VICE_PRESIDENT", label: "副社长" },
+  { value: "PRESIDENT", label: "社长" },
+];
 
 export default async function AdminMembersPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -46,11 +57,12 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
           <div className="p-8 text-center text-sm" style={{ color: "#777" }}>暂无成员</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[800px]">
             <thead>
               <tr className="border-b" style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>名称</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>年级</th>
+                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>身份</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>状态</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>用户角色</th>
                 <th className="text-right p-3 font-medium" style={{ color: "#555" }}>操作</th>
@@ -63,14 +75,49 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                     <div className="font-medium" style={{ color: "#333" }}>{m.displayName}</div>
                     <div className="text-xs" style={{ color: "#999" }}>{m.user.email}</div>
                   </td>
-                  <td className="p-3 text-xs" style={{ color: "#777" }}>{m.grade || "—"}</td>
+                  <td className="p-3">
+                    <form action={updateMemberDetails.bind(null, m.id)} className="flex items-center gap-1">
+                      <input type="hidden" name="position" value={m.position || "MEMBER"} />
+                      <input type="hidden" name="isActive" value={String(m.isActive)} />
+                      <select
+                        name="grade"
+                        defaultValue={m.grade ?? ""}
+                        className="text-xs rounded border px-2 py-1 bg-white cursor-pointer"
+                        style={{ borderColor: "#D0DEE8", color: "#333", minWidth: "80px" }}
+                        onChange={(e: any) => e.target.form?.requestSubmit()}
+                      >
+                        <option value="">未设置</option>
+                        <option value="" disabled>──────────</option>
+                        {GRADE_OPTIONS.map((y) => (
+                          <option key={y} value={`${y}级`}>{y}级</option>
+                        ))}
+                      </select>
+                    </form>
+                  </td>
+                  <td className="p-3">
+                    <form action={updateMemberDetails.bind(null, m.id)} className="flex items-center gap-1">
+                      <input type="hidden" name="grade" value={m.grade ?? ""} />
+                      <input type="hidden" name="isActive" value={String(m.isActive)} />
+                      <select
+                        name="position"
+                        defaultValue={m.position || "MEMBER"}
+                        className="text-xs rounded border px-2 py-1 bg-white cursor-pointer"
+                        style={{ borderColor: "#D0DEE8", color: "#333" }}
+                        onChange={(e: any) => e.target.form?.requestSubmit()}
+                      >
+                        {POSITION_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </form>
+                  </td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={
                       m.isActive
                         ? { background: "#E8F5E9", color: "#2E7D32" }
                         : { background: "#FDE8E8", color: "#C62828" }
                     }>
-                      {m.isActive ? "活跃" : "已停用"}
+                      {m.isActive ? "活跃" : "已退役"}
                     </span>
                   </td>
                   <td className="p-3">
@@ -87,7 +134,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                       <Link href={`/members/${m.id}`} target="_blank" className="text-xs hover:underline cursor-pointer" style={{ color: "#3388BB" }}>查看</Link>
                       <form action={toggleMemberActive.bind(null, m.id, !m.isActive)} className="inline">
                         <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: m.isActive ? "#C62828" : "#88C232" }}>
-                          {m.isActive ? "停用" : "激活"}
+                          {m.isActive ? "退役" : "激活"}
                         </button>
                       </form>
                       <DeleteMemberButton memberId={m.id} />
