@@ -58,6 +58,7 @@ function ProjectCard({ project, compact, priority }: { project: ProjectWithRelat
             src={project.coverImage}
             alt={project.title}
             fill
+            unoptimized
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, 25vw"
             {...(priority ? { priority: true, fetchPriority: "high" as const } : {})}

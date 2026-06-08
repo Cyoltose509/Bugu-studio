@@ -144,7 +144,7 @@ async function WorkDetailContent({ params }: PageProps) {
         <div className="lg:col-span-2">
           {project.coverImage && (
             <div className="relative aspect-video w-full max-w-2xl rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
-              <Image src={project.coverImage} alt={project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px" className="object-cover" priority />
+              <Image src={project.coverImage} alt={project.title} fill unoptimized sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px" className="object-cover" priority />
             </div>
           )}
 
