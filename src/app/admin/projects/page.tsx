@@ -109,6 +109,13 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-2 flex-wrap">
+                      <Link
+                        href={`/works/${p.slug}/edit`}
+                        className="text-xs hover:underline"
+                        style={{ color: "#3388BB" }}
+                      >
+                        编辑
+                      </Link>
                       {p.status === "PENDING" && (
                         <form action={updateProjectStatus.bind(null, p.id, "PUBLISHED")} className="inline">
                           <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#88C232" }}>通过</button>

@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import { auth } from "@/lib/auth/auth";
+import { canEditProject } from "@/lib/auth/rbac";
 import { ProjectStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +19,11 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  // metadata 查询放宽：不限制状态，这样 SEO 不友好但至少不会崩溃
+  // 真正的权限控制在页面组件中
   const project = await prisma.project.findFirst({
-    where: { OR: [{ slug }, { id: slug }], status: ProjectStatus.PUBLISHED },
-    select: { title: true, description: true, coverImage: true },
+    where: { OR: [{ slug }, { id: slug }] },
+    select: { title: true, description: true, coverImage: true, status: true },
   });
 
   if (!project) return { title: "作品不存在" };
@@ -35,9 +39,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function WorkDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const session = await auth();
+  const userId = session?.user?.id;
+  const userRole = session?.user?.role as string | undefined;
 
+  // 先查项目基本信息，判断访问权限
   const project = await prisma.project.findFirst({
-    where: { OR: [{ slug }, { id: slug }], status: ProjectStatus.PUBLISHED },
+    where: { OR: [{ slug }, { id: slug }] },
     include: {
       images: { orderBy: { sortOrder: "asc" } },
       links: { orderBy: { sortOrder: "asc" } },
@@ -59,6 +67,23 @@ export default async function WorkDetailPage({ params }: PageProps) {
   });
 
   if (!project) notFound();
+
+  // 非公开作品仅提交者和管理员可见
+  const canView = project.status === ProjectStatus.PUBLISHED
+    || (userId && (userId === project.submitterId || userRole === "ADMIN" || userRole === "REVIEWER"));
+  if (!canView) notFound();
+
+  const canEdit = userId ? canEditProject(userRole as any, userId, project.submitterId) : false;
+
+  // 状态徽章
+  const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
+    DRAFT: { bg: "#F5F5F5", color: "#777", label: "草稿" },
+    PENDING: { bg: "#FFF3E0", color: "#E65100", label: "待审核" },
+    PUBLISHED: { bg: "#E8F5E9", color: "#2E7D32", label: "已发布" },
+    REJECTED: { bg: "#FDE8E8", color: "#C62828", label: "已拒绝" },
+    ARCHIVED: { bg: "#EDE7F6", color: "#5E35B1", label: "已归档" },
+  };
+  const statusBadge = STATUS_BADGE[project.status];
 
   // 动态外部链接（新） + 兼容旧版 flat URL
   const LINK_ICONS: Record<string, string> = {
@@ -110,9 +135,29 @@ export default async function WorkDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          <h1 className="text-3xl font-bold mb-2" style={{ color: "#25547A" }}>{project.title}</h1>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "#25547A" }}>
+            {project.title}
+            {project.status !== ProjectStatus.PUBLISHED && statusBadge && (
+              <span className="inline-block ml-3 text-xs px-2 py-0.5 rounded-full align-middle" style={{ background: statusBadge.bg, color: statusBadge.color }}>
+                {statusBadge.label}
+              </span>
+            )}
+          </h1>
           {project.subtitle && (
             <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>
+          )}
+
+          {/* 操作按钮 */}
+          {canEdit && (
+            <div className="flex gap-2 mb-6">
+              <Link
+                href={`/works/${project.slug}/edit`}
+                className="inline-flex items-center gap-1 text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ background: "#25547A", color: "#fff" }}
+              >
+                ✏️ 编辑作品
+              </Link>
+            </div>
           )}
 
           {/* 标签 */}

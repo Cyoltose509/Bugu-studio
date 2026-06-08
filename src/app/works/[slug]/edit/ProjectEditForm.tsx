@@ -1,0 +1,452 @@
+"use client";
+
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+// ── 作品类型 ──
+const PROJECT_TYPES = [
+  { value: "DEMO", label: "Demo 演示" },
+  { value: "STEAM", label: "Steam 发布" },
+  { value: "ITCH", label: "itch.io 发布" },
+  { value: "OTHER", label: "其他" },
+];
+
+// ── 常用链接标签预设 ──
+const LINK_LABEL_PRESETS = ["Steam", "itch.io", "官网", "百度网盘", "Google Drive", "GitHub", "B站"];
+
+interface Tag {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface LinkEntry {
+  label: string;
+  url: string;
+}
+
+interface SelectedMember {
+  memberId: string;
+  displayName: string;
+  role: string;
+}
+
+interface InitialData {
+  title: string;
+  subtitle: string;
+  description: string;
+  type: string;
+  developYear: number;
+  coverImage: string;
+  devlog: string;
+  techStack: string[];
+  tagIds: string[];
+  links: LinkEntry[];
+  members: SelectedMember[];
+}
+
+interface Props {
+  projectId: string;
+  tags: Tag[];
+  initialData: InitialData;
+}
+
+// ── 通用样式 ──
+const inputClass =
+  "w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent transition-shadow";
+const inputStyle = { borderColor: "#D0DEE8", color: "#333" };
+const labelClass = "block text-sm font-medium mb-1.5";
+const labelStyle = { color: "#555" };
+
+export default function ProjectEditForm({ projectId, tags, initialData }: Props) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // ── 表单状态 ──
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialData.tagIds);
+  const [links, setLinks] = useState<LinkEntry[]>(initialData.links);
+  const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>(initialData.members);
+  const [customTags, setCustomTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
+
+  const [newLinkLabel, setNewLinkLabel] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [showCustomLabel, setShowCustomLabel] = useState(false);
+
+  // ── 封面图 ──
+  const [coverPreview, setCoverPreview] = useState<string | null>(initialData.coverImage || null);
+  const [coverUrl, setCoverUrl] = useState(initialData.coverImage);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverError, setCoverError] = useState("");
+  const coverFileRef = useRef<HTMLInputElement>(null);
+
+  // ── 成员搜索 ──
+  const [memberQuery, setMemberQuery] = useState("");
+  const [memberResults, setMemberResults] = useState<any[]>([]);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [memberRole, setMemberRole] = useState("");
+  const memberDropdownRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── 成员搜索 ──
+  const searchMembers = useCallback(async (q: string) => {
+    try {
+      const res = await fetch(`/api/members/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMemberResults(Array.isArray(data) ? data : data.data || []);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (memberQuery.length >= 1) {
+      searchTimerRef.current = setTimeout(() => searchMembers(memberQuery), 200);
+    } else {
+      searchMembers("");
+    }
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [memberQuery, searchMembers]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (memberDropdownRef.current && !memberDropdownRef.current.contains(e.target as Node)) {
+        setShowMemberDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function addMember(member: any) {
+    if (selectedMembers.some((m) => m.memberId === member.id)) return;
+    setSelectedMembers((prev) => [
+      ...prev,
+      { memberId: member.id, displayName: member.displayName, role: memberRole || "成员" },
+    ]);
+    setMemberQuery("");
+    setMemberRole("");
+    setShowMemberDropdown(false);
+  }
+
+  function removeMember(memberId: string) {
+    setSelectedMembers((prev) => prev.filter((m) => m.memberId !== memberId));
+  }
+
+  function updateMemberRole(memberId: string, role: string) {
+    setSelectedMembers((prev) =>
+      prev.map((m) => (m.memberId === memberId ? { ...m, role } : m))
+    );
+  }
+
+  // ── 链接 ──
+  function addLink() {
+    const label = newLinkLabel.trim();
+    const url = newLinkUrl.trim();
+    if (!label || !url) return;
+    setLinks((prev) => [...prev, { label, url }]);
+    setNewLinkLabel("");
+    setNewLinkUrl("");
+    setShowCustomLabel(false);
+  }
+
+  function removeLink(index: number) {
+    setLinks((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // ── 标签 ──
+  function toggleTag(tagId: string) {
+    setSelectedTags((prev) =>
+      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
+    );
+  }
+
+  function addCustomTag() {
+    const name = customTagInput.trim();
+    if (!name) return;
+    if (customTags.includes(name)) {
+      setCustomTagInput("");
+      return;
+    }
+    setCustomTags((prev) => [...prev, name]);
+    setCustomTagInput("");
+  }
+
+  function removeCustomTag(name: string) {
+    setCustomTags((prev) => prev.filter((t) => t !== name));
+  }
+
+  // ── 提交 ──
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const form = new FormData(e.currentTarget);
+
+    const body = {
+      title: form.get("title") as string,
+      subtitle: form.get("subtitle") as string || undefined,
+      description: form.get("description") as string,
+      type: form.get("type") as string,
+      developYear: parseInt(form.get("developYear") as string),
+      coverImage: coverUrl || undefined,
+      devlog: (form.get("devlog") as string) || undefined,
+      techStack: ((form.get("techStack") as string) || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      tagIds: selectedTags,
+      customTags,
+      links,
+      memberRoles: selectedMembers.map((m) => ({ memberId: m.memberId, role: m.role })),
+    };
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "保存失败");
+      setSaved(true);
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || "保存失败");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (saved) {
+    return (
+      <div className="animate-fade-in text-center py-16">
+        <div className="text-5xl mb-4">✅</div>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: "#25547A" }}>
+          保存成功！
+        </h2>
+        <p className="mb-6" style={{ color: "#777" }}>
+          作品信息已更新。
+        </p>
+        <a
+          href={`/works/${initialData.title}`}
+          className="btn-primary px-6 py-2 rounded-lg text-sm inline-block"
+          onClick={(e) => { e.preventDefault(); router.push("/works/" + initialData.title); }}
+        >
+          返回作品页
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
+      {error && (
+        <div className="p-3 rounded-lg text-sm" style={{ background: "#FDE8E8", color: "#C62828" }}>
+          {error}
+        </div>
+      )}
+
+      {/* ═══════════════ 基本信息 ═══════════════ */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>📋 基本信息</h2>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>作品名称 <span style={{ color: "#C62828" }}>*</span></label>
+          <input name="title" type="text" required maxLength={200} defaultValue={initialData.title} className={inputClass} style={inputStyle} />
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>副标题</label>
+          <input name="subtitle" type="text" maxLength={300} defaultValue={initialData.subtitle} className={inputClass} style={inputStyle} />
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>简介 <span style={{ color: "#C62828" }}>*</span></label>
+          <textarea name="description" required minLength={10} maxLength={10000} rows={4} defaultValue={initialData.description} className={inputClass} style={inputStyle} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass} style={labelStyle}>作品类型 <span style={{ color: "#C62828" }}>*</span></label>
+            <select name="type" required defaultValue={initialData.type} className={inputClass} style={inputStyle}>
+              <option value="">请选择类型</option>
+              {PROJECT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass} style={labelStyle}>开发年份 <span style={{ color: "#C62828" }}>*</span></label>
+            <input name="developYear" type="number" required min={2000} max={new Date().getFullYear() + 1} defaultValue={initialData.developYear} className={inputClass} style={inputStyle} />
+          </div>
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>技术栈（逗号分隔）</label>
+          <input name="techStack" type="text" defaultValue={initialData.techStack.join(", ")} placeholder="如: Unity, C#, Blender" className={inputClass} style={inputStyle} />
+        </div>
+
+        <div>
+          <label className={labelClass} style={labelStyle}>开发日志</label>
+          <textarea name="devlog" maxLength={50000} rows={5} defaultValue={initialData.devlog} placeholder="记录开发过程的心得…" className={inputClass} style={inputStyle} />
+        </div>
+      </section>
+
+      {/* ═══════════════ 封面图 ═══════════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🖼️ 封面图</h2>
+        <input
+          ref={coverFileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setCoverError("");
+            setCoverUploading(true);
+            try {
+              const fd = new FormData();
+              fd.append("file", file);
+              const res = await fetch("/api/upload/cover", { method: "POST", body: fd });
+              const json = await res.json();
+              if (!res.ok) throw new Error(json.error || "上传失败");
+              setCoverPreview(json.url);
+              setCoverUrl(json.url);
+            } catch (err: any) {
+              setCoverError(err.message || "上传失败");
+            } finally {
+              setCoverUploading(false);
+              if (coverFileRef.current) coverFileRef.current.value = "";
+            }
+          }}
+        />
+        <div className="flex items-start gap-4">
+          <div className="shrink-0">
+            {coverPreview ? (
+              <img src={coverPreview} alt="封面预览" className="w-40 h-24 object-cover rounded-lg border" style={{ borderColor: "#D0DEE8" }} />
+            ) : (
+              <div className="w-40 h-24 flex items-center justify-center rounded-lg border border-dashed" style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
+                <span className="text-xs" style={{ color: "#999" }}>暂无封面</span>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 space-y-1">
+            <button type="button" onClick={() => coverFileRef.current?.click()} disabled={coverUploading} className="px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "#3388BB" }}>
+              {coverUploading ? "上传中..." : coverPreview ? "更换封面" : "选择封面图"}
+            </button>
+            {coverError && <p className="text-xs" style={{ color: "#E38043" }}>{coverError}</p>}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ 制作成员 ═══════════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>👥 制作成员</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-2" ref={memberDropdownRef}>
+          <div className="relative">
+            <input type="text" value={memberQuery} onChange={(e) => { setMemberQuery(e.target.value); setShowMemberDropdown(true); }} onFocus={() => setShowMemberDropdown(true)} placeholder="搜索成员姓名..." className={inputClass} style={inputStyle} />
+            {showMemberDropdown && memberResults.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto" style={{ borderColor: "#D0DEE8" }}>
+                {memberResults.map((m: any) => (
+                  <button key={m.id} type="button" onClick={() => addMember(m)} className="w-full text-left px-3 py-2 text-sm hover:bg-[#F0F5F9] flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-[#E38043] text-white text-xs flex items-center justify-center flex-shrink-0">{m.displayName.charAt(0)}</span>
+                    <span style={{ color: "#333" }}>{m.displayName}</span>
+                    <span className="text-xs ml-auto" style={{ color: "#999" }}>{m.grade && `${m.grade} · `}{m.joinYear}级</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <input type="text" value={memberRole} onChange={(e) => setMemberRole(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); } }} placeholder="角色，如: 主程序" className={inputClass} style={inputStyle} />
+        </div>
+        {selectedMembers.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {selectedMembers.map((m) => (
+              <span key={m.memberId} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs" style={{ background: "rgba(37,84,122,0.1)", color: "#25547A" }}>
+                {m.displayName}
+                <input type="text" value={m.role} onChange={(e) => updateMemberRole(m.memberId, e.target.value)} className="w-16 bg-transparent border-b border-dashed text-xs px-1 focus:outline-none" style={{ borderColor: "#25547A", color: "#25547A" }} />
+                <button type="button" onClick={() => removeMember(m.memberId)} className="ml-0.5 hover:text-red-500" title="移除">×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ═══════════════ 外部链接 ═══════════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🔗 外部链接</h2>
+        {links.length > 0 && (
+          <div className="space-y-1.5">
+            {links.map((link, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-2 bg-[#F0F5F9] rounded-lg text-sm">
+                <span className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0" style={{ background: "#25547A", color: "#fff" }}>{link.label}</span>
+                <span className="truncate flex-1" style={{ color: "#3388BB" }}>{link.url}</span>
+                <button type="button" onClick={() => removeLink(i)} className="text-xs flex-shrink-0 hover:text-red-500" style={{ color: "#999" }}>移除</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap items-end gap-2">
+          {!showCustomLabel ? (
+            <select value={newLinkLabel} onChange={(e) => { const v = e.target.value; if (v === "__custom__") { setShowCustomLabel(true); setNewLinkLabel(""); } else setNewLinkLabel(v); }} className={`${inputClass} w-36`} style={inputStyle}>
+              <option value="">选择类型</option>
+              {LINK_LABEL_PRESETS.map((l) => <option key={l} value={l}>{l}</option>)}
+              <option value="__custom__">自定义...</option>
+            </select>
+          ) : (
+            <input type="text" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }} placeholder="链接标签" className={`${inputClass} w-36`} style={inputStyle} />
+          )}
+          <input type="url" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }} placeholder="https://..." className={`${inputClass} flex-1 min-w-[200px]`} style={inputStyle} />
+          <button type="button" onClick={addLink} disabled={!newLinkLabel.trim() || !newLinkUrl.trim()} className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all" style={{ background: "#88C232", color: "#fff" }}>添加</button>
+        </div>
+      </section>
+
+      {/* ═══════════════ 标签 ═══════════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🏷️ 标签</h2>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => {
+              const active = selectedTags.includes(tag.id);
+              return (
+                <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
+                  className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"}`}
+                  style={{ backgroundColor: active ? "rgba(136,194,50,0.15)" : "rgba(136,194,50,0.08)", color: "#88C232" }}>
+                  {tag.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {customTags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {customTags.map((name) => (
+              <span key={name} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full" style={{ background: "rgba(227,128,67,0.15)", color: "#E38043" }}>
+                {name}
+                <button type="button" onClick={() => removeCustomTag(name)} className="hover:text-red-500">×</button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input type="text" value={customTagInput} onChange={(e) => setCustomTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }} placeholder="输入自定义标签，回车添加" className={`${inputClass} max-w-xs`} style={inputStyle} />
+          <button type="button" onClick={addCustomTag} disabled={!customTagInput.trim()} className="px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-40" style={{ background: "#E38043", color: "#fff" }}>添加</button>
+        </div>
+      </section>
+
+      {/* ═══════════════ 提交 ═══════════════ */}
+      <div className="flex items-center gap-3 pt-2">
+        <button type="submit" disabled={loading} className="btn-primary px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
+          {loading ? "保存中..." : "保存修改"}
+        </button>
+        <a href={`/works/${initialData.title}`} className="text-sm" style={{ color: "#999" }}>取消</a>
+      </div>
+    </form>
+  );
+}

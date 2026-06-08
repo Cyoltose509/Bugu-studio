@@ -12,7 +12,7 @@ import { projectUpdateSchema, reviewSchema } from "@/lib/validations";
 import { canEditProject, isAdmin, isReviewerOrAbove } from "@/lib/auth/rbac";
 import { getClientIp, checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
-import { apiResponse, apiError } from "@/lib/utils";
+import { apiResponse, apiError, generateSlug } from "@/lib/utils";
 import { ProjectStatus } from "@prisma/client";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -137,14 +137,32 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const { tagIds, memberRoles, links, customTags, ...projectData } = parsed.data;
 
+  // 处理自定义标签：upsert 新标签并合并到 tagIds
+  let finalTagIds = tagIds;
+  if (customTags !== undefined) {
+    const customTagIds: string[] = [];
+    for (const name of customTags) {
+      const tagSlug = generateSlug(name);
+      const tag = await prisma.tag.upsert({
+        where: { name },
+        update: {},
+        create: { name, slug: tagSlug, color: "#88C232" },
+        select: { id: true },
+      });
+      customTagIds.push(tag.id);
+    }
+    // 合并已有标签和自定义标签（去重）
+    finalTagIds = [...(tagIds || []), ...customTagIds.filter((id) => !(tagIds || []).includes(id))];
+  }
+
   const updated = await prisma.project.update({
     where: { id },
     data: {
       ...projectData,
-      ...(tagIds !== undefined && {
+      ...(finalTagIds !== undefined && {
         tags: {
           deleteMany: {},
-          create: tagIds.map((tagId) => ({ tagId })),
+          create: finalTagIds.map((tagId) => ({ tagId })),
         },
       }),
       ...(memberRoles !== undefined && {
