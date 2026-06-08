@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { createNotification } from "@/lib/services/notification";
 
 export async function POST(request: Request) {
   try {
@@ -54,6 +55,22 @@ export async function POST(request: Request) {
         where: { identifier: normalizedEmail },
       }),
     ]);
+
+    // ── 通知所有管理员有新用户注册 ──
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { id: true },
+    });
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin.id,
+        type: "NEW_USER",
+        title: "新用户注册",
+        content: `${token.name}（${normalizedEmail}）刚刚完成注册，角色：${targetRole}`,
+        relatedId: user.id,
+        relatedType: "User",
+      });
+    }
 
     // 3. 如果邀请码赋予了 MEMBER 或 ADMIN 角色，自动创建 ClubMember 记录
     if (targetRole === "MEMBER" || targetRole === "ADMIN") {

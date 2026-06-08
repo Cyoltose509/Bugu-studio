@@ -146,6 +146,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                   <Link href="/admin" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">管理后台</Link>
                 )}
                 <Link href="/profile/edit" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">编辑资料</Link>
+                <Link href="/profile/settings" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">通知设置</Link>
                 <Link href="/auth/signout" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">退出登录</Link>
               </>
             )}

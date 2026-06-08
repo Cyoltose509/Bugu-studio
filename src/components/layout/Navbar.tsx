@@ -4,6 +4,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { auth } from "@/lib/auth/auth";
+import NotificationBell from "./NotificationBell";
 
 export async function Navbar() {
   const session = await auth();
@@ -38,6 +39,7 @@ export async function Navbar() {
                   管理后台
                 </Link>
               )}
+              <NotificationBell />
               <Link href="/profile" className="flex items-center gap-2 text-sm text-white/80 hover:text-white">
                 {session.user.image ? (
                   <img

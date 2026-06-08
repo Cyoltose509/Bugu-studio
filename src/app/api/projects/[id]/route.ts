@@ -15,6 +15,7 @@ import { getClientIp, checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { apiResponse, apiError, generateSlug } from "@/lib/utils";
 import { invalidateCache } from "@/lib/db/cache";
+import { createNotification, notifyNewProject } from "@/lib/services/notification";
 import { ProjectStatus } from "@prisma/client";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -116,6 +117,31 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         },
       }),
     ]);
+
+    // ── 通知提交者审核结果 ──
+    const projectForNotif = await prisma.project.findUnique({
+      where: { id },
+      select: { title: true, submitterId: true },
+    });
+    if (projectForNotif) {
+      await createNotification({
+        userId: projectForNotif.submitterId,
+        type: "PROJECT_REVIEW",
+        title: approved ? "作品审核通过 ✅" : "作品审核未通过 ❌",
+        content: `你的作品《${projectForNotif.title}》${approved ? "已通过审核并发布" : `被驳回：${note || "无备注"}`}`,
+        relatedId: id,
+        relatedType: "Project",
+      });
+
+      // ── 通知管理员 & 关注上新的成员 ──
+      if (approved) {
+        const submitter = await prisma.user.findUnique({
+          where: { id: projectForNotif.submitterId },
+          select: { name: true },
+        });
+        await notifyNewProject(id, projectForNotif.title, submitter?.name || "未知用户");
+      }
+    }
 
     const { ipAddress, userAgent } = extractRequestInfo(request);
     await createAuditLog({

@@ -95,6 +95,9 @@ model User {
   loginAttempts LoginAttempt[]
   sessions      Session[]
   accounts      Account[]
+  comments      Comment[]
+  commentLikes  CommentLike[]
+  notifications Notification[]
 
   @@index([email])
   @@index([role])
@@ -202,6 +205,7 @@ model ClubMember {
   phone       String?                   // 电话（敏感项，仅成员+可见）
   wechat      String?                   // 微信（敏感项，仅成员+可见）
   qq          String?                   // QQ（敏感项，仅成员+可见）
+  notifyNewProjects Boolean @default(false) // 关注作品上新通知
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -276,6 +280,7 @@ model Project {
   members      ProjectMember[]
   tags         ProjectTag[]
   reviews      Review[]
+  comments     Comment[]
 
   @@index([status])
   @@index([type])
@@ -458,5 +463,59 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([userId, createdAt])
   @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// 留言 & 通知系统
+// ============================================================
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.VarChar(300)
+  projectId String
+  userId    String
+  parentId  String?  // 回复的目标留言（null = 顶层留言）
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  Comment[]     @relation("CommentReplies")
+  likes    CommentLike[]
+
+  @@index([projectId, createdAt])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // "PROJECT_REVIEW" | "COMMENT_REPLY" | "COMMENT_LIKE" | "ROLE_CHANGE" | "NEW_PROJECT" | "NEW_USER"
+  title       String
+  content     String
+  relatedId   String?  // projectId / commentId / userId
+  relatedType String?  // "Project" | "Comment" | "User"
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
   @@index([createdAt])
 }

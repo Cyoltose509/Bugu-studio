@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/auth/adminGuard";
 import { invalidateCache } from "@/lib/db/cache";
+import { createNotification } from "@/lib/services/notification";
 import { revalidatePath } from "next/cache";
 
 export async function toggleMemberActive(id: string, isActive: boolean) {
@@ -30,6 +31,12 @@ export async function updateMemberDetails(id: string, formData: FormData) {
 
   const isValidPosition = ["MEMBER", "PRESIDENT", "VICE_PRESIDENT"].includes(position);
 
+  // 先查当前成员信息，用于通知
+  const current = await prisma.clubMember.findUnique({
+    where: { id },
+    select: { userId: true, displayName: true, position: true },
+  });
+
   await prisma.clubMember.update({
     where: { id },
     data: {
@@ -38,6 +45,23 @@ export async function updateMemberDetails(id: string, formData: FormData) {
       ...(isActiveStr !== null && { isActive: isActiveStr === "true" }),
     },
   });
+
+  // ── 通知成员身份变更 ──
+  if (current && isValidPosition) {
+    const posLabel: Record<string, string> = {
+      MEMBER: "普通成员", PRESIDENT: "社长", VICE_PRESIDENT: "副社长",
+    };
+    if (current.position !== position) {
+      await createNotification({
+        userId: current.userId,
+        type: "ROLE_CHANGE",
+        title: "社团身份已变更",
+        content: `你的身份已变更为「${posLabel[position] || position}」`,
+        relatedId: id,
+        relatedType: "User",
+      });
+    }
+  }
 
   invalidateMemberCaches(id);
   revalidatePath("/admin/members");

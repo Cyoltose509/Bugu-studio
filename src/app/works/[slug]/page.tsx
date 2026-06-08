@@ -3,15 +3,18 @@
  *
  * 优化：React.cache 让 generateMetadata 和页面共享同一查询
  */
+
 import { cache } from "react";
-import { Metadata } from "next";
+import { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
+import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/auth";
 import { ProjectStatus } from "@prisma/client";
 import EditButton from "./EditButton";
+import CommentSection from "@/components/CommentSection";
 
 export const revalidate = 60;
 
@@ -43,7 +46,10 @@ const getProject = cache(async (slug: string) => {
 
 /* ── Metadata（复用同一查询，无额外 DB 开销） ── */
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: PageProps,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProject(slug);
   if (!project || project.status !== ProjectStatus.PUBLISHED) return { title: "作品不存在" };
@@ -84,7 +90,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
   const statusBadge = STATUS_BADGE[project.status];
 
   const LINK_ICONS: Record<string, string> = {
-    steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📦", drive: "📁", 官网: "🌐", b站: "▶️",
+    steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📁", drive: "📁", 官网: "🌐",
   };
   const externalLinks = [
     ...project.links.map((l) => ({ label: l.label, url: l.url, icon: LINK_ICONS[l.label.toLowerCase()] || "🔗" })),
@@ -130,10 +136,11 @@ export default async function WorkDetailPage({ params }: PageProps) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* 主内容区 */}
         <div className="lg:col-span-2">
           {project.coverImage && (
             <div className="relative aspect-video w-full max-w-2xl rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
-              <Image src={project.coverImage} alt={project.title} fill unoptimized sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px" className="object-cover" priority />
+              <Image src={project.coverImage} alt={project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px" className="object-cover" priority />
             </div>
           )}
 
@@ -178,8 +185,14 @@ export default async function WorkDetailPage({ params }: PageProps) {
               <div className="rounded-xl p-6 whitespace-pre-wrap leading-relaxed border" style={{ background: "#F0F5F9", color: "#555", borderColor: "#D0DEE8" }}>{project.devlog}</div>
             </div>
           )}
+
+          {/* ── 留言板 ── */}
+          <Suspense fallback={<div className="text-xs" style={{ color: "#999" }}>留言加载中…</div>}>
+            <CommentSection projectId={project.id} />
+          </Suspense>
         </div>
 
+        {/* 侧边栏 */}
         <aside className="space-y-6">
           {externalLinks.length > 0 && (
             <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
