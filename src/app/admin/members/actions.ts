@@ -38,5 +38,6 @@ export async function updateMemberDetails(id: string, formData: FormData) {
 
   revalidatePath("/admin/members");
   revalidatePath("/members");
+  revalidatePath(`/members/${id}`);
   revalidatePath("/profile");
 }

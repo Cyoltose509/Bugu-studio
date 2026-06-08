@@ -6,8 +6,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { toggleMemberActive, updateMemberDetails } from "./actions";
+import { toggleMemberActive } from "./actions";
 import DeleteMemberButton from "./DeleteMemberButton";
+import EditableSelect from "./EditableSelect";
 
 export const metadata: Metadata = { title: "成员管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -76,40 +77,31 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                     <div className="text-xs" style={{ color: "#999" }}>{m.user.email}</div>
                   </td>
                   <td className="p-3">
-                    <form action={updateMemberDetails.bind(null, m.id)} className="flex items-center gap-1">
-                      <input type="hidden" name="position" value={m.position || "MEMBER"} />
-                      <input type="hidden" name="isActive" value={String(m.isActive)} />
-                      <select
-                        name="grade"
-                        defaultValue={m.grade ?? ""}
-                        className="text-xs rounded border px-2 py-1 bg-white cursor-pointer"
-                        style={{ borderColor: "#D0DEE8", color: "#333", minWidth: "80px" }}
-                        onChange={(e: any) => e.target.form?.requestSubmit()}
-                      >
-                        <option value="">未设置</option>
-                        <option value="" disabled>──────────</option>
-                        {GRADE_OPTIONS.map((y) => (
-                          <option key={y} value={`${y}级`}>{y}级</option>
-                        ))}
-                      </select>
-                    </form>
+                    <EditableSelect
+                      memberId={m.id}
+                      field="grade"
+                      currentValue={m.grade ?? ""}
+                      options={[
+                        { value: "", label: "未设置" },
+                        ...GRADE_OPTIONS.map((y) => ({ value: `${y}级`, label: `${y}级` })),
+                      ]}
+                      preserveValues={{
+                        position: m.position || "MEMBER",
+                        isActive: String(m.isActive),
+                      }}
+                    />
                   </td>
                   <td className="p-3">
-                    <form action={updateMemberDetails.bind(null, m.id)} className="flex items-center gap-1">
-                      <input type="hidden" name="grade" value={m.grade ?? ""} />
-                      <input type="hidden" name="isActive" value={String(m.isActive)} />
-                      <select
-                        name="position"
-                        defaultValue={m.position || "MEMBER"}
-                        className="text-xs rounded border px-2 py-1 bg-white cursor-pointer"
-                        style={{ borderColor: "#D0DEE8", color: "#333" }}
-                        onChange={(e: any) => e.target.form?.requestSubmit()}
-                      >
-                        {POSITION_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </form>
+                    <EditableSelect
+                      memberId={m.id}
+                      field="position"
+                      currentValue={m.position || "MEMBER"}
+                      options={POSITION_OPTIONS}
+                      preserveValues={{
+                        grade: m.grade ?? "",
+                        isActive: String(m.isActive),
+                      }}
+                    />
                   </td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={

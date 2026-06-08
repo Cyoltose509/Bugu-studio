@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import MemberContactInfo from "./MemberContactInfo";
+import AdminMemberEditor from "./AdminMemberEditor";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const revalidate = 300;
@@ -173,6 +174,14 @@ export default async function MemberDetailPage({ params }: PageProps) {
 
         {/* 右侧边栏 */}
         <aside className="space-y-6">
+          {/* 管理员编辑面板 */}
+          <AdminMemberEditor
+            memberId={member.id}
+            currentGrade={member.grade}
+            currentPosition={member.position || "MEMBER"}
+            isActive={member.isActive}
+          />
+
           {/* 联系方式 — 敏感项，客户端判断可见性 */}
           <MemberContactInfo data={{
             location: member.location,
