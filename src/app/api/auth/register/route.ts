@@ -11,7 +11,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { registerSchema } from "@/lib/validations";
 import { sendVerificationEmail } from "@/lib/email/send";
 import crypto from "crypto";
-import { isRateLimited, getRateLimitRemaining, resetRateLimit } from "@/lib/utils/rateLimit";
+import { isRateLimited, getRateLimitRemaining, resetRateLimit } from "@/lib/utils/rate-limit";
 
 export async function POST(request: Request) {
   try {

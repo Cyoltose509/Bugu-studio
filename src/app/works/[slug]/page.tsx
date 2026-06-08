@@ -1,90 +1,26 @@
 /**
- * 作品详情页 — PPR 架构
- * 静态外壳预渲染/ISR缓存 → 动态内容（auth+DB）Suspense 流式加载
+ * 作品详情页 — ISR 静态缓存，无 auth() 阻塞
+ *
+ * 优化：React.cache 让 generateMetadata 和页面共享同一查询
  */
-
-import { Suspense } from "react";
+import { cache } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { auth } from "@/lib/auth/auth";
-import { canEditProject } from "@/lib/auth/rbac";
 import { ProjectStatus } from "@prisma/client";
+import EditButton from "./EditButton";
 
 export const revalidate = 60;
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
-}
+interface PageProps { params: Promise<{ slug: string }> }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const project = await prisma.project.findFirst({
-    where: { OR: [{ slug }, { id: slug }] },
-    select: { title: true, description: true, coverImage: true },
-  });
-  if (!project) return { title: "作品不存在" };
-  return {
-    title: project.title,
-    description: project.description.slice(0, 160),
-    openGraph: { images: project.coverImage ? [project.coverImage] : [] },
-  };
-}
+/* ── 共享查询（React.cache 去重） ── */
 
-// 静态外壳 + Suspense 动态内容
-export default function WorkDetailPage({ params }: PageProps) {
-  return (
-    <Suspense fallback={<WorkDetailSkeleton />}>
-      <WorkDetailContent params={params} />
-    </Suspense>
-  );
-}
-
-/* ── 骨架屏 ────────────────────────────────── */
-
-function WorkDetailSkeleton() {
-  return (
-    <div className="container mx-auto px-4 py-10 animate-pulse">
-      <div className="flex gap-2 mb-6 text-sm">
-        <div className="w-10 h-4 rounded bg-gray-200" />
-        <div className="w-3 h-4 rounded bg-gray-200" />
-        <div className="w-16 h-4 rounded bg-gray-200" />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="aspect-video w-full max-w-2xl rounded-xl bg-gray-200" />
-          <div className="w-2/3 h-8 rounded bg-gray-200" />
-          <div className="w-1/2 h-5 rounded bg-gray-200" />
-          <div className="space-y-2">
-            <div className="w-full h-4 rounded bg-gray-200" />
-            <div className="w-full h-4 rounded bg-gray-200" />
-            <div className="w-3/4 h-4 rounded bg-gray-200" />
-          </div>
-        </div>
-        <aside className="space-y-4">
-          <div className="rounded-xl p-5 border border-gray-200 space-y-3">
-            <div className="w-20 h-5 rounded bg-gray-200" />
-            <div className="w-full h-4 rounded bg-gray-200" />
-            <div className="w-full h-4 rounded bg-gray-200" />
-          </div>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-/* ── 动态内容（auth + DB 在 Suspense 内） ── */
-
-async function WorkDetailContent({ params }: PageProps) {
-  const { slug } = await params;
-  const session = await auth();
-  const userId = session?.user?.id;
-  const userRole = session?.user?.role as string | undefined;
-
-  const project = await prisma.project.findFirst({
-    where: { OR: [{ slug }, { id: slug }] },
+const getProject = cache(async (slug: string) => {
+  return prisma.project.findUnique({
+    where: { slug },
     include: {
       images: { orderBy: { sortOrder: "asc" } },
       links: { orderBy: { sortOrder: "asc" } },
@@ -102,31 +38,46 @@ async function WorkDetailContent({ params }: PageProps) {
       },
     },
   });
+});
 
-  if (!project) notFound();
+/* ── Metadata（复用同一查询，无额外 DB 开销） ── */
 
-  const canView = project.status === ProjectStatus.PUBLISHED
-    || (userId && (userId === project.submitterId || userRole === "ADMIN" || userRole === "REVIEWER"));
-  if (!canView) notFound();
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await getProject(slug);
+  if (!project || project.status !== ProjectStatus.PUBLISHED) return { title: "作品不存在" };
+  return {
+    title: project.title,
+    description: project.description.slice(0, 160),
+    openGraph: { images: project.coverImage ? [project.coverImage] : [] },
+  };
+}
 
-  const canEdit = userId ? canEditProject(userRole as any, userId, project.submitterId) : false;
+/* ── 页面主体 ── */
+
+export default async function WorkDetailPage({ params }: PageProps) {
+  const { slug } = await params;
+  const project = await getProject(slug);
+
+  if (!project || project.status !== ProjectStatus.PUBLISHED) notFound();
 
   const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
-    DRAFT: { bg: "#F5F5F5", color: "#777", label: "草稿" },
-    PENDING: { bg: "#FFF3E0", color: "#E65100", label: "待审核" },
-    PUBLISHED: { bg: "#E8F5E9", color: "#2E7D32", label: "已发布" },
+    DRAFT:    { bg: "#F5F5F5", color: "#777",   label: "草稿" },
+    PENDING:  { bg: "#FFF3E0", color: "#E65100", label: "待审核" },
     REJECTED: { bg: "#FDE8E8", color: "#C62828", label: "已拒绝" },
     ARCHIVED: { bg: "#EDE7F6", color: "#5E35B1", label: "已归档" },
   };
   const statusBadge = STATUS_BADGE[project.status];
 
-  const LINK_ICONS: Record<string, string> = { steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📦", drive: "📁", 官网: "🌐", b站: "▶️" };
+  const LINK_ICONS: Record<string, string> = {
+    steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📦", drive: "📁", 官网: "🌐", b站: "▶️",
+  };
   const externalLinks = [
     ...project.links.map((l) => ({ label: l.label, url: l.url, icon: LINK_ICONS[l.label.toLowerCase()] || "🔗" })),
-    ...([{ label: "Steam", url: project.steamUrl }, { label: "GitHub", url: project.githubUrl }, { label: "itch.io", url: project.itchUrl },
-        { label: "百度网盘", url: project.panUrl }, { label: "Google Drive", url: project.driveUrl }, { label: "OneDrive", url: project.onedriveUrl },
-        { label: "官网", url: project.websiteUrl }]
-      .filter((l) => l.url && !project.links.some((pl) => pl.url === l.url)) as { label: string; url: string; icon?: string }[])
+    ...[{ label: "Steam", url: project.steamUrl }, { label: "GitHub", url: project.githubUrl }, { label: "itch.io", url: project.itchUrl },
+       { label: "百度网盘", url: project.panUrl }, { label: "Google Drive", url: project.driveUrl }, { label: "OneDrive", url: project.onedriveUrl },
+       { label: "官网", url: project.websiteUrl }]
+      .filter((l) => l.url && !project.links.some((pl) => pl.url === l.url))
       .map((l) => ({ ...l, icon: LINK_ICONS[l.label.toLowerCase()] || "🔗" })),
   ];
 
@@ -150,17 +101,14 @@ async function WorkDetailContent({ params }: PageProps) {
 
           <h1 className="text-3xl font-bold mb-2" style={{ color: "#25547A" }}>
             {project.title}
-            {project.status !== ProjectStatus.PUBLISHED && statusBadge && (
+            {statusBadge && (
               <span className="inline-block ml-3 text-xs px-2 py-0.5 rounded-full align-middle" style={{ background: statusBadge.bg, color: statusBadge.color }}>{statusBadge.label}</span>
             )}
           </h1>
           {project.subtitle && <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>}
 
-          {canEdit && (
-            <div className="flex gap-2 mb-6">
-              <Link href={`/works/${project.slug}/edit`} className="inline-flex items-center gap-1 text-sm px-4 py-2 rounded-lg font-medium transition-colors" style={{ background: "#25547A", color: "#fff" }}>✏️ 编辑作品</Link>
-            </div>
-          )}
+          {/* 编辑按钮 — 客户端组件，无服务器阻塞 */}
+          <EditButton slug={project.slug} submitterId={project.submitterId} />
 
           <div className="flex flex-wrap gap-2 mb-6">
             {project.tags.map(({ tag }) => (

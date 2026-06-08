@@ -1,10 +1,12 @@
 /**
- * 速率限制实现
- * 基于内存（单实例）或 Redis（多实例）
- * 生产多实例部署时切换到 Redis
+ * 速率限制 — 统一实现
+ *
+ * checkRateLimit / getClientIp / RATE_LIMITS → 内存（IP 级别限流）
+ * isRateLimited / getRateLimitRemaining / resetRateLimit → Prisma（用户级别限流）
  */
 
 import { NextRequest } from "next/server";
+import { prisma } from "@/lib/db/prisma";
 
 interface RateLimitEntry {
   count: number;
@@ -110,3 +112,38 @@ export const RATE_LIMITS = {
   /** 搜索 - 每 IP 每分钟 30 次 */
   SEARCH: { windowSeconds: 60, maxRequests: 30, prefix: "search" },
 } as const;
+
+/* ── Prisma-based 用户级限流（用于邮箱验证码、头像更换等） ── */
+
+/**
+ * 检查是否超出速率限制（基于数据库，无状态部署友好）
+ * @returns true = 被限流，false = 允许
+ */
+export async function isRateLimited(key: string, windowSeconds: number, maxCount = 1): Promise<boolean> {
+  const now = new Date();
+
+  await prisma.rateLimit.deleteMany({ where: { expiresAt: { lt: now } } }).catch(() => {});
+
+  const record = await prisma.rateLimit.findUnique({ where: { key } });
+
+  if (!record || record.expiresAt < now) {
+    if (record) await prisma.rateLimit.delete({ where: { key } }).catch(() => {});
+    await prisma.rateLimit.create({ data: { key, count: 1, expiresAt: new Date(now.getTime() + windowSeconds * 1000) } });
+    return false;
+  }
+
+  if (record.count >= maxCount) return true;
+
+  await prisma.rateLimit.update({ where: { key }, data: { count: { increment: 1 } } });
+  return false;
+}
+
+export async function getRateLimitRemaining(key: string): Promise<number> {
+  const record = await prisma.rateLimit.findUnique({ where: { key } });
+  if (!record) return 0;
+  return Math.max(0, Math.ceil((record.expiresAt.getTime() - Date.now()) / 1000));
+}
+
+export async function resetRateLimit(key: string): Promise<void> {
+  await prisma.rateLimit.delete({ where: { key } }).catch(() => {});
+}
