@@ -35,25 +35,34 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   const where: any = {};
   if (role) where.role = role;
 
-  const [users, total] = await Promise.all([
-    prisma.user.findMany({
-      where,
-      orderBy: [{ role: "desc" }, { createdAt: "desc" }],
-      select: {
-        id: true, name: true, email: true, role: true,
-        isActive: true, emailVerified: true,
-        lastLoginAt: true, createdAt: true,
-      },
-      skip,
-      take: pageSize,
-    }),
+  // 1. 先拿当前页用户列表
+  const users = await prisma.user.findMany({
+    where,
+    orderBy: [{ role: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true, name: true, email: true, role: true,
+      isActive: true, emailVerified: true,
+      lastLoginAt: true, createdAt: true,
+    },
+    skip,
+    take: pageSize,
+  });
+
+  // 2. 并行拿总数和作品数统计（用 groupBy 避免 N+1）
+  const [total, projectCounts] = await Promise.all([
     prisma.user.count({ where }),
+    prisma.project.groupBy({
+      by: ["submitterId"],
+      where: { submitterId: { in: users.map((u: any) => u.id) } },
+      _count: { submitterId: true },
+    }),
   ]);
 
-  const userProjectCounts = await Promise.all(
-    users.map(u => prisma.project.count({ where: { submitterId: u.id } }))
+  // 3. 组装用户+作品数
+  const countMap = Object.fromEntries(
+    projectCounts.map((pc: any) => [pc.submitterId, pc._count.submitterId])
   );
-  const userWithCounts = users.map((u, i) => ({ ...u, projectCount: userProjectCounts[i] }));
+  const userWithCounts = users.map(u => ({ ...u, projectCount: countMap[u.id] || 0 }));
 
   const totalPages = Math.ceil(total / pageSize);
 

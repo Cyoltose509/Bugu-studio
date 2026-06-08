@@ -36,14 +36,14 @@ export default async function LatestProjects() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-      {projects.map((p) => (
-        <ProjectCard key={p.id} project={p} compact />
+      {projects.map((p, i) => (
+        <ProjectCard key={p.id} project={p} compact priority={i === 0} />
       ))}
     </div>
   );
 }
 
-function ProjectCard({ project, compact }: { project: ProjectWithRelations; compact?: boolean }) {
+function ProjectCard({ project, compact, priority }: { project: ProjectWithRelations; compact?: boolean; priority?: boolean }) {
   const typeLabel: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
 
   return (
@@ -60,7 +60,7 @@ function ProjectCard({ project, compact }: { project: ProjectWithRelations; comp
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, 25vw"
-            loading="lazy"
+            {...(priority ? { priority: true } : { loading: "lazy" as const })}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
