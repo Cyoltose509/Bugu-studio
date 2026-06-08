@@ -51,7 +51,6 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
               <tr className="border-b" style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>名称</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>年级</th>
-                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>入社年份</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>状态</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>用户角色</th>
                 <th className="text-right p-3 font-medium" style={{ color: "#555" }}>操作</th>
@@ -65,7 +64,6 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                     <div className="text-xs" style={{ color: "#999" }}>{m.user.email}</div>
                   </td>
                   <td className="p-3 text-xs" style={{ color: "#777" }}>{m.grade || "—"}</td>
-                  <td className="p-3 text-xs" style={{ color: "#777" }}>{m.joinYear}</td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={
                       m.isActive

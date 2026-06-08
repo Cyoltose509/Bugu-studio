@@ -104,8 +104,8 @@ export default async function MemberDetailPage({ params }: PageProps) {
                 )}
               </div>
               <div className="text-sm space-y-1" style={{ color: "#777" }}>
-                {member.grade && <p>{member.grade} · 入社 {member.joinYear} 年{member.graduateYear ? ` · ${member.graduateYear} 年毕业` : ""}</p>}
-                {!member.grade && <p>入社 {member.joinYear} 年{member.graduateYear ? ` · ${member.graduateYear} 年毕业` : ""}</p>}
+                {member.grade && <p>{member.grade}{member.graduateYear ? ` · ${member.graduateYear} 年毕业` : ""}</p>}
+                {!member.grade && member.graduateYear && <p>{member.graduateYear} 年毕业</p>}
               </div>
 
               {/* 职能标签 */}
@@ -194,7 +194,6 @@ export default async function MemberDetailPage({ params }: PageProps) {
           <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
             <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>个人信息</h3>
             <dl className="space-y-2.5 text-sm">
-              <InfoRow label="入社年份" value={String(member.joinYear)} />
               {member.graduateYear && <InfoRow label="毕业年份" value={String(member.graduateYear)} />}
               {member.grade && <InfoRow label="年级" value={member.grade} />}
               <InfoRow label="参与项目数" value={String(member.projectMembers.length)} />

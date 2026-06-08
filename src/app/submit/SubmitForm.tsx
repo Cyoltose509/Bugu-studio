@@ -475,7 +475,7 @@ export default function SubmitForm({ tags }: Props) {
                     </span>
                     <span style={{ color: "#333" }}>{m.displayName}</span>
                     <span className="text-xs ml-auto" style={{ color: "#999" }}>
-                      {m.grade && `${m.grade} · `}{m.joinYear}级{Array.isArray(m.skills) && m.skills.length > 0 && ` · ${m.skills.slice(0, 3).join("、")}`}
+                      {m.grade || ""}{Array.isArray(m.skills) && m.skills.length > 0 && ` · ${m.skills.slice(0, 3).join("、")}`}
                     </span>
                   </button>
                 ))}

@@ -42,7 +42,7 @@ export default async function ProfilePage() {
       where: { userId: session.user.id },
       select: {
         id: true, displayName: true, bio: true, grade: true,
-        joinYear: true, graduateYear: true, skills: true,
+        graduateYear: true, skills: true,
         isActive: true,
         socialLinks: { orderBy: { sortOrder: "asc" } },
       },
@@ -155,10 +155,6 @@ export default async function ProfilePage() {
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>年级</div>
               <div style={{ color: "#333" }}>{member.grade || "—"}</div>
-            </div>
-            <div>
-              <div className="text-xs mb-0.5" style={{ color: "#999" }}>入社年份</div>
-              <div style={{ color: "#333" }}>{member.joinYear}</div>
             </div>
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>状态</div>
