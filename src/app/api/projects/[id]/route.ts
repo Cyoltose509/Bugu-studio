@@ -6,6 +6,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { projectUpdateSchema, reviewSchema } from "@/lib/validations";
@@ -13,6 +14,7 @@ import { canEditProject, isAdmin, isReviewerOrAbove } from "@/lib/auth/rbac";
 import { getClientIp, checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { apiResponse, apiError, generateSlug } from "@/lib/utils";
+import { invalidateCache } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -126,6 +128,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       statusCode: 200,
     });
 
+    // ── 清除成员相关缓存 & 触发页面刷新 ──
+    await invalidateCache("members:all");
+    revalidatePath("/members");
+    revalidatePath("/works");
+    // 使受影响的成员详情缓存也失效
+    const affectedMembers = await prisma.projectMember.findMany({
+      where: { projectId: id },
+      select: { memberId: true },
+    });
+    for (const m of affectedMembers) {
+      await invalidateCache(`member:detail:${m.memberId}`);
+    }
+
     return apiResponse(updated[0]);
   }
 
@@ -199,6 +214,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     statusCode: 200,
   });
 
+  // ── 清除成员相关缓存 ──
+  await invalidateCache("members:all");
+  revalidatePath("/members");
+  revalidatePath("/works");
+
   return apiResponse(updated);
 }
 
@@ -225,6 +245,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     userAgent,
     statusCode: 200,
   });
+
+  // ── 清除成员相关缓存 ──
+  await invalidateCache("members:all");
+  revalidatePath("/members");
+  revalidatePath("/works");
 
   return apiResponse({ deleted: true });
 }

@@ -5,6 +5,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { projectCreateSchema, projectQuerySchema } from "@/lib/validations";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/utils/rate-limit";
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { apiResponse, apiError, generateSlug, getPagination } from "@/lib/utils";
+import { invalidateCache } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 // GET /api/projects
@@ -146,6 +148,16 @@ export async function POST(request: NextRequest) {
     slug = `${slug}-${Date.now()}`;
   }
 
+  // ── 自动将提交者本人加入成员列表 ──
+  const finalMemberRoles = [...memberRoles];
+  const submitterMember = await prisma.clubMember.findFirst({
+    where: { userId: session.user.id },
+    select: { id: true },
+  });
+  if (submitterMember && !finalMemberRoles.some((m) => m.memberId === submitterMember.id)) {
+    finalMemberRoles.push({ memberId: submitterMember.id, role: "制作" });
+  }
+
   const project = await prisma.project.create({
     data: {
       ...projectData,
@@ -157,7 +169,7 @@ export async function POST(request: NextRequest) {
         create: tagIds.map((tagId) => ({ tagId })),
       },
       members: {
-        create: memberRoles.map(({ memberId, role }, idx) => ({
+        create: finalMemberRoles.map(({ memberId, role }, idx) => ({
           memberId,
           role,
           sortOrder: idx,
@@ -176,6 +188,13 @@ export async function POST(request: NextRequest) {
       members: { include: { member: true } },
     },
   });
+
+  // ── 清除成员相关缓存 & 触发页面刷新 ──
+  await invalidateCache("members:all");
+  for (const m of finalMemberRoles) {
+    await invalidateCache(`member:detail:${m.memberId}`);
+  }
+  revalidatePath("/members");
 
   // 审计日志
   const { ipAddress, userAgent } = extractRequestInfo(request);

@@ -7,6 +7,7 @@ import { projectCreateSchema, linkEntrySchema } from "@/lib/validations";
 import { generateSlug } from "@/lib/utils";
 import { ProjectStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { invalidateCache } from "@/lib/db/cache";
 import { z } from "zod";
 
 function safeJsonParse<T>(str: string | null, fallback: T): T {
@@ -173,7 +174,13 @@ export async function submitProject(formData: FormData) {
     },
   });
 
+  // ── 清除相关缓存 & 触发页面刷新 ──
+  await invalidateCache("members:all");
+  for (const m of finalMemberRoles) {
+    await invalidateCache(`member:detail:${m.memberId}`);
+  }
   revalidatePath("/submit");
   revalidatePath("/works");
+  revalidatePath("/members");
   return { success: true };
 }
