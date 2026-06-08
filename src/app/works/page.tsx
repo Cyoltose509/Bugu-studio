@@ -126,11 +126,17 @@ export default async function WorksPage({ searchParams }: PageProps) {
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
                       <div className="flex -space-x-1">
-                        {p.members.slice(0, 3).map(({ member }) => (
-                          <div key={member.displayName} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white overflow-hidden" style={{ background: "#E38043" }} title={member.displayName}>
-                            {(member.user?.image || member.avatar) ? <img src={(member.user?.image || member.avatar)!} alt={member.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : member.displayName[0]}
-                          </div>
-                        ))}
+                        {p.members.slice(0, 3).map((pm) => {
+                          const name = pm.member?.displayName || pm.externalName || "?";
+                          const avatarUrl = pm.member ? (pm.member.user?.image || pm.member.avatar) : null;
+                          return (
+                            <div key={pm.id} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white overflow-hidden"
+                              style={{ background: pm.member ? "#E38043" : "#6B7280" }}
+                              title={name}>
+                              {avatarUrl ? <img src={avatarUrl} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : name[0]}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

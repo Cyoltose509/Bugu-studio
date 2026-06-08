@@ -301,14 +301,15 @@ model ProjectImage {
 
 // 作品-成员多对多（含角色）
 model ProjectMember {
-  id       String @id @default(cuid())
-  projectId String
-  memberId  String
-  role      String   // 如 "主程序员", "美术", "策划", "音效"
-  sortOrder Int @default(0)
+  id           String  @id @default(cuid())
+  projectId    String
+  memberId     String? // 社团成员 ID（可选，外部成员为 null）
+  externalName String? // 非社团成员姓名
+  role         String   // 如 "主程序员", "美术", "策划", "音效"
+  sortOrder    Int     @default(0)
 
-  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  member  ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  ClubMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, memberId])
   @@index([projectId])

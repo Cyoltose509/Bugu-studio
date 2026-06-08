@@ -75,9 +75,11 @@ export async function submitProject(formData: FormData) {
   }
 
   // ── 关联数据校验 ──
-  // 成员必须真实存在
-  if (parsed.data.memberRoles.length > 0) {
-    const memberIds = parsed.data.memberRoles.map((m) => m.memberId);
+  // 成员必须真实存在（仅对 memberId 不为空的条目校验）
+  const memberIds = parsed.data.memberRoles
+    .filter((m) => m.memberId)
+    .map((m) => m.memberId as string);
+  if (memberIds.length > 0) {
     const existingMembers = await prisma.clubMember.findMany({
       where: { id: { in: memberIds } },
       select: { id: true },
@@ -167,7 +169,8 @@ export async function submitProject(formData: FormData) {
       // 成员-角色关联
       members: {
         create: finalMemberRoles.map((m) => ({
-          memberId: m.memberId,
+          memberId: m.memberId || null,
+          externalName: m.memberId ? null : (m.externalName || null),
           role: m.role,
         })),
       },
@@ -177,7 +180,7 @@ export async function submitProject(formData: FormData) {
   // ── 清除相关缓存 & 触发页面刷新 ──
   await invalidateCache("members:all");
   for (const m of finalMemberRoles) {
-    await invalidateCache(`member:detail:${m.memberId}`);
+    if (m.memberId) await invalidateCache(`member:detail:${m.memberId}`);
   }
   revalidatePath("/submit");
   revalidatePath("/works");

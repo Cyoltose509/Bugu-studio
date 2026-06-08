@@ -28,9 +28,15 @@ interface LinkEntry {
 }
 
 interface SelectedMember {
-  memberId: string;
+  memberId?: string;
+  externalName?: string;
   displayName: string;
   role: string;
+}
+
+interface ProjectImage {
+  url: string;
+  altText?: string;
 }
 
 interface InitialData {
@@ -44,6 +50,7 @@ interface InitialData {
   tagIds: string[];
   links: LinkEntry[];
   members: SelectedMember[];
+  images: ProjectImage[];
 }
 
 interface Props {
@@ -72,6 +79,12 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState("");
 
+  // ── 截图管理 ──
+  const [screenshots, setScreenshots] = useState<ProjectImage[]>(initialData.images);
+  const [screenshotUploading, setScreenshotUploading] = useState(false);
+  const [screenshotError, setScreenshotError] = useState("");
+  const screenshotFileRef = useRef<HTMLInputElement>(null);
+
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [showCustomLabel, setShowCustomLabel] = useState(false);
@@ -97,6 +110,10 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
   const [memberRole, setMemberRole] = useState("");
   const memberDropdownRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── 外部成员（非社团成员） ──
+  const [externalName, setExternalName] = useState("");
+  const [externalRole, setExternalRole] = useState("");
 
   // ── 成员搜索 ──
   const searchMembers = useCallback(async (q: string) => {
@@ -140,13 +157,50 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
     setShowMemberDropdown(false);
   }
 
-  function removeMember(memberId: string) {
-    setSelectedMembers((prev) => prev.filter((m) => m.memberId !== memberId));
+  function addExternalMember() {
+    const name = externalName.trim();
+    if (!name) return;
+    setSelectedMembers((prev) => [
+      ...prev,
+      { externalName: name, displayName: name, role: externalRole || "成员" },
+    ]);
+    setExternalName("");
+    setExternalRole("");
   }
 
-  function updateMemberRole(memberId: string, role: string) {
+  function removeMember(index: number) {
+    setSelectedMembers((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // ── 截图上传 ──
+  async function handleScreenshotUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScreenshotError("");
+    setScreenshotUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("type", "screenshot");
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "上传失败");
+      setScreenshots((prev) => [...prev, { url: json.url }]);
+    } catch (err: any) {
+      setScreenshotError(err.message || "上传失败");
+    } finally {
+      setScreenshotUploading(false);
+      if (screenshotFileRef.current) screenshotFileRef.current.value = "";
+    }
+  }
+
+  function removeScreenshot(index: number) {
+    setScreenshots((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateMemberRole(index: number, role: string) {
     setSelectedMembers((prev) =>
-      prev.map((m) => (m.memberId === memberId ? { ...m, role } : m))
+      prev.map((m, i) => (i === index ? { ...m, role } : m))
     );
   }
 
@@ -205,7 +259,8 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
       tagIds: selectedTags,
       customTags,
       links,
-      memberRoles: selectedMembers.map((m) => ({ memberId: m.memberId, role: m.role })),
+      memberRoles: selectedMembers.map((m) => ({ memberId: m.memberId, externalName: m.externalName, role: m.role })),
+      images: screenshots.length > 0 ? screenshots : undefined,
     };
 
     try {
@@ -379,12 +434,56 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
         </div>
       </section>
 
+      {/* ═══════════════ 截图管理 ═══════════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>📸 作品截图 ({screenshots.length}/3)</h2>
+        <input
+          ref={screenshotFileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleScreenshotUpload}
+        />
+        {screenshots.length > 0 && (
+          <div className="grid grid-cols-3 gap-3">
+            {screenshots.map((img, i) => (
+              <div key={i} className="relative group rounded-lg overflow-hidden border" style={{ borderColor: "#D0DEE8" }}>
+                <img src={img.url} alt={img.altText || `截图 ${i + 1}`} className="w-full aspect-video object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeScreenshot(i)}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                  title="删除截图"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div>
+          <button
+            type="button"
+            onClick={() => screenshotFileRef.current?.click()}
+            disabled={screenshotUploading || screenshots.length >= 3}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-all"
+            style={{ background: "#3388BB", color: "#fff" }}
+          >
+            {screenshotUploading ? "上传中..." : screenshots.length >= 3 ? "已达到上限" : "+ 添加截图"}
+          </button>
+          {screenshotError && <p className="text-xs mt-1" style={{ color: "#E38043" }}>{screenshotError}</p>}
+          <p className="text-xs mt-1" style={{ color: "#999" }}>最多 3 张，支持 JPG/PNG/WebP 格式</p>
+        </div>
+      </section>
+
       {/* ═══════════════ 制作成员 ═══════════════ */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>👥 制作成员</h2>
+
+        {/* 社团成员搜索 */}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-2" ref={memberDropdownRef}>
           <div className="relative">
-            <input type="text" value={memberQuery} onChange={(e) => { setMemberQuery(e.target.value); setShowMemberDropdown(true); }} onFocus={() => setShowMemberDropdown(true)} placeholder="搜索成员姓名..." className={inputClass} style={inputStyle} />
+            <input type="text" value={memberQuery} onChange={(e) => { setMemberQuery(e.target.value); setShowMemberDropdown(true); }} onFocus={() => setShowMemberDropdown(true)} placeholder="搜索社团成员姓名..." className={inputClass} style={inputStyle} />
             {showMemberDropdown && memberResults.length > 0 && (
               <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto" style={{ borderColor: "#D0DEE8" }}>
                 {memberResults.map((m: any) => (
@@ -399,13 +498,48 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
           </div>
           <input type="text" value={memberRole} onChange={(e) => setMemberRole(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); } }} placeholder="角色，如: 主程序" className={inputClass} style={inputStyle} />
         </div>
+
+        {/* 外部成员添加 */}
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-2">
+          <input
+            type="text"
+            value={externalName}
+            onChange={(e) => setExternalName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
+            placeholder="添加非社团成员姓名..."
+            className={inputClass}
+            style={inputStyle}
+          />
+          <input
+            type="text"
+            value={externalRole}
+            onChange={(e) => setExternalRole(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
+            placeholder="角色，如: 原画"
+            className={inputClass}
+            style={inputStyle}
+          />
+          <button
+            type="button"
+            onClick={addExternalMember}
+            disabled={!externalName.trim()}
+            className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all"
+            style={{ background: "#88C232", color: "#fff" }}
+          >
+            添加
+          </button>
+        </div>
+        <p className="text-xs" style={{ color: "#999" }}>非社团成员填写姓名即可添加为作品贡献者</p>
+
         {selectedMembers.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {selectedMembers.map((m) => (
-              <span key={m.memberId} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs" style={{ background: "rgba(37,84,122,0.1)", color: "#25547A" }}>
+            {selectedMembers.map((m, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs" style={m.memberId ? { background: "rgba(37,84,122,0.1)", color: "#25547A" } : { background: "rgba(227,128,67,0.1)", color: "#E38043" }}>
+                {m.memberId && <span className="w-4 h-4 rounded-full bg-[#E38043] text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>}
+                {!m.memberId && <span className="text-[10px] mr-0.5">👤</span>}
                 {m.displayName}
-                <input type="text" value={m.role} onChange={(e) => updateMemberRole(m.memberId, e.target.value)} className="w-16 bg-transparent border-b border-dashed text-xs px-1 focus:outline-none" style={{ borderColor: "#25547A", color: "#25547A" }} />
-                <button type="button" onClick={() => removeMember(m.memberId)} className="ml-0.5 hover:text-red-500" title="移除">×</button>
+                <input type="text" value={m.role} onChange={(e) => updateMemberRole(i, e.target.value)} className="w-16 bg-transparent border-b border-dashed text-xs px-1 focus:outline-none" style={{ borderColor: "currentColor", color: "inherit" }} />
+                <button type="button" onClick={() => removeMember(i)} className="ml-0.5 hover:text-red-500" title="移除">×</button>
               </span>
             ))}
           </div>

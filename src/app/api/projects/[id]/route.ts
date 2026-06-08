@@ -150,7 +150,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return apiError("数据验证失败", 422, parsed.error.flatten());
   }
 
-  const { tagIds, memberRoles, links, customTags, ...projectData } = parsed.data;
+  const { tagIds, memberRoles, links, customTags, images, ...projectData } = parsed.data;
 
   // 处理自定义标签：upsert 新标签并合并到 tagIds
   let finalTagIds = tagIds;
@@ -183,8 +183,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       ...(memberRoles !== undefined && {
         members: {
           deleteMany: {},
-          create: memberRoles.map(({ memberId, role }, idx) => ({
-            memberId,
+          create: memberRoles.map(({ memberId, externalName, role }, idx) => ({
+            memberId: memberId || null,
+            externalName: externalName || null,
             role,
             sortOrder: idx,
           })),
@@ -196,6 +197,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           create: links.map((l, i) => ({
             label: l.label,
             url: l.url,
+            sortOrder: i,
+          })),
+        },
+      }),
+      ...(images !== undefined && {
+        images: {
+          deleteMany: {},
+          create: images.map((img, i) => ({
+            url: img.url,
+            altText: img.altText,
             sortOrder: i,
           })),
         },

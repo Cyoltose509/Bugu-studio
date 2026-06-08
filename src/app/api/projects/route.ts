@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     return apiError("数据验证失败", 422, parsed.error.flatten());
   }
 
-  const { tagIds, memberRoles, links, customTags, ...projectData } = parsed.data;
+  const { tagIds, memberRoles, links, customTags, images: _, ...projectData } = parsed.data;
 
   // 生成唯一 slug
   let slug = generateSlug(projectData.title);
@@ -149,7 +149,11 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 自动将提交者本人加入成员列表 ──
-  const finalMemberRoles = [...memberRoles];
+  const finalMemberRoles = [...memberRoles] as Array<{
+    memberId?: string;
+    externalName?: string;
+    role: string;
+  }>;
   const submitterMember = await prisma.clubMember.findFirst({
     where: { userId: session.user.id },
     select: { id: true },
@@ -169,8 +173,9 @@ export async function POST(request: NextRequest) {
         create: tagIds.map((tagId) => ({ tagId })),
       },
       members: {
-        create: finalMemberRoles.map(({ memberId, role }, idx) => ({
-          memberId,
+        create: finalMemberRoles.map(({ memberId, externalName, role }, idx) => ({
+          memberId: memberId || null,
+          externalName: memberId ? null : (externalName || null),
           role,
           sortOrder: idx,
         })),
@@ -192,7 +197,7 @@ export async function POST(request: NextRequest) {
   // ── 清除成员相关缓存 & 触发页面刷新 ──
   await invalidateCache("members:all");
   for (const m of finalMemberRoles) {
-    await invalidateCache(`member:detail:${m.memberId}`);
+    if (m.memberId) await invalidateCache(`member:detail:${m.memberId}`);
   }
   revalidatePath("/members");
 

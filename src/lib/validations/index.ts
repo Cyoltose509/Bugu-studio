@@ -64,13 +64,27 @@ export const projectCreateSchema = z.object({
   customTags: z.array(z.string().min(1).max(30)).max(10).default([]),
   memberRoles: z
     .array(
-      z.object({
-        memberId: z.string(),
-        role: z.string().max(50),
-      })
+      z
+        .object({
+          memberId: z.string().optional(),
+          externalName: z.string().max(100).optional(),
+          role: z.string().max(50),
+        })
+        .refine((d) => d.memberId || d.externalName, {
+          message: "必须提供 memberId（社团成员）或 externalName（外部成员）",
+        })
     )
     .max(50)
     .default([]),
+  images: z
+    .array(
+      z.object({
+        url: z.string().max(500),
+        altText: z.string().max(200).optional(),
+      })
+    )
+    .max(20)
+    .optional(),
 });
 
 export const projectUpdateSchema = projectCreateSchema.partial();

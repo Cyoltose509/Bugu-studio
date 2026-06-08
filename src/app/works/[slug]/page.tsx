@@ -216,19 +216,39 @@ export default async function WorkDetailPage({ params }: PageProps) {
             <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
               <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>开发团队</h3>
               <div className="space-y-3">
-                {project.members.map(({ member, role }) => (
-                  <Link key={member.id} href={`/members/${member.id}`} className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5 transition-colors hover:bg-[#E6F0F8]">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden" style={{ background: "linear-gradient(135deg, #E38043, #F09055)" }}>
-                      {(member.user?.image || member.avatar) ? (
-                        <img src={(member.user?.image || member.avatar)!} alt={member.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      ) : member.displayName[0]}
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium" style={{ color: "#333" }}>{member.displayName}</div>
-                      <div className="text-xs" style={{ color: "#999" }}>{role}</div>
-                    </div>
-                  </Link>
-                ))}
+                {project.members.map((pm) => {
+                  const isExternal = !pm.member;
+                  const displayName = pm.member?.displayName || pm.externalName || "未知";
+                  const avatarUrl = pm.member ? (pm.member.user?.image || pm.member.avatar) : null;
+
+                  const inner = (
+                    <>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden`}
+                        style={{ background: isExternal ? "#6B7280" : "linear-gradient(135deg, #E38043, #F09055)" }}>
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : displayName[0]}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium" style={{ color: "#333" }}>{displayName}</div>
+                        <div className="text-xs" style={{ color: "#999" }}>{pm.role}</div>
+                      </div>
+                    </>
+                  );
+
+                  if (isExternal) {
+                    return (
+                      <div key={pm.id} className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5">
+                        {inner}
+                      </div>
+                    );
+                  }
+                  return (
+                    <Link key={pm.id} href={`/members/${pm.member!.id}`} className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5 transition-colors hover:bg-[#E6F0F8]">
+                      {inner}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           )}
