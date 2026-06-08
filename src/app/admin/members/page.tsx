@@ -6,6 +6,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { toggleMemberActive } from "./actions";
 import DeleteMemberButton from "./DeleteMemberButton";
 import EditableSelect from "./EditableSelect";
@@ -35,13 +36,15 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
   const skip = (page - 1) * pageSize;
 
   const [members, total] = await Promise.all([
-    prisma.clubMember.findMany({
-      orderBy: [{ joinYear: "desc" }, { createdAt: "desc" }],
-      include: { user: { select: { id: true, name: true, email: true, role: true } } },
-      skip,
-      take: pageSize,
-    }),
-    prisma.clubMember.count(),
+    cachedQuery(`admin:members:page${page}`, () =>
+      prisma.clubMember.findMany({
+        orderBy: [{ joinYear: "desc" }, { createdAt: "desc" }],
+        include: { user: { select: { id: true, name: true, email: true, role: true } } },
+        skip,
+        take: pageSize,
+      })
+    , 15),
+    cachedQuery('admin:members:total', () => prisma.clubMember.count(), 30),
   ]);
 
   const totalPages = Math.ceil(total / pageSize);

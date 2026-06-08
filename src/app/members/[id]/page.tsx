@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import MemberContactInfo from "./MemberContactInfo";
 import AdminMemberEditor from "./AdminMemberEditor";
 
@@ -19,10 +20,12 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const member = await prisma.clubMember.findUnique({
-    where: { id },
-    select: { displayName: true, bio: true },
-  });
+  const member = await cachedQuery(`member:meta:${id}`, () =>
+    prisma.clubMember.findUnique({
+      where: { id },
+      select: { displayName: true, bio: true },
+    })
+  , 300);
   if (!member) return { title: "成员不存在" };
   return {
     title: member.displayName,
@@ -33,28 +36,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function MemberDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const member = await prisma.clubMember.findUnique({
-    where: { id },
-    include: {
-      user: { select: { role: true, image: true, bio: true } },
-      socialLinks: { orderBy: { sortOrder: "asc" } },
-      projectMembers: {
-        orderBy: { sortOrder: "asc" },
-        include: {
-          project: {
-            select: {
-              id: true,
-              slug: true,
-              title: true,
-              type: true,
-              coverImage: true,
-              developYear: true,
+  const member = await cachedQuery(`member:detail:${id}`, () =>
+    prisma.clubMember.findUnique({
+      where: { id },
+      include: {
+        user: { select: { role: true, image: true, bio: true } },
+        socialLinks: { orderBy: { sortOrder: "asc" } },
+        projectMembers: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            project: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+                type: true,
+                coverImage: true,
+                developYear: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    })
+  , 300);
 
   if (!member) notFound();
 

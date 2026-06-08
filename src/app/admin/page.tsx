@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import { ProjectStatus } from "@prisma/client";
 
@@ -12,12 +13,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminDashboard() {
   const [userCount, memberCount, projectCount, pendingCount, latestUsers, latestProjects] =
     await Promise.all([
-      prisma.user.count(),
-      prisma.clubMember.count(),
-      prisma.project.count(),
-      prisma.project.count({ where: { status: ProjectStatus.PENDING } }),
-      prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, name: true, email: true, role: true, createdAt: true } }),
-      prisma.project.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, title: true, status: true, createdAt: true } }),
+      cachedQuery('admin:userCount', () => prisma.user.count(), 30),
+      cachedQuery('admin:memberCount', () => prisma.clubMember.count(), 30),
+      cachedQuery('admin:projectCount', () => prisma.project.count(), 30),
+      cachedQuery('admin:pendingCount', () => prisma.project.count({ where: { status: ProjectStatus.PENDING } }), 30),
+      cachedQuery('admin:latestUsers', () => prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, name: true, email: true, role: true, createdAt: true } }), 15),
+      cachedQuery('admin:latestProjects', () => prisma.project.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, title: true, status: true, createdAt: true } }), 15),
     ]);
 
   const stats = [

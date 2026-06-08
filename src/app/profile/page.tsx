@@ -5,6 +5,7 @@
  */
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -34,33 +35,39 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const userId = isAdminView ? targetId! : session.user.id;
 
   const [user, member, userProjects] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true, email: true, name: true, bio: true, role: true, image: true,
-        emailVerified: true, isActive: true,
-        lastLoginAt: true, createdAt: true,
-      },
-    }),
-    prisma.clubMember.findUnique({
-      where: { userId },
-      select: {
-        id: true, displayName: true, bio: true, grade: true,
-        graduateYear: true, skills: true, position: true,
-        location: true, phone: true, wechat: true, qq: true,
-        isActive: true,
-        socialLinks: { orderBy: { sortOrder: "asc" } },
-      },
-    }),
-    prisma.project.findMany({
-      where: { submitterId: userId },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true, slug: true, title: true, status: true,
-        type: true, developYear: true, createdAt: true,
-      },
-      take: 10,
-    }),
+    cachedQuery(`profile:user:${userId}`, () =>
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true, email: true, name: true, bio: true, role: true, image: true,
+          emailVerified: true, isActive: true,
+          lastLoginAt: true, createdAt: true,
+        },
+      })
+    , 30),
+    cachedQuery(`profile:member:${userId}`, () =>
+      prisma.clubMember.findUnique({
+        where: { userId },
+        select: {
+          id: true, displayName: true, bio: true, grade: true,
+          graduateYear: true, skills: true, position: true,
+          location: true, phone: true, wechat: true, qq: true,
+          isActive: true,
+          socialLinks: { orderBy: { sortOrder: "asc" } },
+        },
+      })
+    , 30),
+    cachedQuery(`profile:projects:${userId}`, () =>
+      prisma.project.findMany({
+        where: { submitterId: userId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true, slug: true, title: true, status: true,
+          type: true, developYear: true, createdAt: true,
+        },
+        take: 10,
+      })
+    , 30),
   ]);
 
   return (

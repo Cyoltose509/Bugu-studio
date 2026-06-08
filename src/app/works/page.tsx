@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { ensureDefaultTags } from "@/lib/db/tags";
 import { ProjectStatus } from "@prisma/client";
 
@@ -25,31 +26,41 @@ export default async function WorksPage({ searchParams }: PageProps) {
   if (params.q) where.OR = [{ title: { contains: params.q, mode: "insensitive" } }, { description: { contains: params.q, mode: "insensitive" } }];
   if (params.tag) where.tags = { some: { tag: { slug: params.tag } } };
 
+  const cacheKey = `works:list:${page}:${params.type || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}`;
+
   const [tags, projects, total, years] = await Promise.all([
-    prisma.tag.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { projects: { where: { project: { status: "PUBLISHED" } } } } } } }),
-    prisma.project.findMany({
-      where,
-      skip,
-      take: pageSize,
-      orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-      include: {
-        tags: { include: { tag: true } },
-        members: {
-          take: 3,
-          include: {
-            member: {
-              select: {
-                displayName: true,
-                avatar: true,
-                user: { select: { image: true } },
+    cachedQuery('works:sidebar:tags', () =>
+      prisma.tag.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { projects: { where: { project: { status: "PUBLISHED" } } } } } } })
+    , 120),
+    cachedQuery(cacheKey, () =>
+      prisma.project.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+        include: {
+          tags: { include: { tag: true } },
+          members: {
+            take: 3,
+            include: {
+              member: {
+                select: {
+                  displayName: true,
+                  avatar: true,
+                  user: { select: { image: true } },
+                },
               },
             },
           },
         },
-      },
-    }),
-    prisma.project.count({ where }),
-    prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } }),
+      })
+    , 60),
+    params.q || params.tag
+      ? prisma.project.count({ where })
+      : cachedQuery('works:total', () => prisma.project.count({ where }), 60),
+    cachedQuery('works:sidebar:years', () =>
+      prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } })
+    , 120),
   ]);
 
   const totalPages = Math.ceil(total / pageSize);
