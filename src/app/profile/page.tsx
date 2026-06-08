@@ -58,14 +58,24 @@ export default async function ProfilePage() {
       <div className="bg-white rounded-xl border p-8 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* 头像 */}
-          <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0"
-            style={{
-              background: user?.role === "ADMIN"
-                ? "linear-gradient(135deg, #25547A, #3A7099)"
-                : "linear-gradient(135deg, #E38043, #F09055)",
-            }}>
-            {(user?.name || user?.email || "?")[0].toUpperCase()}
-          </div>
+          {user?.image ? (
+            <img
+              src={user.image}
+              alt={user.name || ""}
+              className="w-20 h-20 rounded-full object-cover border-2 shrink-0"
+              style={{ borderColor: "#25547A" }}
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0"
+              style={{
+                background: user?.role === "ADMIN"
+                  ? "linear-gradient(135deg, #25547A, #3A7099)"
+                  : "linear-gradient(135deg, #E38043, #F09055)",
+              }}>
+              {(user?.name || user?.email || "?")[0].toUpperCase()}
+            </div>
+          )}
 
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>
@@ -99,7 +109,7 @@ export default async function ProfilePage() {
               <Link href="/admin" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">管理后台</Link>
             )}
             <Link href="/profile/edit" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">编辑资料</Link>
-            <Link href="/api/auth/signout" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">退出登录</Link>
+            <Link href="/auth/signout" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">退出登录</Link>
           </div>
         </div>
       </div>
