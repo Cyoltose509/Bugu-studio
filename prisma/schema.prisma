@@ -193,6 +193,7 @@ model ClubMember {
   skills      String[] @default([])     // 职能标签
   isActive    Boolean  @default(true)   // 是否在读/活跃
   sortOrder   Int      @default(0)
+  position    String   @default("MEMBER") // MEMBER | PRESIDENT | VICE_PRESIDENT
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

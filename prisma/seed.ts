@@ -50,7 +50,7 @@ async function main() {
   const defaultSettings = [
     { key: "site_name", value: "布谷工作室" },
     { key: "site_description", value: "我们是一群热爱游戏开发的同学，一起创造有趣的游戏世界。" },
-    { key: "club_founded_year", value: "2018" },
+    { key: "club_founded_year", value: "2019" },
     { key: "allow_registration", value: "true" },
     { key: "require_email_verification", value: "false" },
   ];
