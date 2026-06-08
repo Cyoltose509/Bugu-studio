@@ -106,6 +106,12 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // 同步更新 ClubMember.avatar（如果该用户有关联的成员记录）
+  await prisma.clubMember.updateMany({
+    where: { userId: session.user.id },
+    data: { avatar: url },
+  });
+
   // 重置速率限制（允许用户立即再次尝试如果本次上传失败的话）
   // 这里不清除，因为 7 天限制是严格的
   return NextResponse.json({ url });

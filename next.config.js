@@ -50,7 +50,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://cdn.bugu-studio.com",
               "font-src 'self' data:",
-              "connect-src 'self'",
+              "connect-src 'self' https://bugu-studio.com https://www.bugu-studio.com",
               "frame-ancestors 'none'",
             ].join("; "),
           },

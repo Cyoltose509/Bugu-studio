@@ -1,13 +1,12 @@
 ﻿import { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 
 export const metadata: Metadata = { title: "成员", description: "认识历届布谷工作室成员" };
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
-  const members = await prisma.clubMember.findMany({ orderBy: [{ joinYear: "desc" }, { sortOrder: "asc" }], include: { _count: { select: { projectMembers: true } } } });
+  const members = await prisma.clubMember.findMany({ orderBy: [{ joinYear: "desc" }, { sortOrder: "asc" }], include: { user: { select: { image: true } }, _count: { select: { projectMembers: true } } } });
   const grouped = members.reduce<Record<number, typeof members>>((acc, m) => { const y = m.joinYear; if (!acc[y]) acc[y] = []; acc[y].push(m); return acc; }, {});
   const sortedYears = Object.keys(grouped).map(Number).sort((a, b) => b - a);
 
@@ -27,7 +26,7 @@ export default async function MembersPage() {
             {grouped[year].map(m => (
               <Link key={m.id} href={`/members/${m.id}`} className="group text-center p-4 rounded-xl bg-white border shadow-sm hover:shadow-md transition-all" style={{ borderColor: "#D0DEE8" }}>
                 <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3 overflow-hidden" style={{ background: "#E38043", color: "#fff" }}>
-                  {m.avatar ? <Image src={m.avatar} alt={m.displayName} width={64} height={64} className="object-cover" /> : m.displayName[0]}
+                  {(m.user?.image || m.avatar) ? <img src={(m.user?.image || m.avatar)!} alt={m.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : m.displayName[0]}
                 </div>
                 <div className="text-sm font-medium group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>{m.displayName}</div>
                 <div className="text-xs mt-0.5" style={{ color: "#999" }}>{m._count.projectMembers} 个项目</div>
