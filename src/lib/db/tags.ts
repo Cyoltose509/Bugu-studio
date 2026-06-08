@@ -39,25 +39,29 @@ const DEFAULT_TAGS: { name: string; slug: string; color: string; sortOrder: numb
   { name: "Game Jam", slug: "gamejam", color: "#ef4444", sortOrder: 44 },
 ];
 
-let seeded = false;
+let synced = false;
 
 /**
- * 确保数据库中存在默认标签（只在首次调用时写入）
- * 可在多个页面安全并行调用
+ * 确保数据库中存在所有默认标签。
+ * 每次调用都会检查缺失的标签并补全，避免已有旧标签时其他默认标签无法创建。
+ * 可在多个页面安全并行调用。
  */
 export async function ensureDefaultTags(): Promise<void> {
-  if (seeded) return;
+  if (synced) return;
   try {
-    const count = await prisma.tag.count();
-    if (count > 0) {
-      seeded = true;
+    const existing = await prisma.tag.findMany({ select: { slug: true } });
+    const existingSlugs = new Set(existing.map((t) => t.slug));
+    const missing = DEFAULT_TAGS.filter((t) => !existingSlugs.has(t.slug));
+
+    if (missing.length === 0) {
+      synced = true;
       return;
     }
-    await prisma.tag.createMany({ data: DEFAULT_TAGS, skipDuplicates: true });
-    seeded = true;
-    console.log(`[tags] 自动创建了 ${DEFAULT_TAGS.length} 个默认标签`);
+
+    await prisma.tag.createMany({ data: missing, skipDuplicates: true });
+    console.log(`[tags] 补全了 ${missing.length} 个缺失的默认标签`);
+    synced = true;
   } catch (err) {
-    // 静默失败 — 标签为空不影响核心功能
-    console.error("[tags] 自动初始化失败:", err);
+    console.error("[tags] 标签同步失败:", err);
   }
 }
