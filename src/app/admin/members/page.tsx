@@ -18,7 +18,7 @@ interface PageProps {
 }
 
 const GRADE_OPTIONS = Array.from(
-  { length: new Date().getFullYear() - 2017 },
+  { length: new Date().getFullYear() - 2016 },
   (_, i) => 2018 + i
 );
 
