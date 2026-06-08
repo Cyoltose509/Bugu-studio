@@ -1,8 +1,8 @@
 /**
  * 个人中心
- * 展示用户信息、项目列表、成员信息
+ * - 普通用户：查看/编辑自己的资料
+ * - 管理员：可通过 ?id=xxx 查看任意用户资料
  */
-
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
@@ -15,7 +15,7 @@ const LINK_ICONS: Record<string, string> = {
   "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
 };
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const session = await auth();
 
   if (!session?.user) {
@@ -29,26 +29,31 @@ export default async function ProfilePage() {
     );
   }
 
+  const { id: targetId } = await searchParams;
+  const isAdminView = session.user.role === "ADMIN" && !!targetId && targetId !== session.user.id;
+  const userId = isAdminView ? targetId! : session.user.id;
+
   const [user, member, userProjects] = await Promise.all([
     prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
-        id: true, email: true, name: true, role: true, image: true,
+        id: true, email: true, name: true, bio: true, role: true, image: true,
         emailVerified: true, isActive: true,
         lastLoginAt: true, createdAt: true,
       },
     }),
     prisma.clubMember.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
       select: {
         id: true, displayName: true, bio: true, grade: true,
-        graduateYear: true, skills: true,
+        graduateYear: true, skills: true, position: true,
+        location: true, phone: true, wechat: true, qq: true,
         isActive: true,
         socialLinks: { orderBy: { sortOrder: "asc" } },
       },
     }),
     prisma.project.findMany({
-      where: { submitterId: session.user.id },
+      where: { submitterId: userId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true, slug: true, title: true, status: true,
@@ -60,6 +65,20 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in space-y-8">
+      {/* 管理员视图横幅 */}
+      {isAdminView && (
+        <div className="rounded-xl border p-4 flex items-center justify-between shadow-sm" style={{ borderColor: "#FDE8E8", background: "#FFF5F5" }}>
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🛡️</span>
+            <div>
+              <p className="text-sm font-medium" style={{ color: "#C62828" }}>管理员视图 — 正在查看 {user?.name || user?.email || "未知用户"} 的资料</p>
+              <p className="text-xs" style={{ color: "#E53935" }}>你无法编辑此用户的资料，仅可查看</p>
+            </div>
+          </div>
+          <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border hover:bg-white transition-colors" style={{ borderColor: "#FDE8E8", color: "#C62828" }}>← 返回用户管理</Link>
+        </div>
+      )}
+
       {/* 头部 */}
       <div className="bg-white rounded-xl border p-8 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
         <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -111,11 +130,17 @@ export default async function ProfilePage() {
 
           {/* 操作按钮 */}
           <div className="flex gap-2">
-            {user?.role === "ADMIN" && (
-              <Link href="/admin" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">管理后台</Link>
+            {isAdminView ? (
+              <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">← 返回用户管理</Link>
+            ) : (
+              <>
+                {user?.role === "ADMIN" && (
+                  <Link href="/admin" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">管理后台</Link>
+                )}
+                <Link href="/profile/edit" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">编辑资料</Link>
+                <Link href="/auth/signout" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">退出登录</Link>
+              </>
             )}
-            <Link href="/profile/edit" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">编辑资料</Link>
-            <Link href="/auth/signout" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">退出登录</Link>
           </div>
         </div>
       </div>
@@ -143,14 +168,32 @@ export default async function ProfilePage() {
         </div>
       </div>
 
+      {/* 个人介绍 — 所有用户可见 */}
+      {user?.bio && (
+        <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
+          <h2 className="font-semibold mb-3" style={{ color: "#25547A" }}>个人介绍</h2>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>{user.bio}</p>
+        </div>
+      )}
+
       {/* 成员信息 */}
-      {member && (
+      {member && (() => {
+        // 敏感信息可见性：自己看自己 或 查看者角色 >= MEMBER
+        const canSeeSensitive = !isAdminView || (session.user.role !== "USER");
+        return (
         <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
           <h2 className="font-semibold mb-4" style={{ color: "#25547A" }}>社团成员信息</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>展示名称</div>
-              <div style={{ color: "#333" }}>{member.displayName}</div>
+              <div className="flex items-center gap-1.5" style={{ color: "#333" }}>
+                {member.displayName}
+                {member.position && member.position !== "MEMBER" && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#25547A", color: "#fff" }}>
+                    {member.position === "PRESIDENT" ? "社长" : member.position === "VICE_PRESIDENT" ? "副社长" : member.position}
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>年级</div>
@@ -163,6 +206,19 @@ export default async function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* 联系方式 — 敏感项，仅成员+可见 */}
+          {canSeeSensitive && (member.location || member.phone || member.wechat || member.qq) && (
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
+              <div className="text-xs mb-2" style={{ color: "#999" }}>联系方式（仅成员可见）</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                {member.location && <ContactRow label="所在地" value={member.location} />}
+                {member.phone && <ContactRow label="电话" value={member.phone} />}
+                {member.wechat && <ContactRow label="微信" value={member.wechat} />}
+                {member.qq && <ContactRow label="QQ" value={member.qq} />}
+              </div>
+            </div>
+          )}
 
           {member.bio && (
             <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
@@ -197,7 +253,8 @@ export default async function ProfilePage() {
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* 作品列表 */}
       <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
@@ -232,6 +289,15 @@ export default async function ProfilePage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ContactRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span style={{ color: "#777" }}>{label}</span>
+      <span style={{ color: "#333" }}>{value}</span>
     </div>
   );
 }

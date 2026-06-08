@@ -14,9 +14,14 @@ const linkEntrySchema = z.object({
 const schema = z.object({
   name: z.string().min(1, "名称不能为空").max(50),
   bio: z.string().max(2000).optional().or(z.literal("")),
+  memberBio: z.string().max(2000).optional().or(z.literal("")),
   grade: z.string().max(20).optional().or(z.literal("")),
   skills: z.string().max(500).optional().or(z.literal("")),
   socialLinks: z.string().optional().or(z.literal("")),
+  location: z.string().max(100).optional().or(z.literal("")),
+  phone: z.string().max(30).optional().or(z.literal("")),
+  wechat: z.string().max(50).optional().or(z.literal("")),
+  qq: z.string().max(30).optional().or(z.literal("")),
 });
 
 const NAME_CHANGE_DAYS = 7;
@@ -30,9 +35,14 @@ export async function saveProfile(formData: FormData) {
   const raw = {
     name: (formData.get("name") as string) || "",
     bio: (formData.get("bio") as string) || "",
+    memberBio: (formData.get("memberBio") as string) || "",
     grade: (formData.get("grade") as string) || "",
     skills: (formData.get("skills") as string) || "",
     socialLinks: (formData.get("socialLinks") as string) || "",
+    location: (formData.get("location") as string) || "",
+    phone: (formData.get("phone") as string) || "",
+    wechat: (formData.get("wechat") as string) || "",
+    qq: (formData.get("qq") as string) || "",
   };
 
   const result = schema.safeParse(raw);
@@ -40,7 +50,7 @@ export async function saveProfile(formData: FormData) {
     return { error: result.error.errors[0].message };
   }
 
-  const { name, bio, grade, skills, socialLinks: socialLinksJson } = result.data;
+  const { name, bio, memberBio, grade, skills, socialLinks: socialLinksJson, location, phone, wechat, qq } = result.data;
 
   // 解析链接 JSON
   let socialLinks: { label: string; url: string }[] = [];
@@ -76,8 +86,9 @@ export async function saveProfile(formData: FormData) {
     }
   }
 
-  // 更新 User.name
+  // 更新 User（含 bio）
   const userUpdateData: any = { name };
+  if (bio !== undefined) userUpdateData.bio = bio || null;
   if (name !== dbUser?.name) {
     userUpdateData.nameChangedAt = new Date();
   }
@@ -98,13 +109,17 @@ export async function saveProfile(formData: FormData) {
     await prisma.clubMember.update({
       where: { id: member.id },
       data: {
-        ...(bio !== undefined && { bio: bio || null }),
+        ...(memberBio !== undefined && { bio: memberBio || null }),
         ...(isAdmin && grade !== undefined && { grade: grade || null }),
         ...(skills !== undefined && {
           skills: skills
             ? skills.split(",").map((s: string) => s.trim()).filter(Boolean)
             : [],
         }),
+        ...(location !== undefined && { location: location || null }),
+        ...(phone !== undefined && { phone: phone || null }),
+        ...(wechat !== undefined && { wechat: wechat || null }),
+        ...(qq !== undefined && { qq: qq || null }),
         socialLinks: {
           create: socialLinks.map((l, i) => ({
             label: l.label,

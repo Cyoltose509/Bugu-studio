@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
+import MemberContactInfo from "./MemberContactInfo";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const revalidate = 300;
@@ -34,7 +35,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
   const member = await prisma.clubMember.findUnique({
     where: { id },
     include: {
-      user: { select: { role: true, image: true } },
+      user: { select: { role: true, image: true, bio: true } },
       socialLinks: { orderBy: { sortOrder: "asc" } },
       projectMembers: {
         orderBy: { sortOrder: "asc" },
@@ -97,6 +98,11 @@ export default async function MemberDetailPage({ params }: PageProps) {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
                 <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>{member.displayName}</h1>
+                {member.position && member.position !== "MEMBER" && (
+                  <span className="text-xs px-2 py-1 rounded font-medium" style={{ background: "#25547A", color: "#fff" }}>
+                    {member.position === "PRESIDENT" ? "社长" : member.position === "VICE_PRESIDENT" ? "副社长" : member.position}
+                  </span>
+                )}
                 {member.isActive ? (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(136,194,50,0.15)", color: "#88C232" }}>在读</span>
                 ) : (
@@ -121,12 +127,12 @@ export default async function MemberDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* 个人简介 */}
-          {member.bio && (
+          {/* 个人简介 — 优先用成员 bio，兜底用户 bio */}
+          {(member.bio || member.user?.bio) && (
             <div className="mb-10">
               <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>个人简介</h2>
               <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>
-                {member.bio}
+                {member.bio || member.user!.bio}
               </p>
             </div>
           )}
@@ -167,7 +173,15 @@ export default async function MemberDetailPage({ params }: PageProps) {
 
         {/* 右侧边栏 */}
         <aside className="space-y-6">
-          {/* 联系方式 */}
+          {/* 联系方式 — 敏感项，客户端判断可见性 */}
+          <MemberContactInfo data={{
+            location: member.location,
+            phone: member.phone,
+            wechat: member.wechat,
+            qq: member.qq,
+          }} />
+
+          {/* 外部链接 */}
           {links.length > 0 && (
             <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
               <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>外部链接</h3>

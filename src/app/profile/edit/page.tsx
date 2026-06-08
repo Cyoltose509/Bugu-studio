@@ -21,6 +21,7 @@ export default async function EditProfilePage() {
       select: {
         id: true,
         name: true,
+        bio: true,
         image: true,
         avatarChangedAt: true,
         nameChangedAt: true,
@@ -34,6 +35,10 @@ export default async function EditProfilePage() {
         bio: true,
         grade: true,
         skills: true,
+        location: true,
+        phone: true,
+        wechat: true,
+        qq: true,
         socialLinks: { orderBy: { sortOrder: "asc" } },
       },
     }),
@@ -61,7 +66,7 @@ export default async function EditProfilePage() {
     <div className="max-w-2xl mx-auto py-10 px-4 animate-fade-in">
       <h1 className="text-2xl font-bold mb-6" style={{ color: "#25547A" }}>编辑个人资料</h1>
       <EditForm
-        user={{ id: dbUser.id, name: dbUser.name, image: dbUser.image }}
+        user={{ id: dbUser.id, name: dbUser.name, bio: dbUser.bio, image: dbUser.image }}
         member={member}
         isAdmin={isAdmin}
         avatarCooldown={avatarCooldown}

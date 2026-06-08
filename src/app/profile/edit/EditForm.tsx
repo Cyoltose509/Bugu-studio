@@ -6,13 +6,17 @@ import {saveProfile, redeemInviteCode} from "./actions";
 import Cropper from "react-easy-crop";
 import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
 
-type UserSnippet = { id: string; name: string | null; image: string | null };
+type UserSnippet = { id: string; name: string | null; bio: string | null; image: string | null };
 type MemberSnippet = {
     id: string;
     displayName: string;
     bio: string | null;
     grade: string | null;
     skills: string[];
+    location: string | null;
+    phone: string | null;
+    wechat: string | null;
+    qq: string | null;
     socialLinks: { id: string; label: string; url: string; sortOrder: number }[];
 };
 type CooldownInfo = { canEdit: boolean; remainingDays: number };
@@ -48,7 +52,7 @@ export default function EditForm({
 
     // 表单原始值（用于检测是否有修改）
     const originalName = user.name ?? "";
-    const originalBio = member?.bio ?? "";
+    const originalBio = user.bio ?? "";
     const originalSkills = member?.skills ?? [];
     const originalLinks: LinkEntry[] = (member?.socialLinks ?? []).map(l => ({label: l.label, url: l.url}));
 
@@ -82,6 +86,10 @@ export default function EditForm({
     // 表单值
     const [nameValue, setNameValue] = useState(originalName);
     const [bioValue, setBioValue] = useState(originalBio);
+    const [locationValue, setLocationValue] = useState(member?.location ?? "");
+    const [phoneValue, setPhoneValue] = useState(member?.phone ?? "");
+    const [wechatValue, setWechatValue] = useState(member?.wechat ?? "");
+    const [qqValue, setQqValue] = useState(member?.qq ?? "");
 
     // 自定义链接
     const [socialLinks, setSocialLinks] = useState<LinkEntry[]>(originalLinks);
@@ -92,8 +100,12 @@ export default function EditForm({
     // dirty state 检测
     const hasChanged =
         nameValue !== originalName ||
-        (member && bioValue !== originalBio) ||
-        JSON.stringify(skills) !== JSON.stringify(originalSkills) ||
+        bioValue !== originalBio ||
+        (member && locationValue !== (member.location ?? "")) ||
+        (member && phoneValue !== (member.phone ?? "")) ||
+        (member && wechatValue !== (member.wechat ?? "")) ||
+        (member && qqValue !== (member.qq ?? "")) ||
+        (member && JSON.stringify(skills) !== JSON.stringify(originalSkills)) ||
         JSON.stringify(socialLinks.map(({label, url}) => ({label, url}))) !==
         JSON.stringify(originalLinks.map(({label, url}) => ({label, url})));
 
@@ -200,8 +212,15 @@ export default function EditForm({
             <form
                 action={(fd) => {
                     fd.set("name", fd.get("name") ?? originalName);
+                    fd.set("bio", fd.get("bio") ?? originalBio);
                     fd.set("skills", skills.join(","));
                     fd.set("socialLinks", JSON.stringify(socialLinks));
+                    if (member) {
+                        fd.set("location", locationValue);
+                        fd.set("phone", phoneValue);
+                        fd.set("wechat", wechatValue);
+                        fd.set("qq", qqValue);
+                    }
                     formAction(fd);
                 }}
                 className="space-y-6 bg-white p-6 rounded-xl border"
@@ -288,23 +307,100 @@ export default function EditForm({
                     />
                 </div>
 
+                {/* 个人介绍 — 所有用户可编辑 */}
+                <div>
+                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="bio">
+                        个人介绍
+                    </label>
+                    <textarea
+                        id="bio"
+                        name="bio"
+                        value={bioValue}
+                        onChange={(e) => setBioValue(e.target.value)}
+                        rows={4}
+                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent resize-y"
+                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                        placeholder="介绍一下自己..."
+                    />
+                </div>
+
                 {/* 社团成员专属字段 */}
                 {member && (
                     <>
-                        {/* 个人简介 */}
+                        {/* 所在地 */}
                         <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="bio">
-                                个人简介
+                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="location">
+                                所在地 <span className="text-xs" style={{color: "#999"}}>(省份或国家)</span>
+                            </label>
+                            <input
+                                id="location"
+                                value={locationValue}
+                                onChange={(e) => setLocationValue(e.target.value)}
+                                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                                placeholder="如：广东 / 北京 / 日本"
+                            />
+                        </div>
+
+                        {/* 联系方式 — 三列 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="phone">
+                                    电话
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded" style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                </label>
+                                <input
+                                    id="phone"
+                                    value={phoneValue}
+                                    onChange={(e) => setPhoneValue(e.target.value)}
+                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    placeholder="手机号"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="wechat">
+                                    微信
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded" style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                </label>
+                                <input
+                                    id="wechat"
+                                    value={wechatValue}
+                                    onChange={(e) => setWechatValue(e.target.value)}
+                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    placeholder="微信号"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="qq">
+                                    QQ
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded" style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                </label>
+                                <input
+                                    id="qq"
+                                    value={qqValue}
+                                    onChange={(e) => setQqValue(e.target.value)}
+                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    placeholder="QQ号"
+                                />
+                            </div>
+                        </div>
+
+                        {/* 成员简介 */}
+                        <div>
+                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="memberBio">
+                                成员简介 <span className="text-xs" style={{color: "#999"}}>(社团成员页展示，如留空则使用上方个人介绍)</span>
                             </label>
                             <textarea
-                                id="bio"
-                                name="bio"
-                                value={bioValue}
-                                onChange={(e) => setBioValue(e.target.value)}
+                                id="memberBio"
+                                name="memberBio"
+                                defaultValue={member.bio ?? ""}
                                 rows={4}
                                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent resize-y"
                                 style={{borderColor: "#D0DEE8", color: "#333"}}
-                                placeholder="介绍一下自己..."
+                                placeholder="在成员页面展示的简介..."
                             />
                         </div>
 
