@@ -320,9 +320,24 @@ export default function EditForm({
               )}
             </div>
 
-            {/* 技能标签 */}
+            {/* 职能标签 */}
             <div>
-              <label className="block text-sm mb-1.5" style={{ color: "#555" }}>技能标签</label>
+              <label className="block text-sm mb-1.5" style={{ color: "#555" }}>职能标签</label>
+              {/* 快捷预设 */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {["程序", "策划", "美术", "音效", "制作人"].filter(t => !skills.includes(t)).map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setSkills([...skills, tag])}
+                    className="text-xs px-2 py-0.5 rounded border transition-colors hover:bg-[#E6F0F8] hover:border-[#3388BB] hover:text-[#3388BB]"
+                    style={{ borderColor: "#D0DEE8", color: "#888" }}
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              </div>
+              {/* 已选标签 */}
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {skills.map((s) => (
                   <span
@@ -342,7 +357,7 @@ export default function EditForm({
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
                   className="flex-1 rounded-lg bg-white border px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
                   style={{ borderColor: "#D0DEE8", color: "#333" }}
-                  placeholder="输入技能后回车添加"
+                  placeholder="输入自定义职能后回车添加"
                 />
                 <button
                   type="button"

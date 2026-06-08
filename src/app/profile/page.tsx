@@ -171,7 +171,7 @@ export default async function ProfilePage() {
 
           {member.skills.length > 0 && (
             <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-              <div className="text-xs mb-2" style={{ color: "#999" }}>技能</div>
+              <div className="text-xs mb-2" style={{ color: "#999" }}>职能标签</div>
               <div className="flex flex-wrap gap-1.5">
                 {member.skills.map((s, i) => (
                   <span key={i} className="text-xs px-2 py-0.5 rounded" style={{ background: "#E8F5E9", color: "#88C232" }}>

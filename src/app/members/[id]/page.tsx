@@ -100,7 +100,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
                 {!member.grade && <p>入社 {member.joinYear} 年{member.graduateYear ? ` · ${member.graduateYear} 年毕业` : ""}</p>}
               </div>
 
-              {/* 技能标签 */}
+              {/* 职能标签 */}
               {member.skills.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {member.skills.map((skill) => (

@@ -97,19 +97,20 @@ export const authConfig = {
         session.user.image = (token.picture as string) ?? undefined;
         session.user.name = (token.name as string) ?? undefined;
 
-        // 额外 from-DB 校验 isActive（仅 Node.js 环境，Edge 降级）
+        // 每次读取 session 时从 DB 同步最新状态（仅 Node.js 环境，Edge 降级）
         try {
           const { prisma } = await import("@/lib/db/prisma");
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { isActive: true, image: true, name: true },
+            select: { isActive: true, image: true, name: true, role: true },
           });
           if (!dbUser?.isActive) {
             session.user = undefined as any;
           } else {
-            // 兜底：若 jwt 没同步到，用 session callback 结果覆盖
+            // 同步 DB 中最新的 image / name / role
             if (dbUser.image) session.user.image = dbUser.image;
             if (dbUser.name) session.user.name = dbUser.name;
+            if (dbUser.role) session.user.role = dbUser.role;
           }
         } catch {
           // Edge runtime 降级
