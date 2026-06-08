@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: { template: "%s | 布谷工作室", default: "布谷工作室 - 作品档案馆" },
   description: "布谷工作室官方网站，展示历届成员作品与社团历史。",
   keywords: ["游戏开发", "社团", "独立游戏", "Game Jam", "Unity", "Unreal"],
-  icons: { icon: "/favicon.svg", apple: "/favicon.svg" },
+  icons: { icon: "/images/logo.png", apple: "/images/logo.png", shortcut: "/images/logo.png" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
