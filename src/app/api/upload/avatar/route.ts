@@ -10,13 +10,50 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { uploadToR2 } from "@/lib/utils/upload";
+import { isRateLimited, resetRateLimit } from "@/lib/utils/rateLimit";
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "avatars");
+const AVATAR_CHANGE_DAYS = 7;
+const AVATAR_CHANGE_SECONDS = AVATAR_CHANGE_DAYS * 24 * 3600;
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "未登录" }, { status: 401 });
+  }
+
+  // 速率限制：同一用户 7 天内只能更换一次头像
+  const rateKey = `avatar:${session.user.id}`;
+  const limited = await isRateLimited(rateKey, AVATAR_CHANGE_SECONDS, 1);
+  if (limited) {
+    const remaining = await getRateLimitRemaining(rateKey);
+    const days = Math.ceil(remaining / 86400);
+    return NextResponse.json(
+      { error: `头像更换过于频繁，请 ${days} 天后再试` },
+      { status: 429 }
+    );
+  }
+
+  // 二次检查：读取数据库中的上次更换时间（防御性）
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { avatarChangedAt: true },
+  });
+  if (user?.avatarChangedAt) {
+    const cooldownEnd = new Date(
+      user.avatarChangedAt.getTime() + AVATAR_CHANGE_DAYS * 24 * 3600 * 1000
+    );
+    if (cooldownEnd > new Date()) {
+      const remainingDays = Math.ceil(
+        (cooldownEnd.getTime() - Date.now()) / (1000 * 86400)
+      );
+      // 清除速率限制记录（因为数据库层面已有限制，速率限制记录可能已过期）
+      await resetRateLimit(rateKey);
+      return NextResponse.json(
+        { error: `头像更换过于频繁，请 ${remainingDays} 天后再试` },
+        { status: 429 }
+      );
+    }
   }
 
   const formData = await req.formData();
@@ -60,11 +97,16 @@ export async function POST(req: NextRequest) {
     url = `/uploads/avatars/${filename}`;
   }
 
-  // 更新用户头像 URL
+  // 更新用户头像 URL 和更换时间
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { image: url },
+    data: {
+      image: url,
+      avatarChangedAt: new Date(),
+    },
   });
 
+  // 重置速率限制（允许用户立即再次尝试如果本次上传失败的话）
+  // 这里不清除，因为 7 天限制是严格的
   return NextResponse.json({ url });
 }

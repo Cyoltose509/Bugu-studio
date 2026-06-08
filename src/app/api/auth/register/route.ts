@@ -11,6 +11,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { registerSchema } from "@/lib/validations";
 import { sendVerificationEmail } from "@/lib/email/send";
 import crypto from "crypto";
+import { isRateLimited, resetRateLimit } from "@/lib/utils/rateLimit";
 
 export async function POST(request: Request) {
   try {
@@ -87,6 +88,17 @@ export async function POST(request: Request) {
         createdAt: true,
       },
     });
+
+    // 速率限制：同一邮箱 60 秒内只能发送一次验证码
+    const rateKey = `email:verify:${normalizedEmail}`;
+    const limited = await isRateLimited(rateKey, 60, 1);
+    if (limited) {
+      const remaining = await getRateLimitRemaining(rateKey);
+      return NextResponse.json(
+        { error: `验证码发送过于频繁，请 ${remaining} 秒后再试` },
+        { status: 429 }
+      );
+    }
 
     // 生成 6 位验证码
     const code = crypto.randomInt(100000, 999999).toString();
