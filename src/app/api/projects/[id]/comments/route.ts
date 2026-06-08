@@ -5,14 +5,12 @@ import { UserRole } from "@prisma/client";
 import { apiResponse, apiError } from "@/lib/utils";
 import { createNotification } from "@/lib/services/notification";
 
-// ── GET: 获取作品所有留言（含回复嵌套 + 点赞数 + 当前用户是否点赞）──
+// ── GET: 获取作品所有留言（含回复嵌套）──
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
-  const session = await auth();
-  const userId = session?.user?.id;
 
   const comments = await prisma.comment.findMany({
     where: { projectId, parentId: null },
@@ -23,35 +21,23 @@ export async function GET(
         orderBy: { createdAt: "asc" },
         include: {
           user: { select: { id: true, name: true, image: true } },
-          _count: { select: { likes: true } },
-          ...(userId ? {
-            likes: { where: { userId }, select: { id: true } },
-          } : {}),
         },
       },
-      _count: { select: { likes: true, replies: true } },
-      ...(userId ? {
-        likes: { where: { userId }, select: { id: true } },
-      } : {}),
+      _count: { select: { replies: true } },
     },
   });
 
-  // 格式化：hasLiked → boolean
   const result = comments.map((c) => ({
     id: c.id,
     content: c.content,
     createdAt: c.createdAt,
     user: { id: c.user.id, name: c.user.name, image: c.user.image },
-    likeCount: c._count.likes,
-    hasLiked: userId ? (c as any).likes.length > 0 : false,
     replyCount: c._count.replies,
-    replies: (c as any).replies.map((r: any) => ({
+    replies: c.replies.map((r: any) => ({
       id: r.id,
       content: r.content,
       createdAt: r.createdAt,
       user: { id: r.user.id, name: r.user.name, image: r.user.image },
-      likeCount: r._count.likes,
-      hasLiked: userId ? r.likes.length > 0 : false,
     })),
   }));
 

@@ -15,6 +15,7 @@ import { auth } from "@/lib/auth/auth";
 import { ProjectStatus } from "@prisma/client";
 import EditButton from "./EditButton";
 import CommentSection from "@/components/CommentSection";
+import ProjectLikeButton from "@/components/ProjectLikeButton";
 
 export const revalidate = 60;
 
@@ -40,6 +41,7 @@ const getProject = cache(async (slug: string) => {
           },
         },
       },
+      _count: { select: { likes: true } },
     },
   });
 });
@@ -140,7 +142,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
         <div className="lg:col-span-2">
           {project.coverImage && (
             <div className="relative aspect-video w-full max-w-2xl rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
-              <Image src={project.coverImage} alt={project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px" className="object-cover" priority />
+              <Image src={project.coverImage} alt={project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px" className="object-cover" priority unoptimized />
             </div>
           )}
 
@@ -152,8 +154,18 @@ export default async function WorkDetailPage({ params }: PageProps) {
           </h1>
           {project.subtitle && <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>}
 
-          {/* 编辑按钮 — 客户端组件，无服务器阻塞 */}
-          <EditButton slug={project.slug} submitterId={project.submitterId} />
+          {/* 点赞 + 编辑 */}
+          <div className="flex items-center gap-3 mb-4">
+            <Suspense fallback={
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{ background: "#F0F5F9", border: "1px solid #D0DEE8", color: "#777" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                {(project as any)._count?.likes ?? 0}
+              </span>
+            }>
+              <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={false} />
+            </Suspense>
+            <EditButton slug={project.slug} submitterId={project.submitterId} />
+          </div>
 
           <div className="flex flex-wrap gap-2 mb-6">
             {project.tags.map(({ tag }) => (
@@ -172,7 +184,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
               <div className="grid grid-cols-2 gap-3">
                 {project.images.map((img) => (
                   <div key={img.id} className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ borderColor: "#D0DEE8" }}>
-                    <Image src={img.url} alt={img.altText || project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover hover:scale-105 transition-transform duration-300" />
+                    <Image src={img.url} alt={img.altText || project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover hover:scale-105 transition-transform duration-300" unoptimized />
                   </div>
                 ))}
               </div>

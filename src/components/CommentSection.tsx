@@ -2,15 +2,18 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import Image from "next/image";
+
+interface CommentUser {
+  id: string;
+  name?: string | null;
+  image?: string | null;
+}
 
 interface Comment {
   id: string;
   content: string;
   createdAt: string;
-  user: { id: string; name?: string | null; image?: string | null };
-  likeCount: number;
-  hasLiked: boolean;
+  user: CommentUser;
   replyCount: number;
   replies: Comment[];
 }
@@ -42,7 +45,7 @@ export default function CommentSection({ projectId }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── 发表留言 ──
+  // 发表留言
   async function submitComment(parentId?: string) {
     const content = parentId ? replyContent.trim() : newContent.trim();
     if (!content || content.length > 300) return;
@@ -62,17 +65,7 @@ export default function CommentSection({ projectId }: Props) {
     } finally { setSubmitting(false); }
   }
 
-  // ── 点赞切换 ──
-  async function toggleLike(commentId: string) {
-    const res = await fetch(`/api/projects/${projectId}/comments/like`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commentId }),
-    });
-    if (res.ok) load();
-  }
-
-  // ── 删除留言 ──
+  // 删除留言
   async function deleteComment(commentId: string) {
     if (!confirm("确定删除这条留言？")) return;
     const res = await fetch(`/api/projects/${projectId}/comments`, {
@@ -93,37 +86,54 @@ export default function CommentSection({ projectId }: Props) {
     return d.toLocaleDateString("zh-CN");
   }
 
+  function Avatar({ user }: { user: CommentUser }) {
+    const initial = (user.name || "?")[0];
+    if (user.image) {
+      return (
+        <img src={user.image} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
+      );
+    }
+    return (
+      <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: "#E38043" }}>
+        {initial}
+      </div>
+    );
+  }
+
   function CommentCard({ c, isReply = false }: { c: Comment; isReply?: boolean }) {
     const isMine = session?.user?.id === c.user.id;
     return (
-      <div className={`${isReply ? "ml-6 pl-3 border-l-2" : "p-3"} rounded-lg`}
-        style={isReply ? { borderColor: "#E8F0F8" } : { background: "#F8FAFB" }}>
-        <div className="flex items-start gap-2">
-          <div className="w-7 h-7 rounded-full overflow-hidden bg-[#E38043] flex items-center justify-center text-white text-xs shrink-0">
-            {c.user.image ? (
-              <Image src={c.user.image} alt="" width={28} height={28} className="object-cover w-full h-full" />
-            ) : (
-              (c.user.name || "?")[0]
-            )}
-          </div>
+      <div className={`${isReply ? "ml-6 pl-3 border-l-2" : "py-3"} rounded-lg`}
+        style={isReply ? { borderColor: "#E8F0F8" } : {}}>
+        <div className="flex items-start gap-2.5">
+          <Avatar user={c.user} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium" style={{ color: "#25547A" }}>{c.user.name || "匿名"}</span>
               <span className="text-xs" style={{ color: "#999" }}>{formatTime(c.createdAt)}</span>
             </div>
-            <p className="text-sm mt-0.5 whitespace-pre-wrap break-words">{c.content}</p>
+            <p className="text-sm mt-0.5 whitespace-pre-wrap break-words" style={{ color: "#444" }}>{c.content}</p>
             {canOperate && (
-              <div className="flex items-center gap-3 mt-1">
-                <button onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
-                  className="text-xs hover:underline" style={{ color: "#3388BB" }}>回复</button>
-                <button onClick={() => toggleLike(c.id)}
-                  className={`text-xs flex items-center gap-0.5 ${c.hasLiked ? "" : "opacity-50"}`}
-                  style={{ color: c.hasLiked ? "#E38043" : "#999" }}>
-                  👍 {c.likeCount > 0 && c.likeCount}
+              <div className="flex items-center gap-3 mt-1.5">
+                <button
+                  onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
+                  className="text-xs inline-flex items-center gap-1 hover:underline transition-colors"
+                  style={{ color: replyingTo === c.id ? "#3388BB" : "#999" }}
+                  title="回复"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  回复
                 </button>
                 {isMine && (
-                  <button onClick={() => deleteComment(c.id)}
-                    className="text-xs hover:underline" style={{ color: "#E38043" }}>删除</button>
+                  <button
+                    onClick={() => deleteComment(c.id)}
+                    className="text-xs inline-flex items-center gap-1 hover:underline transition-colors"
+                    style={{ color: "#bbb" }}
+                    title="删除"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14"/></svg>
+                    删除
+                  </button>
                 )}
               </div>
             )}
@@ -133,16 +143,18 @@ export default function CommentSection({ projectId }: Props) {
                 <input value={replyContent} onChange={(e) => setReplyContent(e.target.value)}
                   maxLength={300}
                   placeholder={`回复 ${c.user.name || "Ta"}...`}
-                  className="flex-1 text-xs px-2 py-1 rounded border"
+                  className="flex-1 text-xs px-2 py-1.5 rounded border focus:outline-none focus:ring-1 focus:ring-[#3388BB]"
                   style={{ borderColor: "#D0DEE8" }} />
                 <button onClick={() => submitComment(c.id)} disabled={!replyContent.trim() || submitting}
-                  className="text-xs px-2 py-1 rounded text-white" style={{ background: "#3388BB" }}>发送</button>
+                  className="text-xs px-3 py-1.5 rounded text-white disabled:opacity-40 transition-opacity" style={{ background: "#3388BB" }}>发送</button>
+                <button onClick={() => { setReplyingTo(null); setReplyContent(""); }}
+                  className="text-xs px-2 py-1.5 rounded" style={{ color: "#999" }}>取消</button>
               </div>
             )}
           </div>
         </div>
         {/* 回复列表 */}
-        {c.replies.length > 0 && (
+        {c.replies && c.replies.length > 0 && (
           <div className="mt-2 space-y-2">
             {c.replies.map((r) => <CommentCard key={r.id} c={r} isReply />)}
           </div>
@@ -154,7 +166,7 @@ export default function CommentSection({ projectId }: Props) {
   return (
     <section className="mt-8">
       <h2 className="text-lg font-semibold mb-4" style={{ color: "#25547A" }}>
-        💬 留言板（{comments.reduce((s, c) => s + 1 + c.replyCount, 0)} 条）
+        💬 留言板（{comments.reduce((s, c) => s + 1 + (c.replies?.length || 0), 0)} 条）
       </h2>
 
       {/* 发表留言 */}
@@ -164,10 +176,10 @@ export default function CommentSection({ projectId }: Props) {
             <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)}
               maxLength={300} rows={2}
               placeholder="写下你的留言…（最多300字）"
-              className="flex-1 text-sm px-3 py-2 rounded-lg border resize-none"
+              className="flex-1 text-sm px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-1 focus:ring-[#3388BB]"
               style={{ borderColor: "#D0DEE8" }} />
             <button onClick={() => submitComment()} disabled={!newContent.trim() || submitting}
-              className="self-end px-4 py-2 rounded-lg text-sm text-white disabled:opacity-40"
+              className="self-end px-4 py-2 rounded-lg text-sm text-white disabled:opacity-40 transition-opacity"
               style={{ background: "#25547A" }}>
               {submitting ? "发送中…" : "发表"}
             </button>
@@ -187,8 +199,12 @@ export default function CommentSection({ projectId }: Props) {
       ) : comments.length === 0 ? (
         <p className="text-xs" style={{ color: "#999" }}>暂无留言，来抢沙发吧～</p>
       ) : (
-        <div className="space-y-3">
-          {comments.map((c) => <CommentCard key={c.id} c={c} />)}
+        <div className="space-y-1 divide-y" style={{ borderColor: "#F0F0F0" }}>
+          {comments.map((c) => (
+            <div key={c.id} className="first:pt-0 pt-3">
+              <CommentCard c={c} />
+            </div>
+          ))}
         </div>
       )}
     </section>

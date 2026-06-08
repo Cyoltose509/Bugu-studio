@@ -13,8 +13,8 @@ export default function SyncOrphanedButton() {
       const res = await fetch("/api/admin/sync-orphaned-projects", { method: "POST" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "同步失败");
-      if (json.synced === 0) {
-        setResult("✅ 没有孤儿项目，数据已完全同步。");
+      if (json.synced === 0 || !json.details || json.details.length === 0) {
+        setResult(json.message || "✅ 没有孤儿项目，数据已完全同步。");
       } else {
         setResult(
           `✅ 已同步 ${json.synced} 个孤儿项目：\n${(json.details as string[]).map((d) => "  · " + d).join("\n")}`

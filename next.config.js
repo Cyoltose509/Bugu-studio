@@ -13,6 +13,10 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "*.r2.dev",
+      },
+      {
+        protocol: "https",
         hostname: "*.cloudflare.com",
       },
       {
@@ -58,7 +62,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://cdn.bugu-studio.com",
+              "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.r2.dev https://cdn.bugu-studio.com",
               "font-src 'self' data: https://fonts.gstatic.com",
               "media-src 'self' data: blob:",
               "connect-src 'self' https://bugu-studio.com https://www.bugu-studio.com",
