@@ -125,11 +125,12 @@ export default async function WorkDetailPage({ params }: PageProps) {
         <div className="lg:col-span-2">
           {/* 封面 */}
           {project.coverImage && (
-            <div className="relative aspect-video w-full rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
+            <div className="relative aspect-video w-full max-w-2xl rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
               <Image
                 src={project.coverImage}
                 alt={project.title}
                 fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px"
                 className="object-cover"
                 priority
               />
@@ -194,6 +195,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
                       src={img.url}
                       alt={img.altText || project.title}
                       fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover hover:scale-105 transition-transform duration-300"
                     />
                   </div>

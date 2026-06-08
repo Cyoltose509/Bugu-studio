@@ -5,11 +5,23 @@
 
 import { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import nextDynamic from "next/dynamic";
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/auth";
 import { canEditProject } from "@/lib/auth/rbac";
 import { ensureDefaultTags } from "@/lib/db/tags";
-import ProjectEditForm from "./ProjectEditForm";
+
+// 懒加载编辑表单，避免 react-easy-crop (~54KB gzip) 打包进主客户端 bundle
+const ProjectEditForm = nextDynamic(() => import("./ProjectEditForm"), {
+  loading: () => (
+    <div className="animate-pulse space-y-4">
+      <div className="h-10 w-full bg-gray-100 rounded-lg" />
+      <div className="h-32 w-full bg-gray-100 rounded-lg" />
+      <div className="h-10 w-full bg-gray-100 rounded-lg" />
+      <div className="h-10 w-full bg-gray-100 rounded-lg" />
+    </div>
+  ),
+});
 
 export const metadata: Metadata = { title: "编辑作品" };
 export const dynamic = "force-dynamic";
