@@ -39,9 +39,18 @@ export async function Navbar() {
                 </Link>
               )}
               <Link href="/profile" className="flex items-center gap-2 text-sm text-white/80 hover:text-white">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#E38043" }}>
-                  {session.user.name?.[0]?.toUpperCase() || "U"}
-                </div>
+                {session.user.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={session.user.name || ""}
+                    className="w-7 h-7 rounded-full object-cover border border-white/30"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#E38043" }}>
+                    {session.user.name?.[0]?.toUpperCase() || "U"}
+                  </div>
+                )}
               </Link>
             </div>
           ) : (

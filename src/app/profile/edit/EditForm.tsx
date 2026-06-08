@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useRef, useCallback } from "react";
+import { useActionState, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { saveProfile, redeemInviteCode } from "./actions";
 import Cropper from "react-easy-crop";
@@ -17,15 +17,20 @@ type MemberSnippet = {
   itchUrl: string | null;
   website: string | null;
 };
+type CooldownInfo = { canEdit: boolean; remainingDays: number };
 
 export default function EditForm({
   user,
   member,
   isAdmin,
+  avatarCooldown,
+  nameCooldown,
 }: {
   user: UserSnippet;
   member: MemberSnippet | null;
   isAdmin: boolean;
+  avatarCooldown: CooldownInfo;
+  nameCooldown: CooldownInfo;
 }) {
   const { update: updateSession } = useSession();
 
@@ -36,8 +41,16 @@ export default function EditForm({
     null
   );
 
+  // 表单原始值（用于检测是否有修改）
+  const originalName = user.name ?? "";
+  const originalBio = member?.bio ?? "";
+  const originalSkills = member?.skills ?? [];
+  const originalGithub = member?.githubUrl ?? "";
+  const originalItch = member?.itchUrl ?? "";
+  const originalWebsite = member?.website ?? "";
+
   const [skillInput, setSkillInput] = useState("");
-  const [skills, setSkills] = useState<string[]>(member?.skills ?? []);
+  const [skills, setSkills] = useState<string[]>(originalSkills);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
     user.image
       ? user.image.startsWith("http")
@@ -62,6 +75,23 @@ export default function EditForm({
   const [invitePending, setInvitePending] = useState(false);
   const [inviteMsg, setInviteMsg] = useState("");
   const [inviteError, setInviteError] = useState("");
+
+  // 检测表单是否有修改
+  const [nameValue, setNameValue] = useState(originalName);
+  const [bioValue, setBioValue] = useState(originalBio);
+  const [githubValue, setGithubValue] = useState(originalGithub);
+  const [itchValue, setItchValue] = useState(originalItch);
+  const [websiteValue, setWebsiteValue] = useState(originalWebsite);
+
+  const hasChanged =
+    nameValue !== originalName ||
+    (member && bioValue !== originalBio) ||
+    (member && githubValue !== originalGithub) ||
+    (member && itchValue !== originalItch) ||
+    (member && websiteValue !== originalWebsite) ||
+    JSON.stringify(skills) !== JSON.stringify(originalSkills);
+
+  const canSave = hasChanged && !pending;
 
   function addSkill() {
     const v = skillInput.trim();
@@ -100,12 +130,7 @@ export default function EditForm({
     setAvatarError("");
     setAvatarSuccess("");
     try {
-      const { blob, url: croppedUrl } = await getCroppedImg(
-        cropSrc,
-        croppedPixels,
-        400,
-        0.85
-      );
+      const { blob } = await getCroppedImg(cropSrc, croppedPixels, 400, 0.85);
       const fd = new FormData();
       fd.append("file", new File([blob], "avatar.jpg", { type: "image/jpeg" }));
       const res = await fetch("/api/upload/avatar", { method: "POST", body: fd });
@@ -142,7 +167,6 @@ export default function EditForm({
       } else {
         setInviteMsg(result.message!);
         setInviteInput("");
-        // 刷新 session 以获取新角色
         await updateSession();
       }
     } catch {
@@ -156,7 +180,7 @@ export default function EditForm({
     <>
       <form
         action={(fd) => {
-          fd.set("name", fd.get("name") ?? user.name ?? "");
+          fd.set("name", fd.get("name") ?? originalName);
           fd.set("skills", skills.join(","));
           formAction(fd);
         }}
@@ -184,7 +208,14 @@ export default function EditForm({
           </div>
           <div className="flex-1 space-y-1">
             <p className="text-sm" style={{ color: "#555" }}>
-              头像 <span className="text-xs" style={{ color: "#999" }}>(7天内只能更换一次)</span>
+              头像{" "}
+              {avatarCooldown.canEdit ? (
+                <span className="text-xs" style={{ color: "#999" }}>(7天内只能更换一次)</span>
+              ) : (
+                <span className="text-xs font-medium" style={{ color: "#E38043" }}>
+                  冷却中 — {avatarCooldown.remainingDays} 天后可更换
+                </span>
+              )}
             </p>
             <input
               ref={fileRef}
@@ -197,9 +228,9 @@ export default function EditForm({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                disabled={avatarUploading}
+                disabled={avatarUploading || !avatarCooldown.canEdit}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50"
-                style={{ background: "#3388BB" }}
+                style={{ background: avatarCooldown.canEdit ? "#3388BB" : "#999" }}
               >
                 {avatarUploading ? "处理中..." : "更换头像"}
               </button>
@@ -216,15 +247,24 @@ export default function EditForm({
         {/* 姓名 */}
         <div>
           <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="name">
-            显示名称 <span className="text-xs" style={{ color: "#999" }}>(7天内只能修改一次)</span>
+            显示名称{" "}
+            {nameCooldown.canEdit ? (
+              <span className="text-xs" style={{ color: "#999" }}>(7天内只能修改一次)</span>
+            ) : (
+              <span className="text-xs font-medium" style={{ color: "#E38043" }}>
+                冷却中 — {nameCooldown.remainingDays} 天后可修改
+              </span>
+            )}
           </label>
           <input
             id="name"
             name="name"
-            defaultValue={user.name ?? ""}
+            value={nameValue}
+            onChange={(e) => setNameValue(e.target.value)}
             required
-            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-            style={{ borderColor: "#D0DEE8", color: "#333" }}
+            disabled={!nameCooldown.canEdit}
+            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+            style={{ borderColor: nameCooldown.canEdit ? "#D0DEE8" : "#E38043", color: nameCooldown.canEdit ? "#333" : "#999" }}
           />
         </div>
 
@@ -239,7 +279,8 @@ export default function EditForm({
               <textarea
                 id="bio"
                 name="bio"
-                defaultValue={member.bio ?? ""}
+                value={bioValue}
+                onChange={(e) => setBioValue(e.target.value)}
                 rows={4}
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent resize-y"
                 style={{ borderColor: "#D0DEE8", color: "#333" }}
@@ -323,7 +364,8 @@ export default function EditForm({
                 id="githubUrl"
                 name="githubUrl"
                 type="url"
-                defaultValue={member.githubUrl ?? ""}
+                value={githubValue}
+                onChange={(e) => setGithubValue(e.target.value)}
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                 style={{ borderColor: "#D0DEE8", color: "#333" }}
                 placeholder="https://github.com/..."
@@ -339,7 +381,8 @@ export default function EditForm({
                 id="itchUrl"
                 name="itchUrl"
                 type="url"
-                defaultValue={member.itchUrl ?? ""}
+                value={itchValue}
+                onChange={(e) => setItchValue(e.target.value)}
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                 style={{ borderColor: "#D0DEE8", color: "#333" }}
                 placeholder="https://yourname.itch.io/..."
@@ -355,7 +398,8 @@ export default function EditForm({
                 id="website"
                 name="website"
                 type="url"
-                defaultValue={member.website ?? ""}
+                value={websiteValue}
+                onChange={(e) => setWebsiteValue(e.target.value)}
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                 style={{ borderColor: "#D0DEE8", color: "#333" }}
                 placeholder="https://..."
@@ -406,10 +450,10 @@ export default function EditForm({
         {/* 提交按钮 */}
         <button
           type="submit"
-          disabled={pending}
+          disabled={!canSave}
           className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {pending ? "保存中..." : "保存修改"}
+          {pending ? "保存中..." : !hasChanged ? "无修改" : "保存修改"}
         </button>
       </form>
 
