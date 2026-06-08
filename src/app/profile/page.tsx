@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import MiniLikeButton from "@/components/MiniLikeButton";
+import ProjectCoverImage from "@/components/ProjectCoverImage";
 
 export const dynamic = "force-dynamic";
 
@@ -296,19 +297,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 style={{ borderColor: "#E8EEF4" }}>
                 {/* 封面 */}
                 <div className="relative aspect-video bg-gray-100 overflow-hidden">
-                  {p.coverImage ? (
-                    <img
-                      src={p.coverImage}
-                      alt={p.title}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E6F0F8, #F0F5F9)" }}>
-                      <span className="text-2xl opacity-30">🎮</span>
-                    </div>
-                  )}
+                  <ProjectCoverImage
+                    src={p.coverImage}
+                    alt={p.title}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    fillParent={true}
+                  />
                   {/* 状态角标 */}
                   <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm shadow-sm"
                     style={{
@@ -349,19 +343,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 className="group block rounded-xl border overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5"
                 style={{ borderColor: "#E8EEF4" }}>
                 <div className="relative aspect-video bg-gray-100 overflow-hidden">
-                  {p.coverImage ? (
-                    <img
-                      src={p.coverImage}
-                      alt={p.title}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E6F0F8, #F0F5F9)" }}>
-                      <span className="text-2xl opacity-30">🎮</span>
-                    </div>
-                  )}
+                  <ProjectCoverImage
+                    src={p.coverImage}
+                    alt={p.title}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    fillParent={true}
+                  />
                 </div>
                 <div className="p-3">
                   <div className="font-medium text-sm truncate group-hover:text-[#3388BB]" style={{ color: "#333" }}>

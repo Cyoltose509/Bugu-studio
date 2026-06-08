@@ -7,6 +7,7 @@ import { ensureDefaultTags } from "@/lib/db/tags";
 import { ProjectStatus } from "@prisma/client";
 import MiniLikeButton from "@/components/MiniLikeButton";
 import GridSizeToggle from "@/components/GridSizeToggle";
+import ProjectCoverImage from "@/components/ProjectCoverImage";
 
 export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
 export const revalidate = 60;
@@ -118,7 +119,16 @@ export default async function WorksPage({ searchParams }: PageProps) {
               {projects.map((p, idx) => (
                 <Link key={p.id} href={`/works/${p.slug}`} className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>
                   <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
-                    {p.coverImage ? <img src={p.coverImage} alt={p.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading={idx === 0 ? "eager" : "lazy"} onError={(e: any) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
+                    <ProjectCoverImage
+                      src={p.coverImage}
+                      alt={p.title}
+                      priority={idx === 0}
+                    />
+                    {!p.coverImage && (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: "#E6F0F8" }}>
+                        <img src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
+                      </div>
+                    )}
                     <div className="absolute top-2 left-2"><span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">{TYPE_LABELS[p.type]}</span></div>
                     {p.isFeatured && <div className="absolute top-2 right-2"><span className="text-xs px-2 py-0.5 rounded text-white" style={{ background: "#E38043" }}>精选</span></div>}
                   </div>

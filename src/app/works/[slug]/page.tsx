@@ -15,6 +15,7 @@ import { ProjectStatus } from "@prisma/client";
 import EditButton from "./EditButton";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
+import SafeImage from "@/components/SafeImage";
 
 export const revalidate = 60;
 
@@ -176,7 +177,12 @@ export default async function WorkDetailPage({ params }: PageProps) {
               <div className="grid grid-cols-2 gap-3">
                 {project.images.map((img) => (
                   <div key={img.id} className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ borderColor: "#D0DEE8" }}>
-                    <img src={img.url} alt={img.altText || project.title} className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    <SafeImage
+                      src={img.url}
+                      alt={img.altText || project.title}
+                      className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
                   </div>
                 ))}
               </div>

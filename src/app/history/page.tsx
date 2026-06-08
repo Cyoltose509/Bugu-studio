@@ -1,6 +1,6 @@
 ﻿import { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import SafeImage from "@/components/SafeImage";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 
@@ -11,14 +11,15 @@ export default async function HistoryPage() {
   const yearData = await prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, _count: { id: true }, orderBy: { developYear: "desc" } });
   const projectYears = yearData.map(y => y.developYear);
 
-  const yearDetails = await Promise.all(projectYears.map(async year => {
+  const yearDetails = [];
+  for (const year of projectYears) {
     const [projects, members, events] = await Promise.all([
       prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
       prisma.clubMember.findMany({ where: { joinYear: year }, select: { id: true, displayName: true, avatar: true } }),
       prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
     ]);
-    return { year, projects, members, events };
-  }));
+    yearDetails.push({ year, projects, members, events });
+  }
 
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
@@ -43,7 +44,7 @@ export default async function HistoryPage() {
                       {members.map(m => (
                         <Link key={m.id} href={`/members/${m.id}`} className="flex items-center gap-1.5 text-xs hover:text-[#3388BB] transition-colors" style={{ color: "#555" }}>
                           <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs overflow-hidden text-white" style={{ background: "#25547A" }}>
-                            {m.avatar ? <Image src={m.avatar} alt={m.displayName} width={20} height={20} /> : m.displayName[0]}
+                            {m.avatar ? <SafeImage src={m.avatar} alt={m.displayName} className="w-full h-full object-cover" /> : m.displayName[0]}
                           </div>
                           {m.displayName}
                         </Link>
@@ -58,7 +59,7 @@ export default async function HistoryPage() {
                       {projects.slice(0, 4).map(p => (
                         <Link key={p.id} href={`/works/${p.slug}`} className="flex items-center gap-2 text-xs hover:text-[#3388BB] transition-colors" style={{ color: "#555" }}>
                           <div className="w-8 h-8 rounded overflow-hidden shrink-0" style={{ background: "#E6F0F8" }}>
-                            {p.coverImage ? <Image src={p.coverImage} alt={p.title} width={32} height={32} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={16} height={16} className="opacity-30" /></div>}
+                            {p.coverImage ? <SafeImage src={p.coverImage} alt={p.title} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center"><img src="/images/logo.png" alt="" width={16} height={16} className="opacity-30" /></div>}
                           </div>
                           <span className="line-clamp-1">{p.title}</span>
                         </Link>
@@ -88,7 +89,7 @@ export default async function HistoryPage() {
                               <div className="flex gap-2 mt-2 flex-wrap">
                                 {event.images.map((img) => (
                                   <div key={img.id} className="relative w-20 h-14 rounded overflow-hidden border" style={{ borderColor: "#D0DEE8" }}>
-                                    <Image src={img.url} alt={img.altText || event.title} fill unoptimized className="object-cover" sizes="80px" />
+                                    <SafeImage src={img.url} alt={img.altText || event.title} className="object-cover w-full h-full" />
                                   </div>
                                 ))}
                               </div>

@@ -2,6 +2,7 @@
  * 首页最新作品 — 独立服务器组件，可被 Suspense 包裹
  */
 import Link from "next/link";
+import ProjectCoverImage from "@/components/ProjectCoverImage";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
@@ -55,19 +56,12 @@ function ProjectCard({ project, compact, priority }: { project: ProjectWithRelat
       style={{ borderColor: "#D0DEE8" }}
     >
       <div className={`relative w-full bg-gray-100 ${compact ? "aspect-video" : "aspect-video"}`}>
-        {project.coverImage ? (
-          <img
-            src={project.coverImage}
-            alt={project.title}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading={priority ? "eager" : "lazy"}
-            onError={(e: any) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <img src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
-          </div>
-        )}
+        <ProjectCoverImage
+          src={project.coverImage}
+          alt={project.title}
+          priority={priority}
+          compact={compact}
+        />
         <div className="absolute top-2 left-2">
           <span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">
             {typeLabel[project.type] || project.type}
