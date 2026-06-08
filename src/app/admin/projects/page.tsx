@@ -80,7 +80,8 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
         {projects.length === 0 ? (
           <div className="p-8 text-center text-sm" style={{ color: "#777" }}>暂无作品</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="border-b" style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>标题</th>
@@ -133,6 +134,7 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

@@ -35,13 +35,12 @@ interface SelectedMember {
 
 interface InitialData {
   title: string;
+  slug: string;
   subtitle: string;
   description: string;
   type: string;
   developYear: number;
   coverImage: string;
-  devlog: string;
-  techStack: string[];
   tagIds: string[];
   links: LinkEntry[];
   members: SelectedMember[];
@@ -203,11 +202,6 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
       type: form.get("type") as string,
       developYear: parseInt(form.get("developYear") as string),
       coverImage: coverUrl || undefined,
-      devlog: (form.get("devlog") as string) || undefined,
-      techStack: ((form.get("techStack") as string) || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
       tagIds: selectedTags,
       customTags,
       links,
@@ -242,9 +236,9 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
           作品信息已更新。
         </p>
         <a
-          href={`/works/${initialData.title}`}
+          href={`/works/${initialData.slug}`}
           className="btn-primary px-6 py-2 rounded-lg text-sm inline-block"
-          onClick={(e) => { e.preventDefault(); router.push("/works/" + initialData.title); }}
+          onClick={(e) => { e.preventDefault(); router.push(`/works/${initialData.slug}`); }}
         >
           返回作品页
         </a>
@@ -295,15 +289,6 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
           </div>
         </div>
 
-        <div>
-          <label className={labelClass} style={labelStyle}>技术栈（逗号分隔）</label>
-          <input name="techStack" type="text" defaultValue={initialData.techStack.join(", ")} placeholder="如: Unity, C#, Blender" className={inputClass} style={inputStyle} />
-        </div>
-
-        <div>
-          <label className={labelClass} style={labelStyle}>开发日志</label>
-          <textarea name="devlog" maxLength={50000} rows={5} defaultValue={initialData.devlog} placeholder="记录开发过程的心得…" className={inputClass} style={inputStyle} />
-        </div>
       </section>
 
       {/* ═══════════════ 封面图 ═══════════════ */}
@@ -494,7 +479,7 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
         <button type="submit" disabled={loading} className="btn-primary px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
           {loading ? "保存中..." : "保存修改"}
         </button>
-        <a href={`/works/${initialData.title}`} className="text-sm" style={{ color: "#999" }}>取消</a>
+        <a href={`/works/${initialData.slug}`} className="text-sm" style={{ color: "#999" }}>取消</a>
       </div>
     </form>
   );

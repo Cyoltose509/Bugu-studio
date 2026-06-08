@@ -69,13 +69,12 @@ export default async function ProjectEditPage({ params }: PageProps) {
   // 将数据库数据序列化为表单可用的格式
   const initialData = {
     title: project.title,
+    slug: project.slug,
     subtitle: project.subtitle || "",
     description: project.description,
     type: project.type,
     developYear: project.developYear,
     coverImage: project.coverImage || "",
-    devlog: project.devlog || "",
-    techStack: project.techStack,
     tagIds: project.tags.map((t) => t.tagId),
     links: project.links.map((l) => ({ label: l.label, url: l.url })),
     members: project.members.map((m) => ({

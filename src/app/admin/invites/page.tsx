@@ -63,19 +63,19 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
           <div>
             <label className="block text-xs mb-1" style={{ color: "#999" }}>最大使用次数</label>
             <input name="maxUses" type="number" min="1" placeholder="留空=无限"
-              className="text-sm rounded border px-2 py-1.5 w-28"
+              className="text-sm rounded border px-2 py-1.5 w-full sm:w-28"
               style={{ borderColor: "#D0DEE8", color: "#333" }} />
           </div>
           <div>
             <label className="block text-xs mb-1" style={{ color: "#999" }}>有效期（天）</label>
             <input name="expiresDays" type="number" min="1" placeholder="留空=永久"
-              className="text-sm rounded border px-2 py-1.5 w-28"
+              className="text-sm rounded border px-2 py-1.5 w-full sm:w-28"
               style={{ borderColor: "#D0DEE8", color: "#333" }} />
           </div>
           <div>
             <label className="block text-xs mb-1" style={{ color: "#999" }}>备注</label>
             <input name="description" type="text" placeholder="如：张三入社用"
-              className="text-sm rounded border px-2 py-1.5 w-48"
+              className="text-sm rounded border px-2 py-1.5 w-full sm:w-48"
               style={{ borderColor: "#D0DEE8", color: "#333" }} />
           </div>
           <button type="submit" className="btn-primary px-4 py-1.5 rounded-lg text-sm font-medium h-fit">
@@ -89,7 +89,8 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
         {codes.length === 0 ? (
           <div className="p-8 text-center text-sm" style={{ color: "#777" }}>暂无邀请码</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b" style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>邀请码</th>
@@ -151,6 +152,7 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

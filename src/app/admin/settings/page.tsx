@@ -42,7 +42,7 @@ export default async function AdminSettings() {
       {/* 数据统计 */}
       <div className="bg-white rounded-xl border p-5 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
         <h2 className="font-semibold mb-4" style={{ color: "#25547A" }}>数据统计</h2>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="text-center">
             <div className="text-3xl font-bold" style={{ color: "#3388BB" }}>{userCount}</div>
             <div className="text-sm mt-1" style={{ color: "#777" }}>注册用户</div>
@@ -68,7 +68,8 @@ export default async function AdminSettings() {
             暂无自定义配置项。可通过直接操作数据库 <code className="bg-gray-100 px-1 py-0.5 rounded text-xs" style={{ color: "#25547A" }}>SiteSetting</code> 表添加。
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
             <thead>
               <tr className="border-b text-left" style={{ borderColor: "#D0DEE8" }}>
                 <th className="p-3 font-medium" style={{ color: "#555" }}>键</th>
@@ -90,6 +91,7 @@ export default async function AdminSettings() {
               ))}
             </tbody>
           </table>
+        </div>
         )}
       </div>
     </div>
