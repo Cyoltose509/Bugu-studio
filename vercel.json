@@ -1,5 +1,5 @@
 {
-  "regions": ["hkg1", "sin1", "nrt1"],
+  "regions": ["hnd1", "sin1"],
   "crons": [],
   "cleanUrls": true,
   "trailingSlash": false,
