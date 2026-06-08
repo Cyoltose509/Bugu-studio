@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/auth";
-import { ProjectStatus } from "@prisma/client";
+import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
@@ -156,7 +156,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
           {/* 点赞 + 编辑 */}
           <div className="flex items-center gap-3 mb-4">
-            <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={false} />
+            <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} />
             <EditButton slug={project.slug} submitterId={project.submitterId} />
           </div>
 

@@ -195,7 +195,8 @@ model ClubMember {
   avatar      String?                   // 头像 URL（R2）
   bio         String?  @db.Text
   grade       String?                   // 年级，如 "2021级"
-  joinYear    Int                       // 入社年份
+  cohortYear  Int?                      // 第几届（入学年份届别），取代 joinYear 的语义
+  joinYear    Int?                      // 入社年份（保留兼容，新数据不再使用）
   graduateYear Int?                     // 毕业年份（null = 在读）
   skills      String[] @default([])     // 职能标签
   isActive    Boolean  @default(true)   // 是否在读/活跃

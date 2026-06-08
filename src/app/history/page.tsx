@@ -15,7 +15,7 @@ export default async function HistoryPage() {
   for (const year of projectYears) {
     const [projects, members, events] = await Promise.all([
       prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
-      prisma.clubMember.findMany({ where: { joinYear: year }, select: { id: true, displayName: true, avatar: true } }),
+      prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true } }),
       prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
     ]);
     yearDetails.push({ year, projects, members, events });
