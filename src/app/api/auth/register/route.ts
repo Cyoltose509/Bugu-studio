@@ -2,7 +2,8 @@
  * 注册 API
  * POST /api/auth/register
  * Body: { email, password, name, inviteCode? }
- * 流程：验证邀请码 → 创建用户 → 生成验证码 → 发送验证邮件 → 返回成功
+ * 流程：验证输入 → 验证邀请码 → 生成验证码 → 存待验证数据到 VerificationToken → 发送邮件
+ * 注意：此时不创建 User，等邮箱验证通过后再创建
  */
 
 import { NextResponse } from "next/server";
@@ -11,7 +12,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { registerSchema } from "@/lib/validations";
 import { sendVerificationEmail } from "@/lib/email/send";
 import crypto from "crypto";
-import { isRateLimited, getRateLimitRemaining, resetRateLimit } from "@/lib/utils/rate-limit";
+import { isRateLimited, getRateLimitRemaining } from "@/lib/utils/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -28,25 +29,24 @@ export async function POST(request: Request) {
     const { email, password, name, inviteCode } = parsed.data;
     const normalizedEmail = email.toLowerCase();
 
-    // 检查邮箱是否已注册
-    const existing = await prisma.user.findUnique({
+    // 1. 检查邮箱是否已被已验证用户占用
+    const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
+      select: { emailVerified: true },
     });
 
-    if (existing) {
-      // 已验证用户 → 拒绝
-      if (existing.emailVerified) {
-        return NextResponse.json(
-          { error: "该邮箱已被注册" },
-          { status: 409 }
-        );
-      }
-      // 未验证 → 删除旧记录，允许重新注册
-      await prisma.verificationToken.deleteMany({ where: { identifier: normalizedEmail } });
-      await prisma.user.delete({ where: { id: existing.id } });
+    if (existingUser?.emailVerified) {
+      return NextResponse.json(
+        { error: "该邮箱已被注册" },
+        { status: 409 }
+      );
+    }
+    // 脏数据清理：如果存在未验证的 User（旧逻辑残留），删掉
+    if (existingUser && !existingUser.emailVerified) {
+      await prisma.user.delete({ where: { email: normalizedEmail } });
     }
 
-    // 检查邀请码
+    // 2. 验证邀请码
     let assignedRole: string | undefined;
     if (inviteCode?.trim()) {
       const inviteCodeRecord = await prisma.inviteCode.findUnique({
@@ -54,7 +54,9 @@ export async function POST(request: Request) {
       });
       const now = new Date();
       const expired = inviteCodeRecord?.expiresAt && inviteCodeRecord.expiresAt < now;
-      const exhausted = inviteCodeRecord?.maxUses !== null && inviteCodeRecord != null && inviteCodeRecord.usedCount >= (inviteCodeRecord.maxUses ?? 0);
+      const exhausted = inviteCodeRecord?.maxUses !== null
+        && inviteCodeRecord != null
+        && inviteCodeRecord.usedCount >= (inviteCodeRecord.maxUses ?? 0);
 
       if (!inviteCodeRecord || !inviteCodeRecord.isActive || expired || exhausted) {
         return NextResponse.json(
@@ -63,7 +65,6 @@ export async function POST(request: Request) {
         );
       }
 
-      // 使用邀请码
       await prisma.inviteCode.update({
         where: { id: inviteCodeRecord.id },
         data: { usedCount: { increment: 1 } },
@@ -71,25 +72,7 @@ export async function POST(request: Request) {
       assignedRole = inviteCodeRecord.role;
     }
 
-    // 创建用户（未验证邮箱）
-    const passwordHash = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        passwordHash,
-        name,
-        role: assignedRole ? (assignedRole as any) : undefined,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
-    });
-
-    // 速率限制：同一邮箱 60 秒内只能发送一次验证码
+    // 3. 速率限制：同一邮箱 60 秒内只能发一次验证码
     const rateKey = `email:verify:${normalizedEmail}`;
     const limited = await isRateLimited(rateKey, 60, 1);
     if (limited) {
@@ -100,30 +83,41 @@ export async function POST(request: Request) {
       );
     }
 
-    // 生成 6 位验证码
+    // 4. 生成验证码 + 密码哈希
     const code = crypto.randomInt(100000, 999999).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 分钟有效
+    const passwordHash = await hashPassword(password);
 
-    // 存储验证码到 VerificationToken 表
-    await prisma.verificationToken.create({
-      data: {
-        identifier: normalizedEmail,
-        token: code,
-        expires: expiresAt,
-      },
-    });
+    // 5. 删除旧 token，存新 token（含待验证注册数据）
+    await prisma.$transaction([
+      prisma.verificationToken.deleteMany({
+        where: { identifier: normalizedEmail },
+      }),
+      prisma.verificationToken.create({
+        data: {
+          identifier: normalizedEmail,
+          token: code,
+          expires: expiresAt,
+          name,
+          passwordHash,
+          role: assignedRole ?? null,
+        },
+      }),
+    ]);
 
-    // 发送验证邮件（未配置 Resend 时优雅跳过）
+    // 6. 发送验证邮件
     const emailSent = await sendVerificationEmail(normalizedEmail, code);
 
-    return NextResponse.json({
-      user,
-      verification: {
-        sent: emailSent,
-        // 开发模式：未配置 Resend 时返回验证码方便调试
-        ...(emailSent ? {} : { code, expiresAt: expiresAt.toISOString() }),
+    return NextResponse.json(
+      {
+        verification: {
+          sent: emailSent,
+          // 开发模式：未配置 Resend 时返回验证码方便调试
+          ...(emailSent ? {} : { code, expiresAt: expiresAt.toISOString() }),
+        },
       },
-    }, { status: 201 });
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(

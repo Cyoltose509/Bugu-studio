@@ -2,6 +2,7 @@
  * 邮箱验证 API
  * POST /api/auth/verify
  * Body: { email, code }
+ * 流程：查找验证码 → 校验有效性 → 创建 User → 标记邮箱已验证 → 删除 token
  */
 
 import { NextResponse } from "next/server";
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
 
     const normalizedEmail = email.toLowerCase();
 
-    // 查找验证码
+    // 1. 查找验证 token（含待验证注册数据）
     const token = await prisma.verificationToken.findUnique({
       where: {
         identifier_token: {
@@ -37,19 +38,43 @@ export async function POST(request: Request) {
       );
     }
 
-    // 标记邮箱已验证
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { email: normalizedEmail },
-        data: { emailVerified: new Date() },
+    // 2. 创建用户 + 清理 token（事务）
+    const targetRole = token.role || "USER";
+    const [user] = await prisma.$transaction([
+      prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash: token.passwordHash!,
+          name: token.name!,
+          role: targetRole as any,
+          emailVerified: new Date(),
+        },
       }),
-      // 删除已使用的验证码
       prisma.verificationToken.deleteMany({
         where: { identifier: normalizedEmail },
       }),
     ]);
 
-    return NextResponse.json({ success: true });
+    // 3. 如果邀请码赋予了 MEMBER 或 ADMIN 角色，自动创建 ClubMember 记录
+    if (targetRole === "MEMBER" || targetRole === "ADMIN") {
+      await prisma.clubMember.create({
+        data: {
+          userId: user.id,
+          displayName: token.name!,
+          joinYear: new Date().getFullYear(),
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    });
   } catch (error) {
     console.error("Verify error:", error);
     return NextResponse.json(

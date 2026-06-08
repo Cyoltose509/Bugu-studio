@@ -138,9 +138,12 @@ model Session {
 }
 
 model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
+  identifier   String
+  token        String   @unique
+  expires      DateTime
+  name         String?  @db.Text    // 待验证注册：昵称
+  passwordHash String?  @db.Text    // 待验证注册：密码哈希
+  role         String?  @db.VarChar(20) // 待验证注册：角色
 
   @@unique([identifier, token])
 }
