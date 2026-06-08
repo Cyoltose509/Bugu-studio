@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
+import { ensureDefaultTags } from "@/lib/db/tags";
 import SubmitForm from "./SubmitForm";
 
 export const metadata: Metadata = {
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SubmitPage() {
+  await ensureDefaultTags();
   const tags = await prisma.tag.findMany({
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true, slug: true },

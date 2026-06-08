@@ -8,6 +8,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/auth";
 import { canEditProject } from "@/lib/auth/rbac";
+import { ensureDefaultTags } from "@/lib/db/tags";
 import ProjectEditForm from "./ProjectEditForm";
 
 export const metadata: Metadata = { title: "编辑作品" };
@@ -25,6 +26,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
   const userId = session.user.id;
   const userRole = session.user.role as string;
 
+  await ensureDefaultTags();
   const [project, tags] = await Promise.all([
     prisma.project.findFirst({
       where: { OR: [{ slug }, { id: slug }] },

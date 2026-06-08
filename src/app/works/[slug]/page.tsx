@@ -59,6 +59,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
               displayName: true,
               avatar: true,
               grade: true,
+              user: { select: { image: true } },
             },
           },
         },
@@ -275,12 +276,12 @@ export default async function WorkDetailPage({ params }: PageProps) {
                   >
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden"
                       style={{ background: "linear-gradient(135deg, #E38043, #F09055)" }}>
-                      {member.avatar ? (
-                        <Image
-                          src={member.avatar}
+                      {(member.user?.image || member.avatar) ? (
+                        <img
+                          src={(member.user?.image || member.avatar)!}
                           alt={member.displayName}
-                          width={36}
-                          height={36}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
                         />
                       ) : (
                         member.displayName[0]

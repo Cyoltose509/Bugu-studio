@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
+import { ensureDefaultTags } from "@/lib/db/tags";
 import { ProjectStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
@@ -12,6 +13,7 @@ interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: s
 const TYPE_LABELS: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
 
 export default async function WorksPage({ searchParams }: PageProps) {
+  await ensureDefaultTags();
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
   const pageSize = 12;
@@ -25,7 +27,27 @@ export default async function WorksPage({ searchParams }: PageProps) {
 
   const [tags, projects, total, years] = await Promise.all([
     prisma.tag.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { projects: { where: { project: { status: "PUBLISHED" } } } } } } }),
-    prisma.project.findMany({ where, skip, take: pageSize, orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }], include: { tags: { include: { tag: true } }, members: { take: 3, include: { member: { select: { displayName: true, avatar: true } } } } } }),
+    prisma.project.findMany({
+      where,
+      skip,
+      take: pageSize,
+      orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+      include: {
+        tags: { include: { tag: true } },
+        members: {
+          take: 3,
+          include: {
+            member: {
+              select: {
+                displayName: true,
+                avatar: true,
+                user: { select: { image: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
     prisma.project.count({ where }),
     prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } }),
   ]);
@@ -94,8 +116,8 @@ export default async function WorksPage({ searchParams }: PageProps) {
                       <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
                       <div className="flex -space-x-1">
                         {p.members.slice(0, 3).map(({ member }) => (
-                          <div key={member.displayName} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white" style={{ background: "#E38043" }} title={member.displayName}>
-                            {member.avatar ? <Image src={member.avatar} alt={member.displayName} width={20} height={20} className="rounded-full" loading="lazy" /> : member.displayName[0]}
+                          <div key={member.displayName} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white overflow-hidden" style={{ background: "#E38043" }} title={member.displayName}>
+                            {(member.user?.image || member.avatar) ? <img src={(member.user?.image || member.avatar)!} alt={member.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : member.displayName[0]}
                           </div>
                         ))}
                       </div>

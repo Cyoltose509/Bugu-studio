@@ -342,23 +342,64 @@ export default function SubmitForm({ tags }: Props) {
             const file = e.target.files?.[0];
             if (!file) return;
             setCoverError("");
-            setCoverUploading(true);
-            try {
-              const fd = new FormData();
-              fd.append("file", file);
-              const res = await fetch("/api/upload/cover", { method: "POST", body: fd });
-              const json = await res.json();
-              if (!res.ok) throw new Error(json.error || "上传失败");
-              setCoverPreview(json.url);
-              setCoverUrl(json.url);
-            } catch (err: any) {
-              setCoverError(err.message || "上传失败");
-            } finally {
-              setCoverUploading(false);
-              if (coverFileRef.current) coverFileRef.current.value = "";
-            }
+            // 先打开裁剪器，选择裁剪区域
+            const src = await readFileAsDataURL(file);
+            setCoverCropSrc(src);
+            setCoverCrop({ x: 0, y: 0 });
+            setCoverZoom(1);
+            setShowCoverCrop(true);
+            if (coverFileRef.current) coverFileRef.current.value = "";
           }}
         />
+        {/* ── 封面裁剪弹窗 ── */}
+        {showCoverCrop && coverCropSrc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowCoverCrop(false)}>
+            <div className="bg-white rounded-xl p-6 w-[90vw] max-w-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-base font-semibold mb-3" style={{ color: "#25547A" }}>裁剪封面</h3>
+              <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden" style={{ height: 320 }}>
+                <Cropper
+                  image={coverCropSrc}
+                  crop={coverCrop}
+                  zoom={coverZoom}
+                  aspect={16 / 9}
+                  onCropChange={setCoverCrop}
+                  onZoomChange={setCoverZoom}
+                  onCropComplete={(_, area) => setCoverCropped(area)}
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button type="button" className="px-4 py-2 rounded-lg text-sm" style={{ color: "#777", border: "1px solid #D0DEE8" }}
+                  onClick={() => { setShowCoverCrop(false); setCoverCropSrc(null); }}>
+                  取消
+                </button>
+                <button type="button" className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: "#3388BB" }}
+                  onClick={async () => {
+                    if (!coverCropSrc) return;
+                    setShowCoverCrop(false);
+                    setCoverUploading(true);
+                    try {
+                      const { file: croppedFile, url: previewUrl } = await getCroppedImg(coverCropSrc, coverCropped);
+                      setCoverPreview(previewUrl);
+                      const fd = new FormData();
+                      fd.append("file", croppedFile);
+                      const res = await fetch("/api/upload/cover", { method: "POST", body: fd });
+                      const json = await res.json();
+                      if (!res.ok) throw new Error(json.error || "上传失败");
+                      setCoverUrl(json.url);
+                    } catch (err: any) {
+                      setCoverError(err.message || "上传失败");
+                      setCoverPreview(null);
+                    } finally {
+                      setCoverUploading(false);
+                      setCoverCropSrc(null);
+                    }
+                  }}>
+                  确认裁剪
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex items-start gap-4">
           <div className="shrink-0">
             {coverPreview ? (
