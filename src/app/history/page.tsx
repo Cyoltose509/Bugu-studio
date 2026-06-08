@@ -5,8 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "社团历史", description: "记录布谷工作室每一年的成长与创作" };
-export const dynamic = "force-dynamic";
-export const revalidate = 600;
+export const revalidate = 3600; // 历史数据变化少，1小时缓存
 
 export default async function HistoryPage() {
   const yearData = await prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, _count: { id: true }, orderBy: { developYear: "desc" } });

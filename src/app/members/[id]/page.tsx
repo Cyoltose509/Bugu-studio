@@ -8,7 +8,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 
-export const dynamic = "force-dynamic";
+// ISR: 成员信息变化少，5 分钟缓存
+export const revalidate = 300;
 
 interface PageProps {
   params: Promise<{ id: string }>;

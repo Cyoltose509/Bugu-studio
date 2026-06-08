@@ -1,9 +1,10 @@
 ﻿import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+import { NavbarSkeleton } from "@/components/layout/NavbarSkeleton";
 import { Footer } from "@/components/layout/Footer";
-import { Providers } from "@/components/providers/Providers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -23,13 +24,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className={`${inter.className} text-[#333333] min-h-screen flex flex-col`}>
-        <Providers>
+        {/* Navbar 用 Suspense 包裹 — auth() 不阻塞首屏渲染 */}
+        <Suspense fallback={<NavbarSkeleton />}>
           <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <SpeedInsights />
-          <Analytics />
-        </Providers>
+        </Suspense>
+        <main className="flex-1">{children}</main>
+        <Footer />
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
