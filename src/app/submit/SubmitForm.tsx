@@ -58,6 +58,7 @@ export default function SubmitForm({ tags }: Props) {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const submittingRef = useRef(false);
 
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState("");
@@ -183,8 +184,10 @@ export default function SubmitForm({ tags }: Props) {
   // ── 提交 ──
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submittingRef.current) return;
     setError("");
     setLoading(true);
+    submittingRef.current = true;
 
     const form = new FormData(e.currentTarget);
     form.set("tagIds", selectedTags.join(","));
@@ -195,6 +198,7 @@ export default function SubmitForm({ tags }: Props) {
 
     const result = await submitProject(form);
     setLoading(false);
+    submittingRef.current = false;
 
     if (result.success) {
       setSuccess(true);

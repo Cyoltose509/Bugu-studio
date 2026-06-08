@@ -72,7 +72,13 @@ export default async function middleware(req: NextRequest) {
     const role = (user as any)?.role;
     if (!role || !["MEMBER", "REVIEWER", "ADMIN"].includes(role)) {
       if (isRscRequest(req)) return new NextResponse("Unauthorized", { status: 401 });
-      return NextResponse.redirect(new URL("/auth/login", req.url));
+      // 已登录但角色不足 → 跳转到权限提示页；未登录 → 跳转登录页（带 callbackUrl）
+      if (user) {
+        return NextResponse.redirect(new URL("/auth/login?error=permission_denied", req.url));
+      }
+      return NextResponse.redirect(
+        new URL(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`, req.url)
+      );
     }
   }
 

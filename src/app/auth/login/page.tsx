@@ -30,13 +30,22 @@ function LoginForm() {
   const [msg, setMsg] = useState("");
   const [checking, setChecking] = useState(true);
 
-  // 检测是否已登录：已登录自动跳转
+  // 检测是否已登录：已登录自动跳转（但 permission_denied 时不算 callbackUrl，避免再次跳回）
   useEffect(() => {
     fetch("/api/auth/session")
       .then((r) => r.json())
-      .then((s) => { if (s?.user) router.push(callbackUrl); })
-      .finally(() => setChecking(false));
-  }, [callbackUrl, router]);
+      .then((s) => {
+        if (s?.user) {
+          if (error === "permission_denied") {
+            setChecking(false);
+            setMsg("你的账号权限不足，无法访问该页面。请联系管理员升级为社团成员。");
+            return;
+          }
+          router.push(callbackUrl);
+        }
+      })
+      .finally(() => { if (error !== "permission_denied") setChecking(false); });
+  }, [callbackUrl, router, error]);
 
   if (checking) {
     return <div className="min-h-[80vh] flex items-center justify-center text-gray-400">加载中...</div>;

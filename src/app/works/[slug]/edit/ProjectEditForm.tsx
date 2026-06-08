@@ -71,6 +71,7 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const submittingRef = useRef(false);
 
   // ── 表单状态 ──
   const [selectedTags, setSelectedTags] = useState<string[]>(initialData.tagIds);
@@ -244,8 +245,10 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
   // ── 提交 ──
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submittingRef.current) return;
     setError("");
     setLoading(true);
+    submittingRef.current = true;
 
     const form = new FormData(e.currentTarget);
 
@@ -277,6 +280,7 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
       setError(err.message || "保存失败");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   }
 

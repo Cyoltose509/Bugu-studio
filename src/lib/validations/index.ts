@@ -57,7 +57,7 @@ export const projectCreateSchema = z.object({
     .min(2000)
     .max(new Date().getFullYear() + 1),
   links: z.array(linkEntrySchema).max(20).default([]),
-  coverImage: z.string().max(500).optional(),
+  coverImage: z.string().max(2048).optional(),
   devlog: z.string().max(50000).optional(),
   techStack: z.array(z.string().max(50)).max(20).default([]),
   tagIds: z.array(z.string()).max(10).default([]),
@@ -79,7 +79,7 @@ export const projectCreateSchema = z.object({
   images: z
     .array(
       z.object({
-        url: z.string().max(500),
+        url: z.string().max(2048),
         altText: z.string().max(200).optional(),
       })
     )
