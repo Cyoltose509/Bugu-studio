@@ -1,9 +1,8 @@
 /**
- * Next.js 中间件 — 路由保护 + 安全头 + www 规范化
+ * Next.js 中间件 — 路由保护 + 安全头
  *
- * 重要：CORS preflight (OPTIONS) 请求不能被重定向，否则浏览器会拒绝跨域请求。
- * RSC 请求同样需要避免跨域重定向，否则会导致 "Redirect is not allowed
- * for a preflight request" 错误。
+ * 优化：仅对受保护路由调用 auth()，公开路由直接放行
+ * CORS preflight (OPTIONS) 立即返回 204
  */
 
 import { NextResponse } from "next/server";
@@ -17,9 +16,11 @@ const MEMBER_ROUTES = ["/submit"];
 // 需要 ADMIN 权限
 const ADMIN_ROUTES = ["/admin"];
 
+// 公开路由（完全跳过 auth() 调用，提升性能）
+const PUBLIC_PREFIXES = ["/", "/works", "/members", "/about", "/join", "/api"];
+
 /**
- * 判断是否为 RSC 请求
- * Next.js 客户端导航/预取会发送 RSC 请求（带 _rsc 参数或 RSC header）
+ * 判断是否为 RSC 请求（Next.js 客户端导航/预取）
  */
 function isRscRequest(req: NextRequest): boolean {
   return req.headers.get("RSC") === "1" || req.nextUrl.searchParams.has("_rsc");
@@ -28,55 +29,49 @@ function isRscRequest(req: NextRequest): boolean {
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ══════════════════════════════════════════════════
-  // 1. CORS preflight — 立即响应 204，绝不重定向
-  // ══════════════════════════════════════════════════
+  // 1. CORS preflight — 立即响应 204
   if (req.method === "OPTIONS") {
     return new NextResponse(null, { status: 204 });
   }
 
-  // ══════════════════════════════════════════════════
-  // 2. 获取会话（直接调用 auth()，不使用 wrapper）
-  // ══════════════════════════════════════════════════
+  // 2. 判断是否需要认证检查
+  const isProtected = PROTECTED_ROUTES.some((r) => pathname.startsWith(r));
+  const isMember = MEMBER_ROUTES.some((r) => pathname.startsWith(r));
+  const isAdmin = ADMIN_ROUTES.some((r) => pathname.startsWith(r));
+  const needsAuth = isProtected || isMember || isAdmin;
+
+  // 3. 公开路由且不是 RSC 请求 → 直接放行，不调用 auth()
+  if (!needsAuth && !isRscRequest(req)) {
+    return NextResponse.next();
+  }
+
+  // 4. 需要认证的路由，才调用 auth()
   const session = await auth();
   const user = session?.user;
 
-  // ══════════════════════════════════════════════════
-  // 4. 检查 ADMIN 路由
-  // ══════════════════════════════════════════════════
-  if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
+  // 检查 ADMIN 路由
+  if (isAdmin) {
     if (!user || (user as any).role !== "ADMIN") {
-      // RSC 请求：返回 401 让客户端降级为完整页面导航
-      if (isRscRequest(req)) {
-        return new NextResponse("Unauthorized", { status: 401 });
-      }
+      if (isRscRequest(req)) return new NextResponse("Unauthorized", { status: 401 });
       return NextResponse.redirect(new URL("/auth/login?callbackUrl=/admin", req.url));
     }
   }
 
-  // ══════════════════════════════════════════════════
-  // 5. 检查受保护路由（需要登录）
-  // ══════════════════════════════════════════════════
-  if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
+  // 检查受保护路由（需要登录）
+  if (isProtected) {
     if (!user) {
-      if (isRscRequest(req)) {
-        return new NextResponse("Unauthorized", { status: 401 });
-      }
+      if (isRscRequest(req)) return new NextResponse("Unauthorized", { status: 401 });
       return NextResponse.redirect(
         new URL(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`, req.url)
       );
     }
   }
 
-  // ══════════════════════════════════════════════════
-  // 6. 检查 MEMBER 路由
-  // ══════════════════════════════════════════════════
-  if (MEMBER_ROUTES.some((route) => pathname.startsWith(route))) {
+  // 检查 MEMBER 路由
+  if (isMember) {
     const role = (user as any)?.role;
     if (!role || !["MEMBER", "REVIEWER", "ADMIN"].includes(role)) {
-      if (isRscRequest(req)) {
-        return new NextResponse("Unauthorized", { status: 401 });
-      }
+      if (isRscRequest(req)) return new NextResponse("Unauthorized", { status: 401 });
       return NextResponse.redirect(new URL("/auth/login", req.url));
     }
   }

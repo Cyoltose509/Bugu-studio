@@ -1,44 +1,18 @@
-﻿/**
+/**
  * 首页 - 布谷工作室
+ * 使用 Suspense 拆分：统计数据立即显示，作品列表流式加载
  */
-import { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { prisma } from "@/lib/db/prisma";
-import { ProjectStatus, ProjectType } from "@prisma/client";
+import HomeStats from "./HomeStats";
+import FeaturedProjects from "./FeaturedProjects";
+import LatestProjects from "./LatestProjects";
 
-export const metadata: Metadata = { title: "首页" };
+export const metadata = { title: "首页" };
 export const revalidate = 60;
 
-async function getStats() {
-  const foundedYear = parseInt(process.env.NEXT_PUBLIC_CLUB_FOUNDED_YEAR || "2018");
-  const [memberCount, projectCount, steamCount] = await Promise.all([
-    prisma.clubMember.count(),
-    prisma.project.count({ where: { status: ProjectStatus.PUBLISHED } }),
-    prisma.project.count({ where: { status: ProjectStatus.PUBLISHED, type: ProjectType.STEAM } }),
-  ]);
-  return { foundedYear, memberCount, projectCount, steamCount };
-}
-
-async function getFeaturedProjects() {
-  return prisma.project.findMany({
-    where: { status: ProjectStatus.PUBLISHED, isFeatured: true },
-    orderBy: { publishedAt: "desc" }, take: 6,
-    include: { tags: { include: { tag: true } }, members: { take: 3, include: { member: { select: { displayName: true, avatar: true } } } } },
-  });
-}
-
-async function getLatestProjects() {
-  return prisma.project.findMany({
-    where: { status: ProjectStatus.PUBLISHED },
-    orderBy: { publishedAt: "desc" }, take: 4,
-    include: { tags: { include: { tag: true } }, members: { take: 3, include: { member: { select: { displayName: true, avatar: true } } } } },
-  });
-}
-
-export default async function HomePage() {
-  const [stats, featuredProjects, latestProjects] = await Promise.all([getStats(), getFeaturedProjects(), getLatestProjects()]);
-
+export default function HomePage() {
   return (
     <div className="animate-fade-in">
       {/* Hero */}
@@ -57,34 +31,31 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 统计数据 */}
-      <section className="py-10 border-y" style={{ borderColor: "#D0DEE8", background: "rgba(255,255,255,0.6)" }}>
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <Stat value={`${new Date().getFullYear() - stats.foundedYear + 1}年`} label="社团历史" />
-            <Stat value={`${stats.memberCount}+`} label="历届成员" />
-            <Stat value={`${stats.projectCount}+`} label="累计作品" />
-            <Stat value={`${stats.steamCount}`} label="Steam 发布" />
-          </div>
+      {/* 统计数据 — 直接加载（快） */}
+      <Suspense fallback={<StatsSkeleton />}>
+        <HomeStats />
+      </Suspense>
+
+      {/* 精选作品 — 流式加载 */}
+      <section className="py-16 container mx-auto px-4">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold" style={{ color: "#25547A" }}>精选作品</h2>
+          <Link href="/works" className="text-sm hover:underline" style={{ color: "#3388BB" }}>查看全部 →</Link>
         </div>
+        <Suspense fallback={<ProjectGridSkeleton count={6} />}>
+          <FeaturedProjects />
+        </Suspense>
       </section>
 
-      {/* 精选作品 */}
-      {featuredProjects.length > 0 && (
-        <section className="py-16 container mx-auto px-4">
-          <SectionHeader title="精选作品" href="/works" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {featuredProjects.map(p => <ProjectCard key={p.id} project={p} />)}
-          </div>
-        </section>
-      )}
-
-      {/* 最新作品 */}
+      {/* 最新作品 — 流式加载 */}
       <section className="py-16 container mx-auto px-4">
-        <SectionHeader title="最新作品" href="/works" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          {latestProjects.map(p => <ProjectCard key={p.id} project={p} compact />)}
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold" style={{ color: "#25547A" }}>最新作品</h2>
+          <Link href="/works" className="text-sm hover:underline" style={{ color: "#3388BB" }}>查看全部 →</Link>
         </div>
+        <Suspense fallback={<ProjectGridSkeleton count={4} />}>
+          <LatestProjects />
+        </Suspense>
       </section>
 
       {/* CTA */}
@@ -99,45 +70,37 @@ export default async function HomePage() {
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+/* ── 骨架屏 ────────────────────────────────── */
+
+function StatsSkeleton() {
   return (
-    <div>
-      <div className="text-3xl font-bold" style={{ color: "#E38043" }}>{value}</div>
-      <div className="text-sm mt-1" style={{ color: "#777" }}>{label}</div>
-    </div>
-  );
-}
-
-function SectionHeader({ title, href }: { title: string; href: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-2xl font-bold" style={{ color: "#25547A" }}>{title}</h2>
-      <Link href={href} className="text-sm hover:underline" style={{ color: "#3388BB" }}>查看全部 →</Link>
-    </div>
-  );
-}
-
-type ProjectWithRelations = Awaited<ReturnType<typeof getFeaturedProjects>>[0];
-
-function ProjectCard({ project, compact = false }: { project: ProjectWithRelations; compact?: boolean }) {
-  const typeLabel: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
-
-  return (
-    <Link href={`/works/${project.slug}`} className="game-card group block bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>
-      <div className={`relative w-full bg-gray-100 ${compact ? "aspect-video" : "aspect-video"}`}>
-        {project.coverImage ? <Image src={project.coverImage} alt={project.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:768px) 100vw,33vw" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
-        <div className="absolute top-2 left-2"><span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">{typeLabel[project.type] || project.type}</span></div>
+    <div className="py-10 border-y animate-pulse" style={{ borderColor: "#D0DEE8" }}>
+      <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        {[1,2,3,4].map(i => (
+          <div key={i} className="space-y-2">
+            <div className="mx-auto w-16 h-7 rounded bg-gray-200" />
+            <div className="mx-auto w-20 h-4 rounded bg-gray-200" />
+          </div>
+        ))}
       </div>
-      <div className="p-4">
-        <h3 className={`font-semibold group-hover:text-[#3388BB] transition-colors ${compact ? "text-sm" : "text-base"}`} style={{ color: "#333" }}>{project.title}</h3>
-        {!compact && <p className="text-sm mt-1 line-clamp-2" style={{ color: "#777" }}>{project.description}</p>}
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-          {project.tags.slice(0, 3).map(({ tag }) => (
-            <span key={tag.slug} className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: "#88C23222", color: "#88C232" }}>{tag.name}</span>
-          ))}
+    </div>
+  );
+}
+
+function ProjectGridSkeleton({ count }: { count: number }) {
+  const cols = count === 4 ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+  return (
+    <div className={`grid ${cols} gap-6 animate-pulse`}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-xl border overflow-hidden" style={{ borderColor: "#D0DEE8" }}>
+          <div className="aspect-video bg-gray-200" />
+          <div className="p-4 space-y-2">
+            <div className="w-3/4 h-5 rounded bg-gray-200" />
+            <div className="w-full h-4 rounded bg-gray-200" />
+            <div className="w-2/3 h-4 rounded bg-gray-200" />
+          </div>
         </div>
-        <div className="text-xs mt-2" style={{ color: "#999" }}>{project.developYear}</div>
-      </div>
-    </Link>
+      ))}
+    </div>
   );
 }
