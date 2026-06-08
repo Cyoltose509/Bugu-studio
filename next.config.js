@@ -28,6 +28,12 @@ const nextConfig = {
   },
   // jose 在 Edge Runtime 会引用 Node.js API，标为外部包避免打包进 Edge bundle
   serverExternalPackages: ["jose"],
+  // 旧路由重定向
+  async redirects() {
+    return [
+      { source: "/projects/:slug", destination: "/works/:slug", permanent: true },
+    ];
+  },
   // Security headers
   async headers() {
     return [

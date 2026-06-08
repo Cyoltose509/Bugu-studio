@@ -213,7 +213,7 @@ export default async function ProfilePage() {
         ) : (
           <div className="space-y-3">
             {userProjects.map(p => (
-              <Link key={p.id} href={`/projects/${p.slug}`}
+              <Link key={p.id} href={`/works/${p.slug}`}
                 className="flex items-center justify-between p-3 rounded-lg border hover:border-[#3388BB] hover:shadow-sm transition-all"
                 style={{ borderColor: "#EEE" }}>
                 <div>
