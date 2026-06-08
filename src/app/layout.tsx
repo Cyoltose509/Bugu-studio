@@ -6,7 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Providers } from "@/components/providers/Providers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap", preload: true });
 
 export const metadata: Metadata = {
   title: { template: "%s | 布谷工作室", default: "布谷工作室 - 作品档案馆" },
@@ -18,6 +18,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
+      <head>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
       <body className={`${inter.className} text-[#333333] min-h-screen flex flex-col`}>
         <Providers>
           <Navbar />

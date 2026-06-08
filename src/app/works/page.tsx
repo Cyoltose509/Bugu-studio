@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
-export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string }>; }
@@ -78,10 +77,10 @@ export default async function WorksPage({ searchParams }: PageProps) {
             <div className="text-center py-20" style={{ color: "#999" }}><div className="text-4xl mb-4">🔍</div><p>没有找到匹配的作品</p></div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              {projects.map(p => (
+              {projects.map((p, idx) => (
                 <Link key={p.id} href={`/works/${p.slug}`} className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>
                   <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
-                    {p.coverImage ? <Image src={p.coverImage} alt={p.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:640px) 100vw,33vw" /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
+                    {p.coverImage ? <Image src={p.coverImage} alt={p.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:640px) 100vw,33vw" priority={idx === 0} loading={idx > 0 ? "lazy" : undefined} /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
                     <div className="absolute top-2 left-2"><span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">{TYPE_LABELS[p.type]}</span></div>
                     {p.isFeatured && <div className="absolute top-2 right-2"><span className="text-xs px-2 py-0.5 rounded text-white" style={{ background: "#E38043" }}>精选</span></div>}
                   </div>
@@ -96,7 +95,7 @@ export default async function WorksPage({ searchParams }: PageProps) {
                       <div className="flex -space-x-1">
                         {p.members.slice(0, 3).map(({ member }) => (
                           <div key={member.displayName} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white" style={{ background: "#E38043" }} title={member.displayName}>
-                            {member.avatar ? <Image src={member.avatar} alt={member.displayName} width={20} height={20} className="rounded-full" /> : member.displayName[0]}
+                            {member.avatar ? <Image src={member.avatar} alt={member.displayName} width={20} height={20} className="rounded-full" loading="lazy" /> : member.displayName[0]}
                           </div>
                         ))}
                       </div>

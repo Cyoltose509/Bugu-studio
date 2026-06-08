@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 
 export const metadata: Metadata = { title: "成员", description: "认识历届布谷工作室成员" };
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function MembersPage() {
   const members = await prisma.clubMember.findMany({ orderBy: [{ joinYear: "desc" }, { sortOrder: "asc" }], include: { user: { select: { image: true } }, _count: { select: { projectMembers: true } } } });

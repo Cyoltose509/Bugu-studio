@@ -8,7 +8,6 @@ import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus, ProjectType } from "@prisma/client";
 
 export const metadata: Metadata = { title: "首页" };
-export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
 async function getStats() {
@@ -45,7 +44,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="relative overflow-hidden px-4 py-20 md:py-28 text-center" style={{ background: "linear-gradient(180deg, #E6F0F8 0%, #D0E4F0 100%)" }}>
         <div className="container mx-auto max-w-3xl relative">
-          <Image src="/images/logo.png" alt="布谷工作室" width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg" />
+          <Image src="/images/logo.png" alt="布谷工作室" width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg" priority />
           <h1 className="text-4xl md:text-6xl font-bold mb-4" style={{ color: "#25547A" }}>布谷工作室</h1>
           <p className="text-xl mb-3" style={{ color: "#555" }}>作品档案馆</p>
           <p className="mb-8 max-w-xl mx-auto" style={{ color: "#777" }}>
@@ -126,7 +125,7 @@ function ProjectCard({ project, compact = false }: { project: ProjectWithRelatio
   return (
     <Link href={`/works/${project.slug}`} className="game-card group block bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>
       <div className={`relative w-full bg-gray-100 ${compact ? "aspect-video" : "aspect-video"}`}>
-        {project.coverImage ? <Image src={project.coverImage} alt={project.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:768px) 100vw,33vw" /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
+        {project.coverImage ? <Image src={project.coverImage} alt={project.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:768px) 100vw,33vw" loading="lazy" /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
         <div className="absolute top-2 left-2"><span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">{typeLabel[project.type] || project.type}</span></div>
       </div>
       <div className="p-4">

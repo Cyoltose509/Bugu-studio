@@ -13,12 +13,17 @@ export function cn(...inputs: ClassValue[]) {
  * 生成 URL 友好的 slug
  */
 export function generateSlug(title: string): string {
-  return title
+  const cleaned = title
     .toLowerCase()
     .replace(/[\s_]+/g, "-")
-    .replace(/[^\w\-\u4e00-\u9fa5]/g, "")
+    .replace(/[^\w\-]/g, "") // 只保留英文字母、数字、下划线、连字符
     .replace(/--+/g, "-")
+    .replace(/^-+|-+$/g, "") // 去头尾连字符
     .trim();
+
+  // 纯中文标题清理后为空，用随机后缀兜底
+  if (!cleaned) return `project-${Math.random().toString(36).slice(2, 8)}`;
+  return cleaned;
 }
 
 /**
