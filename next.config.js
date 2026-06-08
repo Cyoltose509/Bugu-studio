@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // ❌ 移除 output: 'standalone' — Vercel 不需要，会导致部署失败
   images: {
     remotePatterns: [
       {
@@ -11,12 +11,22 @@ const nextConfig = {
         protocol: "https",
         hostname: "*.cloudflare.com",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.bugu-studio.com",
+      },
     ],
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000"],
+      allowedOrigins: [
+        "localhost:3000",
+        "bugu-studio.com",
+        "www.bugu-studio.com",
+      ],
     },
+    // jose 在 Edge Runtime 会引用 Node.js API，标为外部包避免打包进 Edge bundle
+    serverExternalPackages: ["jose"],
   },
   // Security headers
   async headers() {

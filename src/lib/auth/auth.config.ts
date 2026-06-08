@@ -1,19 +1,25 @@
 /**
- * Auth.js v5 配置
- * 策略：JWT（Credentials 登录必须用 JWT）
- * 换届下线：session callback 中校验 isActive，禁用后 session 返回空
- * 注意：顶层不 import Prisma，确保 middleware (Edge Runtime) 兼容
+ * Auth.js 基础配置（Edge Runtime 兼容）
+ * 不含 Prisma，可用于 middleware 和所有环境
  */
-
-import NextAuth, { type NextAuthConfig } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { loginSchema } from "@/lib/validations/auth";
+
+// Prisma 延迟导入——只在 Node.js 运行时可用
+let prismaModule: any = null;
+async function getPrisma() {
+  if (!prismaModule) {
+    prismaModule = await import("@/lib/db/prisma");
+  }
+  return prismaModule.prisma;
+}
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET!,
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 天
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
     signIn: "/auth/login",
@@ -30,21 +36,16 @@ export const authConfig = {
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
-
         const { email, password } = parsed.data;
-        const { prisma } = await import("@/lib/db/prisma");
-
+        const prisma = await getPrisma();
         const user = await prisma.user.findUnique({
           where: { email: email.toLowerCase() },
         });
-
         if (!user || !user.passwordHash || !user.isActive) return null;
         if (!user.emailVerified) return null;
-
         const { verifyPassword } = await import("@/lib/auth/password");
         const isValid = await verifyPassword(password, user.passwordHash);
         if (!isValid) return null;
-
         return {
           id: user.id,
           email: user.email,
@@ -69,10 +70,9 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as any;
         session.user.email = token.email as string;
-
-        // 每次读取 session 时校验 isActive（仅 Node.js 环境）
+        // Edge 环境降级：跳过 Prisma isActive 校验（信任 JWT）
         try {
-          const { prisma } = await import("@/lib/db/prisma");
+          const prisma = await getPrisma();
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
             select: { isActive: true },
@@ -81,7 +81,7 @@ export const authConfig = {
             session.user = undefined as any;
           }
         } catch {
-          // Edge runtime 降级：信任 JWT（prisma 不可用）
+          // Edge runtime 降级
         }
       }
       return session;
@@ -91,7 +91,7 @@ export const authConfig = {
     async signIn({ user }) {
       if (user?.id) {
         try {
-          const { prisma } = await import("@/lib/db/prisma");
+          const prisma = await getPrisma();
           await prisma.user.update({
             where: { id: user.id },
             data: { lastLoginAt: new Date() },
@@ -103,5 +103,3 @@ export const authConfig = {
     },
   },
 } satisfies NextAuthConfig;
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
