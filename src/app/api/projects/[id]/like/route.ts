@@ -26,7 +26,8 @@ export async function GET(
     liked = !!existing;
   }
 
-  return apiResponse({ liked, likeCount: count });
+  const canLike = !!session?.user && session.user.role !== UserRole.GUEST;
+  return apiResponse({ liked, likeCount: count, canLike });
 }
 
 /**
@@ -67,6 +68,26 @@ export async function POST(
       data: { projectId, userId: session.user.id },
     });
     liked = true;
+
+    // ── 通知作品作者（不阻塞主流程）──
+    try {
+      const { createNotification } = await import("@/lib/services/notification");
+      const projectInfo = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { title: true, submitterId: true },
+      });
+      if (projectInfo && projectInfo.submitterId !== session.user.id) {
+        const liker = session.user.name || session.user.email || "匿名用户";
+        await createNotification({
+          userId: projectInfo.submitterId,
+          type: "PROJECT_LIKE",
+          title: "有人喜欢了你的作品 ❤️",
+          content: `${liker} 喜欢了你的作品《${projectInfo.title}》`,
+          relatedId: projectId,
+          relatedType: "Project",
+        });
+      }
+    } catch { /* 通知失败不影响主流程 */ }
   }
 
   const count = await prisma.projectLike.count({ where: { projectId } });

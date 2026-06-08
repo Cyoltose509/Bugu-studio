@@ -1,15 +1,17 @@
-﻿import { Metadata } from "next";
+import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ensureDefaultTags } from "@/lib/db/tags";
 import { ProjectStatus } from "@prisma/client";
+import MiniLikeButton from "@/components/MiniLikeButton";
+import GridSizeToggle from "@/components/GridSizeToggle";
 
 export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
 export const revalidate = 60;
 
-interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string }>; }
+interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string; size?: string }>; }
 
 const TYPE_LABELS: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
 
@@ -19,6 +21,7 @@ export default async function WorksPage({ searchParams }: PageProps) {
   const page = parseInt(params.page || "1", 10);
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
+  const size = params.size === "small" || params.size === "large" ? params.size : "medium";
 
   const where: any = { status: ProjectStatus.PUBLISHED };
   if (params.type) where.type = params.type;
@@ -52,6 +55,7 @@ export default async function WorksPage({ searchParams }: PageProps) {
               },
             },
           },
+          _count: { select: { likes: true } },
         },
       })
     , 60),
@@ -103,17 +107,18 @@ export default async function WorksPage({ searchParams }: PageProps) {
           </div>
         </aside>
         <div className="flex-1">
-          <form className="mb-6">
-            <input type="search" name="q" defaultValue={params.q} placeholder="搜索作品名称或简介..." className="w-full bg-white border rounded-lg px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent" style={{ borderColor: "#D0DEE8", color: "#333" }} />
+          <form className="mb-4 flex items-center gap-3">
+            <input type="search" name="q" defaultValue={params.q} placeholder="搜索作品名称或简介..." className="flex-1 bg-white border rounded-lg px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent" style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            <GridSizeToggle />
           </form>
           {projects.length === 0 ? (
             <div className="text-center py-20" style={{ color: "#999" }}><div className="text-4xl mb-4">🔍</div><p>没有找到匹配的作品</p></div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className={`grid gap-5 ${size === "small" ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" : size === "large" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
               {projects.map((p, idx) => (
                 <Link key={p.id} href={`/works/${p.slug}`} className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>
                   <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
-                    {p.coverImage ? <Image src={p.coverImage} alt={p.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:640px) 100vw,33vw" priority={idx === 0} loading={idx > 0 ? "lazy" : undefined} /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
+                    {p.coverImage ? <img src={p.coverImage} alt={p.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading={idx === 0 ? "eager" : "lazy"} onError={(e: any) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : <div className="w-full h-full flex items-center justify-center"><Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
                     <div className="absolute top-2 left-2"><span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">{TYPE_LABELS[p.type]}</span></div>
                     {p.isFeatured && <div className="absolute top-2 right-2"><span className="text-xs px-2 py-0.5 rounded text-white" style={{ background: "#E38043" }}>精选</span></div>}
                   </div>
@@ -125,18 +130,21 @@ export default async function WorksPage({ searchParams }: PageProps) {
                     </div>
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
-                      <div className="flex -space-x-1">
-                        {p.members.slice(0, 3).map((pm) => {
-                          const name = pm.member?.displayName || pm.externalName || "?";
-                          const avatarUrl = pm.member ? (pm.member.user?.image || pm.member.avatar) : null;
-                          return (
-                            <div key={pm.id} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white overflow-hidden"
-                              style={{ background: pm.member ? "#E38043" : "#6B7280" }}
-                              title={name}>
-                              {avatarUrl ? <img src={avatarUrl} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : name[0]}
-                            </div>
-                          );
-                        })}
+                      <div className="flex items-center gap-2">
+                        <MiniLikeButton projectId={p.id} initialCount={p._count.likes} />
+                        <div className="flex -space-x-1">
+                          {p.members.slice(0, 3).map((pm) => {
+                            const name = pm.member?.displayName || pm.externalName || "?";
+                            const avatarUrl = pm.member ? (pm.member.user?.image || pm.member.avatar) : null;
+                            return (
+                              <div key={pm.id} className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white overflow-hidden"
+                                style={{ background: pm.member ? "#E38043" : "#6B7280" }}
+                                title={name}>
+                                {avatarUrl ? <img src={avatarUrl} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : name[0]}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>

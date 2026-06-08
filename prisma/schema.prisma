@@ -411,12 +411,27 @@ model YearEvent {
   id          String   @id @default(cuid())
   year        Int
   title       String
-  description String?  @db.Text
-  eventDate   DateTime?
+  body        String?  @db.Text           // 正文内容
+  eventDate   DateTime?                   // 事件日期
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  images EventImage[]                     // 最多5张图片
 
   @@index([year])
+}
+
+model EventImage {
+  id       String    @id @default(cuid())
+  eventId  String
+  url      String
+  altText  String?
+  sortOrder Int      @default(0)
+
+  event YearEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }
 
 // ============================================================

@@ -9,12 +9,13 @@ export const revalidate = 3600; // 历史数据变化少，1小时缓存
 
 export default async function HistoryPage() {
   const yearData = await prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, _count: { id: true }, orderBy: { developYear: "desc" } });
-  const years = yearData.map(y => y.developYear);
-  const yearDetails = await Promise.all(years.map(async year => {
+  const projectYears = yearData.map(y => y.developYear);
+
+  const yearDetails = await Promise.all(projectYears.map(async year => {
     const [projects, members, events] = await Promise.all([
       prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
       prisma.clubMember.findMany({ where: { joinYear: year }, select: { id: true, displayName: true, avatar: true } }),
-      prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" } }),
+      prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
     ]);
     return { year, projects, members, events };
   }));
@@ -69,13 +70,29 @@ export default async function HistoryPage() {
                 {events.length > 0 && (
                   <div className="md:col-span-3 bg-white rounded-xl p-5 border shadow-sm" style={{ borderColor: "#D0DEE8" }}>
                     <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>大事记</h3>
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       {events.map(event => (
                         <div key={event.id} className="flex gap-3">
-                          <div className="text-xs mt-0.5 shrink-0" style={{ color: "#88C232" }}>◆</div>
-                          <div>
-                            <div className="text-sm" style={{ color: "#333" }}>{event.title}</div>
-                            {event.description && <div className="text-xs mt-0.5" style={{ color: "#777" }}>{event.description}</div>}
+                          <div className="text-xs mt-1 shrink-0" style={{ color: "#88C232" }}>◆</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="text-sm font-medium" style={{ color: "#333" }}>{event.title}</div>
+                              {event.eventDate && (
+                                <span className="text-xs" style={{ color: "#999" }}>
+                                  {new Date(event.eventDate).toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
+                                </span>
+                              )}
+                            </div>
+                            {event.body && <div className="text-xs mt-1 whitespace-pre-wrap" style={{ color: "#777" }}>{event.body}</div>}
+                            {event.images && event.images.length > 0 && (
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                {event.images.map((img) => (
+                                  <div key={img.id} className="relative w-20 h-14 rounded overflow-hidden border" style={{ borderColor: "#D0DEE8" }}>
+                                    <Image src={img.url} alt={img.altText || event.title} fill unoptimized className="object-cover" sizes="80px" />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}

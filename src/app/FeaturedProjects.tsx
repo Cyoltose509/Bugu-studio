@@ -2,7 +2,6 @@
  * 首页精选作品 — 独立服务器组件，可被 Suspense 包裹
  */
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
@@ -62,18 +61,16 @@ function ProjectCard({ project, priority }: { project: ProjectWithRelations; pri
     >
       <div className="relative w-full aspect-video bg-gray-100">
         {project.coverImage ? (
-          <Image
+          <img
             src={project.coverImage}
             alt={project.title}
-            fill
-            unoptimized
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 100vw, 33vw"
-            {...(priority ? { priority: true, fetchPriority: "high" as const } : {})}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading={priority ? "eager" : "lazy"}
+            onError={(e: any) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
+            <img src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
           </div>
         )}
         <div className="absolute top-2 left-2">

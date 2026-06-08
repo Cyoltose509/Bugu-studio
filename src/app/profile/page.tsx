@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
-import Image from "next/image";
+import MiniLikeButton from "@/components/MiniLikeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +35,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const isAdminView = session.user.role === "ADMIN" && !!targetId && targetId !== session.user.id;
   const userId = isAdminView ? targetId! : session.user.id;
 
-  const [user, member, userProjects] = await Promise.all([
+  const [user, member, userProjects, likedProjects] = await Promise.all([
     cachedQuery(`profile:user:${userId}`, () =>
       prisma.user.findUnique({
         where: { id: userId },
@@ -65,8 +65,24 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         select: {
           id: true, slug: true, title: true, status: true,
           type: true, developYear: true, coverImage: true, createdAt: true,
+          _count: { select: { likes: true } },
         },
         take: 12,
+      })
+    , 30),
+    cachedQuery(`profile:liked:${userId}`, () =>
+      prisma.project.findMany({
+        where: {
+          likes: { some: { userId } },
+          status: "PUBLISHED",
+        },
+        orderBy: { publishedAt: "desc" },
+        select: {
+          id: true, slug: true, title: true, coverImage: true,
+          type: true, developYear: true,
+          _count: { select: { likes: true } },
+        },
+        take: 8,
       })
     , 30),
   ]);
@@ -281,12 +297,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 {/* 封面 */}
                 <div className="relative aspect-video bg-gray-100 overflow-hidden">
                   {p.coverImage ? (
-                    <Image
+                    <img
                       src={p.coverImage}
                       alt={p.title}
-                      fill
-                      unoptimized
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E6F0F8, #F0F5F9)" }}>
@@ -313,12 +329,59 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                       {p.type.replace("_", " ")}
                     </span>
                   </div>
+                  <div className="mt-1">
+                    <MiniLikeButton projectId={p.id} initialCount={p._count.likes} />
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
         )}
       </div>
+
+      {/* 我喜欢的作品 */}
+      {likedProjects.length > 0 && (
+        <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
+          <h2 className="font-semibold mb-4" style={{ color: "#E38043" }}>❤️ 我喜欢的作品</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {likedProjects.map(p => (
+              <Link key={p.id} href={`/works/${p.slug}`}
+                className="group block rounded-xl border overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5"
+                style={{ borderColor: "#E8EEF4" }}>
+                <div className="relative aspect-video bg-gray-100 overflow-hidden">
+                  {p.coverImage ? (
+                    <img
+                      src={p.coverImage}
+                      alt={p.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E6F0F8, #F0F5F9)" }}>
+                      <span className="text-2xl opacity-30">🎮</span>
+                    </div>
+                  )}
+                </div>
+                <div className="p-3">
+                  <div className="font-medium text-sm truncate group-hover:text-[#3388BB]" style={{ color: "#333" }}>
+                    {p.title}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#E6F0F8", color: "#25547A" }}>
+                      {p.type.replace("_", " ")}
+                    </span>
+                  </div>
+                  <div className="mt-1">
+                    <MiniLikeButton projectId={p.id} initialCount={p._count.likes} />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

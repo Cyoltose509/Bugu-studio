@@ -8,7 +8,6 @@ import { cache } from "react";
 import { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/auth";
@@ -142,7 +141,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
         <div className="lg:col-span-2">
           {project.coverImage && (
             <div className="relative aspect-video w-full max-w-2xl rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
-              <Image src={project.coverImage} alt={project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 672px, 672px" className="object-cover" priority unoptimized />
+              <img src={project.coverImage} alt={project.title} className="absolute inset-0 w-full h-full object-cover" />
             </div>
           )}
 
@@ -156,14 +155,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
           {/* 点赞 + 编辑 */}
           <div className="flex items-center gap-3 mb-4">
-            <Suspense fallback={
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm" style={{ background: "#F0F5F9", border: "1px solid #D0DEE8", color: "#777" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                {(project as any)._count?.likes ?? 0}
-              </span>
-            }>
-              <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={false} />
-            </Suspense>
+            <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={false} />
             <EditButton slug={project.slug} submitterId={project.submitterId} />
           </div>
 
@@ -184,7 +176,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
               <div className="grid grid-cols-2 gap-3">
                 {project.images.map((img) => (
                   <div key={img.id} className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ borderColor: "#D0DEE8" }}>
-                    <Image src={img.url} alt={img.altText || project.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover hover:scale-105 transition-transform duration-300" unoptimized />
+                    <img src={img.url} alt={img.altText || project.title} className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   </div>
                 ))}
               </div>
