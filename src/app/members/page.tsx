@@ -7,19 +7,39 @@ export const metadata: Metadata = { title: "成员", description: "认识历届�
 export const revalidate = 300;
 
 export default async function MembersPage() {
-  const members = await cachedQuery('members:all', () =>
-    prisma.clubMember.findMany({
+  const members = await cachedQuery('members:all', async () => {
+    const list = await prisma.clubMember.findMany({
       orderBy: [{ sortOrder: "asc" }],
       select: {
         id: true, displayName: true, avatar: true, grade: true,
         joinYear: true, isActive: true, position: true,
+        userId: true,
         user: { select: { image: true } },
         _count: { select: { projectMembers: true } },
       },
-    })
-  , 300);
+    });
+
+    // ── 防御性计数：也统计成员作为提交者的项目数（修复历史孤儿数据）──
+    const userIds = list.map((m) => m.userId).filter(Boolean);
+    const submitterCounts = userIds.length > 0
+      ? await prisma.project.groupBy({
+          by: ["submitterId"],
+          where: { submitterId: { in: userIds } },
+          _count: { submitterId: true },
+        })
+      : [];
+    const submitterMap = new Map(submitterCounts.map((g) => [g.submitterId, g._count.submitterId]));
+
+    return list.map((m) => ({
+      ...m,
+      projectCount: Math.max(
+        m._count.projectMembers,
+        submitterMap.get(m.userId) ?? 0,
+      ),
+    }));
+  }, 300);
   // 按 grade（如 "2024级"）分组，无 grade 时按 joinYear 分组
-  const grouped = members.reduce<Record<string, typeof members>>((acc, m) => {
+  const grouped = members.reduce<Record<string, typeof members>>((acc, m: any) => {
     const key = m.grade || `${m.joinYear} 年入社`;
     (acc[key] ??= []).push(m);
     return acc;
@@ -57,7 +77,7 @@ export default async function MembersPage() {
                     </span>
                   )}
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: "#999" }}>{m._count.projectMembers} 个项目</div>
+                <div className="text-xs mt-0.5" style={{ color: "#999" }}>{(m as any).projectCount ?? m._count.projectMembers} 个项目</div>
                 {!m.isActive && <div className="text-xs mt-0.5" style={{ color: "#aaa" }}>已毕业</div>}
               </Link>
             ))}

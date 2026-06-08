@@ -36,11 +36,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function MemberDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const member = await cachedQuery(`member:detail:${id}`, () =>
-    prisma.clubMember.findUnique({
+  const member = await cachedQuery(`member:detail:${id}`, async () => {
+    const m = await prisma.clubMember.findUnique({
       where: { id },
       include: {
-        user: { select: { role: true, image: true, bio: true } },
+        user: { select: { id: true, role: true, image: true, bio: true } },
         socialLinks: { orderBy: { sortOrder: "asc" } },
         projectMembers: {
           orderBy: { sortOrder: "asc" },
@@ -58,8 +58,42 @@ export default async function MemberDetailPage({ params }: PageProps) {
           },
         },
       },
-    })
-  , 300);
+    });
+
+    if (!m) return null;
+
+    // ── 防御性查询：也加载成员作为提交者的项目（修复历史孤儿数据）──
+    const existingProjectIds = new Set(m.projectMembers.map((pm) => pm.project.id));
+    const submittedProjects = m.userId
+      ? await prisma.project.findMany({
+          where: {
+            submitterId: m.userId,
+            id: { notIn: [...existingProjectIds] },
+          },
+          select: {
+            id: true, slug: true, title: true,
+            type: true, coverImage: true, developYear: true,
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+
+    // 合并：将提交者项目包装成类似 ProjectMember 的结构
+    const extraMembers = submittedProjects.map((p) => ({
+      id: `orphan-${p.id}`,
+      projectId: p.id,
+      memberId: m.id,
+      externalName: null,
+      role: "制作",
+      sortOrder: 999,
+      project: p,
+    }));
+
+    return {
+      ...m,
+      projectMembers: [...m.projectMembers, ...extraMembers],
+    };
+  }, 300);
 
   if (!member) notFound();
 

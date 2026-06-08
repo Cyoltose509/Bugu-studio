@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import { ProjectStatus } from "@prisma/client";
+import SyncOrphanedButton from "./SyncOrphanedButton";
 
 export const dynamic = "force-dynamic";
 
@@ -107,12 +108,13 @@ export default async function AdminDashboard() {
       {/* 快捷操作 */}
       <div className="bg-white rounded-xl border p-5 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
         <h2 className="font-semibold mb-4" style={{ color: "#25547A" }}>快捷操作</h2>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
           <Link href="/admin/projects" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">管理作品</Link>
           <Link href="/admin/members" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">管理成员</Link>
           <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">管理用户</Link>
           <Link href="/admin/settings" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">站点设置</Link>
           <Link href="/" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">← 返回前台</Link>
+          <SyncOrphanedButton />
         </div>
       </div>
     </div>
