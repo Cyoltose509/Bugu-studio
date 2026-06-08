@@ -18,11 +18,7 @@ export const registerSchema = z.object({
   password: z
     .string()
     .min(8, "密码至少 8 位")
-    .max(128)
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "密码必须包含大小写字母和数字"
-    ),
+    .max(128),
   name: z.string().min(1, "昵称不能为空").max(50),
   inviteCode: z.string().max(50).optional(),
 });
@@ -33,11 +29,7 @@ export const changePasswordSchema = z
     newPassword: z
       .string()
       .min(8, "密码至少 8 位")
-      .max(128)
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "密码必须包含大小写字母和数字"
-      ),
+      .max(128),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -49,29 +41,27 @@ export const changePasswordSchema = z
 // 作品相关
 // ============================================================
 
+export const linkEntrySchema = z.object({
+  label: z.string().min(1, "链接标签不能为空").max(50),
+  url: z.string().url("请输入有效的 URL"),
+});
+
 export const projectCreateSchema = z.object({
   title: z.string().min(1, "标题不能为空").max(200),
   subtitle: z.string().max(300).optional(),
   description: z.string().min(10, "简介至少 10 字").max(10000),
-  type: z.enum([
-    "STEAM", "INDIE", "GAME_JAM", "DEMO", "PROTOTYPE", "GRADUATION", "OTHER"
-  ]),
+  type: z.enum(["DEMO", "STEAM", "ITCH", "OTHER"]),
   developYear: z
     .number()
     .int()
     .min(2000)
     .max(new Date().getFullYear() + 1),
-  steamUrl: z.string().url().optional().or(z.literal("")),
-  githubUrl: z.string().url().optional().or(z.literal("")),
-  itchUrl: z.string().url().optional().or(z.literal("")),
-  panUrl: z.string().url().optional().or(z.literal("")),
-  driveUrl: z.string().url().optional().or(z.literal("")),
-  onedriveUrl: z.string().url().optional().or(z.literal("")),
-  videoUrl: z.string().url().optional().or(z.literal("")),
-  websiteUrl: z.string().url().optional().or(z.literal("")),
+  links: z.array(linkEntrySchema).max(20).default([]),
+  coverImage: z.string().max(500).optional(),
   devlog: z.string().max(50000).optional(),
   techStack: z.array(z.string().max(50)).max(20).default([]),
   tagIds: z.array(z.string()).max(10).default([]),
+  customTags: z.array(z.string().min(1).max(30)).max(10).default([]),
   memberRoles: z
     .array(
       z.object({
@@ -118,7 +108,7 @@ export const paginationSchema = z.object({
 export const projectQuerySchema = paginationSchema.extend({
   q: z.string().max(200).optional(),
   type: z
-    .enum(["STEAM", "INDIE", "GAME_JAM", "DEMO", "PROTOTYPE", "GRADUATION", "OTHER"])
+    .enum(["DEMO", "STEAM", "ITCH", "OTHER"])
     .optional(),
   tag: z.string().optional(),
   year: z.coerce.number().int().optional(),

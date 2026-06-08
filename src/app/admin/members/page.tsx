@@ -6,25 +6,14 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { revalidatePath } from "next/cache";
+import { toggleMemberActive } from "./actions";
+import DeleteMemberButton from "./DeleteMemberButton";
 
 export const metadata: Metadata = { title: "成员管理 - 管理后台" };
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   searchParams: Promise<{ page?: string }>;
-}
-
-async function updateMemberStatus(id: string, isActive: boolean) {
-  "use server";
-  await prisma.clubMember.update({ where: { id }, data: { isActive } });
-  revalidatePath("/admin/members");
-}
-
-async function deleteMember(id: string) {
-  "use server";
-  await prisma.clubMember.delete({ where: { id } });
-  revalidatePath("/admin/members");
 }
 
 export default async function AdminMembersPage({ searchParams }: PageProps) {
@@ -97,15 +86,12 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/members/${m.id}`} target="_blank" className="text-xs hover:underline cursor-pointer" style={{ color: "#3388BB" }}>查看</Link>
-                      <form action={updateMemberStatus.bind(null, m.id, !m.isActive)} className="inline">
+                      <form action={toggleMemberActive.bind(null, m.id, !m.isActive)} className="inline">
                         <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: m.isActive ? "#C62828" : "#88C232" }}>
                           {m.isActive ? "停用" : "激活"}
                         </button>
                       </form>
-                      <form action={deleteMember.bind(null, m.id)} className="inline"
-                        onSubmit={e => { if (!confirm("确认删除此成员？关联用户不会被删除。")) e.preventDefault(); }}>
-                        <button type="submit" className="text-xs hover:underline cursor-pointer text-red-600">删除</button>
-                      </form>
+                      <DeleteMemberButton memberId={m.id} />
                     </div>
                   </td>
                 </tr>

@@ -40,6 +40,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
     where: { OR: [{ slug }, { id: slug }], status: ProjectStatus.PUBLISHED },
     include: {
       images: { orderBy: { sortOrder: "asc" } },
+      links: { orderBy: { sortOrder: "asc" } },
       tags: { include: { tag: true } },
       members: {
         orderBy: { sortOrder: "asc" },
@@ -59,16 +60,28 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
   if (!project) notFound();
 
+  // 动态外部链接（新） + 兼容旧版 flat URL
+  const LINK_ICONS: Record<string, string> = {
+    steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📦", drive: "📁", 官网: "🌐", b站: "▶️",
+  };
   const externalLinks = [
-    { label: "Steam", url: project.steamUrl, icon: "🎮" },
-    { label: "GitHub", url: project.githubUrl, icon: "💻" },
-    { label: "Itch.io", url: project.itchUrl, icon: "🕹️" },
-    { label: "网盘下载", url: project.panUrl, icon: "📦" },
-    { label: "Google Drive", url: project.driveUrl, icon: "📁" },
-    { label: "OneDrive", url: project.onedriveUrl, icon: "☁️" },
-    { label: "视频演示", url: project.videoUrl, icon: "▶️" },
-    { label: "官方网站", url: project.websiteUrl, icon: "🌐" },
-  ].filter((l) => l.url);
+    ...project.links.map((l) => ({
+      label: l.label,
+      url: l.url,
+      icon: LINK_ICONS[l.label.toLowerCase()] || "🔗",
+    })),
+    // 兼容旧数据（flat URL 字段）
+    ...([
+      { label: "Steam", url: project.steamUrl },
+      { label: "GitHub", url: project.githubUrl },
+      { label: "itch.io", url: project.itchUrl },
+      { label: "百度网盘", url: project.panUrl },
+      { label: "Google Drive", url: project.driveUrl },
+      { label: "OneDrive", url: project.onedriveUrl },
+      { label: "官网", url: project.websiteUrl },
+    ].filter((l) => l.url && !project.links.some((pl) => pl.url === l.url)) as { label: string; url: string; icon?: string }[])
+      .map((l) => ({ ...l, icon: LINK_ICONS[l.label.toLowerCase()] || "🔗" })),
+  ];
 
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
@@ -244,10 +257,11 @@ export default async function WorkDetailPage({ params }: PageProps) {
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
+  const TYPE_LABELS: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
   return (
     <div className="flex justify-between">
       <dt style={{ color: "#777" }}>{label}</dt>
-      <dd style={{ color: "#333" }}>{value}</dd>
+      <dd style={{ color: "#333" }}>{TYPE_LABELS[value] || value}</dd>
     </div>
   );
 }

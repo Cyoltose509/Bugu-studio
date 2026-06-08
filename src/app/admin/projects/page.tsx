@@ -7,7 +7,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { updateProjectStatus, toggleFeatured } from "./actions";
+import DeleteProjectButton from "./DeleteProjectButton";
 
 export const metadata: Metadata = { title: "作品管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -21,26 +22,10 @@ const STATUS_TABS = [
   { value: "ARCHIVED", label: "已归档" },
 ];
 
+const TYPE_LABELS: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
+
 interface PageProps {
   searchParams: Promise<{ status?: string; page?: string }>;
-}
-
-async function updateProjectStatus(id: string, status: ProjectStatus) {
-  "use server";
-  await prisma.project.update({ where: { id }, data: { status } });
-  revalidatePath("/admin/projects");
-}
-
-async function deleteProject(id: string) {
-  "use server";
-  await prisma.project.delete({ where: { id } });
-  revalidatePath("/admin/projects");
-}
-
-async function toggleFeatured(id: string, current: boolean) {
-  "use server";
-  await prisma.project.update({ where: { id }, data: { isFeatured: !current } });
-  revalidatePath("/admin/projects");
 }
 
 export default async function AdminProjectsPage({ searchParams }: PageProps) {
@@ -112,7 +97,7 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
                   <td className="p-3">
                     <Link href={`/works/${p.slug}`} target="_blank" className="font-medium hover:underline" style={{ color: "#333" }}>{p.title}</Link>
                   </td>
-                  <td className="p-3 text-xs" style={{ color: "#777" }}>{p.type.replace("_", " ")}</td>
+                  <td className="p-3 text-xs" style={{ color: "#777" }}>{TYPE_LABELS[p.type] || p.type}</td>
                   <td className="p-3 text-xs" style={{ color: "#777" }}>{p.developYear}</td>
                   <td className="p-3"><StatusBadge status={p.status} /></td>
                   <td className="p-3 text-center">
@@ -134,10 +119,7 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
                           <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#C62828" }}>拒绝</button>
                         </form>
                       )}
-                      <form action={deleteProject.bind(null, p.id)} className="inline"
-                        onSubmit={e => { if (!confirm("确认删除此作品？此操作不可撤销。")) e.preventDefault(); }}>
-                        <button type="submit" className="text-xs hover:underline cursor-pointer text-red-600">删除</button>
-                      </form>
+                      <DeleteProjectButton projectId={p.id} />
                     </div>
                   </td>
                 </tr>

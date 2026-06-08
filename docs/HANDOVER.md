@@ -33,7 +33,7 @@
 | 服务器 SSH | root / deploy 用户 | IP: `xxx.xxx.xxx.xxx` |
 | 域名服务商 | [账号] | [服务商名称] |
 | Cloudflare | [邮箱] | 管理 CDN 和 R2 |
-| GitHub 组织 | [账号] | 仓库：`your-org/game-dev-club` |
+| GitHub 组织 | [账号] | 仓库：`your-org/bugu-club` |
 | 邮件服务 | [账号] | 用于系统发送验证邮件 |
 | 网站后台 | admin@your-domain.com | 超级管理员账号 |
 
@@ -60,8 +60,8 @@ ssh -i ~/.ssh/gameclub_rsa deploy@xxx.xxx.xxx.xxx
 ## 四、项目部署位置
 
 ```
-项目根目录:    /opt/game-dev-club/
-备份目录:      /opt/game-dev-club/backups/
+项目根目录:    /opt/bugu-club/
+备份目录:      /opt/bugu-club/backups/
 Nginx 日志:   /var/log/nginx/
 Docker 日志:  docker compose logs [service]
 ```
@@ -73,7 +73,7 @@ Docker 日志:  docker compose logs [service]
 ### 5.1 查看运行状态
 
 ```bash
-cd /opt/game-dev-club
+cd /opt/bugu-club
 docker compose ps                  # 查看所有容器状态
 docker compose logs app --tail=100 # 查看应用日志
 docker compose logs nginx --tail=50
@@ -95,7 +95,7 @@ docker compose down && docker compose up -d
 ### 5.3 部署新版本
 
 ```bash
-cd /opt/game-dev-club
+cd /opt/bugu-club
 git pull origin main
 docker compose build app
 docker compose up -d --no-deps app
@@ -106,7 +106,7 @@ docker compose logs app --tail=50  # 确认启动正常
 
 ```bash
 # 列出所有备份
-ls -lh /opt/game-dev-club/backups/daily/
+ls -lh /opt/bugu-club/backups/daily/
 
 # 手动触发备份
 docker compose exec backup /backup.sh
@@ -168,7 +168,7 @@ docker compose exec backup /backup.sh
 df -h
 docker system prune -f             # 清理未使用的 Docker 资源（镜像/容器）
 # 清理超出保留期的备份（脚本自动执行，手动可强制）
-find /opt/game-dev-club/backups/daily -mtime +30 -delete
+find /opt/bugu-club/backups/daily -mtime +30 -delete
 ```
 
 ---

@@ -1,8 +1,23 @@
 ﻿"use client";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+
+function getLoginErrorMsg(error: string | undefined): string {
+  if (!error) return "登录失败，请核对邮箱和密码";
+  const map: Record<string, string> = {
+    CredentialsSignin: "邮箱或密码错误",
+    OAuthSignin: "第三方登录失败",
+    OAuthCallback: "第三方登录回调失败",
+    OAuthCreateAccount: "第三方账号创建失败",
+    EmailCreateAccount: "邮箱注册失败",
+    Callback: "回调失败",
+    OAuthAccountNotLinked: "该邮箱已绑定其他登录方式",
+    SessionRequired: "请先登录",
+  };
+  return map[error] ?? "登录出错，请重试";
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -13,13 +28,26 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [checking, setChecking] = useState(true);
+
+  // 检测是否已登录：已登录自动跳转
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((s) => { if (s?.user) router.push(callbackUrl); })
+      .finally(() => setChecking(false));
+  }, [callbackUrl, router]);
+
+  if (checking) {
+    return <div className="min-h-[80vh] flex items-center justify-center text-gray-400">加载中...</div>;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setMsg("");
     const result = await signIn("credentials", { email: email.trim().toLowerCase(), password, redirect: false });
     setLoading(false);
     if (result?.ok) { router.push(callbackUrl); router.refresh(); }
-    else setMsg(result?.error || "登录失败，请核对邮箱和密码");
+    else setMsg(getLoginErrorMsg(result?.error));
   }
 
   return (

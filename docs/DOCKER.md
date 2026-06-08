@@ -14,8 +14,8 @@ services:
       dockerfile: docker/Dockerfile
       args:
         - NODE_VERSION=22
-    image: game-dev-club:latest
-    container_name: game-dev-club-app
+    image: bugu-club:latest
+    container_name: bugu-club-app
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -46,7 +46,7 @@ services:
 
   postgres:
     image: postgres:15-alpine
-    container_name: game-dev-club-db
+    container_name: bugu-club-db
     restart: unless-stopped
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
@@ -69,7 +69,7 @@ services:
 
   nginx:
     image: nginx:1.25-alpine
-    container_name: game-dev-club-nginx
+    container_name: bugu-club-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -87,7 +87,7 @@ services:
 
   backup:
     image: postgres:15-alpine
-    container_name: game-dev-club-backup
+    container_name: bugu-club-backup
     restart: unless-stopped
     environment:
       - PGPASSWORD=${POSTGRES_PASSWORD}
@@ -186,7 +186,7 @@ CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
 ## Nginx 配置
 
 ```nginx
-# docker/nginx/conf.d/game-dev-club.conf
+# docker/nginx/conf.d/bugu-club.conf
 
 upstream app {
     server app:3000;
@@ -291,8 +291,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 ```bash
 # 1. 克隆代码
-git clone https://github.com/your-org/game-dev-club.git
-cd game-dev-club
+git clone https://github.com/your-org/bugu-club.git
+cd bugu-club
 
 # 2. 配置环境变量
 cp .env.example .env.production
@@ -337,10 +337,10 @@ curl http://localhost/api/health
 
 ```bash
 # 查看历史镜像
-docker images game-dev-club
+docker images bugu-club
 
 # 回滚到上一个版本（通过 tag 指定）
 docker compose down app
-docker tag game-dev-club:previous game-dev-club:latest
+docker tag bugu-club:previous bugu-club:latest
 docker compose up -d app
 ```

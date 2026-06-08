@@ -121,7 +121,7 @@ function SectionHeader({ title, href }: { title: string; href: string }) {
 type ProjectWithRelations = Awaited<ReturnType<typeof getFeaturedProjects>>[0];
 
 function ProjectCard({ project, compact = false }: { project: ProjectWithRelations; compact?: boolean }) {
-  const typeLabel: Record<string, string> = { STEAM: "Steam", INDIE: "独立游戏", GAME_JAM: "Game Jam", DEMO: "Demo", PROTOTYPE: "原型", GRADUATION: "毕业设计", OTHER: "其他" };
+  const typeLabel: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
 
   return (
     <Link href={`/works/${project.slug}`} className="game-card group block bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>

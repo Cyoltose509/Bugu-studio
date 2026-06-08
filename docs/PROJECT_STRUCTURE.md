@@ -1,7 +1,7 @@
 # 项目目录结构
 
 ```
-game-dev-club/
+bugu-club/
 ├── .env.example                  # 环境变量模板（提交到 Git）
 ├── .env.local                    # 本地开发变量（不提交）
 ├── .env.production               # 生产变量（不提交）

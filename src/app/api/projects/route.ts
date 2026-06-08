@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     return apiError("数据验证失败", 422, parsed.error.flatten());
   }
 
-  const { tagIds, memberRoles, ...projectData } = parsed.data;
+  const { tagIds, memberRoles, links, customTags, ...projectData } = parsed.data;
 
   // 生成唯一 slug
   let slug = generateSlug(projectData.title);
@@ -161,6 +161,13 @@ export async function POST(request: NextRequest) {
           memberId,
           role,
           sortOrder: idx,
+        })),
+      },
+      links: {
+        create: links.map((l, i) => ({
+          label: l.label,
+          url: l.url,
+          sortOrder: i,
         })),
       },
     },

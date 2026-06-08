@@ -6,7 +6,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { revalidatePath } from "next/cache";
+import { updateUserRole } from "./actions";
+import ToggleActiveButton from "./ToggleActiveButton";
+import DeleteButton from "./DeleteButton";
 
 export const metadata: Metadata = { title: "用户管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -21,24 +23,6 @@ const ROLES = [
 
 interface PageProps {
   searchParams: Promise<{ role?: string; page?: string }>;
-}
-
-async function updateUserRole(id: string, role: string) {
-  "use server";
-  await prisma.user.update({ where: { id }, data: { role: role as any } });
-  revalidatePath("/admin/users");
-}
-
-async function updateUserActive(id: string, isActive: boolean) {
-  "use server";
-  await prisma.user.update({ where: { id }, data: { isActive } });
-  revalidatePath("/admin/users");
-}
-
-async function deleteUser(id: string) {
-  "use server";
-  await prisma.user.delete({ where: { id } });
-  revalidatePath("/admin/users");
 }
 
 export default async function AdminUsersPage({ searchParams }: PageProps) {
@@ -66,7 +50,6 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
     prisma.user.count({ where }),
   ]);
 
-  // 单独获取每个用户的作品数
   const userProjectCounts = await Promise.all(
     users.map(u => prisma.project.count({ where: { submitterId: u.id } }))
   );
@@ -122,7 +105,17 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                     )}
                   </td>
                   <td className="p-3">
-                    <RoleSelect userId={u.id} currentRole={u.role} />
+                    <form action={updateUserRole.bind(null, u.id)} className="inline-flex items-center gap-1">
+                      <select name="role" defaultValue={u.role}
+                        className="text-xs rounded border px-1 py-0.5"
+                        style={{ borderColor: "#D0DEE8", color: "#333", background: "#fff" }}>
+                        <option value="USER">普通用户</option>
+                        <option value="MEMBER">成员</option>
+                        <option value="REVIEWER">审核员</option>
+                        <option value="ADMIN">管理员</option>
+                      </select>
+                      <button type="submit" className="text-xs px-1 py-0.5 rounded cursor-pointer hover:bg-[#F0F5F9]" style={{ color: "#3388BB" }}>保存</button>
+                    </form>
                   </td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={
@@ -140,15 +133,8 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/profile?id=${u.id}`} className="text-xs hover:underline" style={{ color: "#3388BB" }}>查看</Link>
-                      <form action={updateUserActive.bind(null, u.id, !u.isActive)} className="inline">
-                        <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: u.isActive ? "#C62828" : "#88C232" }}>
-                          {u.isActive ? "停用" : "激活"}
-                        </button>
-                      </form>
-                      <form action={deleteUser.bind(null, u.id)} className="inline"
-                        onSubmit={e => { if (!confirm("确认删除此用户？此操作不可撤销。")) e.preventDefault(); }}>
-                        <button type="submit" className="text-xs hover:underline cursor-pointer text-red-600">删除</button>
-                      </form>
+                      <ToggleActiveButton userId={u.id} isActive={u.isActive} />
+                      <DeleteButton userId={u.id} userName={u.name || u.email} />
                     </div>
                   </td>
                 </tr>
@@ -166,31 +152,5 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * 角色下拉选择器（Server Action）
- */
-function RoleSelect({ userId, currentRole }: { userId: string; currentRole: string }) {
-  async function changeRole(formData: FormData) {
-    "use server";
-    const newRole = formData.get("role") as string;
-    await prisma.user.update({ where: { id: userId }, data: { role: newRole as any } });
-    revalidatePath("/admin/users");
-  }
-
-  return (
-    <form action={changeRole} className="inline">
-      <select name="role" defaultValue={currentRole}
-        onChange={e => e.currentTarget.form?.requestSubmit()}
-        className="text-xs rounded border px-1 py-0.5 cursor-pointer"
-        style={{ borderColor: "#D0DEE8", color: "#333", background: "#fff" }}>
-        <option value="USER">普通用户</option>
-        <option value="MEMBER">成员</option>
-        <option value="REVIEWER">审核员</option>
-        <option value="ADMIN">管理员</option>
-      </select>
-    </form>
   );
 }

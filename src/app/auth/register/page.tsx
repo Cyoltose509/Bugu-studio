@@ -1,7 +1,9 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+const STORAGE_KEY = "bugu_register_email";
 
 function RegisterForm() {
   const router = useRouter();
@@ -15,6 +17,27 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
+  // 恢复 sessionStorage 中的注册状态
+  useEffect(() => {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const { email: savedEmail, step: savedStep } = JSON.parse(saved);
+        if (savedStep === "verify" && savedEmail) {
+          setEmail(savedEmail);
+          setStep("verify");
+        }
+      } catch {}
+    }
+  }, []);
+
+  // 进入验证步骤时持久化 email
+  useEffect(() => {
+    if (step === "verify" && email) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ email, step: "verify" }));
+    }
+  }, [step, email]);
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setMsg("");
     if (password !== confirmPassword) { setMsg("两次密码不一致"); setLoading(false); return; }
@@ -27,10 +50,28 @@ function RegisterForm() {
       const data = await res.json();
       if (res.ok) {
         setStep("verify");
-        // 未配置 Resend 时返回验证码，自动填入
         if (data.verification?.code) setCode(data.verification.code);
       } else {
         setMsg(data.error || "注册失败");
+      }
+    } catch { setMsg("网络错误，请重试"); }
+    setLoading(false);
+  }
+
+  async function handleResend() {
+    setLoading(true); setMsg("");
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email: email.trim().toLowerCase(), password, inviteCode: inviteCode.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg("验证码已重新发送！");
+        if (data.verification?.code) setCode(data.verification.code);
+      } else {
+        setMsg(data.error || "发送失败");
       }
     } catch { setMsg("网络错误，请重试"); }
     setLoading(false);
@@ -46,6 +87,7 @@ function RegisterForm() {
       });
       const data = await res.json();
       if (res.ok) {
+        sessionStorage.removeItem(STORAGE_KEY);
         setMsg("邮箱验证成功！");
         setTimeout(() => router.push("/auth/login"), 1500);
       } else {

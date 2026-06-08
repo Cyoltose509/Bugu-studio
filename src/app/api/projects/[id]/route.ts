@@ -135,7 +135,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return apiError("数据验证失败", 422, parsed.error.flatten());
   }
 
-  const { tagIds, memberRoles, ...projectData } = parsed.data;
+  const { tagIds, memberRoles, links, customTags, ...projectData } = parsed.data;
 
   const updated = await prisma.project.update({
     where: { id },
@@ -154,6 +154,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             memberId,
             role,
             sortOrder: idx,
+          })),
+        },
+      }),
+      ...(links !== undefined && {
+        links: {
+          deleteMany: {},
+          create: links.map((l, i) => ({
+            label: l.label,
+            url: l.url,
+            sortOrder: i,
           })),
         },
       }),

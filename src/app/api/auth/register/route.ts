@@ -33,10 +33,16 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
-      return NextResponse.json(
-        { error: "该邮箱已被注册" },
-        { status: 409 }
-      );
+      // 已验证用户 → 拒绝
+      if (existing.emailVerified) {
+        return NextResponse.json(
+          { error: "该邮箱已被注册" },
+          { status: 409 }
+        );
+      }
+      // 未验证 → 删除旧记录，允许重新注册
+      await prisma.verificationToken.deleteMany({ where: { identifier: normalizedEmail } });
+      await prisma.user.delete({ where: { id: existing.id } });
     }
 
     // 检查邀请码

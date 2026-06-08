@@ -10,7 +10,7 @@ export const revalidate = 60;
 
 interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string }>; }
 
-const TYPE_LABELS: Record<string, string> = { STEAM: "Steam", INDIE: "独立游戏", GAME_JAM: "Game Jam", DEMO: "Demo", PROTOTYPE: "原型", GRADUATION: "毕业设计", OTHER: "其他" };
+const TYPE_LABELS: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
 
 export default async function WorksPage({ searchParams }: PageProps) {
   const params = await searchParams;

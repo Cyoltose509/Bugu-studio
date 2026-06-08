@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 
 export const authConfig = {
+  secret: process.env.AUTH_SECRET!,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 天
@@ -71,12 +72,17 @@ export const authConfig = {
         session.user.email = token.email as string;
 
         // 每次 session 读取时校验 isActive（换届可强制下线）
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { isActive: true },
-        });
-        if (!dbUser?.isActive) {
-          session.user = undefined as any;
+        // try-catch: Edge Runtime (middleware) 中 Prisma 不可用，跳过校验
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { isActive: true },
+          });
+          if (!dbUser?.isActive) {
+            session.user = undefined as any;
+          }
+        } catch {
+          // Edge runtime 降级：信任 JWT 中的信息，不做实时 isActive 校验
         }
       }
       return session;
@@ -85,10 +91,14 @@ export const authConfig = {
   events: {
     async signIn({ user }) {
       if (user?.id) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
-        });
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+        } catch {
+          // Edge runtime 降级：跳过 lastLoginAt 更新
+        }
       }
     },
   },

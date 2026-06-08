@@ -6,7 +6,8 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { revalidatePath } from "next/cache";
+import { createInviteCode, toggleInviteCode } from "./actions";
+import DeleteInviteCodeButton from "./DeleteInviteCodeButton";
 
 export const metadata: Metadata = { title: "邀请码管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -19,44 +20,6 @@ const ROLE_OPTIONS = [
 
 interface PageProps {
   searchParams: Promise<{ page?: string }>;
-}
-
-async function createInviteCode(formData: FormData) {
-  "use server";
-  const role = formData.get("role") as string;
-  const maxUses = formData.get("maxUses") as string;
-  const expiresDays = formData.get("expiresDays") as string;
-  const description = formData.get("description") as string;
-
-  // 生成邀请码: BUGU-{ROLE}-{6位随机}
-  const prefix = `BUGU-${role}`;
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  const code = `${prefix}-${random}`;
-
-  await prisma.inviteCode.create({
-    data: {
-      code,
-      role: role as any,
-      maxUses: maxUses ? parseInt(maxUses) || null : null,
-      expiresAt: expiresDays
-        ? new Date(Date.now() + parseInt(expiresDays) * 24 * 60 * 60 * 1000)
-        : null,
-      description: description || null,
-    },
-  });
-  revalidatePath("/admin/invites");
-}
-
-async function toggleInviteCode(id: string, isActive: boolean) {
-  "use server";
-  await prisma.inviteCode.update({ where: { id }, data: { isActive } });
-  revalidatePath("/admin/invites");
-}
-
-async function deleteInviteCode(id: string) {
-  "use server";
-  await prisma.inviteCode.delete({ where: { id } });
-  revalidatePath("/admin/invites");
 }
 
 export default async function AdminInvitesPage({ searchParams }: PageProps) {
@@ -180,10 +143,7 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
                             {c.isActive ? "禁用" : "启用"}
                           </button>
                         </form>
-                        <form action={deleteInviteCode.bind(null, c.id)} className="inline"
-                          onSubmit={e => { if (!confirm("确认删除此邀请码？")) e.preventDefault(); }}>
-                          <button type="submit" className="text-xs hover:underline cursor-pointer text-red-600">删除</button>
-                        </form>
+                        <DeleteInviteCodeButton codeId={c.id} />
                       </div>
                     </td>
                   </tr>
