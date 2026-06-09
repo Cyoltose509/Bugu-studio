@@ -183,28 +183,29 @@ export default async function MemberDetailPage({ params }: PageProps) {
               <h2 className="text-xl font-semibold mb-4" style={{ color: "#25547A" }}>
                 参与项目 <span className="text-sm font-normal" style={{ color: "#999" }}>共 {member.projectMembers.length} 个</span>
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {member.projectMembers.map(({ project, roles }) => (
-                  <Link
-                    key={project.id}
-                    href={`/works/${project.slug}`}
-                    className="group flex gap-4 p-4 rounded-xl border bg-white hover:shadow-md transition-all"
-                    style={{ borderColor: "#D0DEE8" }}
-                  >
-                    <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0" style={{ background: "#E6F0F8" }}>
-                      {project.coverImage ? (
-                        <Image src={project.coverImage} alt={project.title} width={80} height={56} className="object-cover w-full h-full" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Image src="/images/logo.png" alt="" width={20} height={20} className="opacity-30" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold group-hover:text-[#3388BB] transition-colors truncate" style={{ color: "#333" }}>{project.title}</h3>
-                      <p className="text-xs mt-1" style={{ color: "#777" }}>{roles?.join("、") || ""} · {project.developYear}</p>
-                    </div>
-                  </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {member.projectMembers.map(({ project, roles }, idx) => (
+                  <div key={project.id}>
+                    <Link
+                      href={`/works/${project.slug}`}
+                      className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md block"
+                      style={{ borderColor: "#D0DEE8" }}
+                    >
+                      <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
+                        {project.coverImage ? (
+                          <Image src={project.coverImage} alt={project.title} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>{project.title}</h3>
+                        <p className="text-xs mt-1" style={{ color: "#777" }}>{roles?.join("、") || "参与"} · {project.developYear}</p>
+                      </div>
+                    </Link>
+                  </div>
                 ))}
               </div>
             </div>
