@@ -15,7 +15,7 @@ import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
-import SafeImage from "@/components/SafeImage";
+import ImageGallery from "@/components/ImageGallery";
 
 export const revalidate = 60;
 
@@ -150,11 +150,11 @@ export default async function WorkDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* 主内容区 */}
         <div className="lg:col-span-2">
-          {project.coverImage && (
-            <div className="relative aspect-video w-full max-w-2xl rounded-xl overflow-hidden mb-6 border" style={{ borderColor: "#D0DEE8" }}>
-              <img src={project.coverImage} alt={project.title} className="absolute inset-0 w-full h-full object-cover" />
-            </div>
-          )}
+          <ImageGallery
+            coverImage={project.coverImage}
+            coverAlt={project.title}
+            screenshots={project.images}
+          />
 
           <h1 className="text-3xl font-bold mb-2" style={{ color: "#25547A" }}>
             {project.title}
@@ -180,24 +180,6 @@ export default async function WorkDetailPage({ params }: PageProps) {
             <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>作品简介</h2>
             <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>{project.description}</p>
           </div>
-
-          {project.images.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4" style={{ color: "#25547A" }}>游戏截图</h2>
-              <div className="grid grid-cols-2 gap-3">
-                {project.images.map((img) => (
-                  <div key={img.id} className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ borderColor: "#D0DEE8" }}>
-                    <SafeImage
-                      src={img.url}
-                      alt={img.altText || project.title}
-                      className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {project.devlog && (
             <div className="mb-8">

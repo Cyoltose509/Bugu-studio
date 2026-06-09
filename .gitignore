@@ -45,4 +45,7 @@ Thumbs.db
 uploads/
 tmp/
 
+# 数据库备份 (每日自动备份，不推送到 git)
+backups/
+
 nul

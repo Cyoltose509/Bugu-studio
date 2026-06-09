@@ -240,30 +240,30 @@ async function seed() {
     if (p.slug === "starlight-drifter") {
       await prisma.projectMember.createMany({
         data: [
-          { projectId: project.id, memberId: member1Id, role: "主程序员" },
-          { projectId: project.id, memberId: member2Id, role: "美术" },
+          { projectId: project.id, memberId: member1Id, roles: ["程序"] },
+          { projectId: project.id, memberId: member2Id, roles: ["美术"] },
         ],
       });
     }
     if (p.slug === "neon-runner") {
       await prisma.projectMember.createMany({
         data: [
-          { projectId: project.id, memberId: member2Id, role: "美术 & 策划" },
+          { projectId: project.id, memberId: member2Id, roles: ["美术", "策划"] },
         ],
       });
     }
     if (p.slug === "ancient-maze") {
       await prisma.projectMember.createMany({
         data: [
-          { projectId: project.id, memberId: member3Id, role: "主程序 & TA" },
+          { projectId: project.id, memberId: member3Id, roles: ["程序", "TA"] },
         ],
       });
     }
     if (p.slug === "meow-wars") {
       await prisma.projectMember.createMany({
         data: [
-          { projectId: project.id, memberId: member1Id, role: "程序" },
-          { projectId: project.id, memberId: member2Id, role: "美术" },
+          { projectId: project.id, memberId: member1Id, roles: ["程序"] },
+          { projectId: project.id, memberId: member2Id, roles: ["美术"] },
         ],
       });
     }
