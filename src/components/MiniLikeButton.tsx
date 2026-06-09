@@ -10,54 +10,55 @@ interface Props {
 export default function MiniLikeButton({ projectId, initialCount }: Props) {
   const [count, setCount] = useState(initialCount);
   const [liked, setLiked] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const seqRef = useRef(0);
   const likedRef = useRef(liked);
   likedRef.current = liked;
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch(`/api/projects/${projectId}/like`, { method: "GET", signal: controller.signal })
+    const seq = ++seqRef.current;
+    fetch(`/api/projects/${projectId}/like`, { method: "GET" })
       .then((r) => r.json())
-      .then((d) => {
-        setCount(d.likeCount ?? initialCount);
-        setLiked(d.liked ?? false);
+      .then((d: any) => {
+        if (seq !== seqRef.current) return;
+        const body = d.data ?? d;
+        setCount(body.likeCount ?? initialCount);
+        setLiked(body.liked ?? false);
       })
       .catch(() => {});
-    return () => controller.abort();
   }, [projectId, initialCount]);
 
   const toggle = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // 取消上一次未完成的请求
-    if (abortRef.current) abortRef.current.abort();
-
     const intendedLiked = !likedRef.current;
+    const seq = ++seqRef.current;
+
+    // 乐观更新
     setLiked(intendedLiked);
     setCount((c) => (intendedLiked ? c + 1 : c - 1));
-
-    const controller = new AbortController();
-    abortRef.current = controller;
 
     try {
       const res = await fetch(`/api/projects/${projectId}/like`, {
         method: "POST",
-        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
       });
-      if (controller.signal.aborted) return;
+      if (seq !== seqRef.current) return;
 
       const json = await res.json();
+      if (seq !== seqRef.current) return;
+
+      const body = json.data ?? json;
+
       if (!res.ok) {
         setLiked(!intendedLiked);
         setCount((c) => (intendedLiked ? c - 1 : c + 1));
       } else {
-        setLiked(json.liked);
-        setCount(json.likeCount);
+        setLiked(body.liked);
+        setCount(body.likeCount);
       }
-    } catch (err: any) {
-      if (err.name === "AbortError") return;
+    } catch {
+      if (seq !== seqRef.current) return;
       setLiked(!intendedLiked);
       setCount((c) => (intendedLiked ? c - 1 : c + 1));
     }

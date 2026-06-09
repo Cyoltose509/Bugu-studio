@@ -15,66 +15,67 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
   const [liked, setLiked] = useState(initialLiked ?? false);
   const [animating, setAnimating] = useState(false);
   const [canLike, setCanLike] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const seqRef = useRef(0);
   const likedRef = useRef(liked);
   likedRef.current = liked;
 
-  // session 加载完成后拉取准确状态
+  // session 加载完成后拉取服务端真实状态
   useEffect(() => {
     if (status === "loading") return;
-    const controller = new AbortController();
+    const seq = ++seqRef.current;
 
     const can = !!(session?.user?.id && session.user.role !== "GUEST");
     setCanLike(can);
 
-    fetch(`/api/projects/${projectId}/like`, { method: "GET", signal: controller.signal })
+    fetch(`/api/projects/${projectId}/like`, { method: "GET" })
       .then((r) => r.json())
       .then((d: any) => {
-        setCount(d.likeCount ?? initialCount);
-        setLiked(d.liked ?? initialLiked ?? false);
-        setCanLike(d.canLike ?? can);
+        if (seq !== seqRef.current) return; // 过期请求
+        // apiResponse 包裹在 data 字段中
+        const body = d.data ?? d;
+        setCount(body.likeCount ?? initialCount);
+        setLiked(body.liked ?? initialLiked ?? false);
+        setCanLike(body.canLike ?? can);
       })
       .catch(() => {});
-
-    return () => controller.abort();
   }, [projectId, initialCount, initialLiked, status]);
 
   const toggle = useCallback(async () => {
     if (!canLike) return;
 
-    // 取消上一次未完成的请求，允许快速连点
-    if (abortRef.current) abortRef.current.abort();
-
     const intendedLiked = !likedRef.current;
+    const seq = ++seqRef.current;
+
     // 乐观更新
     setLiked(intendedLiked);
     setCount((c) => (intendedLiked ? c + 1 : c - 1));
     setAnimating(true);
     setTimeout(() => setAnimating(false), 300);
 
-    const controller = new AbortController();
-    abortRef.current = controller;
-
     try {
       const res = await fetch(`/api/projects/${projectId}/like`, {
         method: "POST",
-        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
       });
-      if (controller.signal.aborted) return;
+      if (seq !== seqRef.current) return; // 被后续点击覆盖
 
       const json = await res.json();
+      if (seq !== seqRef.current) return;
+
+      // apiResponse 包裹：{ success, data: { liked, likeCount } }
+      const body = json.data ?? json;
+
       if (!res.ok) {
-        // 回滚
+        // 服务端拒绝：回滚
         setLiked(!intendedLiked);
         setCount((c) => (intendedLiked ? c - 1 : c + 1));
       } else {
-        // 以服务端返回值为准
-        setLiked(json.liked);
-        setCount(json.likeCount);
+        // 以服务端真实值为准
+        setLiked(body.liked);
+        setCount(body.likeCount);
       }
-    } catch (err: any) {
-      if (err.name === "AbortError") return; // 被新请求取消，无需回滚
+    } catch {
+      if (seq !== seqRef.current) return; // 被覆盖，不处理
       // 网络错误：回滚
       setLiked(!intendedLiked);
       setCount((c) => (intendedLiked ? c - 1 : c + 1));
