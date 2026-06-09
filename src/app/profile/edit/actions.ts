@@ -1,7 +1,9 @@
 "use server";
 
 import { auth } from "@/lib/auth/auth";
+import { clearSessionCache } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
+import { invalidateCache } from "@/lib/db/cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -109,6 +111,7 @@ export async function saveProfile(formData: FormData) {
     await prisma.clubMember.update({
       where: { id: member.id },
       data: {
+        ...(name !== dbUser?.name && { displayName: name }),
         ...(memberBio !== undefined && { bio: memberBio || null }),
         ...(isAdmin && grade !== undefined && { grade: grade || null }),
         ...(skills !== undefined && {
@@ -131,7 +134,13 @@ export async function saveProfile(formData: FormData) {
     });
   }
 
+  // 清除所有相关缓存，确保其他页面立即显示新名称
+  clearSessionCache(session.user.id);
+  await invalidateCache(`profile:user:${session.user.id}`);
+  await invalidateCache(`profile:member:${session.user.id}`);
+
   revalidatePath("/profile");
+  revalidatePath("/");
   redirect("/profile");
 }
 

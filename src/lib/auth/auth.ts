@@ -9,9 +9,14 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { loginSchema } from "@/lib/validations/auth";
 
-/** 短期内存缓存：减少 session callback 的 DB 查询（30s TTL） */
+/** 短期内存缓存：减少 session callback 的 DB 查询（60s TTL） */
 const sessionCache = new Map<string, { data: any; ts: number }>();
 const SESSION_CACHE_TTL = 60_000; // 60 秒
+
+/** 清除指定用户的 session 缓存（修改用户信息后调用） */
+export function clearSessionCache(userId: string) {
+  sessionCache.delete(userId);
+}
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET!,
