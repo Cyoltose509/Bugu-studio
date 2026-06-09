@@ -1,18 +1,16 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ensureDefaultTags } from "@/lib/db/tags";
 import { ProjectStatus } from "@prisma/client";
 import MiniLikeButton from "@/components/MiniLikeButton";
-import GridSizeToggle from "@/components/GridSizeToggle";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
 
 export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
 export const revalidate = 60;
 
-interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string; size?: string }>; }
+interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string; sort?: string }>; }
 
 const TYPE_LABELS: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
 
@@ -22,7 +20,7 @@ export default async function WorksPage({ searchParams }: PageProps) {
   const page = parseInt(params.page || "1", 10);
   const pageSize = 12;
   const skip = (page - 1) * pageSize;
-  const size = params.size === "small" || params.size === "large" ? params.size : "medium";
+  const sort = params.sort || "date"; // date | name | likes
 
   const where: any = { status: ProjectStatus.PUBLISHED };
   if (params.type) where.type = params.type;
@@ -30,7 +28,14 @@ export default async function WorksPage({ searchParams }: PageProps) {
   if (params.q) where.OR = [{ title: { contains: params.q, mode: "insensitive" } }, { description: { contains: params.q, mode: "insensitive" } }];
   if (params.tag) where.tags = { some: { tag: { slug: params.tag } } };
 
-  const cacheKey = `works:list:${page}:${params.type || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}`;
+  const cacheKey = `works:list:${page}:${params.type || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`;
+
+  // 根据排序方式确定 orderBy
+  const orderBy: any = sort === "name"
+    ? [{ title: "asc" }]
+    : sort === "likes"
+    ? [{ likes: { _count: "desc" } }, { publishedAt: "desc" }]
+    : [{ isFeatured: "desc" }, { publishedAt: "desc" }];
 
   const [tags, projects, total, years] = await Promise.all([
     cachedQuery('works:sidebar:tags', () =>
@@ -41,7 +46,7 @@ export default async function WorksPage({ searchParams }: PageProps) {
         where,
         skip,
         take: pageSize,
-        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+        orderBy,
         include: {
           tags: { include: { tag: true } },
           members: {
@@ -110,12 +115,12 @@ export default async function WorksPage({ searchParams }: PageProps) {
         <div className="flex-1">
           <form className="mb-4 flex items-center gap-3">
             <input type="search" name="q" defaultValue={params.q} placeholder="搜索作品名称或简介..." className="flex-1 bg-white border rounded-lg px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent" style={{ borderColor: "#D0DEE8", color: "#333" }} />
-            <GridSizeToggle />
+            <SortToggle currentSort={sort} currentParams={params} />
           </form>
           {projects.length === 0 ? (
             <div className="text-center py-20" style={{ color: "#999" }}><div className="text-4xl mb-4">🔍</div><p>没有找到匹配的作品</p></div>
           ) : (
-            <div className={`grid gap-5 ${size === "small" ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" : size === "large" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {projects.map((p, idx) => (
                 <Link key={p.id} href={`/works/${p.slug}`} className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md" style={{ borderColor: "#D0DEE8" }}>
                   <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
@@ -171,6 +176,36 @@ export default async function WorksPage({ searchParams }: PageProps) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SortToggle({ currentSort, currentParams }: { currentSort: string; currentParams: Record<string, any> }) {
+  const sorts = [
+    { value: "date", label: "时间" },
+    { value: "name", label: "名称" },
+    { value: "likes", label: "喜欢" },
+  ];
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs mr-1" style={{ color: "#999" }}>排序:</span>
+      {sorts.map((s) => {
+        const isActive = currentSort === s.value;
+        return (
+          <Link
+            key={s.value}
+            href={buildUrl(currentParams, { sort: s.value !== "date" ? s.value : void 0, page: 1 })}
+            className="px-2 py-1 rounded text-xs transition-colors"
+            style={{
+              background: isActive ? "#E38043" : "transparent",
+              color: isActive ? "#fff" : "#999",
+              border: isActive ? "none" : "1px solid #D0DEE8",
+            }}
+          >
+            {s.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }

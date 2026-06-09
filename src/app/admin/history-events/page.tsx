@@ -38,7 +38,10 @@ export default function AdminHistoryEventsPage() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/history-events");
-      if (res.ok) setEvents(await res.json());
+      if (res.ok) {
+        const json = await res.json();
+        setEvents(json.data ?? []);
+      }
       else setError("加载失败");
     } catch { setError("网络错误"); }
     finally { setLoading(false); }

@@ -34,6 +34,19 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
+  // 批量获取 Project 类型通知对应的 slug
+  const projectIds = items
+    .filter((n) => n.relatedType === "Project" && n.relatedId)
+    .map((n) => n.relatedId!);
+  const slugMap = new Map<string, string>();
+  if (projectIds.length > 0) {
+    const projects = await prisma.project.findMany({
+      where: { id: { in: projectIds } },
+      select: { id: true, slug: true },
+    });
+    for (const p of projects) slugMap.set(p.id, p.slug);
+  }
+
   return apiResponse({
     items: items.map((n) => ({
       id: n.id,
@@ -42,6 +55,7 @@ export async function GET(request: NextRequest) {
       content: n.content,
       relatedId: n.relatedId,
       relatedType: n.relatedType,
+      relatedSlug: n.relatedType === "Project" ? (slugMap.get(n.relatedId!) ?? n.relatedId) : undefined,
       read: n.read,
       createdAt: n.createdAt,
     })),

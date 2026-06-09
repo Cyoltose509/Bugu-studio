@@ -10,6 +10,7 @@ interface NotificationItem {
   content: string;
   relatedId?: string | null;
   relatedType?: string | null;
+  relatedSlug?: string | null;
   read: boolean;
   createdAt: string;
 }
@@ -46,6 +47,12 @@ export default function NotificationBell() {
 
   useEffect(() => { fetchUnreadCount(); }, [fetchUnreadCount]);
 
+  // 每30秒自动轮询未读数
+  useEffect(() => {
+    const timer = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(timer);
+  }, [fetchUnreadCount]);
+
   // 打开时加载列表
   useEffect(() => {
     if (open) fetchItems();
@@ -72,13 +79,10 @@ export default function NotificationBell() {
       });
     }
     setOpen(false);
-    // 根据 relatedType 跳转
-    if (item.relatedId && item.relatedType === "Comment") {
-      // 跳转到作品页（需从 comment 反查 project slug）
-      window.location.href = `/works`; // 简单处理：先跳作品列表
-    }
-    if (item.relatedId && item.relatedType === "Project") {
-      window.location.href = `/works/${item.relatedId}`;
+    if (item.relatedType === "Project") {
+      const target = item.relatedSlug || item.relatedId;
+      if (target) window.location.href = `/works/${target}`;
+      else window.location.href = `/works`;
     }
   }
 

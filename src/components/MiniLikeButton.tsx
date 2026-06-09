@@ -53,8 +53,6 @@ export default function MiniLikeButton({ projectId, initialCount }: Props) {
     }
   }, [liked, projectId]);
 
-  if (count === 0) return null;
-
   return (
     <button
       onClick={toggle}

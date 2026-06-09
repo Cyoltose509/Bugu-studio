@@ -15,7 +15,7 @@ export default async function HistoryPage() {
   for (const year of projectYears) {
     const [projects, members, events] = await Promise.all([
       prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
-      prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true } }),
+      prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }),
       prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
     ]);
     yearDetails.push({ year, projects, members, events });
@@ -41,31 +41,31 @@ export default async function HistoryPage() {
                   <div className="bg-white rounded-xl p-5 border shadow-sm" style={{ borderColor: "#D0DEE8" }}>
                     <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>{year} 级成员 ({members.length}人)</h3>
                     <div className="flex flex-wrap gap-2">
-                      {members.map(m => (
+                      {members.map(m => {
+                        const avatarUrl = m.avatar || m.user?.image;
+                        return (
                         <Link key={m.id} href={`/members/${m.id}`} className="flex items-center gap-1.5 text-xs hover:text-[#3388BB] transition-colors" style={{ color: "#555" }}>
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs overflow-hidden text-white" style={{ background: "#25547A" }}>
-                            {m.avatar ? <SafeImage src={m.avatar} alt={m.displayName} className="w-full h-full object-cover" /> : m.displayName[0]}
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs overflow-hidden text-white shrink-0" style={{ background: "#25547A" }}>
+                            {avatarUrl ? <SafeImage src={avatarUrl} alt={m.displayName} className="w-full h-full object-cover" /> : m.displayName[0]}
                           </div>
                           {m.displayName}
                         </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
                 {projects.length > 0 && (
                   <div className="md:col-span-2 bg-white rounded-xl p-5 border shadow-sm" style={{ borderColor: "#D0DEE8" }}>
                     <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>作品 ({projects.length}件)</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      {projects.slice(0, 4).map(p => (
-                        <Link key={p.id} href={`/works/${p.slug}`} className="flex items-center gap-2 text-xs hover:text-[#3388BB] transition-colors" style={{ color: "#555" }}>
-                          <div className="w-8 h-8 rounded overflow-hidden shrink-0" style={{ background: "#E6F0F8" }}>
-                            {p.coverImage ? <SafeImage src={p.coverImage} alt={p.title} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center"><img src="/images/logo.png" alt="" width={16} height={16} className="opacity-30" /></div>}
-                          </div>
-                          <span className="line-clamp-1">{p.title}</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {projects.slice(0, 8).map(p => (
+                        <Link key={p.id} href={`/works/${p.slug}`} className="block aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ background: "#E6F0F8", borderColor: "#D0DEE8" }}>
+                          {p.coverImage ? <SafeImage src={p.coverImage} alt={p.title} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center"><img src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
                         </Link>
                       ))}
-                      {projects.length > 4 && <Link href={`/works?year=${year}`} className="text-xs hover:underline flex items-center" style={{ color: "#3388BB" }}>查看全部 {projects.length} 件 →</Link>}
                     </div>
+                    {projects.length > 8 && <Link href={`/works?year=${year}`} className="text-xs hover:underline flex items-center mt-3" style={{ color: "#3388BB" }}>查看全部 {projects.length} 件 →</Link>}
                   </div>
                 )}
                 {events.length > 0 && (
