@@ -7,14 +7,21 @@ import Link from "next/link";
 function getLoginErrorMsg(error: string | undefined): string {
   if (!error) return "登录失败，请核对邮箱和密码";
   const map: Record<string, string> = {
-    CredentialsSignin: "邮箱或密码错误",
-    OAuthSignin: "第三方登录失败",
-    OAuthCallback: "第三方登录回调失败",
+    // 细分错误（auth.ts authorize 抛出的具体类型）
+    user_not_found:     "该邮箱未注册，请先注册账号",
+    email_not_verified: "邮箱未验证，请联系管理员",
+    account_disabled:   "账号已被停用，请联系管理员",
+    wrong_password:     "密码错误，请重试",
+    no_password_login:  "该账号未设置密码，请使用第三方登录",
+    // NextAuth 内置错误类型
+    CredentialsSignin:  "邮箱或密码错误",
+    OAuthSignin:        "第三方登录失败",
+    OAuthCallback:      "第三方登录回调失败",
     OAuthCreateAccount: "第三方账号创建失败",
     EmailCreateAccount: "邮箱注册失败",
-    Callback: "回调失败",
+    Callback:           "回调失败",
     OAuthAccountNotLinked: "该邮箱已绑定其他登录方式",
-    SessionRequired: "请先登录",
+    SessionRequired:    "请先登录",
   };
   return map[error] ?? "登录出错，请重试";
 }
@@ -64,7 +71,7 @@ function LoginForm() {
       <div className="w-full max-w-md bg-white border rounded-xl p-8 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
         <h1 className="text-2xl font-bold mb-2 text-center" style={{ color: "#25547A" }}>登录</h1>
         <p className="text-sm text-center mb-8" style={{ color: "#777" }}>布谷工作室</p>
-        {error && <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">{error === "CredentialsSignin" ? "邮箱或密码错误" : "登录出错，请重试"}</div>}
+        {error && <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">{getLoginErrorMsg(error)}</div>}
         {msg && <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">{msg}</div>}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>

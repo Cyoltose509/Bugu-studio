@@ -294,6 +294,9 @@ model Project {
   @@index([isFeatured])
   @@index([createdAt])
   @@index([slug])
+  @@index([publishedAt])
+  @@index([status, isFeatured, publishedAt])
+  @@index([status, type, isFeatured, publishedAt])
 }
 
 // 作品截图

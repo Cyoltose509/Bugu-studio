@@ -50,25 +50,13 @@ export default async function WorksPage({ searchParams }: PageProps) {
         orderBy,
         include: {
           tags: { include: { tag: true } },
-          members: {
-            take: 3,
-            include: {
-              member: {
-                select: {
-                  displayName: true,
-                  avatar: true,
-                  user: { select: { image: true } },
-                },
-              },
-            },
-          },
           _count: { select: { likes: true } },
         },
       })
-    , 60),
+    , 120),
     params.q || params.tag
       ? prisma.project.count({ where })
-      : cachedQuery('works:total', () => prisma.project.count({ where }), 60),
+      : cachedQuery('works:total', () => prisma.project.count({ where }), 300),
     cachedQuery('works:sidebar:years', () =>
       prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } })
     , 120),
@@ -86,6 +74,25 @@ export default async function WorksPage({ searchParams }: PageProps) {
       select: { projectId: true },
     });
     likedProjectIds = new Set(liked.map((l) => l.projectId));
+  }
+
+  // 批量查询 members（一次查询替代 12 次 N+1 子查询）
+  let membersMap = new Map<string, any[]>();
+  if (projects.length > 0) {
+    const allMembers = await prisma.projectMember.findMany({
+      where: { projectId: { in: projects.map(p => p.id) } },
+      include: {
+        member: {
+          select: { displayName: true, avatar: true, user: { select: { image: true } } },
+        },
+      },
+      orderBy: { sortOrder: "asc" },
+    });
+    for (const pm of allMembers) {
+      const arr = membersMap.get(pm.projectId) || [];
+      if (arr.length < 3) arr.push(pm);
+      membersMap.set(pm.projectId, arr);
+    }
   }
 
   const totalPages = Math.ceil(total / pageSize);
@@ -163,7 +170,7 @@ export default async function WorksPage({ searchParams }: PageProps) {
                       <div className="flex items-center gap-2">
                         <MiniLikeButton projectId={p.id} initialCount={p._count.likes} initialLiked={likedProjectIds.has(p.id)} />
                         <div className="flex -space-x-1">
-                          {p.members.slice(0, 3).map((pm) => {
+                          {(membersMap.get(p.id) || []).slice(0, 3).map((pm) => {
                             const name = pm.member?.displayName || pm.externalName || "?";
                             const avatarUrl = pm.member ? (pm.member.user?.image || pm.member.avatar) : null;
                             return (

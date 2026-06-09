@@ -6,8 +6,16 @@
  */
 
 import NextAuth, { type NextAuthConfig } from "next-auth";
+import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { loginSchema } from "@/lib/validations/auth";
+
+// ── 细分错误类型（前端据此显示不同提示） ──
+class UserNotFound extends CredentialsSignin { code = "user_not_found"; }
+class EmailNotVerified extends CredentialsSignin { code = "email_not_verified"; }
+class AccountDisabled extends CredentialsSignin { code = "account_disabled"; }
+class WrongPassword extends CredentialsSignin { code = "wrong_password"; }
+class NoPasswordLogin extends CredentialsSignin { code = "no_password_login"; }
 
 /** 短期内存缓存：减少 session callback 的 DB 查询（60s TTL） */
 const sessionCache = new Map<string, { data: any; ts: number }>();
@@ -39,7 +47,7 @@ export const authConfig = {
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        if (!parsed.success) throw new CredentialsSignin();
 
         const { email, password } = parsed.data;
         const { prisma } = await import("@/lib/db/prisma");
@@ -48,12 +56,14 @@ export const authConfig = {
           where: { email: email.toLowerCase() },
         });
 
-        if (!user || !user.passwordHash || !user.isActive) return null;
-        if (!user.emailVerified) return null;
+        if (!user) throw new UserNotFound();
+        if (!user.passwordHash) throw new NoPasswordLogin();
+        if (!user.isActive) throw new AccountDisabled();
+        if (!user.emailVerified) throw new EmailNotVerified();
 
         const { verifyPassword } = await import("@/lib/auth/password");
         const isValid = await verifyPassword(password, user.passwordHash);
-        if (!isValid) return null;
+        if (!isValid) throw new WrongPassword();
 
         return {
           id: user.id,
