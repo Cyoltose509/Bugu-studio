@@ -48,6 +48,8 @@ export default async function HistoryPage() {
       prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }),
       prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
     ]);
+    // 跳过没有任何数据的年份
+    if (projects.length === 0 && members.length === 0 && events.length === 0) continue;
     yearDetails.push({ year, projects, members, events });
   }
 

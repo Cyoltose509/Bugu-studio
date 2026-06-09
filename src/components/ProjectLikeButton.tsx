@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
 interface Props {
@@ -15,14 +15,11 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
   const [liked, setLiked] = useState(initialLiked ?? false);
   const [animating, setAnimating] = useState(false);
   const [canLike, setCanLike] = useState(false);
-  const seqRef = useRef(0);
-  const likedRef = useRef(liked);
-  likedRef.current = liked;
+  const [loading, setLoading] = useState(false);
 
   // session 加载完成后拉取服务端真实状态
   useEffect(() => {
     if (status === "loading") return;
-    const seq = ++seqRef.current;
 
     const can = !!(session?.user?.id && session.user.role !== "GUEST");
     setCanLike(can);
@@ -30,8 +27,6 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
     fetch(`/api/projects/${projectId}/like`, { method: "GET" })
       .then((r) => r.json())
       .then((d: any) => {
-        if (seq !== seqRef.current) return; // 过期请求
-        // apiResponse 包裹在 data 字段中
         const body = d.data ?? d;
         setCount(body.likeCount ?? initialCount);
         setLiked(body.liked ?? initialLiked ?? false);
@@ -41,14 +36,9 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
   }, [projectId, initialCount, initialLiked, status]);
 
   const toggle = useCallback(async () => {
-    if (!canLike) return;
+    if (!canLike || loading) return;
 
-    const intendedLiked = !likedRef.current;
-    const seq = ++seqRef.current;
-
-    // 乐观更新
-    setLiked(intendedLiked);
-    setCount((c) => (intendedLiked ? c + 1 : c - 1));
+    setLoading(true);
     setAnimating(true);
     setTimeout(() => setAnimating(false), 300);
 
@@ -57,37 +47,29 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      if (seq !== seqRef.current) return; // 被后续点击覆盖
-
       const json = await res.json();
-      if (seq !== seqRef.current) return;
-
-      // apiResponse 包裹：{ success, data: { liked, likeCount } }
       const body = json.data ?? json;
 
-      if (!res.ok) {
-        // 服务端拒绝：回滚
-        setLiked(!intendedLiked);
-        setCount((c) => (intendedLiked ? c - 1 : c + 1));
-      } else {
-        // 以服务端真实值为准
+      if (res.ok) {
         setLiked(body.liked);
         setCount(body.likeCount);
       }
+      // 失败时不改变状态
     } catch {
-      if (seq !== seqRef.current) return; // 被覆盖，不处理
-      // 网络错误：回滚
-      setLiked(!intendedLiked);
-      setCount((c) => (intendedLiked ? c - 1 : c + 1));
+      // 网络错误：保持当前状态
+    } finally {
+      setLoading(false);
     }
-  }, [canLike, projectId]);
+  }, [canLike, loading, projectId]);
+
+  const isDisabled = !canLike || loading;
 
   return (
     <button
       onClick={toggle}
-      disabled={!canLike}
+      disabled={isDisabled}
       className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all select-none ${
-        !canLike ? "opacity-40 cursor-not-allowed" : "hover:shadow-sm hover:brightness-95 active:brightness-90"
+        isDisabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-sm hover:brightness-95 active:brightness-90"
       }`}
       style={{
         background: liked ? "rgba(227,128,67,0.12)" : "#F0F5F9",
@@ -95,21 +77,28 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
         transform: animating ? "scale(1.15)" : "scale(1)",
         color: liked ? "#E38043" : "#555",
       }}
-      aria-label={liked ? "取消点赞" : "点赞"}
-      title={!canLike ? "登录后方可点赞" : liked ? "取消点赞" : "点赞"}
+      title={loading ? (liked ? "取消点赞中…" : "点赞中…") : !canLike ? "登录后方可点赞" : liked ? "取消点赞" : "点赞"}
       type="button"
     >
-      <svg
-        width="16" height="16" viewBox="0 0 24 24"
-        fill={liked ? "#E38043" : "none"}
-        stroke={liked ? "#E38043" : "currentColor"}
-        strokeWidth="2"
-        className="transition-transform"
-        style={{ transform: animating ? "scale(1.3)" : "scale(1)" }}
-      >
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-      </svg>
-      <span className="font-medium">{count}</span>
+      {loading ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" className="animate-spin" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+      ) : (
+        <svg
+          width="16" height="16" viewBox="0 0 24 24"
+          fill={liked ? "#E38043" : "none"}
+          stroke={liked ? "#E38043" : "currentColor"}
+          strokeWidth="2"
+          className="transition-transform"
+          style={{ transform: animating ? "scale(1.3)" : "scale(1)" }}
+        >
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      )}
+      <span className="font-medium">
+        {loading ? (liked ? "取消中…" : "点赞中…") : count}
+      </span>
     </button>
   );
 }
