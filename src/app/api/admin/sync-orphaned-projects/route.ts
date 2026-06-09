@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         data: {
           projectId: item.projectId,
           memberId: item.memberId,
-          role: "制作",
+          roles: ["制作"],
           sortOrder: nextOrder,
         },
       });

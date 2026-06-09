@@ -84,7 +84,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
       projectId: p.id,
       memberId: m.id,
       externalName: null,
-      role: "制作",
+      roles: ["制作"],
       sortOrder: 999,
       project: p,
     }));
@@ -184,7 +184,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
                 参与项目 <span className="text-sm font-normal" style={{ color: "#999" }}>共 {member.projectMembers.length} 个</span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {member.projectMembers.map(({ project, role }) => (
+                {member.projectMembers.map(({ project, roles }) => (
                   <Link
                     key={project.id}
                     href={`/works/${project.slug}`}
@@ -202,7 +202,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold group-hover:text-[#3388BB] transition-colors truncate" style={{ color: "#333" }}>{project.title}</h3>
-                      <p className="text-xs mt-1" style={{ color: "#777" }}>{role} · {project.developYear}</p>
+                      <p className="text-xs mt-1" style={{ color: "#777" }}>{roles?.join("、") || ""} · {project.developYear}</p>
                     </div>
                   </Link>
                 ))}

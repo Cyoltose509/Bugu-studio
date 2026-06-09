@@ -209,10 +209,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       ...(memberRoles !== undefined && {
         members: {
           deleteMany: {},
-          create: memberRoles.map(({ memberId, externalName, role }, idx) => ({
+          create: memberRoles.map(({ memberId, externalName, roles }, idx) => ({
             memberId: memberId || null,
             externalName: externalName || null,
-            role,
+            roles,
             sortOrder: idx,
           })),
         },

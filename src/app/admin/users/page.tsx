@@ -6,7 +6,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
-import { updateUserRole } from "./actions";
+import RoleSelect from "./RoleSelect";
 import ToggleActiveButton from "./ToggleActiveButton";
 import DeleteButton from "./DeleteButton";
 
@@ -115,17 +115,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                     )}
                   </td>
                   <td className="p-3">
-                    <form action={updateUserRole.bind(null, u.id)} className="inline-flex items-center gap-1">
-                      <select name="role" defaultValue={u.role}
-                        className="text-xs rounded border px-1 py-0.5"
-                        style={{ borderColor: "#D0DEE8", color: "#333", background: "#fff" }}>
-                        <option value="USER">普通用户</option>
-                        <option value="MEMBER">成员</option>
-                        <option value="REVIEWER">审核员</option>
-                        <option value="ADMIN">管理员</option>
-                      </select>
-                      <button type="submit" className="text-xs px-1 py-0.5 rounded cursor-pointer hover:bg-[#F0F5F9]" style={{ color: "#3388BB" }}>保存</button>
-                    </form>
+                    <RoleSelect userId={u.id} currentRole={u.role} />
                   </td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={

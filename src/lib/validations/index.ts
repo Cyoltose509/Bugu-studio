@@ -68,7 +68,7 @@ export const projectCreateSchema = z.object({
         .object({
           memberId: z.string().optional(),
           externalName: z.string().max(100).optional(),
-          role: z.string().max(50),
+          roles: z.array(z.string().max(30)).min(1).default(["制作"]),
         })
         .refine((d) => d.memberId || d.externalName, {
           message: "必须提供 memberId（社团成员）或 externalName（外部成员）",

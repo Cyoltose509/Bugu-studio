@@ -77,11 +77,11 @@ export default async function ProjectEditPage({ params }: PageProps) {
     coverImage: project.coverImage || "",
     tagIds: project.tags.map((t) => t.tagId),
     links: project.links.map((l) => ({ label: l.label, url: l.url })),
-    members: project.members.map((m) => ({
+    memberRoles: project.members.map((m) => ({
       memberId: m.memberId || undefined,
       externalName: m.externalName || undefined,
       displayName: m.member?.displayName || m.externalName || "未知",
-      role: m.role,
+      roles: m.roles,
     })),
     images: project.images.map((img) => ({ url: img.url, altText: img.altText || undefined })),
   };

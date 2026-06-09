@@ -21,7 +21,7 @@ interface SelectedMember {
   memberId?: string;
   externalName?: string;
   displayName: string;
-  role: string;
+  roles: string[];
 }
 
 interface ProjectImage { url: string; altText?: string; }
@@ -36,7 +36,7 @@ export interface ProjectFormData {
   tagIds: string[];
   customTags: string[];
   links: LinkEntry[];
-  members: { memberId?: string; externalName?: string; role: string }[];
+  memberRoles: { memberId?: string; externalName?: string; roles: string[] }[];
   images?: ProjectImage[];
 }
 
@@ -50,7 +50,7 @@ export interface InitialData {
   coverImage: string;
   tagIds: string[];
   links: LinkEntry[];
-  members: SelectedMember[];
+  memberRoles: SelectedMember[];
   images: ProjectImage[];
 }
 
@@ -78,7 +78,7 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
   // ── 表单状态 ──
   const [selectedTags, setSelectedTags] = useState<string[]>(initialData?.tagIds ?? []);
   const [links, setLinks] = useState<LinkEntry[]>(initialData?.links ?? []);
-  const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>(initialData?.members ?? []);
+  const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>(initialData?.memberRoles ?? []);
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState("");
 
@@ -145,36 +145,37 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  function addMember(member: any) {
+  function addMemberFromSearch(member: any) {
     if (selectedMembers.some((m) => m.memberId === member.id)) return;
+    const roleText = memberRole.trim();
     setSelectedMembers((prev) => [
       ...prev,
-      { memberId: member.id, displayName: member.displayName, role: memberRole || "成员" },
+      { memberId: member.id, displayName: member.displayName, roles: roleText ? [roleText] : ["制作"] },
     ]);
     setMemberQuery("");
     setMemberRole("");
     setShowMemberDropdown(false);
+    delete (memberDropdownRef.current as any).__selectedMember;
   }
 
   function addExternalMember() {
-    const name = externalName.trim();
+    const name = (memberQuery || externalName).trim();
     if (!name) return;
+    const roleText = (memberRole || externalRole).trim();
     setSelectedMembers((prev) => [
       ...prev,
-      { externalName: name, displayName: name, role: externalRole || "成员" },
+      { externalName: name, displayName: name, roles: roleText ? [roleText] : ["制作"] },
     ]);
+    setMemberQuery("");
     setExternalName("");
+    setMemberRole("");
     setExternalRole("");
+    setShowMemberDropdown(false);
+    delete (memberDropdownRef.current as any).__selectedMember;
   }
 
   function removeMember(index: number) {
     setSelectedMembers((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function updateMemberRole(index: number, role: string) {
-    setSelectedMembers((prev) =>
-      prev.map((m, i) => (i === index ? { ...m, role } : m))
-    );
   }
 
   // ── 截图 ──
@@ -256,7 +257,7 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
       tagIds: selectedTags,
       customTags,
       links,
-      members: selectedMembers.map((m) => ({ memberId: m.memberId, externalName: m.externalName, role: m.role })),
+      memberRoles: selectedMembers.map((m) => ({ memberId: m.memberId, externalName: m.externalName, roles: m.roles })),
       images: screenshots.length > 0 ? screenshots : undefined,
     };
 
@@ -454,18 +455,27 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
       <section className="space-y-3">
         <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>👥 制作成员</h2>
 
-        {/* 社团成员搜索 */}
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-2" ref={memberDropdownRef}>
+        {/* 统一添加行：姓名搜索 + 角色 + 添加按钮 */}
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_130px_auto] gap-2" ref={memberDropdownRef}>
           <div className="relative">
             <input type="text" value={memberQuery}
               onChange={(e) => { setMemberQuery(e.target.value); setShowMemberDropdown(true); }}
-              onFocus={() => setShowMemberDropdown(true)} placeholder="搜索社团成员姓名..."
+              onFocus={() => setShowMemberDropdown(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); addExternalMember(); }
+              }}
+              placeholder="搜索社团成员或输入外部成员姓名…"
               className={inputClass} style={inputStyle} />
             {showMemberDropdown && memberResults.length > 0 && (
               <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto"
                 style={{ borderColor: "#D0DEE8" }}>
                 {memberResults.map((m: any) => (
-                  <button key={m.id} type="button" onClick={() => addMember(m)}
+                  <button key={m.id} type="button" onClick={() => {
+                    setMemberQuery(m.displayName);
+                    // 暂存选中的社团成员信息
+                    (memberDropdownRef.current as any).__selectedMember = m;
+                    setShowMemberDropdown(false);
+                  }}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-[#F0F5F9] flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full bg-[#E38043] text-white text-xs flex items-center justify-center flex-shrink-0">
                       {m.displayName.charAt(0)}
@@ -480,24 +490,23 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
               </div>
             )}
           </div>
-          <input type="text" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); } }}
-            placeholder="角色，如: 主程序" className={inputClass} style={inputStyle} />
+          <div className="relative">
+            <input type="text" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
+              placeholder="职位，如: 程序" className={inputClass} style={inputStyle} />
+          </div>
+          <button type="button" onClick={() => {
+            const m = (memberDropdownRef.current as any).__selectedMember;
+            if (m) {
+              addMemberFromSearch(m);
+            } else {
+              addExternalMember();
+            }
+          }} disabled={!memberQuery.trim()}
+            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all whitespace-nowrap"
+            style={{ background: "#88C232", color: "#fff" }}>+ 添加</button>
         </div>
-
-        {/* 外部成员添加 */}
-        <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-2">
-          <input type="text" value={externalName} onChange={(e) => setExternalName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
-            placeholder="添加非社团成员姓名..." className={inputClass} style={inputStyle} />
-          <input type="text" value={externalRole} onChange={(e) => setExternalRole(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
-            placeholder="角色，如: 原画" className={inputClass} style={inputStyle} />
-          <button type="button" onClick={addExternalMember} disabled={!externalName.trim()}
-            className="px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all"
-            style={{ background: "#88C232", color: "#fff" }}>添加</button>
-        </div>
-        <p className="text-xs" style={{ color: "#999" }}>非社团成员填写姓名即可添加为作品贡献者</p>
+        <p className="text-xs" style={{ color: "#999" }}>输入姓名搜索社团成员并选择，或直接输入外部成员姓名后点击添加</p>
 
         {selectedMembers.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -510,9 +519,7 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
                   ? <span className="w-4 h-4 rounded-full bg-[#E38043] text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
                   : <span className="text-[10px] mr-0.5">👤</span>}
                 {m.displayName}
-                <input type="text" value={m.role} onChange={(e) => updateMemberRole(i, e.target.value)}
-                  className="w-16 bg-transparent border-b border-dashed text-xs px-1 focus:outline-none"
-                  style={{ borderColor: "currentColor", color: "inherit" }} />
+                <span className="text-xs opacity-70">{m.roles.join("、")}</span>
                 <button type="button" onClick={() => removeMember(i)} className="ml-0.5 hover:text-red-500" title="移除">×</button>
               </span>
             ))}

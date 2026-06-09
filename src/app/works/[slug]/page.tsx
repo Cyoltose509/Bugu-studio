@@ -264,7 +264,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
                       </div>
                       <div>
                         <div className="text-sm font-medium" style={{ color: "#333" }}>{displayName}</div>
-                        <div className="text-xs" style={{ color: "#999" }}>{pm.role}</div>
+                        <div className="text-xs" style={{ color: "#999" }}>{pm.roles?.join("、") || ""}</div>
                       </div>
                     </>
                   );

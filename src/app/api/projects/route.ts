@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         },
         members: {
           select: {
-            role: true,
+            roles: true,
             member: {
               select: { displayName: true, avatar: true, userId: true },
             },
@@ -152,14 +152,14 @@ export async function POST(request: NextRequest) {
   const finalMemberRoles = [...memberRoles] as Array<{
     memberId?: string;
     externalName?: string;
-    role: string;
+    roles: string[];
   }>;
   const submitterMember = await prisma.clubMember.findFirst({
     where: { userId: session.user.id },
     select: { id: true },
   });
   if (submitterMember && !finalMemberRoles.some((m) => m.memberId === submitterMember.id)) {
-    finalMemberRoles.push({ memberId: submitterMember.id, role: "制作" });
+    finalMemberRoles.push({ memberId: submitterMember.id, roles: ["制作"] });
   }
 
   const project = await prisma.project.create({
@@ -173,10 +173,10 @@ export async function POST(request: NextRequest) {
         create: tagIds.map((tagId) => ({ tagId })),
       },
       members: {
-        create: finalMemberRoles.map(({ memberId, externalName, role }, idx) => ({
+        create: finalMemberRoles.map(({ memberId, externalName, roles }, idx) => ({
           memberId: memberId || null,
           externalName: memberId ? null : (externalName || null),
-          role,
+          roles,
           sortOrder: idx,
         })),
       },

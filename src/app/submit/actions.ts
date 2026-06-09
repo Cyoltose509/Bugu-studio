@@ -137,7 +137,7 @@ export async function submitProject(formData: FormData) {
       select: { id: true },
     });
     if (submitterMember && !finalMemberRoles.some((m) => m.memberId === submitterMember.id)) {
-      finalMemberRoles.push({ memberId: submitterMember.id, role: "制作" });
+      finalMemberRoles.push({ memberId: submitterMember.id, roles: ["制作"] });
     }
   }
 
@@ -171,7 +171,7 @@ export async function submitProject(formData: FormData) {
         create: finalMemberRoles.map((m) => ({
           memberId: m.memberId || null,
           externalName: m.memberId ? null : (m.externalName || null),
-          role: m.role,
+          roles: m.roles,
         })),
       },
     },

@@ -311,8 +311,8 @@ model ProjectMember {
   id           String  @id @default(cuid())
   projectId    String
   memberId     String? // 社团成员 ID（可选，外部成员为 null）
-  externalName String? // 非社团成员姓名
-  role         String   // 如 "主程序员", "美术", "策划", "音效"
+  externalName String?  // 非社团成员姓名
+  roles        String[] // 如 ["程序", "美术", "策划"]
   sortOrder    Int     @default(0)
 
   project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)

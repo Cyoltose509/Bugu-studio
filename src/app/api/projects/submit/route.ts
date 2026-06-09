@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   if (!body) return apiError("请求体格式错误", 400);
 
-  const { title, subtitle, description, type, developYear, coverImage, tagIds, customTags, links, members, images } = body;
+  const { title, subtitle, description, type, developYear, coverImage, tagIds, customTags, links, members, memberRoles, images } = body;
 
   const data = {
     title: title || "",
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     links: (links || []).filter((l: any) => l.label && l.url),
     tagIds: (tagIds || []).slice(0, 10),
     customTags: (customTags || []).filter(Boolean).slice(0, 10),
-    memberRoles: (members || []).filter((m: any) => m.memberId || m.externalName).slice(0, 50),
+    memberRoles: (memberRoles || members || []).filter((m: any) => m.memberId || m.externalName).slice(0, 50),
     images: (images || []).slice(0, 3),
   };
 
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
     if (submitterMember && !finalMemberRoles.some((m) => m.memberId === submitterMember.id)) {
-      finalMemberRoles.push({ memberId: submitterMember.id, role: "制作" });
+      finalMemberRoles.push({ memberId: submitterMember.id, roles: ["制作"] });
     }
   }
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         create: finalMemberRoles.map((m) => ({
           memberId: m.memberId || null,
           externalName: m.memberId ? null : (m.externalName || null),
-          role: m.role,
+          roles: m.roles,
         })),
       },
       images: parsed.data.images?.length
