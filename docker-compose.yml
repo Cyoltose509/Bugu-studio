@@ -10,7 +10,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: bugu_app
+    container_name: bugoo_app
     restart: unless-stopped
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -37,7 +37,7 @@ services:
   # ============================
   nginx:
     image: nginx:alpine
-    container_name: bugu_nginx
+    container_name: bugoo_nginx
     restart: unless-stopped
     depends_on:
       - app
@@ -54,8 +54,8 @@ services:
 
 volumes:
   upload_data:
-    name: bugu_upload_data
+    name: bugoo_upload_data
 
 networks:
   proxy:
-    name: bugu_proxy
+    name: bugoo_proxy

@@ -19,7 +19,7 @@ export function getResend(): Resend | null {
 
 /** 发件人地址（必须在 Resend 控制台验证过域名） */
 export const MAIL_FROM =
-  process.env.MAIL_FROM || "布谷工作室 <noreply@bugu.studio>";
+  process.env.MAIL_FROM || "布谷工作室 <noreply@bugoo.studio>";
 
 /** 前端站点 URL */
 export const SITE_URL =

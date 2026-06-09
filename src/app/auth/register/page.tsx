@@ -3,7 +3,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const STORAGE_KEY = "bugu_register_email";
+const STORAGE_KEY = "bugoo_register_email";
 
 function RegisterForm() {
   const router = useRouter();
@@ -136,7 +136,7 @@ function RegisterForm() {
               </label>
               <input id="inviteCode" type="text" value={inviteCode} onChange={e => setInviteCode(e.target.value)}
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent font-mono text-sm"
-                style={{ borderColor: "#D0DEE8", color: "#25547A" }} placeholder="BUGU-MEMBER-XXXXXX" />
+                style={{ borderColor: "#D0DEE8", color: "#25547A" }} placeholder="BUGOO-MEMBER-XXXXXX" />
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? "注册中..." : "注册"}

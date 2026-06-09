@@ -12,7 +12,7 @@ export async function createInviteCode(formData: FormData) {
   const expiresDays = formData.get("expiresDays") as string;
   const description = formData.get("description") as string;
 
-  const prefix = `BUGU-${role}`;
+  const prefix = `BUGOO-${role}`;
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
   const code = `${prefix}-${random}`;
 

@@ -122,11 +122,11 @@ docker compose exec postgres pg_dumpall \
 
 # 迁移 R2 文件：R2 本身是云端冗余，无需手动迁移
 # 迁移 Docker Volumes：
-docker run --rm -v bugu-club_postgres_data:/data -v $(pwd):/backup \
+docker run --rm -v bugoo-club_postgres_data:/data -v $(pwd):/backup \
   alpine tar czf /backup/postgres_volume.tar.gz /data
 
 # 在新服务器：恢复
-docker run --rm -v bugu-club_postgres_data:/data -v $(pwd):/backup \
+docker run --rm -v bugoo-club_postgres_data:/data -v $(pwd):/backup \
   alpine tar xzf /backup/postgres_volume.tar.gz -C /
 
 # 或者直接恢复 sql dump

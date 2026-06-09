@@ -158,7 +158,7 @@ model VerificationToken {
 // 邀请码（注册时赋予对应角色）
 model InviteCode {
   id          String   @id @default(cuid())
-  code        String   @unique           // 如 "BUGU-MEMBER-ABC123"
+  code        String   @unique           // 如 "BUGOO-MEMBER-ABC123"
   role        UserRole @default(MEMBER)  // 注册后赋予的角色
   maxUses     Int?                      // null = 无限次
   usedCount   Int      @default(0)

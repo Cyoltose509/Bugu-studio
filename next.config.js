@@ -21,7 +21,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "cdn.bugu-studio.com",
+        hostname: "cdn.bugoostudio.com",
       },
     ],
   },
@@ -29,8 +29,8 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: [
         "localhost:3000",
-        "bugu-studio.com",
-        "www.bugu-studio.com",
+        "bugoostudio.com",
+        "www.bugoostudio.com",
       ],
     },
   },
@@ -40,6 +40,19 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/projects/:slug", destination: "/works/:slug", permanent: true },
+      // 旧域名 301 重定向到新域名
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "bugu-studio.com" }],
+        destination: "https://bugoostudio.com/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.bugu-studio.com" }],
+        destination: "https://bugoostudio.com/:path*",
+        permanent: true,
+      },
     ];
   },
   // Security headers
@@ -62,10 +75,10 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.r2.dev https://cdn.bugu-studio.com",
+              "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.r2.dev https://cdn.bugoostudio.com",
               "font-src 'self' data: https://fonts.gstatic.com",
               "media-src 'self' data: blob:",
-              "connect-src 'self' https://bugu-studio.com https://www.bugu-studio.com https://*.vercel-insights.com https://vitals.vercel-insights.com",
+              "connect-src 'self' https://bugoostudio.com https://www.bugoostudio.com https://*.vercel-insights.com https://vitals.vercel-insights.com",
               "frame-ancestors 'none'",
             ].join("; "),
           },
