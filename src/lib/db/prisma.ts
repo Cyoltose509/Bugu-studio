@@ -54,12 +54,14 @@ function extractTargetId(params: any, result: any): string | undefined {
   return undefined;
 }
 
-/** 异步写入审计日志（fire-and-forget） */
+/** 异步写入审计日志（fire-and-forget，含数据快照） */
 async function writeAuditLog(
   action: string,
   model: string,
   targetId: string | undefined,
   userId: string | undefined,
+  beforeData?: any,
+  afterData?: any,
   metadata?: any
 ) {
   try {
@@ -70,13 +72,39 @@ async function writeAuditLog(
         userId: userId ?? null,
         targetType: model,
         targetId: targetId ?? null,
+        beforeData: beforeData ? sanitize(beforeData) : undefined,
+        afterData: afterData ? sanitize(afterData) : undefined,
         metadata: metadata ?? undefined,
         ipAddress: "system",
       },
     });
-  } catch {
-    // 审计日志失败不影响主流程
+  } catch (e) {
+    console.error("[Audit] write failed:", e);
   }
+}
+
+/** 去除大字段/二进制，避免审计日志膨胀 */
+function sanitize(obj: any): any {
+  if (!obj || typeof obj !== "object") return obj;
+  const cleaned: any = Array.isArray(obj) ? [] : {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v instanceof Date) { cleaned[k] = v.toISOString(); continue; }
+    if (k === "passwordHash") continue; // 绝不记录密码
+    if (typeof v === "object" && v !== null) { cleaned[k] = sanitize(v); continue; }
+    cleaned[k] = v;
+  }
+  return cleaned;
+}
+
+/** 读取当前记录（用于 UPDATE/DELETE 前捕获 beforeData） */
+async function fetchCurrent(model: string, where: any): Promise<any> {
+  try {
+    const ap = getAuditPrisma();
+    const record = await (ap as any)[model.charAt(0).toLowerCase() + model.slice(1)].findUnique({
+      where: where.id ? { id: where.id } : where,
+    });
+    return record;
+  } catch { return undefined; }
 }
 
 function createPrismaClient(): PrismaClient {
@@ -93,9 +121,15 @@ function createPrismaClient(): PrismaClient {
       return next(params);
     }
 
+    // 捕获 beforeData（UPDATE/DELETE 前）
+    let beforeData: any = undefined;
+    if ((action === "update" || action === "updateMany" || action === "delete" || action === "deleteMany" || action === "upsert") && params.args?.where) {
+      beforeData = await fetchCurrent(model!, params.args.where).catch(() => undefined);
+    }
+
     const result = await next(params);
 
-    // 异步写入审计日志
+    // 异步写入审计日志（含数据快照）
     const ctx = auditContext.get();
     const targetId = extractTargetId(params, result);
 
@@ -105,7 +139,15 @@ function createPrismaClient(): PrismaClient {
     }
 
     setImmediate(() => {
-      writeAuditLog(mapPrismaAction(action), model, targetId, ctx.userId, metadata);
+      writeAuditLog(
+        mapPrismaAction(action),
+        model!,
+        targetId,
+        ctx.userId,
+        action.startsWith("delete") ? beforeData : undefined,  // DELETE: 记录删除前数据
+        action.startsWith("create") ? sanitize(result) : action === "update" || action === "upsert" ? sanitize(result) : undefined,  // CREATE: 新数据, UPDATE: 更新后数据
+        metadata
+      );
     });
 
     return result;

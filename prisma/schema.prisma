@@ -476,6 +476,8 @@ model AuditLog {
   userId     String?
   targetType String?    // 目标资源类型，如 "Project", "User"
   targetId   String?    // 目标资源 ID
+  beforeData Json?      // 变更前数据快照（DELETE/UPDATE 时捕获）
+  afterData  Json?      // 变更后数据快照（CREATE/UPDATE 时捕获）
   metadata   Json?      // 额外上下文信息
   ipAddress  String?
   userAgent  String?
@@ -487,6 +489,19 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([userId, createdAt])
   @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// 大版本备份记录
+model BackupVersion {
+  id          String   @id @default(cuid())
+  version     Int      @unique  // 自增版本号 1, 2, 3...
+  label       String?  // 备注/标签
+  recordCount Int      @default(0)
+  fileSize    Int?     // 备份文件大小 (bytes)
+  status      String   @default("completed") // completed | failed
+  createdAt   DateTime @default(now())
+
   @@index([createdAt])
 }
 
