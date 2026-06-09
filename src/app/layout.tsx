@@ -2,6 +2,7 @@
 import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Providers } from "@/components/providers/Providers";
 import { Navbar } from "@/components/layout/Navbar";
 import { NavbarSkeleton } from "@/components/layout/NavbarSkeleton";
 import { Footer } from "@/components/layout/Footer";
@@ -24,12 +25,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className={`${inter.className} text-[#333333] min-h-screen flex flex-col`}>
-        {/* Navbar 用 Suspense 包裹 — auth() 不阻塞首屏渲染 */}
-        <Suspense fallback={<NavbarSkeleton />}>
-          <Navbar />
-        </Suspense>
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <Providers>
+          {/* Navbar 用 Suspense 包裹 — auth() 不阻塞首屏渲染 */}
+          <Suspense fallback={<NavbarSkeleton />}>
+            <Navbar />
+          </Suspense>
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </Providers>
         <SpeedInsights />
         <Analytics />
       </body>
