@@ -14,6 +14,7 @@ interface CacheEntry<T> {
 }
 
 const memCache = new Map<string, CacheEntry<unknown>>();
+const keyRegistry = new Set<string>(); // 追踪所有设置的缓存 key
 const CACHE_TTL = 30_000;
 
 // ── Upstash Redis（生产） ──────────────────────
@@ -85,11 +86,11 @@ export async function cachedQuery<T>(
   if (r) {
     try {
       await r.set(key, JSON.stringify(data), { ex: ttlSeconds });
-    } catch {
-      // Redis 写入失败不阻塞
-    }
+      keyRegistry.add(key);
+    } catch { /* ignore */ }
   } else {
     memSet(key, data, ttlMs);
+    keyRegistry.add(key);
   }
 
   return data;
@@ -98,14 +99,20 @@ export async function cachedQuery<T>(
 /** 使某个前缀的所有缓存失效 */
 export async function invalidateCache(prefix: string): Promise<void> {
   const r = getRedis();
-  if (r) {
+  const matchingKeys = Array.from(keyRegistry).filter(k => k.startsWith(prefix));
+  
+  if (r && matchingKeys.length > 0) {
     try {
-      // Upstash 免费版不支持 SCAN，所以只删已知 key
-      await r.del(prefix);
+      // 批量删除匹配的 Redis key
+      await Promise.all(matchingKeys.map(k => r!.del(k)));
     } catch { /* ignore */ }
-  } else {
-    for (const key of memCache.keys()) {
-      if (key.startsWith(prefix)) memCache.delete(key);
-    }
+  }
+  
+  // 清理内存缓存和注册表
+  for (const key of memCache.keys()) {
+    if (key.startsWith(prefix)) memCache.delete(key);
+  }
+  for (const key of matchingKeys) {
+    keyRegistry.delete(key);
   }
 }

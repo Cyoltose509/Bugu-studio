@@ -18,6 +18,7 @@ import {
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { apiResponse, apiError, generateSlug, getPagination } from "@/lib/utils";
 import { invalidateCache } from "@/lib/db/cache";
+import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 // GET /api/projects
@@ -59,44 +60,49 @@ export async function GET(request: NextRequest) {
     }),
   };
 
-  const [projects, total] = await Promise.all([
-    prisma.project.findMany({
-      where,
-      skip,
-      take,
-      orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        subtitle: true,
-        description: true,
-        coverImage: true,
-        type: true,
-        developYear: true,
-        publishedAt: true,
-        isFeatured: true,
-        steamUrl: true,
-        githubUrl: true,
-        itchUrl: true,
-        tags: {
-          select: {
-            tag: { select: { name: true, slug: true, color: true } },
-          },
-        },
-        members: {
-          select: {
-            roles: true,
-            member: {
-              select: { displayName: true, avatar: true, userId: true },
+  const cacheKey = `api:projects:${JSON.stringify({ page, pageSize, q, type, tag, year, featured })}`;
+
+  const result = await cachedQuery(cacheKey, () =>
+    Promise.all([
+      prisma.project.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          subtitle: true,
+          description: true,
+          coverImage: true,
+          type: true,
+          developYear: true,
+          publishedAt: true,
+          isFeatured: true,
+          steamUrl: true,
+          githubUrl: true,
+          itchUrl: true,
+          tags: {
+            select: {
+              tag: { select: { name: true, slug: true, color: true } },
             },
           },
-          orderBy: { sortOrder: "asc" },
+          members: {
+            select: {
+              roles: true,
+              member: {
+                select: { displayName: true, avatar: true, userId: true },
+              },
+            },
+            orderBy: { sortOrder: "asc" },
+          },
         },
-      },
-    }),
-    prisma.project.count({ where }),
-  ]);
+      }),
+      prisma.project.count({ where }),
+    ]), 30);
+
+  const [projects, total] = result;
 
   return apiResponse({
     items: projects,
@@ -195,11 +201,17 @@ export async function POST(request: NextRequest) {
   });
 
   // ── 清除成员相关缓存 & 触发页面刷新 ──
-  await invalidateCache("members:all");
-  for (const m of finalMemberRoles) {
-    if (m.memberId) await invalidateCache(`member:detail:${m.memberId}`);
-  }
+  await Promise.all([
+    invalidateCache("members:all"),
+    invalidateCache("api:projects:"),
+    invalidateCache("works:sidebar:tags"),
+    invalidateCache("works:count:"),
+    invalidateCache("admin:projects:"),
+    invalidateCache("admin:projectCount"),
+    ...finalMemberRoles.filter(m => m.memberId).map(m => invalidateCache(`member:detail:${m.memberId}`)),
+  ]);
   revalidatePath("/members");
+  revalidatePath("/works");
 
   // 审计日志
   const { ipAddress, userAgent } = extractRequestInfo(request);

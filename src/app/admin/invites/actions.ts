@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/auth/adminGuard";
+import { invalidateCache } from "@/lib/db/cache";
 import { revalidatePath } from "next/cache";
 
 export async function createInviteCode(formData: FormData) {
@@ -26,17 +27,20 @@ export async function createInviteCode(formData: FormData) {
       description: description || null,
     },
   });
+  invalidateCache("admin:invites:");
   revalidatePath("/admin/invites");
 }
 
 export async function toggleInviteCode(id: string, isActive: boolean) {
   await requireAdmin();
   await prisma.inviteCode.update({ where: { id }, data: { isActive } });
+  invalidateCache("admin:invites:");
   revalidatePath("/admin/invites");
 }
 
 export async function deleteInviteCode(id: string) {
   await requireAdmin();
   await prisma.inviteCode.delete({ where: { id } });
+  invalidateCache("admin:invites:");
   revalidatePath("/admin/invites");
 }

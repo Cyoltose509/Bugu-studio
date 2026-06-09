@@ -16,6 +16,7 @@ import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { apiResponse, apiError, generateSlug } from "@/lib/utils";
 import { invalidateCache } from "@/lib/db/cache";
 import { createNotification, notifyNewProject } from "@/lib/services/notification";
+import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 type RouteParams = { params: Promise<{ id: string }> };
@@ -25,39 +26,40 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const session = await auth();
 
-  const project = await prisma.project.findFirst({
-    where: {
-      OR: [{ id }, { slug: id }],
-      // 非管理员只能看已发布的
-      ...(!isAdmin(session?.user?.role as any) && {
-        status: ProjectStatus.PUBLISHED,
-      }),
-    },
-    include: {
-      images: { orderBy: { sortOrder: "asc" } },
-      tags: { include: { tag: true } },
-      members: {
-        orderBy: { sortOrder: "asc" },
-        include: {
-          member: {
-            select: {
-              id: true,
-              displayName: true,
-              avatar: true,
-              grade: true,
-              userId: true,
+  const isAdminUser = isAdmin(session?.user?.role as any);
+
+  const project = await cachedQuery(`api:project:${id}`, () =>
+    prisma.project.findFirst({
+      where: {
+        OR: [{ id }, { slug: id }],
+        // 非管理员只能看已发布的
+        ...(!isAdminUser && { status: ProjectStatus.PUBLISHED }),
+      },
+      include: {
+        images: { orderBy: { sortOrder: "asc" } },
+        tags: { include: { tag: true } },
+        members: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            member: {
+              select: {
+                id: true,
+                displayName: true,
+                avatar: true,
+                grade: true,
+                userId: true,
+              },
             },
           },
         },
+        submitter: { select: { id: true, name: true } },
+        reviews: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: { reviewer: { select: { name: true } } },
+        },
       },
-      submitter: { select: { id: true, name: true } },
-      reviews: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        include: { reviewer: { select: { name: true } } },
-      },
-    },
-  });
+    }), 60);
 
   if (!project) return apiError("作品不存在", 404);
 
@@ -154,18 +156,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       statusCode: 200,
     });
 
-    // ── 清除成员相关缓存 & 触发页面刷新 ──
-    await invalidateCache("members:all");
-    revalidatePath("/members");
-    revalidatePath("/works");
-    // 使受影响的成员详情缓存也失效
+    // ── 清除缓存 & 触发页面刷新 ──
     const affectedMembers = await prisma.projectMember.findMany({
       where: { projectId: id },
       select: { memberId: true },
     });
-    for (const m of affectedMembers) {
-      await invalidateCache(`member:detail:${m.memberId}`);
-    }
+    await Promise.all([
+      invalidateCache("members:all"),
+      invalidateCache("api:projects:"),
+      invalidateCache("api:project:"),
+      invalidateCache("works:sidebar:tags"),
+      invalidateCache("works:count:"),
+      invalidateCache("admin:projects:"),
+      invalidateCache("admin:projectCount"),
+      ...affectedMembers.map(m => invalidateCache(`member:detail:${m.memberId}`)),
+    ]);
+    revalidatePath("/members");
+    revalidatePath("/works");
+    revalidatePath("/admin/projects");
 
     return apiResponse(updated[0]);
   }
@@ -251,11 +259,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     statusCode: 200,
   });
 
-  // ── 清除成员相关缓存 ──
-  await invalidateCache("members:all");
+  // ── 清除缓存 ──
+  await Promise.all([
+    invalidateCache("members:all"),
+    invalidateCache("api:projects:"),
+    invalidateCache("api:project:"),
+    invalidateCache("works:sidebar:tags"),
+    invalidateCache("works:count:"),
+    invalidateCache("admin:projects:"),
+    invalidateCache("admin:projectCount"),
+  ]);
   revalidatePath("/members");
   revalidatePath("/works");
-
+  revalidatePath("/admin/projects");
   return apiResponse(updated);
 }
 
@@ -283,10 +299,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     statusCode: 200,
   });
 
-  // ── 清除成员相关缓存 ──
-  await invalidateCache("members:all");
+  // ── 清除缓存 ──
+  await Promise.all([
+    invalidateCache("members:all"),
+    invalidateCache("api:projects:"),
+    invalidateCache("api:project:"),
+    invalidateCache("works:sidebar:tags"),
+    invalidateCache("works:count:"),
+    invalidateCache("admin:projects:"),
+    invalidateCache("admin:projectCount"),
+  ]);
   revalidatePath("/members");
   revalidatePath("/works");
+  revalidatePath("/admin/projects");
 
   return apiResponse({ deleted: true });
 }

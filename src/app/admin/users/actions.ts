@@ -53,27 +53,35 @@ export async function updateUserRole(id: string, formData: FormData) {
   revalidatePath("/profile");
 
   // 清除相关缓存
-  invalidateCache("members:all");
-  invalidateCache("admin:members");
-  invalidateCache("admin:memberCount");
+  await Promise.all([
+    invalidateCache("members:all"),
+    invalidateCache("admin:members"),
+    invalidateCache("admin:memberCount"),
+    invalidateCache("admin:users:"),
+    invalidateCache("admin:userCount"),
+  ]);
 }
 
 export async function toggleUserActive(id: string, isActive: boolean) {
   await requireAdmin();
   await prisma.user.update({ where: { id }, data: { isActive } });
+  invalidateCache("admin:users:");
   revalidatePath("/admin/users");
   revalidatePath("/profile");
 }
 
 export async function deleteUser(id: string) {
   await requireAdmin();
-  // 同时删除关联的 ClubMember（如果有）
   await prisma.clubMember.deleteMany({ where: { userId: id } });
   await prisma.user.delete({ where: { id } });
+  await Promise.all([
+    invalidateCache("members:all"),
+    invalidateCache("admin:members"),
+    invalidateCache("admin:memberCount"),
+    invalidateCache("admin:users:"),
+    invalidateCache("admin:userCount"),
+  ]);
   revalidatePath("/admin/users");
   revalidatePath("/admin/members");
   revalidatePath("/members");
-  invalidateCache("members:all");
-  invalidateCache("admin:members");
-  invalidateCache("admin:memberCount");
 }

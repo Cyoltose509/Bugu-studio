@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db/prisma";
 import { paginationSchema } from "@/lib/validations";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/utils/rate-limit";
 import { apiResponse, apiError, getPagination } from "@/lib/utils";
+import { cachedQuery } from "@/lib/db/cache";
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
@@ -33,31 +34,36 @@ export async function GET(request: NextRequest) {
 
   const { skip, take } = getPagination(page, pageSize);
 
-  const [members, total] = await Promise.all([
-    prisma.clubMember.findMany({
-      where,
-      skip,
-      take,
-      orderBy: [{ joinYear: "desc" }, { sortOrder: "asc" }],
-      select: {
-        id: true,
-        displayName: true,
-        avatar: true,
-        grade: true,
-        joinYear: true,
-        graduateYear: true,
-        bio: true,
-        skills: true,
-        socialLinks: {
-          select: { id: true, label: true, url: true },
-          orderBy: { sortOrder: "asc" },
+  const cacheKey = `api:members:${JSON.stringify({ page, pageSize, year, active })}`;
+
+  const result = await cachedQuery(cacheKey, () =>
+    Promise.all([
+      prisma.clubMember.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ joinYear: "desc" }, { sortOrder: "asc" }],
+        select: {
+          id: true,
+          displayName: true,
+          avatar: true,
+          grade: true,
+          joinYear: true,
+          graduateYear: true,
+          bio: true,
+          skills: true,
+          socialLinks: {
+            select: { id: true, label: true, url: true },
+            orderBy: { sortOrder: "asc" },
+          },
+          isActive: true,
+          _count: { select: { projectMembers: true } },
         },
-        isActive: true,
-        _count: { select: { projectMembers: true } },
-      },
-    }),
-    prisma.clubMember.count({ where }),
-  ]);
+      }),
+      prisma.clubMember.count({ where }),
+    ]), 60);
+
+  const [members, total] = result;
 
   return apiResponse({
     items: members,

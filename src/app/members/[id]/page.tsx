@@ -12,7 +12,7 @@ import MemberContactInfo from "./MemberContactInfo";
 import AdminMemberEditor from "./AdminMemberEditor";
 
 // ISR: 成员信息变化少，5 分钟缓存
-export const revalidate = 300;
+export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 interface PageProps {
   params: Promise<{ id: string }>;

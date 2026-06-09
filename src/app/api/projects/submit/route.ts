@@ -137,10 +137,15 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  await invalidateCache("members:all");
-  for (const m of finalMemberRoles) {
-    if (m.memberId) await invalidateCache(`member:detail:${m.memberId}`);
-  }
+  await Promise.all([
+    invalidateCache("members:all"),
+    invalidateCache("api:projects:"),
+    invalidateCache("works:sidebar:tags"),
+    invalidateCache("works:count:"),
+    invalidateCache("admin:projects:"),
+    invalidateCache("admin:projectCount"),
+    ...finalMemberRoles.filter(m => m.memberId).map(m => invalidateCache(`member:detail:${m.memberId}`)),
+  ]);
   revalidatePath("/submit");
   revalidatePath("/works");
   revalidatePath("/members");

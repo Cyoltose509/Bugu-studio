@@ -10,7 +10,7 @@ import FeaturedProjects from "./FeaturedProjects";
 import LatestProjects from "./LatestProjects";
 
 export const metadata = { title: "首页" };
-export const revalidate = 60;
+export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 export default function HomePage() {
   return (

@@ -9,6 +9,7 @@ import { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import nextDynamic from "next/dynamic";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { auth } from "@/lib/auth/auth";
@@ -16,9 +17,14 @@ import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
-import ImageGallery from "@/components/ImageGallery";
 
-export const revalidate = 60;
+const ImageGallery = nextDynamic(() => import("@/components/ImageGallery"), {
+  loading: () => (
+    <div className="aspect-video rounded-xl animate-pulse" style={{ background: "#E6F0F8" }} />
+  ),
+});
+
+export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时动态路由连接池耗尽
 
 interface PageProps { params: Promise<{ slug: string }> }
 

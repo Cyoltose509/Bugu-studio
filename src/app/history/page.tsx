@@ -6,7 +6,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "社团历史", description: "记录布谷工作室每一年的成长与创作" };
-export const revalidate = 3600; // 历史数据变化少，1小时缓存
+export const dynamic = "force-dynamic"; // 避免构建时并发连接池耗尽
 
 export default async function HistoryPage() {
   const currentYear = new Date().getFullYear();
@@ -49,25 +49,29 @@ export default async function HistoryPage() {
   }
 
   const yearDetails = [];
-  // 所有年份并行加载（替代原来的串行 for 循环）
-  const yearResults = await Promise.all(
-    allYears.map((year) =>
-      Promise.all([
-        cachedQuery(`history:year:${year}:projects`, () =>
-          prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
-        3600),
-        cachedQuery(`history:year:${year}:members`, () =>
-          prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }),
-        3600),
-        cachedQuery(`history:year:${year}:events`, () =>
-          prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
-        3600),
-      ]).then(([projects, members, events]) => ({ year, projects, members, events }))
-    )
-  );
-  for (const detail of yearResults) {
-    if (detail.projects.length === 0 && detail.members.length === 0 && detail.events.length === 0) continue;
-    yearDetails.push(detail);
+  // 分批并发加载（每批3年=9并发，避免超过 PgBouncer pool_size=15）
+  const BATCH_SIZE = 3;
+  for (let i = 0; i < allYears.length; i += BATCH_SIZE) {
+    const batch = allYears.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map((year) =>
+        Promise.all([
+          cachedQuery(`history:year:${year}:projects`, () =>
+            prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
+          3600),
+          cachedQuery(`history:year:${year}:members`, () =>
+            prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }),
+          3600),
+          cachedQuery(`history:year:${year}:events`, () =>
+            prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
+          3600),
+        ]).then(([projects, members, events]) => ({ year, projects, members, events }))
+      )
+    );
+    for (const detail of batchResults) {
+      if (detail.projects.length === 0 && detail.members.length === 0 && detail.events.length === 0) continue;
+      yearDetails.push(detail);
+    }
   }
 
   return (

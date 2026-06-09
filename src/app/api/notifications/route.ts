@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
-import { invalidateCache } from "@/lib/db/cache";
+import { invalidateCache, cachedQuery } from "@/lib/db/cache";
 
 const PAGE_SIZE = 20;
 
@@ -21,18 +21,21 @@ export async function GET(request: NextRequest) {
   const where: any = { userId: session.user.id };
   if (unreadOnly) where.read = false;
 
-  const [items, total, unreadCount] = await Promise.all([
-    prisma.notification.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
-    prisma.notification.count({ where }),
-    prisma.notification.count({
-      where: { userId: session.user.id, read: false },
-    }),
-  ]);
+  const cacheKey = `api:notifications:${session.user.id}:${page}:${unreadOnly}`;
+
+  const [items, total, unreadCount] = await cachedQuery(cacheKey, () =>
+    Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      prisma.notification.count({ where }),
+      prisma.notification.count({
+        where: { userId: session.user.id, read: false },
+      }),
+    ]), 15);
 
   // 批量获取 Project 类型通知对应的 slug
   const projectIds = items
@@ -96,6 +99,7 @@ export async function PATCH(request: NextRequest) {
     });
   }
 
+  await invalidateCache(`api:notifications:${session.user.id}`);
   await invalidateCache(`notifications:${session.user.id}`);
   return apiResponse({ success: true });
 }

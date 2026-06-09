@@ -6,6 +6,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { createInviteCode, toggleInviteCode } from "./actions";
 import DeleteInviteCodeButton from "./DeleteInviteCodeButton";
 
@@ -28,14 +29,15 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
   const pageSize = 15;
   const skip = (page - 1) * pageSize;
 
-  const [codes, total] = await Promise.all([
-    prisma.inviteCode.findMany({
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: pageSize,
-    }),
-    prisma.inviteCode.count(),
-  ]);
+  const [codes, total] = await cachedQuery(`admin:invites:${page}`, () =>
+    Promise.all([
+      prisma.inviteCode.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+      }),
+      prisma.inviteCode.count(),
+    ]), 15);
 
   const totalPages = Math.ceil(total / pageSize);
 

@@ -6,6 +6,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { updateProjectStatus, toggleFeatured } from "./actions";
 import DeleteProjectButton from "./DeleteProjectButton";
@@ -38,17 +39,20 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
   const where: any = {};
   if (status) where.status = status as ProjectStatus;
 
-  const [projects, total, statusCounts, allCount] = await Promise.all([
-    prisma.project.findMany({
-      where,
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-      skip,
-      take: pageSize,
-    }),
-    prisma.project.count({ where }),
-    prisma.project.groupBy({ by: ["status"], _count: { status: true } }),
-    prisma.project.count(),
-  ]);
+  const cacheKey = `admin:projects:${status}:${page}`;
+
+  const [projects, total, statusCounts, allCount] = await cachedQuery(cacheKey, () =>
+    Promise.all([
+      prisma.project.findMany({
+        where,
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        skip,
+        take: pageSize,
+      }),
+      prisma.project.count({ where }),
+      prisma.project.groupBy({ by: ["status"], _count: { status: true } }),
+      prisma.project.count(),
+    ]), 15);
 
   const totalPages = Math.ceil(total / pageSize);
 

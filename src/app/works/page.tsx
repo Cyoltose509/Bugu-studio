@@ -11,7 +11,7 @@ import LogoLoading from "@/components/ui/LogoLoading";
 import WorksToolbar from "./WorksToolbar";
 
 export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
-export const revalidate = 60;
+export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 interface PageProps { searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string; sort?: string }>; }
 

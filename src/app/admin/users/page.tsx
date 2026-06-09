@@ -6,6 +6,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import RoleSelect from "./RoleSelect";
 import ToggleActiveButton from "./ToggleActiveButton";
 import DeleteButton from "./DeleteButton";
@@ -35,28 +36,31 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   const where: any = {};
   if (role) where.role = role;
 
-  // 1. 先拿当前页用户列表
-  const users = await prisma.user.findMany({
-    where,
-    orderBy: [{ role: "desc" }, { createdAt: "desc" }],
-    select: {
-      id: true, name: true, email: true, role: true,
-      isActive: true, emailVerified: true,
-      lastLoginAt: true, createdAt: true,
-    },
-    skip,
-    take: pageSize,
-  });
+  const cacheKey = `admin:users:${role}:${page}`;
 
-  // 2. 并行拿总数和作品数统计（用 groupBy 避免 N+1）
-  const [total, projectCounts] = await Promise.all([
-    prisma.user.count({ where }),
-    prisma.project.groupBy({
-      by: ["submitterId"],
-      where: { submitterId: { in: users.map((u: any) => u.id) } },
-      _count: { submitterId: true },
-    }),
-  ]);
+  // 1. 缓存用户列表 + 总数
+  const [users, total] = await cachedQuery(cacheKey, () =>
+    Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: [{ role: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true, name: true, email: true, role: true,
+          isActive: true, emailVerified: true,
+          lastLoginAt: true, createdAt: true,
+        },
+        skip,
+        take: pageSize,
+      }),
+      prisma.user.count({ where }),
+    ]), 15);
+
+  // 2. 批量获取作品数统计（lightweight groupBy，不缓存但很快）
+  const projectCounts = await prisma.project.groupBy({
+    by: ["submitterId"],
+    where: { submitterId: { in: users.map((u: any) => u.id) } },
+    _count: { submitterId: true },
+  });
 
   // 3. 组装用户+作品数
   const countMap = Object.fromEntries(

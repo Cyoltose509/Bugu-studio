@@ -3,9 +3,15 @@
  */
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { auth } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
-import AdminSidebar from "./AdminSidebar";
+
+const AdminSidebar = dynamic(() => import("./AdminSidebar"), {
+  loading: () => (
+    <div className="w-14 lg:w-56 shrink-0 animate-pulse" style={{ background: "#1A3A54" }} />
+  ),
+});
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
