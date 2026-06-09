@@ -2,6 +2,7 @@
 
 import {useActionState, useState, useRef, useEffect} from "react";
 import {useSession} from "next-auth/react";
+import {useRouter} from "next/navigation";
 import {saveProfile, redeemInviteCode} from "./actions";
 import Cropper from "react-easy-crop";
 import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
@@ -33,19 +34,24 @@ export default function EditForm({
                                      member,
                                      isAdmin,
                                      avatarCooldown,
-                                     nameCooldown,
                                  }: {
     user: UserSnippet;
     member: MemberSnippet | null;
     isAdmin: boolean;
     avatarCooldown: CooldownInfo;
-    nameCooldown: CooldownInfo;
 }) {
     const {update: updateSession} = useSession();
+    const router = useRouter();
 
     const [state, formAction, pending] = useActionState(
         async (_prev: any, formData: FormData) => {
-            return saveProfile(formData);
+            const result = await saveProfile(formData);
+            if (result?.success) {
+                // 刷新 JWT token 中的 name，确保 Navbar 等客户端组件立即显示新名称
+                await updateSession();
+                router.push("/profile");
+            }
+            return result;
         },
         null
     );
@@ -286,14 +292,7 @@ export default function EditForm({
                 {/* 姓名 */}
                 <div>
                     <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="name">
-                        显示名称{" "}
-                        {nameCooldown.canEdit ? (
-                            <span className="text-xs" style={{color: "#999"}}>(7天内只能修改一次)</span>
-                        ) : (
-                            <span className="text-xs font-medium" style={{color: "#E38043"}}>
-                冷却中 — {nameCooldown.remainingDays} 天后可修改
-              </span>
-                        )}
+                        显示名称
                     </label>
                     <input
                         id="name"
@@ -301,9 +300,8 @@ export default function EditForm({
                         value={nameValue}
                         onChange={(e) => setNameValue(e.target.value)}
                         required
-                        disabled={!nameCooldown.canEdit}
-                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-                        style={{borderColor: nameCooldown.canEdit ? "#D0DEE8" : "#E38043", color: nameCooldown.canEdit ? "#333" : "#999"}}
+                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                        style={{borderColor: "#D0DEE8", color: "#333"}}
                     />
                 </div>
 

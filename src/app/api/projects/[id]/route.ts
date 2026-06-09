@@ -169,10 +169,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       invalidateCache("works:count:"),
       invalidateCache("admin:projects:"),
       invalidateCache("admin:projectCount"),
+      invalidateCache(`project:detail:${project.slug}`),
       ...affectedMembers.map(m => invalidateCache(`member:detail:${m.memberId}`)),
     ]);
     revalidatePath("/members");
     revalidatePath("/works");
+    revalidatePath(`/works/${project.slug}`);
     revalidatePath("/admin/projects");
 
     return apiResponse(updated[0]);
@@ -268,9 +270,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     invalidateCache("works:count:"),
     invalidateCache("admin:projects:"),
     invalidateCache("admin:projectCount"),
+    // ⭐ 清除作品详情页缓存（/works/[slug] 使用的是 project:detail:${slug}）
+    invalidateCache(`project:detail:${project.slug}`),
   ]);
   revalidatePath("/members");
   revalidatePath("/works");
+  revalidatePath(`/works/${project.slug}`);
   revalidatePath("/admin/projects");
   return apiResponse(updated);
 }
@@ -308,9 +313,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     invalidateCache("works:count:"),
     invalidateCache("admin:projects:"),
     invalidateCache("admin:projectCount"),
+    invalidateCache(`project:detail:${project.slug}`),
   ]);
   revalidatePath("/members");
   revalidatePath("/works");
+  revalidatePath(`/works/${project.slug}`);
   revalidatePath("/admin/projects");
 
   return apiResponse({ deleted: true });

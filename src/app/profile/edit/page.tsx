@@ -24,7 +24,6 @@ export default async function EditProfilePage() {
         bio: true,
         image: true,
         avatarChangedAt: true,
-        nameChangedAt: true,
       },
     }),
     prisma.clubMember.findUnique({
@@ -60,7 +59,6 @@ export default async function EditProfilePage() {
   }
 
   const avatarCooldown = getCooldown(dbUser.avatarChangedAt);
-  const nameCooldown = getCooldown(dbUser.nameChangedAt);
 
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 animate-fade-in">
@@ -70,7 +68,6 @@ export default async function EditProfilePage() {
         member={member}
         isAdmin={isAdmin}
         avatarCooldown={avatarCooldown}
-        nameCooldown={nameCooldown}
       />
     </div>
   );

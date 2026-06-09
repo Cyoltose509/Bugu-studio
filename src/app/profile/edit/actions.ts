@@ -25,8 +25,6 @@ const schema = z.object({
   qq: z.string().max(30).optional().or(z.literal("")),
 });
 
-const NAME_CHANGE_DAYS = 7;
-
 export async function saveProfile(formData: FormData) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
@@ -67,25 +65,11 @@ export async function saveProfile(formData: FormData) {
     } catch { /* ignore malformed JSON */ }
   }
 
-  // ═══ 名称修改速率限制（7 天一次）═══
+  // ═══ 名称修改速率限制已移除 — 用户可随时修改 ═══
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { name: true, nameChangedAt: true },
+    select: { name: true },
   });
-
-  if (name !== dbUser?.name && dbUser?.nameChangedAt) {
-    const cooldownEnd = new Date(
-      dbUser.nameChangedAt.getTime() + NAME_CHANGE_DAYS * 24 * 3600 * 1000
-    );
-    if (cooldownEnd > new Date()) {
-      const remainingDays = Math.ceil(
-        (cooldownEnd.getTime() - Date.now()) / (1000 * 86400)
-      );
-      return {
-        error: `显示名称每 ${NAME_CHANGE_DAYS} 天只能修改一次，还需等待 ${remainingDays} 天`,
-      };
-    }
-  }
 
   // 更新 User（含 bio）
   const userUpdateData: any = { name };
@@ -137,6 +121,14 @@ export async function saveProfile(formData: FormData) {
   await invalidateCache(`profile:user:${session.user.id}`);
   await invalidateCache(`profile:member:${session.user.id}`);
   await invalidateCache("members:all");
+  // ⭐ 清除作品相关缓存（作品详情/列表中使用了 displayName）
+  await invalidateCache("project:detail:");
+  await invalidateCache("works:");
+  await invalidateCache("api:projects:");
+  // ⭐ 清除 history 缓存（使用了 displayName）
+  await invalidateCache("history:");
+  // ⭐ 清除成员 API 缓存
+  await invalidateCache("api:members:");
   if (member) {
     await invalidateCache(`member:meta:${member.id}`);
     await invalidateCache(`member:detail:${member.id}`);
@@ -144,8 +136,10 @@ export async function saveProfile(formData: FormData) {
 
   revalidatePath("/profile");
   revalidatePath("/members");
+  revalidatePath("/works");
+  revalidatePath("/history");
   revalidatePath("/");
-  redirect("/profile");
+  return { success: true };
 }
 
 /**
