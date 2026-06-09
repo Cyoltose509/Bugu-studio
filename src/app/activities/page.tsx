@@ -77,9 +77,9 @@ function ActivityCard({ a, badge, countdown }: {
         </div>
 
         {/* 信息区 */}
-        <div className="p-4 space-y-1.5">
+        <div className="p-3 space-y-1">
           {/* 标题 */}
-          <h3 className="font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>
+          <h3 className="text-sm font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>
             {a.title}
           </h3>
 
@@ -101,6 +101,91 @@ function ActivityCard({ a, badge, countdown }: {
   );
 }
 
+function HeroCard({ a, status }: { a: any; status: "ongoing" | "upcoming" | "past" }) {
+  const coverSrc = a.coverImage || DEFAULT_COVER;
+  const statusBadge = status === "ongoing"
+    ? { label: "进行中", cls: "bg-green-500/80" }
+    : status === "upcoming"
+    ? { label: "即将开始", cls: "bg-orange-400/80" }
+    : { label: "已结束", cls: "bg-gray-400/80" };
+
+  return (
+      <Link href={`/activities/${a.id}`} className="group block">
+        <div
+            className="overflow-hidden rounded-2xl border bg-white"
+            style={{ borderColor: "#D0DEE8" }}
+        >
+          <div className="relative aspect-[16/9] overflow-hidden">
+            <img
+                src={coverSrc}
+                alt={a.title}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+            {/* 状态角标 — 右上 */}
+            <div className="absolute top-4 right-4">
+              <span className={`text-xs px-3 py-1 rounded-full text-white backdrop-blur-sm ${statusBadge.cls}`}>
+                {statusBadge.label}
+              </span>
+            </div>
+
+            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+              <div className="mb-2">
+              <span className="text-xs px-2 py-1 rounded-full bg-white/20 backdrop-blur">
+                {TYPE_LABELS[a.type] || a.type}
+              </span>
+              </div>
+
+              <h2 className="text-2xl font-bold mb-2">
+                {a.title}
+              </h2>
+
+              <p className="text-sm opacity-90">
+                {a.startTime.toLocaleDateString("zh-CN")}
+                {a.location ? ` · ${a.location}` : ""}
+              </p>
+
+              {a.summary && (
+                  <p className="mt-3 text-sm opacity-90 line-clamp-2">
+                    {a.summary}
+                  </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </Link>
+  );
+}
+function UpcomingItem({ a }: { a: any }) {
+  const thumbSrc = a.coverImage || DEFAULT_COVER;
+  return (
+      <Link href={`/activities/${a.id}`}>
+        <div
+            className="rounded-xl border p-3 hover:bg-slate-50 transition-colors flex gap-3"
+            style={{ borderColor: "#D0DEE8" }}
+        >
+          {/* 缩略图 */}
+          <div className="w-14 h-10 rounded-md overflow-hidden shrink-0" style={{ background: "#E6F0F8" }}>
+            <img src={thumbSrc} alt="" className="w-full h-full object-cover" />
+          </div>
+
+          <div className="flex-1 min-w-0 flex justify-between items-start gap-2">
+            <div className="min-w-0">
+              <h3 className="font-medium text-sm line-clamp-1" style={{ color: "#333" }}>
+                {a.title}
+              </h3>
+              <p className="text-xs mt-1" style={{ color: "#999" }}>
+                {a.startTime.toLocaleDateString("zh-CN")}
+              </p>
+            </div>
+            <Countdown startTime={a.startTime} />
+          </div>
+        </div>
+      </Link>
+  );
+}
 // ── 区间标题 ──────────────────────────────────────────────
 function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
   return (
@@ -138,54 +223,72 @@ export default async function ActivitiesPage() {
       ]),
     60
   );
+  const hero =
+      ongoing[0] ??
+      upcoming[0] ??
+      past[0] ??
+      null;
 
+  // 判断 hero 的状态
+  const heroStatus: "ongoing" | "upcoming" | "past" =
+    ongoing[0]?.id === hero?.id ? "ongoing"
+    : upcoming[0]?.id === hero?.id ? "upcoming"
+    : "past";
+
+  const upcomingList =
+      hero && upcoming[0]?.id === hero.id
+          ? upcoming.slice(1)
+          : upcoming;
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 animate-fade-in space-y-12">
-      <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>活动</h1>
+      <div className="container mx-auto px-4 py-10 animate-fade-in">
 
-      {/* ── 进行中 ──────────────────────────────────────── */}
-      {ongoing.length > 0 && (
-        <section>
-          <SectionTitle emoji="📣" title="进行中" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {ongoing.map(a => (
-              <ActivityCard key={a.id} a={a} badge="进行中" />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── 即将开始 ────────────────────────────────────── */}
-      {upcoming.length > 0 && (
-        <section>
-          <SectionTitle emoji="⏰" title="即将开始" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {upcoming.map(a => (
-              <ActivityCard key={a.id} a={a} countdown={<Countdown startTime={a.startTime} />} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── 已结束 ──────────────────────────────────────── */}
-      {past.length > 0 && (
-        <section>
-          <SectionTitle emoji="📦" title="已结束" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {past.map(a => (
-              <ActivityCard key={a.id} a={a} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 空状态 */}
-      {ongoing.length === 0 && upcoming.length === 0 && past.length === 0 && (
-        <div className="text-center py-20 text-gray-400">
-          <p className="text-lg">暂无活动</p>
-          <p className="text-sm mt-1">管理员可以在后台创建活动</p>
+        {/* 页面头 */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>社团活动</h1>
+          <p className="mt-2" style={{ color: "#777" }}>布谷工作室的例会、公开课、比赛与各类活动</p>
         </div>
-      )}
-    </div>
-  );
+
+        {hero && (
+            <section>
+              <div className="grid lg:grid-cols-5 gap-10">
+
+                <div className="lg:col-span-3">
+                  <HeroCard a={hero} status={heroStatus} />
+                </div>
+
+                <div className="lg:col-span-2">
+                  <h2
+                      className="text-lg:col-span-2 font-semibold mb-3"
+                      style={{ color: "#25547A" }}
+                  >
+                    ⏰ 即将开始
+                  </h2>
+
+                  <div className="space-y-3">
+                    {upcomingList.slice(0, 5).map(a => (
+                        <UpcomingItem key={a.id} a={a} />
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </section>
+        )}
+
+        {past.length > 0 && (
+            <section>
+              <SectionTitle
+                  emoji="📦"
+                  title="活动档案"
+              />
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {past.map(a => (
+                    <ActivityCard key={a.id} a={a} />
+                ))}
+              </div>
+            </section>
+        )}
+
+      </div>  );
 }
