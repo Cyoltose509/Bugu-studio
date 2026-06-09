@@ -40,12 +40,12 @@ export default async function HistoryPage() {
                 {members.length > 0 && (
                   <div className="bg-white rounded-xl p-5 border shadow-sm" style={{ borderColor: "#D0DEE8" }}>
                     <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>{year} 级成员 ({members.length}人)</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-3">
                       {members.map(m => {
                         const avatarUrl = m.avatar || m.user?.image;
                         return (
-                        <Link key={m.id} href={`/members/${m.id}`} className="flex items-center gap-1.5 text-xs hover:text-[#3388BB] transition-colors" style={{ color: "#555" }}>
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs overflow-hidden text-white shrink-0" style={{ background: "#25547A" }}>
+                        <Link key={m.id} href={`/members/${m.id}`} className="flex items-center gap-2 text-sm hover:text-[#3388BB] transition-colors" style={{ color: "#555" }}>
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm overflow-hidden text-white shrink-0" style={{ background: "#25547A" }}>
                             {avatarUrl ? <SafeImage src={avatarUrl} alt={m.displayName} className="w-full h-full object-cover" /> : m.displayName[0]}
                           </div>
                           {m.displayName}
@@ -58,14 +58,14 @@ export default async function HistoryPage() {
                 {projects.length > 0 && (
                   <div className="md:col-span-2 bg-white rounded-xl p-5 border shadow-sm" style={{ borderColor: "#D0DEE8" }}>
                     <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>作品 ({projects.length}件)</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {projects.slice(0, 8).map(p => (
-                        <Link key={p.id} href={`/works/${p.slug}`} className="block aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ background: "#E6F0F8", borderColor: "#D0DEE8" }}>
-                          {p.coverImage ? <SafeImage src={p.coverImage} alt={p.title} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center"><img src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" /></div>}
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                      {projects.slice(0, 12).map(p => (
+                        <Link key={p.id} href={`/works/${p.slug}`} className="block w-full aspect-[4/3] rounded-md overflow-hidden border hover:border-[#3388BB] transition-colors" style={{ background: "#E6F0F8", borderColor: "#D0DEE8" }}>
+                          {p.coverImage ? <SafeImage src={p.coverImage} alt={p.title} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center"><img src="/images/logo.png" alt="" width={24} height={24} className="opacity-30" /></div>}
                         </Link>
                       ))}
                     </div>
-                    {projects.length > 8 && <Link href={`/works?year=${year}`} className="text-xs hover:underline flex items-center mt-3" style={{ color: "#3388BB" }}>查看全部 {projects.length} 件 →</Link>}
+                    {projects.length > 12 && <Link href={`/works?year=${year}`} className="text-xs hover:underline flex items-center mt-2" style={{ color: "#3388BB" }}>查看全部 {projects.length} 件 →</Link>}
                   </div>
                 )}
                 {events.length > 0 && (
