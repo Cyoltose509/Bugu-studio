@@ -27,7 +27,6 @@ export default function AdminHistoryEventsPage() {
   const [editing, setEditing] = useState<Partial<HistoryEvent> | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formBody, setFormBody] = useState("");
-  const [formYear, setFormYear] = useState(new Date().getFullYear());
   const [formDate, setFormDate] = useState("");
   const [formImages, setFormImages] = useState<EventImage[]>([]);
   const [saving, setSaving] = useState(false);
@@ -54,14 +53,12 @@ export default function AdminHistoryEventsPage() {
       setEditing(ev);
       setFormTitle(ev.title);
       setFormBody(ev.body || "");
-      setFormYear(ev.year);
       setFormDate(ev.eventDate ? ev.eventDate.slice(0, 10) : "");
       setFormImages(ev.images || []);
     } else {
       setEditing({});
       setFormTitle("");
       setFormBody("");
-      setFormYear(new Date().getFullYear());
       setFormDate("");
       setFormImages([]);
     }
@@ -88,14 +85,15 @@ export default function AdminHistoryEventsPage() {
   }
 
   async function save() {
-    if (!formTitle.trim() || !formYear) return alert("标题和年份为必填");
+    if (!formTitle.trim() || !formDate) return alert("标题和日期为必填");
     setSaving(true);
+    const year = new Date(formDate).getFullYear();
     try {
       const body = {
         title: formTitle,
         body: formBody || undefined,
-        year: formYear,
-        eventDate: formDate || undefined,
+        year,
+        eventDate: formDate,
         images: formImages.map((img) => ({ url: img.url, altText: img.altText })),
       };
       const method = editing?.id ? "PATCH" : "POST";
@@ -152,15 +150,9 @@ export default function AdminHistoryEventsPage() {
                 <label style={labelStyle}>正文</label>
                 <textarea value={formBody} onChange={(e) => setFormBody(e.target.value)} rows={4} placeholder="详细描述..." className={inputClass} style={inputStyle} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label style={labelStyle}>年份 *</label>
-                  <input type="number" value={formYear} onChange={(e) => setFormYear(parseInt(e.target.value))} className={inputClass} style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>日期</label>
-                  <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className={inputClass} style={inputStyle} />
-                </div>
+              <div>
+                <label style={labelStyle}>日期 *</label>
+                <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className={inputClass} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>图片 ({formImages.length}/5)</label>

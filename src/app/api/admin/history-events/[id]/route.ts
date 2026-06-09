@@ -21,7 +21,9 @@ export async function PATCH(
   const body = await request.json().catch(() => null);
   if (!body) return apiError("无效的请求体", 400);
 
-  const { title, body: content, year, eventDate, sortOrder, images } = body as Record<string, any>;
+  const { title, body: content, year: bodyYear, eventDate, sortOrder, images } = body as Record<string, any>;
+
+  const year = bodyYear || (eventDate ? new Date(eventDate).getFullYear() : undefined);
 
   // 如果传了 images，先删旧图再创建新图
   if (images !== undefined) {

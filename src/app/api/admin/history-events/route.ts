@@ -26,17 +26,19 @@ export async function POST(request: NextRequest) {
   if (!session?.user || session.user.role !== "ADMIN") return apiError("权限不足", 403);
 
   const body = await request.json().catch(() => null);
-  if (!body || !body.title || !body.year) {
-    return apiError("标题和年份为必填", 400);
+  if (!body || !body.title || !body.eventDate) {
+    return apiError("标题和日期为必填", 400);
   }
 
-  const { title, body: content, year, eventDate, images } = body as {
+  const { title, body: content, eventDate, images } = body as {
     title: string;
     body?: string;
-    year: number;
-    eventDate?: string;
+    year?: number;
+    eventDate: string;
     images?: { url: string; altText?: string }[];
   };
+
+  const year = body.year || new Date(eventDate).getFullYear();
 
   const maxSort = await prisma.yearEvent.findFirst({
     where: { year },
