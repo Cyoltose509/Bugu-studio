@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
+import { invalidateUnreadCache } from "@/lib/cache/unread-count-cache";
 
 /**
  * GET /api/notifications/read — 未读通知数量（轻量，供铃铛图标使用）
@@ -39,6 +40,9 @@ export async function PATCH(request: Request) {
       data: { read: true },
     });
   }
+
+  // 清除缓存，下次未读数查询立即反映最新状态
+  invalidateUnreadCache(session.user.id);
 
   return apiResponse({ success: true });
 }

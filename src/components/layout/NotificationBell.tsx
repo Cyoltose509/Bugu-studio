@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 
 interface NotificationItem {
@@ -15,14 +15,21 @@ interface NotificationItem {
   createdAt: string;
 }
 
+/** 客户端本地缓存：避免短时间内重复请求 */
+let _lastFetched = 0;
+const CACHE_TTL = 10_000; // 10 秒去重
+
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ── 获取未读数 ──
-  const fetchUnreadCount = useCallback(async () => {
+  // ── 获取未读数（带 10s 本地去重） ──
+  const fetchUnreadCount = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && now - _lastFetched < CACHE_TTL) return;
+    _lastFetched = now;
     try {
       const res = await fetch("/api/notifications/unread-count");
       if (res.ok) {
@@ -32,7 +39,7 @@ export default function NotificationBell() {
     } catch { /* ignore */ }
   }, []);
 
-  // ── 获取通知列表 ──
+  // ── 获取通知列表（打开下拉时强制刷新） ──
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
@@ -47,9 +54,9 @@ export default function NotificationBell() {
 
   useEffect(() => { fetchUnreadCount(); }, [fetchUnreadCount]);
 
-  // 每30秒自动轮询未读数
+  // 每 60 秒自动轮询未读数
   useEffect(() => {
-    const timer = setInterval(fetchUnreadCount, 30000);
+    const timer = setInterval(() => fetchUnreadCount(true), 60_000);
     return () => clearInterval(timer);
   }, [fetchUnreadCount]);
 
