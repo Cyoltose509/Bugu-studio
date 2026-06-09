@@ -138,7 +138,7 @@ export default function AdminHistoryEventsPage() {
 
       {/* 编辑弹窗 */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50" onClick={() => setEditing(null)}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50">
           <div className="bg-white rounded-xl p-6 w-[95vw] max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4" style={{ color: "#25547A" }}>{editing.id ? "编辑事件" : "新建事件"}</h2>
             <div className="space-y-4">

@@ -8,11 +8,41 @@ export const metadata: Metadata = { title: "社团历史", description: "记录�
 export const revalidate = 3600; // 历史数据变化少，1小时缓存
 
 export default async function HistoryPage() {
-  const yearData = await prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, _count: { id: true }, orderBy: { developYear: "desc" } });
-  const projectYears = yearData.map(y => y.developYear);
+  const currentYear = new Date().getFullYear();
+
+  // 从三个数据源收集所有有数据的年份
+  const [projectYearRows, memberGradeRows, eventYearRows] = await Promise.all([
+    prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED }, select: { developYear: true }, distinct: ["developYear"] }),
+    prisma.clubMember.findMany({ select: { grade: true }, distinct: ["grade"] }),
+    prisma.yearEvent.findMany({ select: { year: true }, distinct: ["year"] }),
+  ]);
+
+  // 从 grade 字段提取年份（如 "2021级" → 2021）
+  const memberYearSet = new Set(
+    memberGradeRows
+      .filter((m) => m.grade != null)
+      .map((m) => parseInt(m.grade!, 10))
+      .filter((n) => !isNaN(n) && n >= 2000 && n <= currentYear)
+  );
+
+  // 合并所有年份
+  const allYearsSet = new Set<number>();
+  for (const p of projectYearRows) allYearsSet.add(p.developYear);
+  for (const y of memberYearSet) allYearsSet.add(y);
+  for (const e of eventYearRows) allYearsSet.add(e.year);
+
+  // 兜底：确保至少检测到 2017 年
+  const maxYear = allYearsSet.size > 0 ? Math.max(...allYearsSet) : currentYear;
+  const minYear = allYearsSet.size > 0 ? Math.min(Math.min(...allYearsSet), 2017) : 2017;
+
+  // 生成所有需要检查的年份（从最新到最远）
+  const allYears: number[] = [];
+  for (let y = maxYear; y >= minYear; y--) {
+    allYears.push(y);
+  }
 
   const yearDetails = [];
-  for (const year of projectYears) {
+  for (const year of allYears) {
     const [projects, members, events] = await Promise.all([
       prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
       prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }),
