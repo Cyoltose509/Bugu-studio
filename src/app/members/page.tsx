@@ -1,7 +1,7 @@
 ﻿import { Metadata } from "next";
-import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
+import MembersList from "./MembersList";
 
 export const metadata: Metadata = { title: "成员", description: "认识历届布谷工作室成员" };
 export const revalidate = 300;
@@ -13,7 +13,7 @@ export default async function MembersPage() {
       select: {
         id: true, displayName: true, avatar: true, grade: true,
         joinYear: true, isActive: true, position: true,
-        userId: true,
+        userId: true, skills: true,
         user: { select: { image: true } },
         _count: { select: { projectMembers: true } },
       },
@@ -57,33 +57,11 @@ export default async function MembersPage() {
         <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>成员列表</h1>
         <p className="mt-2" style={{ color: "#777" }}>共 {members.length} 位历届成员</p>
       </div>
-      {sortedKeys.map(key => (
-        <section key={key} className="mb-12">
-          <h2 className="text-xl font-semibold mb-5 flex items-center gap-3" style={{ color: "#25547A" }}>
-            <span>{key}</span>
-            <span className="text-sm font-normal" style={{ color: "#999" }}>{grouped[key].length} 人</span>
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {grouped[key].map(m => (
-              <Link key={m.id} href={`/members/${m.id}`} className="group text-center p-4 rounded-xl bg-white border shadow-sm hover:shadow-md transition-all" style={{ borderColor: "#D0DEE8" }}>
-                <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3 overflow-hidden" style={{ background: "#E38043", color: "#fff" }}>
-                  {(m.user?.image || m.avatar) ? <img src={(m.user?.image || m.avatar)!} alt={m.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : m.displayName[0]}
-                </div>
-                <div className="text-sm font-medium group-hover:text-[#3388BB] transition-colors line-clamp-1 flex items-center gap-1" style={{ color: "#333" }}>
-                  {m.displayName}
-                  {m.position && m.position !== "MEMBER" && (
-                    <span className="text-[10px] px-1 py-0.5 rounded" style={{ background: "#25547A", color: "#fff" }}>
-                      {m.position === "PRESIDENT" ? "社长" : m.position === "VICE_PRESIDENT" ? "副社长" : m.position}
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs mt-0.5" style={{ color: "#999" }}>{(m as any).projectCount ?? m._count.projectMembers} 个项目</div>
-                {!m.isActive && <div className="text-xs mt-0.5" style={{ color: "#aaa" }}>已毕业</div>}
-              </Link>
-            ))}
-          </div>
-        </section>
-      ))}
+      <MembersList
+        members={members as any}
+        grouped={grouped}
+        sortedKeys={sortedKeys}
+      />
     </div>
   );
 }

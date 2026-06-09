@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth/auth";
 import { ProjectStatus } from "@prisma/client";
 import StaggeredCard from "@/components/works/StaggeredCard";
 import LogoLoading from "@/components/ui/LogoLoading";
+import WorksToolbar from "./WorksToolbar";
 
 export const metadata: Metadata = { title: "作品库", description: "浏览历届社员创作的所有游戏作品" };
 export const revalidate = 60;
@@ -33,6 +34,23 @@ export default async function WorksPage({ searchParams }: PageProps) {
       prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } })
     , 120),
   ]);
+
+  // 按 group 分组
+  const tagGroups = tags.reduce<Record<string, typeof tags>>((acc, tag) => {
+    const key = (tag as any).group || "其他";
+    (acc[key] ??= []).push(tag);
+    return acc;
+  }, {});
+  // 指定分组顺序
+  const groupOrder = ["引擎", "大类", "要素", "其他"];
+  const sortedGroups = Object.keys(tagGroups).sort((a, b) => {
+    const ia = groupOrder.indexOf(a);
+    const ib = groupOrder.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
 
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
@@ -62,23 +80,38 @@ export default async function WorksPage({ searchParams }: PageProps) {
             )}
             <div>
               <h3 className="text-sm font-semibold mb-3" style={{ color: "#555" }}>标签</h3>
-              <div className="flex flex-wrap gap-2">
-                {tags.map(tag => (
-                  <Link key={tag.slug} href={buildUrl(params, { tag: params.tag === tag.slug ? void 0 : tag.slug, page: 1 })} className={`text-xs px-2 py-1 rounded transition-all ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1 ring-offset-[#F0F5F9]" : "opacity-70 hover:opacity-100"}`} style={{ backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232" }}>
-                    {tag.name} ({tag._count.projects})
-                  </Link>
-                ))}
-              </div>
+              {sortedGroups.length === 1 && sortedGroups[0] === "其他" ? (
+                /* 所有标签未分组 → 平铺展示 */
+                <div className="flex flex-wrap gap-2">
+                  {tags.map(tag => (
+                    <Link key={tag.slug} href={buildUrl(params, { tag: params.tag === tag.slug ? void 0 : tag.slug, page: 1 })} className={`text-xs px-2 py-1 rounded transition-all ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1" : "opacity-70 hover:opacity-100"}`} style={{ backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232" }}>
+                      {tag.name} ({tag._count.projects})
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sortedGroups.map((group) => (
+                    <div key={group}>
+                      <h4 className="text-xs font-medium mb-1.5" style={{ color: "#999" }}>{group}</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(tagGroups[group] || []).map(tag => (
+                          <Link key={tag.slug} href={buildUrl(params, { tag: params.tag === tag.slug ? void 0 : tag.slug, page: 1 })} className={`text-xs px-2 py-1 rounded transition-all ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1" : "opacity-70 hover:opacity-100"}`} style={{ backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232" }}>
+                            {tag.name} ({tag._count.projects})
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </aside>
 
-        {/* 主区域 — 搜索框立即显示，作品网格流式加载 */}
+        {/* 主区域 — 工具栏 + 作品网格 */}
         <div className="flex-1">
-          <form className="mb-4 flex items-center gap-3">
-            <input type="search" name="q" defaultValue={params.q} placeholder="搜索作品名称或简介..." className="flex-1 bg-white border rounded-lg px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent" style={{ borderColor: "#D0DEE8", color: "#333" }} />
-            <SortToggle currentSort={params.sort || "date"} currentParams={params} />
-          </form>
+          <WorksToolbar currentQ={params.q} />
 
           <Suspense fallback={<LogoLoading text="正在加载作品..." />}>
             <WorksGrid params={params} page={page} total={total} />
@@ -185,36 +218,6 @@ function buildWhere(params: Record<string, any>) {
   if (params.q) where.OR = [{ title: { contains: params.q, mode: "insensitive" } }, { description: { contains: params.q, mode: "insensitive" } }];
   if (params.tag) where.tags = { some: { tag: { slug: params.tag } } };
   return where;
-}
-
-function SortToggle({ currentSort, currentParams }: { currentSort: string; currentParams: Record<string, any> }) {
-  const sorts = [
-    { value: "date", label: "时间" },
-    { value: "name", label: "名称" },
-    { value: "likes", label: "喜欢" },
-  ];
-  return (
-    <div className="flex items-center gap-1">
-      <span className="text-xs mr-1" style={{ color: "#999" }}>排序:</span>
-      {sorts.map((s) => {
-        const isActive = currentSort === s.value;
-        return (
-          <Link
-            key={s.value}
-            href={buildUrl(currentParams, { sort: s.value !== "date" ? s.value : void 0, page: 1 })}
-            className="px-2 py-1 rounded text-xs transition-colors"
-            style={{
-              background: isActive ? "#E38043" : "transparent",
-              color: isActive ? "#fff" : "#999",
-              border: isActive ? "none" : "1px solid #D0DEE8",
-            }}
-          >
-            {s.label}
-          </Link>
-        );
-      })}
-    </div>
-  );
 }
 
 function FilterLink({ href, active, label }: { href: string; active: boolean; label: string }) {

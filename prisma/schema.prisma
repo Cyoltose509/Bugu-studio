@@ -353,6 +353,7 @@ model Tag {
   name        String  @unique
   slug        String  @unique
   color       String  @default("#6366f1") // 十六进制颜色
+  group       String? // 分组：引擎、大类、要素 等，null = 未分组
   description String?
   sortOrder   Int     @default(0)
   createdAt   DateTime @default(now())
@@ -360,6 +361,7 @@ model Tag {
   projects ProjectTag[]
 
   @@index([slug])
+  @@index([group])
 }
 
 model ProjectTag {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { compressImage } from "@/lib/utils/imageCrop";
 
 // ── 作品类型 ──
 const PROJECT_TYPES = [
@@ -10,10 +11,11 @@ const PROJECT_TYPES = [
   { value: "OTHER", label: "其他" },
 ];
 
+const ROLE_PRESETS = ["程序", "策划", "美术", "音效", "音乐", "测试", "宣发", "全栈"];
 const LINK_LABEL_PRESETS = ["Steam", "itch.io", "官网", "百度网盘", "Google Drive", "GitHub", "B站"];
 
 // ── 通用类型 ──
-interface Tag { id: string; name: string; slug: string; }
+interface Tag { id: string; name: string; slug: string; group?: string | null; }
 
 interface LinkEntry { label: string; url: string; }
 
@@ -99,7 +101,8 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
   const [memberQuery, setMemberQuery] = useState("");
   const [memberResults, setMemberResults] = useState<any[]>([]);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
-  const [memberRole, setMemberRole] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [customRoleInput, setCustomRoleInput] = useState("");
   const memberDropdownRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -111,6 +114,7 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [showCustomLabel, setShowCustomLabel] = useState(false);
+  const [showCustomRole, setShowCustomRole] = useState(false);
 
   const isEdit = mode === "edit";
 
@@ -147,13 +151,16 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
 
   function addMemberFromSearch(member: any) {
     if (selectedMembers.some((m) => m.memberId === member.id)) return;
-    const roleText = memberRole.trim();
+    const roles = [...selectedRoles];
+    if (customRoleInput.trim()) roles.push(customRoleInput.trim());
     setSelectedMembers((prev) => [
       ...prev,
-      { memberId: member.id, displayName: member.displayName, roles: roleText ? [roleText] : ["制作"] },
+      { memberId: member.id, displayName: member.displayName, roles: roles.length > 0 ? roles : ["制作"] },
     ]);
     setMemberQuery("");
-    setMemberRole("");
+    setSelectedRoles([]);
+    setCustomRoleInput("");
+    setShowCustomRole(false);
     setShowMemberDropdown(false);
     delete (memberDropdownRef.current as any).__selectedMember;
   }
@@ -161,15 +168,19 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
   function addExternalMember() {
     const name = (memberQuery || externalName).trim();
     if (!name) return;
-    const roleText = (memberRole || externalRole).trim();
+    const roles = [...selectedRoles];
+    if (customRoleInput.trim()) roles.push(customRoleInput.trim());
+    if (externalRole.trim()) roles.push(externalRole.trim());
     setSelectedMembers((prev) => [
       ...prev,
-      { externalName: name, displayName: name, roles: roleText ? [roleText] : ["制作"] },
+      { externalName: name, displayName: name, roles: roles.length > 0 ? roles : ["制作"] },
     ]);
     setMemberQuery("");
     setExternalName("");
-    setMemberRole("");
+    setSelectedRoles([]);
+    setCustomRoleInput("");
     setExternalRole("");
+    setShowCustomRole(false);
     setShowMemberDropdown(false);
     delete (memberDropdownRef.current as any).__selectedMember;
   }
@@ -185,8 +196,11 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
     setScreenshotError("");
     setScreenshotUploading(true);
     try {
+      const compressed = file.size > 300 * 1024
+        ? await compressImage(file, 1920, 1080, 0.8)
+        : file;
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", compressed, compressed.name || file.name);
       fd.append("type", "screenshot");
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const json = await res.json();
@@ -382,12 +396,15 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
             setCoverError("");
             setCoverUploading(true);
             try {
-              // 本地预览
+              // 本地预览（用原始文件）
               const previewUrl = URL.createObjectURL(file);
               setCoverPreview(previewUrl);
-              // 上传到服务端
+              // 压缩后上传
+              const compressed = file.size > 300 * 1024
+                ? await compressImage(file, 1920, 1080, 0.8)
+                : file;
               const fd = new FormData();
-              fd.append("file", file);
+              fd.append("file", compressed, compressed.name || file.name);
               const res = await fetch("/api/upload/cover", { method: "POST", body: fd });
               const json = await res.json();
               if (!res.ok) throw new Error(json.error || "上传失败");
@@ -455,8 +472,8 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
       <section className="space-y-3">
         <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>👥 制作成员</h2>
 
-        {/* 统一添加行：姓名搜索 + 角色 + 添加按钮 */}
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_130px_auto] gap-2" ref={memberDropdownRef}>
+        {/* 统一添加行：姓名搜索 → 职位多选 → 添加按钮 */}
+        <div className="flex flex-col gap-2" ref={memberDropdownRef}>
           <div className="relative">
             <input type="text" value={memberQuery}
               onChange={(e) => { setMemberQuery(e.target.value); setShowMemberDropdown(true); }}
@@ -490,21 +507,40 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
               </div>
             )}
           </div>
-          <div className="relative">
-            <input type="text" value={memberRole} onChange={(e) => setMemberRole(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
-              placeholder="职位，如: 程序" className={inputClass} style={inputStyle} />
+          <div className="flex items-center gap-2">
+            <div className="flex flex-wrap gap-1.5 flex-1">
+              {ROLE_PRESETS.map((r) => {
+                const active = selectedRoles.includes(r);
+                return (
+                  <button key={r} type="button" onClick={() => {
+                    setSelectedRoles((prev) => active ? prev.filter((x) => x !== r) : [...prev, r]);
+                  }}
+                    className={`text-xs px-2 py-1 rounded-full border transition-all cursor-pointer ${active
+                      ? "border-[#88C232] text-white"
+                      : "border-[#D0DEE8] text-gray-500 bg-white hover:border-[#88C232]"}`}
+                    style={active ? { background: "#88C232" } : undefined}>
+                    {r}
+                  </button>
+                );
+              })}
+              {showCustomRole ? (
+                <input type="text" value={customRoleInput} onChange={(e) => setCustomRoleInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
+                  placeholder="自定义职位" className="text-xs px-2 py-1 rounded-full border w-28 focus:outline-none"
+                  style={{ borderColor: "#88C232", color: "#333" }} autoFocus />
+              ) : (
+                <button type="button" onClick={() => setShowCustomRole(true)}
+                  className="text-xs px-2 py-1 rounded-full border border-dashed bg-white hover:border-[#88C232] transition-colors cursor-pointer"
+                  style={{ borderColor: "#D0DEE8", color: "#999" }}>+ 自定义</button>
+              )}
+            </div>
+            <button type="button" onClick={() => {
+              const m = (memberDropdownRef.current as any).__selectedMember;
+              if (m) { addMemberFromSearch(m); } else { addExternalMember(); }
+            }} disabled={!memberQuery.trim()}
+              className="px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 transition-all whitespace-nowrap"
+              style={{ background: "#88C232", color: "#fff" }}>+ 添加</button>
           </div>
-          <button type="button" onClick={() => {
-            const m = (memberDropdownRef.current as any).__selectedMember;
-            if (m) {
-              addMemberFromSearch(m);
-            } else {
-              addExternalMember();
-            }
-          }} disabled={!memberQuery.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all whitespace-nowrap"
-            style={{ background: "#88C232", color: "#fff" }}>+ 添加</button>
         </div>
         <p className="text-xs" style={{ color: "#999" }}>输入姓名搜索社团成员并选择，或直接输入外部成员姓名后点击添加</p>
 
@@ -575,18 +611,58 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
       <section className="space-y-3">
         <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🏷️ 标签</h2>
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => {
-              const active = selectedTags.includes(tag.id);
+          (() => {
+            const grouped = tags.reduce<Record<string, Tag[]>>((acc, tag) => {
+              const key = tag.group || "其他";
+              (acc[key] ??= []).push(tag);
+              return acc;
+            }, {});
+            const groupOrder = ["引擎", "大类", "要素", "其他"];
+            const sortedKeys = Object.keys(grouped).sort((a, b) => {
+              const ia = groupOrder.indexOf(a), ib = groupOrder.indexOf(b);
+              if (ia === -1 && ib === -1) return a.localeCompare(b);
+              if (ia === -1) return 1; if (ib === -1) return -1;
+              return ia - ib;
+            });
+            // 全未分组 → 平铺
+            if (sortedKeys.length === 1 && sortedKeys[0] === "其他") {
               return (
-                <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                  className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"}`}
-                  style={{ backgroundColor: active ? "rgba(136,194,50,0.15)" : "rgba(136,194,50,0.08)", color: "#88C232" }}>
-                  {tag.name}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => {
+                    const active = selectedTags.includes(tag.id);
+                    return (
+                      <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
+                        className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"}`}
+                        style={{ backgroundColor: active ? "rgba(136,194,50,0.15)" : "rgba(136,194,50,0.08)", color: "#88C232" }}>
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
               );
-            })}
-          </div>
+            }
+            return (
+              <div className="space-y-3">
+                {sortedKeys.map((group) => (
+                  <div key={group}>
+                    <h3 className="text-xs font-medium mb-1.5" style={{ color: "#999" }}>{group}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {grouped[group].map((tag) => {
+                        const active = selectedTags.includes(tag.id);
+                        return (
+                          <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
+                            className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"}`}
+                            style={{ backgroundColor: active ? "rgba(136,194,50,0.15)" : "rgba(136,194,50,0.08)", color: "#88C232" }}>
+                            {tag.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()
         )}
         {customTags.length > 0 && (
           <div className="flex flex-wrap gap-2">
