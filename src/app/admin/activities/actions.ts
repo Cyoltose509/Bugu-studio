@@ -1,0 +1,276 @@
+"use server";
+
+import { prisma } from "@/lib/db/prisma";
+import { requireAdmin } from "@/lib/auth/adminGuard";
+import { auth } from "@/lib/auth/auth";
+import { invalidateCache } from "@/lib/db/cache";
+import { revalidatePath } from "next/cache";
+import { ActivityStatus, ProposalStatus, EnrollmentStatus } from "@prisma/client";
+
+const TYPE_LABEL: Record<string, string> = {
+  MEETING: "例会", COURSE: "公开课", COMPETITION: "比赛", GENERAL: "活动",
+};
+
+/** 简单 slug 生成 */
+function toSlug(title: string): string {
+  return title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "").slice(0, 60);
+}
+
+/** 如果标题为空，生成默认标题：YYYY年MM月DD日 + 活动类型 */
+function defaultTitle(type: string, startTime?: string): string {
+  if (!startTime) return `新${TYPE_LABEL[type] || "活动"}`;
+  // 直接从 datetime-local 字符串解析，避免 new Date() 的时区歧义
+  const [datePart] = startTime.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  return `${year}年${month}月${day}日 ${TYPE_LABEL[type] || "活动"}`;
+}
+
+// ── 缓存失效辅助 ──────────────────────────────────────────────
+async function invalidateActivityCaches(id?: string) {
+  await Promise.all([
+    invalidateCache("api:activities:"),
+    invalidateCache("activities:home"),
+    invalidateCache("admin:activities:"),
+    ...(id ? [invalidateCache(`activity:detail:${id}`)] : []),
+  ]);
+  revalidatePath("/activities");
+  revalidatePath("/admin/activities");
+  if (id) revalidatePath(`/activities/${id}`);
+}
+
+// ── 创建活动 ──────────────────────────────────────────────────
+export async function createActivity(formData: FormData) {
+  await requireAdmin();
+
+  const title       = (formData.get("title") as string || "").trim();
+  const type        = (formData.get("type") as string || "GENERAL");
+  const summary     = (formData.get("summary") as string || "").trim();
+  const description = (formData.get("description") as string || "").trim();
+  const location    = (formData.get("location") as string || "").trim() || "总图书馆未来学习中心";
+  const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
+  const coverImage   = (formData.get("coverImage") as string || "").trim();
+  const startTime   = formData.get("startTime") as string;
+  const endTime     = formData.get("endTime") as string;
+  const maxStr      = (formData.get("maxParticipants") as string || "").trim();
+  const regOpen     = formData.get("registrationOpen") === "on";
+
+  if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
+  if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
+
+  // 标题默认：年月日 + 活动类型
+  const finalTitle = title || defaultTitle(type, startTime);
+  const slug = toSlug(finalTitle);
+  const maxParticipants = maxStr ? parseInt(maxStr, 10) : undefined;
+
+  const activity = await prisma.activity.create({
+    data: {
+      title: finalTitle,
+      slug,
+      type: type as any,
+      summary: summary || undefined,
+      description: description || undefined,
+      location,
+      meetingUrl: meetingUrl || undefined,
+      coverImage: coverImage || undefined,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      maxParticipants,
+      registrationOpen: regOpen,
+      status: ActivityStatus.DRAFT,
+    },
+  });
+
+  await invalidateActivityCaches();
+  revalidatePath("/admin/activities");
+  return { success: true, id: activity.id, slug: activity.slug };
+}
+
+// ── 更新活动 ──────────────────────────────────────────────────
+export async function updateActivity(id: string, formData: FormData) {
+  await requireAdmin();
+
+  const title       = (formData.get("title") as string || "").trim();
+  const type        = (formData.get("type") as string || "GENERAL");
+  const summary     = (formData.get("summary") as string || "").trim();
+  const description = (formData.get("description") as string || "").trim();
+  const location    = (formData.get("location") as string || "").trim() || "总图书馆未来学习中心";
+  const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
+  const coverImage   = (formData.get("coverImage") as string || "").trim();
+  const startTime   = formData.get("startTime") as string;
+  const endTime     = formData.get("endTime") as string;
+  const maxStr      = (formData.get("maxParticipants") as string || "").trim();
+  const regOpen     = formData.get("registrationOpen") === "on";
+  const status      = (formData.get("status") as string || "DRAFT");
+
+  if (!title) return { error: "请填写活动标题" };
+  if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
+  if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
+
+  const activity = await prisma.activity.findUnique({ where: { id }, select: { slug: true } });
+  const slug = activity ? activity.slug : toSlug(title);
+  const maxParticipants = maxStr ? parseInt(maxStr, 10) : undefined;
+
+  await prisma.activity.update({
+    where: { id },
+    data: {
+      title,
+      slug,
+      type: type as any,
+      summary: summary || undefined,
+      description: description || undefined,
+      location,
+      meetingUrl: meetingUrl || undefined,
+      coverImage: coverImage || undefined,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      maxParticipants,
+      registrationOpen: regOpen,
+      status: status as ActivityStatus,
+    },
+  });
+
+  await invalidateActivityCaches(id);
+  return { success: true };
+}
+
+// ── 删除活动 ──────────────────────────────────────────────────
+export async function deleteActivity(id: string) {
+  await requireAdmin();
+  await prisma.activity.delete({ where: { id } });
+  await invalidateActivityCaches(id);
+  return { success: true };
+}
+
+// ── 更新活动状态 ──────────────────────────────────────────────
+export async function updateActivityStatus(id: string, status: ActivityStatus) {
+  await requireAdmin();
+  await prisma.activity.update({ where: { id }, data: { status } });
+  await invalidateActivityCaches(id);
+}
+
+// ── 例会：提交分享/展示申请 ───────────────────────────────────
+export async function submitProposal(formData: FormData) {
+  const session = await auth();
+  if (!session?.user) throw new Error("请先登录");
+
+  const userId = session.user.id;
+
+  const activityId   = formData.get("activityId") as string;
+  const title        = (formData.get("title") as string || "").trim();
+  const description  = (formData.get("description") as string || "").trim();
+  const proposalType = (formData.get("proposalType") as string || "SHARE");
+
+  if (!activityId) return { error: "无效的活动" };
+  if (!title)       return { error: "请填写标题" };
+
+  await prisma.meetingProposal.create({
+    data: {
+      activityId,
+      userId,
+      title,
+      description: description || undefined,
+      proposalType: proposalType as any,
+    },
+  });
+
+  revalidatePath(`/activities/${activityId}`);
+  return { success: true };
+}
+
+// ── 审核：分享/展示申请 ──────────────────────────────────────
+export async function reviewProposal(id: string, status: ProposalStatus, adminNote?: string) {
+  await requireAdmin();
+  const proposal = await prisma.meetingProposal.findUnique({ where: { id }, select: { activityId: true } });
+  await prisma.meetingProposal.update({
+    where: { id },
+    data: { status, adminNote: adminNote || undefined },
+  });
+  revalidatePath("/admin/activities/proposals");
+  revalidatePath(`/activities/${proposal?.activityId}`);
+}
+
+// ── 公开课：报名 ──────────────────────────────────────────────
+export async function enrollCourse(formData: FormData) {
+  const session = await auth();
+  if (!session?.user) throw new Error("请先登录");
+
+  const userId = session.user.id;
+
+  const activityId = formData.get("activityId") as string;
+  const topic      = (formData.get("topic") as string || "").trim();
+
+  if (!activityId) return { error: "无效的活动" };
+
+  await prisma.courseEnrollment.create({
+    data: {
+      activityId,
+      userId,
+      topic: topic || undefined,
+      status: EnrollmentStatus.ENROLLED,
+    },
+  });
+
+  revalidatePath(`/activities/${activityId}`);
+  return { success: true };
+}
+
+// ── 公开课：分配导师 ──────────────────────────────────────────
+export async function assignMentor(enrollmentId: string, mentorId: string) {
+  await requireAdmin();
+  await prisma.courseEnrollment.update({
+    where: { id: enrollmentId },
+    data: { mentorId, status: EnrollmentStatus.IN_PROGRESS },
+  });
+  revalidatePath("/admin/activities");
+}
+
+// ── 公开课：评分 ──────────────────────────────────────────────
+export async function scoreEnrollment(enrollmentId: string, score: number) {
+  await requireAdmin();
+  await prisma.courseEnrollment.update({
+    where: { id: enrollmentId },
+    data: { score, status: EnrollmentStatus.COMPLETED },
+  });
+  revalidatePath("/admin/activities");
+}
+
+// ── Game Jam：提交作品 ───────────────────────────────────────
+export async function submitCompetition(formData: FormData) {
+  const session = await auth();
+  if (!session?.user) throw new Error("请先登录");
+
+  const userId = session.user.id;
+
+  const activityId    = formData.get("activityId") as string;
+  const projectId     = (formData.get("projectId") as string || "").trim() || undefined;
+  const teamName      = (formData.get("teamName") as string || "").trim() || undefined;
+  const submissionUrl = (formData.get("submissionUrl") as string || "").trim();
+  const note          = (formData.get("note") as string || "").trim();
+
+  if (!activityId)    return { error: "无效的活动" };
+  if (!submissionUrl) return { error: "请填写提交链接" };
+
+  await prisma.competitionSubmission.create({
+    data: {
+      activityId,
+      userId,
+      projectId,
+      teamName,
+      submissionUrl,
+      note: note || undefined,
+    },
+  });
+
+  revalidatePath(`/activities/${activityId}`);
+  return { success: true };
+}
+
+// ── Game Jam：评分 ────────────────────────────────────────────
+export async function scoreSubmission(submissionId: string, score: number) {
+  await requireAdmin();
+  await prisma.competitionSubmission.update({
+    where: { id: submissionId },
+    data: { score },
+  });
+  revalidatePath("/admin/activities");
+}

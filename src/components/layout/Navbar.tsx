@@ -22,6 +22,7 @@ export async function Navbar() {
         <nav className="hidden md:flex items-center gap-6 text-sm text-white/80">
           <Link href="/works" className="hover:text-white transition-colors">作品库</Link>
           <Link href="/members" className="hover:text-white transition-colors">成员</Link>
+          <Link href="/activities" className="hover:text-white transition-colors">活动</Link>
           <Link href="/history" className="hover:text-white transition-colors">历史</Link>
         </nav>
 

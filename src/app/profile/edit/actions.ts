@@ -96,7 +96,7 @@ export async function saveProfile(formData: FormData) {
       data: {
         ...(name !== dbUser?.name && { displayName: name }),
         ...(memberBio !== undefined && { bio: memberBio || null }),
-        ...(isAdmin && grade !== undefined && { grade: grade || null }),
+        ...(grade !== undefined && { grade: grade || null }),
         ...(skills !== undefined && {
           skills: skills
             ? skills.split(",").map((s: string) => s.trim()).filter(Boolean)

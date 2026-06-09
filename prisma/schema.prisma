@@ -5,7 +5,7 @@
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets  = ["native", "linux-musl-openssl-3.0.x", "darwin-arm64", "windows"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "darwin-arm64", "windows"]
 }
 
 datasource db {
@@ -19,25 +19,25 @@ datasource db {
 // ============================================================
 
 enum UserRole {
-  GUEST    // 游客（未注册，概念性）
-  USER     // 注册用户
-  MEMBER   // 社团成员（需管理员审批）
+  GUEST // 游客（未注册，概念性）
+  USER // 注册用户
+  MEMBER // 社团成员（需管理员审批）
   REVIEWER // 审核员
-  ADMIN    // 管理员
+  ADMIN // 管理员
 }
 
 enum ProjectStatus {
-  DRAFT     // 草稿（作者编辑中）
-  PENDING   // 待审核
+  DRAFT // 草稿（作者编辑中）
+  PENDING // 待审核
   PUBLISHED // 已发布（公开）
-  REJECTED  // 审核失败
-  ARCHIVED  // 已归档
+  REJECTED // 审核失败
+  ARCHIVED // 已归档
 }
 
 enum ProjectType {
-  DEMO  // Demo 演示
+  DEMO // Demo 演示
   STEAM // Steam 发布
-  ITCH  // itch.io 发布
+  ITCH // itch.io 发布
   OTHER // 其他
 }
 
@@ -64,10 +64,41 @@ enum AuditAction {
 }
 
 enum AnnouncementType {
-  INFO    // 普通通知
+  INFO // 普通通知
   SUCCESS // 成功通知
   WARNING // 警告通知
-  DANGER  // 危险通知
+  DANGER // 危险通知
+}
+
+enum ActivityType {
+  MEETING // 例会
+  COURSE // 公开课
+  COMPETITION // Game Jam 等比赛
+  GENERAL // 普通社团活动
+}
+
+enum ActivityStatus {
+  DRAFT // 草稿
+  PUBLISHED // 已发布
+  ARCHIVED // 已归档
+}
+
+enum ProposalType {
+  SHARE // 分享申请
+  SHOWCASE // 展示申请
+}
+
+enum ProposalStatus {
+  PENDING // 待审核
+  APPROVED // 已通过
+  REJECTED // 已拒绝
+}
+
+enum EnrollmentStatus {
+  ENROLLED // 已报名
+  IN_PROGRESS // 进行中
+  COMPLETED // 已完成
+  DROPPED // 已退出
 }
 
 // ============================================================
@@ -75,33 +106,37 @@ enum AnnouncementType {
 // ============================================================
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  emailVerified    DateTime?
-  name             String?
-  bio              String?  @db.Text // 个人介绍（所有用户可编辑）
-  passwordHash     String?  // scrypt hash
-  image            String?  // 头像 URL（R2）
-  avatarChangedAt  DateTime? // 上次更换头像时间（限制7天一次）
-  nameChangedAt    DateTime? // 上次修改名称时间（限制7天一次）
-  role             UserRole @default(USER)
-  isActive         Boolean  @default(true)
-  lastLoginAt      DateTime?
-  lastLoginIp      String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  emailVerified   DateTime?
+  name            String?
+  bio             String?   @db.Text // 个人介绍（所有用户可编辑）
+  passwordHash    String? // scrypt hash
+  image           String? // 头像 URL（R2）
+  avatarChangedAt DateTime? // 上次更换头像时间（限制7天一次）
+  nameChangedAt   DateTime? // 上次修改名称时间（限制7天一次）
+  role            UserRole  @default(USER)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  lastLoginIp     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
-  member        ClubMember?
-  submittedProjects Project[] @relation("ProjectSubmitter")
-  reviewedProjects  Review[]
-  auditLogs     AuditLog[] @relation("AuditUser")
-  loginAttempts LoginAttempt[]
-  sessions      Session[]
-  accounts      Account[]
-  comments      Comment[]
-  notifications Notification[]
-  projectLikes  ProjectLike[]
+  member                 ClubMember?
+  submittedProjects      Project[]               @relation("ProjectSubmitter")
+  reviewedProjects       Review[]
+  auditLogs              AuditLog[]              @relation("AuditUser")
+  loginAttempts          LoginAttempt[]
+  sessions               Session[]
+  accounts               Account[]
+  comments               Comment[]
+  notifications          Notification[]
+  projectLikes           ProjectLike[]
+  meetingProposals       MeetingProposal[]
+  courseEnrollments      CourseEnrollment[]
+  mentoredCourses        CourseEnrollment[]      @relation("CourseMentor")
+  competitionSubmissions CompetitionSubmission[]
 
   @@index([email])
   @@index([role])
@@ -148,8 +183,8 @@ model VerificationToken {
   identifier   String
   token        String   @unique
   expires      DateTime
-  name         String?  @db.Text    // 待验证注册：昵称
-  passwordHash String?  @db.Text    // 待验证注册：密码哈希
+  name         String?  @db.Text // 待验证注册：昵称
+  passwordHash String?  @db.Text // 待验证注册：密码哈希
   role         String?  @db.VarChar(20) // 待验证注册：角色
 
   @@unique([identifier, token])
@@ -157,17 +192,17 @@ model VerificationToken {
 
 // 邀请码（注册时赋予对应角色）
 model InviteCode {
-  id          String   @id @default(cuid())
-  code        String   @unique           // 如 "BUGOO-MEMBER-ABC123"
-  role        UserRole @default(MEMBER)  // 注册后赋予的角色
-  maxUses     Int?                      // null = 无限次
-  usedCount   Int      @default(0)
-  expiresAt   DateTime?                 // null = 永不过期
-  description String?                   // 备注（谁发的，用途等）
-  isActive    Boolean  @default(true)
-  createdBy   String?                   // 创建者 userId
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id          String    @id @default(cuid())
+  code        String    @unique // 如 "BUGOO-MEMBER-ABC123"
+  role        UserRole  @default(MEMBER) // 注册后赋予的角色
+  maxUses     Int? // null = 无限次
+  usedCount   Int       @default(0)
+  expiresAt   DateTime? // null = 永不过期
+  description String? // 备注（谁发的，用途等）
+  isActive    Boolean   @default(true)
+  createdBy   String? // 创建者 userId
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([code])
   @@index([isActive])
@@ -193,30 +228,30 @@ model LoginAttempt {
 // ============================================================
 
 model ClubMember {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  displayName String                    // 展示名
-  avatar      String?                   // 头像 URL（R2）
-  bio         String?  @db.Text
-  grade       String?                   // 年级，如 "2021级"
-  cohortYear  Int?                      // 第几届（入学年份届别），取代 joinYear 的语义
-  joinYear    Int?                      // 入社年份（保留兼容，新数据不再使用）
-  graduateYear Int?                     // 毕业年份（null = 在读）
-  skills      String[] @default([])     // 职能标签
-  isActive    Boolean  @default(true)   // 是否在读/活跃
-  sortOrder   Int      @default(0)
-  position    String   @default("MEMBER") // MEMBER | PRESIDENT | VICE_PRESIDENT
-  location    String?                   // 所在地（省份/国家）
-  phone       String?                   // 电话（敏感项，仅成员+可见）
-  wechat      String?                   // 微信（敏感项，仅成员+可见）
-  qq          String?                   // QQ（敏感项，仅成员+可见）
-  notifyNewProjects Boolean @default(false) // 关注作品上新通知
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  displayName       String // 展示名
+  avatar            String? // 头像 URL（R2）
+  bio               String?  @db.Text
+  grade             String? // 年级，如 "2021级"
+  cohortYear        Int? // 第几届（入学年份届别），取代 joinYear 的语义
+  joinYear          Int? // 入社年份（保留兼容，新数据不再使用）
+  graduateYear      Int? // 毕业年份（null = 在读）
+  skills            String[] @default([]) // 职能标签
+  isActive          Boolean  @default(true) // 是否在读/活跃
+  sortOrder         Int      @default(0)
+  position          String   @default("MEMBER") // MEMBER | PRESIDENT | VICE_PRESIDENT
+  location          String? // 所在地（省份/国家）
+  phone             String? // 电话（敏感项，仅成员+可见）
+  wechat            String? // 微信（敏感项，仅成员+可见）
+  qq                String? // QQ（敏感项，仅成员+可见）
+  notifyNewProjects Boolean  @default(false) // 关注作品上新通知
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectMembers  ProjectMember[]
-  socialLinks     MemberLink[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectMembers ProjectMember[]
+  socialLinks    MemberLink[]
 
   @@index([joinYear])
   @@index([isActive])
@@ -226,7 +261,7 @@ model ClubMember {
 model MemberLink {
   id        String   @id @default(cuid())
   memberId  String
-  label     String   // 显示标签，如 "GitHub", "B站", "个人网站"
+  label     String // 显示标签，如 "GitHub", "B站", "个人网站"
   url       String
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -241,52 +276,53 @@ model MemberLink {
 // ============================================================
 
 model Project {
-  id           String        @id @default(cuid())
-  slug         String        @unique  // URL 友好标识符
-  title        String
-  subtitle     String?
-  description  String        @db.Text
-  coverImage   String?                // 封面图 URL（R2）
-  status       ProjectStatus @default(DRAFT)
-  type         ProjectType
-  developYear  Int                    // 开发年份
-  publishedAt  DateTime?              // 实际发布时间
+  id          String        @id @default(cuid())
+  slug        String        @unique // URL 友好标识符
+  title       String
+  subtitle    String?
+  description String        @db.Text
+  coverImage  String? // 封面图 URL（R2）
+  status      ProjectStatus @default(DRAFT)
+  type        ProjectType
+  developYear Int // 开发年份
+  publishedAt DateTime? // 实际发布时间
 
   // 外部链接
-  steamUrl      String?
-  githubUrl     String?
-  itchUrl       String?
-  panUrl        String?    // 百度网盘
-  driveUrl      String?    // Google Drive
-  onedriveUrl   String?
-  videoUrl      String?    // 演示视频
-  websiteUrl    String?    // 作品官网
+  steamUrl    String?
+  githubUrl   String?
+  itchUrl     String?
+  panUrl      String? // 百度网盘
+  driveUrl    String? // Google Drive
+  onedriveUrl String?
+  videoUrl    String? // 演示视频
+  websiteUrl  String? // 作品官网
 
   // 内容
-  devlog       String?  @db.Text  // 开发日志（Markdown）
-  techStack    String[] @default([])
-  isFeatured   Boolean  @default(false)   // 精选作品
+  devlog     String?  @db.Text // 开发日志（Markdown）
+  techStack  String[] @default([])
+  isFeatured Boolean  @default(false) // 精选作品
 
   // 提交信息
-  submitterId  String
-  submittedAt  DateTime?
-  reviewNote   String?  @db.Text  // 审核意见
+  submitterId String
+  submittedAt DateTime?
+  reviewNote  String?   @db.Text // 审核意见
 
   // 统计（非实时，定期更新）
-  viewCount    Int @default(0)
+  viewCount Int @default(0)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  submitter    User @relation("ProjectSubmitter", fields: [submitterId], references: [id])
-  images       ProjectImage[]
-  links        ProjectLink[]
-  members      ProjectMember[]
-  tags         ProjectTag[]
-  reviews      Review[]
-  comments     Comment[]
-  likes        ProjectLike[]
+  submitter              User                    @relation("ProjectSubmitter", fields: [submitterId], references: [id])
+  images                 ProjectImage[]
+  links                  ProjectLink[]
+  members                ProjectMember[]
+  tags                   ProjectTag[]
+  reviews                Review[]
+  comments               Comment[]
+  likes                  ProjectLike[]
+  competitionSubmissions CompetitionSubmission[]
 
   @@index([status])
   @@index([type])
@@ -303,7 +339,7 @@ model Project {
 model ProjectImage {
   id        String   @id @default(cuid())
   projectId String
-  url       String               // R2 URL
+  url       String // R2 URL
   altText   String?
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -315,12 +351,12 @@ model ProjectImage {
 
 // 作品-成员多对多（含角色）
 model ProjectMember {
-  id           String  @id @default(cuid())
+  id           String   @id @default(cuid())
   projectId    String
   memberId     String? // 社团成员 ID（可选，外部成员为 null）
-  externalName String?  // 非社团成员姓名
+  externalName String? // 非社团成员姓名
   roles        String[] // 如 ["程序", "美术", "策划"]
-  sortOrder    Int     @default(0)
+  sortOrder    Int      @default(0)
 
   project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   member  ClubMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
@@ -334,7 +370,7 @@ model ProjectMember {
 model ProjectLink {
   id        String   @id @default(cuid())
   projectId String
-  label     String            // 显示标签，如 "Steam", "itch.io", "官网", "百度网盘"
+  label     String // 显示标签，如 "Steam", "itch.io", "官网", "百度网盘"
   url       String
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -349,13 +385,13 @@ model ProjectLink {
 // ============================================================
 
 model Tag {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  slug        String  @unique
-  color       String  @default("#6366f1") // 十六进制颜色
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  color       String   @default("#6366f1") // 十六进制颜色
   group       String? // 分组：引擎、大类、要素 等，null = 未分组
   description String?
-  sortOrder   Int     @default(0)
+  sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
 
   projects ProjectTag[]
@@ -418,26 +454,26 @@ model Announcement {
 
 // 每年的社团活动/大事记
 model YearEvent {
-  id          String   @id @default(cuid())
-  year        Int
-  title       String
-  body        String?  @db.Text           // 正文内容
-  eventDate   DateTime?                   // 事件日期
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(cuid())
+  year      Int
+  title     String
+  body      String?   @db.Text // 正文内容
+  eventDate DateTime? // 事件日期
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  images EventImage[]                     // 最多5张图片
+  images EventImage[] // 最多5张图片
 
   @@index([year])
 }
 
 model EventImage {
-  id       String    @id @default(cuid())
-  eventId  String
-  url      String
-  altText  String?
-  sortOrder Int      @default(0)
+  id        String  @id @default(cuid())
+  eventId   String
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
 
   event YearEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
@@ -459,7 +495,7 @@ model SiteSetting {
 // 速率限制（防滥用）
 model RateLimit {
   id        String   @id @default(cuid())
-  key       String   @unique  // 如 "email:user@test.com" 或 "avatar:userId"
+  key       String   @unique // 如 "email:user@test.com" 或 "avatar:userId"
   count     Int      @default(1)
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -476,15 +512,15 @@ model AuditLog {
   id         String      @id @default(cuid())
   action     AuditAction
   userId     String?
-  targetType String?    // 目标资源类型，如 "Project", "User"
-  targetId   String?    // 目标资源 ID
-  beforeData Json?      // 变更前数据快照（DELETE/UPDATE 时捕获）
-  afterData  Json?      // 变更后数据快照（CREATE/UPDATE 时捕获）
-  metadata   Json?      // 额外上下文信息
+  targetType String? // 目标资源类型，如 "Project", "User"
+  targetId   String? // 目标资源 ID
+  beforeData Json? // 变更前数据快照（DELETE/UPDATE 时捕获）
+  afterData  Json? // 变更后数据快照（CREATE/UPDATE 时捕获）
+  metadata   Json? // 额外上下文信息
   ipAddress  String?
   userAgent  String?
   statusCode Int?
-  createdAt  DateTime   @default(now())
+  createdAt  DateTime    @default(now())
 
   user User? @relation("AuditUser", fields: [userId], references: [id], onDelete: SetNull)
 
@@ -497,10 +533,10 @@ model AuditLog {
 // 大版本备份记录
 model BackupVersion {
   id          String   @id @default(cuid())
-  version     Int      @unique  // 自增版本号 1, 2, 3...
-  label       String?  // 备注/标签
+  version     Int      @unique // 自增版本号 1, 2, 3...
+  label       String? // 备注/标签
   recordCount Int      @default(0)
-  fileSize    Int?     // 备份文件大小 (bytes)
+  fileSize    Int? // 备份文件大小 (bytes)
   status      String   @default("completed") // completed | failed
   createdAt   DateTime @default(now())
 
@@ -516,14 +552,14 @@ model Comment {
   content   String   @db.VarChar(300)
   projectId String
   userId    String
-  parentId  String?  // 回复的目标留言（null = 顶层留言）
+  parentId  String? // 回复的目标留言（null = 顶层留言）
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent   Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
-  replies  Comment[]     @relation("CommentReplies")
+  project Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies Comment[] @relation("CommentReplies")
 
   @@index([projectId, createdAt])
   @@index([userId])
@@ -547,11 +583,11 @@ model ProjectLike {
 model Notification {
   id          String   @id @default(cuid())
   userId      String
-  type        String   // "PROJECT_REVIEW" | "COMMENT_REPLY" | "COMMENT_LIKE" | "ROLE_CHANGE" | "NEW_PROJECT" | "NEW_USER"
+  type        String // "PROJECT_REVIEW" | "COMMENT_REPLY" | "COMMENT_LIKE" | "ROLE_CHANGE" | "NEW_PROJECT" | "NEW_USER"
   title       String
   content     String
-  relatedId   String?  // projectId / commentId / userId
-  relatedType String?  // "Project" | "Comment" | "User"
+  relatedId   String? // projectId / commentId / userId
+  relatedType String? // "Project" | "Comment" | "User"
   read        Boolean  @default(false)
   createdAt   DateTime @default(now())
 
@@ -559,4 +595,100 @@ model Notification {
 
   @@index([userId, read])
   @@index([createdAt])
+}
+
+// ============================================================
+// 活动系统 (Activity System)
+// ============================================================
+
+model Activity {
+  id               String         @id @default(cuid())
+  title            String
+  slug             String         @unique
+  summary          String?
+  description      String?        @db.Text
+  type             ActivityType   @default(GENERAL)
+  location         String?
+  meetingUrl       String?                      // 线上链接（腾讯会议等）
+  startTime        DateTime
+  endTime          DateTime
+  coverImage       String? // R2 URL
+  registrationOpen Boolean        @default(false)
+  maxParticipants  Int?
+  status           ActivityStatus @default(DRAFT)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  proposals   MeetingProposal[]
+  enrollments CourseEnrollment[]
+  submissions CompetitionSubmission[]
+
+  @@index([status])
+  @@index([type])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([status, startTime])
+  @@index([status, endTime])
+}
+
+// 例会 — 分享/展示申请
+model MeetingProposal {
+  id           String         @id @default(cuid())
+  activityId   String
+  userId       String
+  title        String
+  description  String?        @db.Text
+  proposalType ProposalType   @default(SHARE)
+  status       ProposalStatus @default(PENDING)
+  adminNote    String?        @db.Text // 审核意见
+  createdAt    DateTime       @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+  @@index([userId])
+  @@index([status])
+}
+
+// 公开课 — 报名记录
+model CourseEnrollment {
+  id         String           @id @default(cuid())
+  activityId String
+  userId     String
+  topic      String? // 选题
+  mentorId   String? // 导师 userId
+  status     EnrollmentStatus @default(ENROLLED)
+  score      Int? // 评分 (0-100)
+  createdAt  DateTime         @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mentor   User?    @relation("CourseMentor", fields: [mentorId], references: [id], onDelete: SetNull)
+
+  @@unique([activityId, userId])
+  @@index([activityId])
+  @@index([userId])
+  @@index([mentorId])
+}
+
+// Game Jam — 作品提交
+model CompetitionSubmission {
+  id            String   @id @default(cuid())
+  activityId    String
+  userId        String
+  projectId     String? // 关联作品
+  teamName      String?
+  submissionUrl String? // 提交链接
+  note          String?  @db.Text // 备注
+  score         Int? // 评分 (0-100)
+  createdAt     DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@unique([activityId, userId])
+  @@index([activityId])
+  @@index([userId])
 }

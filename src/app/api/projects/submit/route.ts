@@ -16,8 +16,12 @@ import { ProjectStatus } from "@prisma/client";
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
+  // 双重校验：role 为 MEMBER 及以上，或有关联的 ClubMember 记录
   if (!isMemberOrAbove(session.user.role as any)) {
-    return apiError("仅社团成员可提交作品", 403);
+    const hasClubMember = await prisma.clubMember.findUnique({ where: { userId: session.user.id }, select: { id: true } });
+    if (!hasClubMember) {
+      return apiError("仅社团成员可提交作品。如果你已是社团成员，请尝试重新登录后重试。", 403);
+    }
   }
 
   const body = await request.json().catch(() => null);

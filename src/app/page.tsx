@@ -8,6 +8,7 @@ import Image from "next/image";
 import HomeStats from "./HomeStats";
 import FeaturedProjects from "./FeaturedProjects";
 import LatestProjects from "./LatestProjects";
+import HomeActivities from "./HomeActivities";
 
 export const metadata = { title: "首页" };
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -57,6 +58,11 @@ export default function HomePage() {
           <LatestProjects />
         </Suspense>
       </section>
+
+      {/* 近期活动 */}
+      <Suspense fallback={<div className="py-10 text-center text-gray-400 text-sm">加载活动中…</div>}>
+        <HomeActivities />
+      </Suspense>
 
       {/* CTA */}
       <section className="py-16 text-center">
