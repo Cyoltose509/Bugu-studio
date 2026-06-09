@@ -1,27 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 interface Props {
   projectId: string;
   initialCount: number;
+  initialLiked?: boolean;
 }
 
-export default function MiniLikeButton({ projectId, initialCount }: Props) {
+export default function MiniLikeButton({ projectId, initialCount, initialLiked = false }: Props) {
   const [count, setCount] = useState(initialCount);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetch(`/api/projects/${projectId}/like`, { method: "GET" })
-      .then((r) => r.json())
-      .then((d: any) => {
-        const body = d.data ?? d;
-        setCount(body.likeCount ?? initialCount);
-        setLiked(body.liked ?? false);
-      })
-      .catch(() => {});
-  }, [projectId, initialCount]);
+  // 服务端已提供 like 状态，无需客户端再请求 GET
 
   const toggle = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();

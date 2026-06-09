@@ -11,7 +11,7 @@ import { loginSchema } from "@/lib/validations/auth";
 
 /** 短期内存缓存：减少 session callback 的 DB 查询（30s TTL） */
 const sessionCache = new Map<string, { data: any; ts: number }>();
-const SESSION_CACHE_TTL = 30_000; // 30 秒
+const SESSION_CACHE_TTL = 60_000; // 60 秒
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET!,

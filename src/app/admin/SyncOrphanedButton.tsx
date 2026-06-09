@@ -38,7 +38,7 @@ export default function SyncOrphanedButton() {
           color: "#fff",
         }}
       >
-        {status === "loading" ? "同步中..." : "🔧 同步孤儿项目"}
+        {status === "loading" ? "同步中..." : "同步孤儿项目"}
       </button>
       {result && (
         <span className="text-xs whitespace-pre-wrap" style={{ color: status === "error" ? "#E38043" : "#555" }}>

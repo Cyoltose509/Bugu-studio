@@ -17,9 +17,15 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
   const [canLike, setCanLike] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // session 加载完成后拉取服务端真实状态
+  // session 加载完成后：若未提供 initialLiked 则拉取服务端真实状态
   useEffect(() => {
     if (status === "loading") return;
+    if (initialLiked !== undefined) {
+      // 服务端已提供 liked 状态，无需额外 GET 请求
+      const can = !!(session?.user?.id && session.user.role !== "GUEST");
+      setCanLike(can);
+      return;
+    }
 
     const can = !!(session?.user?.id && session.user.role !== "GUEST");
     setCanLike(can);
@@ -29,11 +35,11 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
       .then((d: any) => {
         const body = d.data ?? d;
         setCount(body.likeCount ?? initialCount);
-        setLiked(body.liked ?? initialLiked ?? false);
+        setLiked(body.liked ?? false);
         setCanLike(body.canLike ?? can);
       })
       .catch(() => {});
-  }, [projectId, initialCount, initialLiked, status]);
+  }, [projectId, initialCount, initialLiked, status, session]);
 
   const toggle = useCallback(async () => {
     if (!canLike || loading) return;

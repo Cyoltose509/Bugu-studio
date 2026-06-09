@@ -4,6 +4,10 @@ import { prisma } from "@/lib/db/prisma";
 import { UserRole } from "@prisma/client";
 import { apiResponse, apiError } from "@/lib/utils";
 
+// 内存缓存：避免短时间内对同一项目重复查 DB（5s TTL）
+const likeCache = new Map<string, { data: { liked: boolean; likeCount: number; canLike: boolean }; ts: number }>();
+const CACHE_TTL = 5000;
+
 /**
  * GET /api/projects/[id]/like
  * 查询当前用户是否点赞 + 总点赞数
@@ -14,6 +18,14 @@ export async function GET(
 ) {
   const session = await auth();
   const { id: projectId } = await params;
+  const userId = session?.user?.id ?? "anon";
+  const cacheKey = `${projectId}:${userId}`;
+
+  // 命中缓存直接返回
+  const cached = likeCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return apiResponse(cached.data);
+  }
 
   const [count, existing] = await Promise.all([
     prisma.projectLike.count({ where: { projectId } }),
@@ -25,9 +37,14 @@ export async function GET(
       : null,
   ]);
 
-  const liked = !!existing;
-  const canLike = !!session?.user && session.user.role !== UserRole.GUEST;
-  return apiResponse({ liked, likeCount: count, canLike });
+  const data = {
+    liked: !!existing,
+    likeCount: count,
+    canLike: !!session?.user && session.user.role !== UserRole.GUEST,
+  };
+
+  likeCache.set(cacheKey, { data, ts: Date.now() });
+  return apiResponse(data);
 }
 
 /**
@@ -71,6 +88,11 @@ export async function POST(
     prisma.projectLike.count({ where: { projectId } }),
     liked ? sendLikeNotification(projectId, userId, session.user.name || session.user.email || "匿名用户") : Promise.resolve(),
   ]);
+
+  // 清除该项目的 like 缓存（所有用户的缓存都失效，因为 count 变了）
+  for (const key of likeCache.keys()) {
+    if (key.startsWith(projectId + ":")) likeCache.delete(key);
+  }
 
   return apiResponse({ liked, likeCount: count });
 }

@@ -15,10 +15,10 @@ export default function EditButton({ slug, submitterId }: { slug: string; submit
   if (!editable) return null;
 
   return (
-    <div className="flex gap-2 mb-6">
+    <div className="flex gap-2">
       <Link
         href={`/works/${slug}/edit`}
-        className="inline-flex items-center gap-1 text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors"
         style={{ background: "#25547A", color: "#fff" }}
       >
         ✏️ 编辑作品

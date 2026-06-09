@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 
 /**
- * GET /api/notifications/unread-count — 未读通知数量（轻量，供铃铛图标使用）
+ * GET /api/notifications/read — 未读通知数量（轻量，供铃铛图标使用）
+ * 注意：客户端 NotificationBell 实际调用的是 /api/notifications/unread-count
  */
 export async function GET() {
   const session = await auth();

@@ -81,6 +81,16 @@ export default async function WorkDetailPage({ params }: PageProps) {
     if (!isSubmitter && !isStaff) notFound();
   }
 
+  // 查询当前用户是否已点赞（仅非 PUBLISHED 时 session 可用）
+  let initialLiked: boolean | undefined;
+  if (session?.user?.id) {
+    const existing = await prisma.projectLike.findUnique({
+      where: { projectId_userId: { projectId: project.id, userId: session.user.id } },
+      select: { id: true },
+    });
+    initialLiked = !!existing;
+  }
+
   const isPending = project.status !== ProjectStatus.PUBLISHED;
 
   const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
@@ -156,7 +166,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
           {/* 点赞 + 编辑 */}
           <div className="flex items-center gap-3 mb-4">
-            <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} />
+            <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={initialLiked} />
             <EditButton slug={project.slug} submitterId={project.submitterId} />
           </div>
 

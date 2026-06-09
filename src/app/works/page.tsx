@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ensureDefaultTags } from "@/lib/db/tags";
+import { auth } from "@/lib/auth/auth";
 import { ProjectStatus } from "@prisma/client";
 import MiniLikeButton from "@/components/MiniLikeButton";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
@@ -72,6 +73,20 @@ export default async function WorksPage({ searchParams }: PageProps) {
       prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } })
     , 120),
   ]);
+
+  // 批量查询当前用户对这批作品的点赞状态（一次查询替代 12 次 GET 请求）
+  const session = await auth().catch(() => null);
+  let likedProjectIds = new Set<string>();
+  if (session?.user?.id && projects.length > 0) {
+    const liked = await prisma.projectLike.findMany({
+      where: {
+        projectId: { in: projects.map((p) => p.id) },
+        userId: session.user.id,
+      },
+      select: { projectId: true },
+    });
+    likedProjectIds = new Set(liked.map((l) => l.projectId));
+  }
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -146,7 +161,7 @@ export default async function WorksPage({ searchParams }: PageProps) {
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
                       <div className="flex items-center gap-2">
-                        <MiniLikeButton projectId={p.id} initialCount={p._count.likes} />
+                        <MiniLikeButton projectId={p.id} initialCount={p._count.likes} initialLiked={likedProjectIds.has(p.id)} />
                         <div className="flex -space-x-1">
                           {p.members.slice(0, 3).map((pm) => {
                             const name = pm.member?.displayName || pm.externalName || "?";
