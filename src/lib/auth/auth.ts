@@ -17,14 +17,12 @@ class AccountDisabled extends CredentialsSignin { code = "account_disabled"; }
 class WrongPassword extends CredentialsSignin { code = "wrong_password"; }
 class NoPasswordLogin extends CredentialsSignin { code = "no_password_login"; }
 
-/** 短期内存缓存：减少 session callback 的 DB 查询（60s TTL） */
-const sessionCache = new Map<string, { data: any; ts: number }>();
-const SESSION_CACHE_TTL = 60_000; // 60 秒
-
-/** 清除指定用户的 session 缓存（修改用户信息后调用） */
-export function clearSessionCache(userId: string) {
-  sessionCache.delete(userId);
-}
+/**
+ * 注意：不再使用进程内存缓存。
+ * Next.js dev 模式下 server action 和 page route 跑在不同编译上下文，
+ * 同一个 Map 在两个上下文中是不同的实例，导致 clear → 无效。
+ * session callback 每次直接读 DB（主键索引，毫秒级），确保名称立即生效。
+ */
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET!,
@@ -86,7 +84,7 @@ export const authConfig = {
         token.name = user.name ?? undefined;
       }
 
-      // trigger === "update" 时（client 端 useSession().update()），从 DB 刷新并更新缓存
+      // trigger === "update" 时（client 端 useSession().update()），从 DB 刷新
       if (trigger === "update" && token.id) {
         try {
           const { prisma } = await import("@/lib/db/prisma");
@@ -99,8 +97,6 @@ export const authConfig = {
             token.picture = dbUser.image ?? undefined;
             token.name = dbUser.name ?? undefined;
             token.role = dbUser.role;
-            // 更新缓存
-            sessionCache.set(token.id as string, { data: dbUser, ts: Date.now() });
           }
         } catch {
           // Edge Runtime 降级
@@ -114,32 +110,22 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as any;
         session.user.email = token.email as string;
-        // 优先用 jwt callback 同步后的 token 值
         session.user.image = (token.picture as string) ?? undefined;
         session.user.name = (token.name as string) ?? undefined;
 
-        // 每次读取 session 时从 DB 同步最新状态（30s 内存缓存，降低 DB 压力）
+        // 每次从 DB 同步最新状态（无内存缓存，避免跨上下文不同步）
         try {
           const { prisma } = await import("@/lib/db/prisma");
           const userId = token.id as string;
 
-          // 检查缓存
-          const cached = sessionCache.get(userId);
-          let dbUser: any;
-          if (cached && Date.now() - cached.ts < SESSION_CACHE_TTL) {
-            dbUser = cached.data;
-          } else {
-            dbUser = await prisma.user.findUnique({
-              where: { id: userId },
-              select: { isActive: true, image: true, name: true, role: true },
-            });
-            if (dbUser) sessionCache.set(userId, { data: dbUser, ts: Date.now() });
-          }
+          const dbUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { isActive: true, image: true, name: true, role: true },
+          });
 
           if (!dbUser?.isActive) {
             session.user = undefined as any;
           } else {
-            // 同步 DB 中最新的 image / name / role
             if (dbUser.image) session.user.image = dbUser.image;
             if (dbUser.name) session.user.name = dbUser.name;
             if (dbUser.role) session.user.role = dbUser.role;

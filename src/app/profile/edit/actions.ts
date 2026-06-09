@@ -1,7 +1,6 @@
 "use server";
 
 import { auth } from "@/lib/auth/auth";
-import { clearSessionCache } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { invalidateCache } from "@/lib/db/cache";
 import { revalidatePath } from "next/cache";
@@ -135,11 +134,16 @@ export async function saveProfile(formData: FormData) {
   }
 
   // 清除所有相关缓存，确保其他页面立即显示新名称
-  clearSessionCache(session.user.id);
   await invalidateCache(`profile:user:${session.user.id}`);
   await invalidateCache(`profile:member:${session.user.id}`);
+  await invalidateCache("members:all");
+  if (member) {
+    await invalidateCache(`member:meta:${member.id}`);
+    await invalidateCache(`member:detail:${member.id}`);
+  }
 
   revalidatePath("/profile");
+  revalidatePath("/members");
   revalidatePath("/");
   redirect("/profile");
 }
