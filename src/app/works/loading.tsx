@@ -1,5 +1,5 @@
-import WaterRipple from "@/components/ui/WaterRipple";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 export default function WorksLoading() {
-  return <WaterRipple text="正在加载作品库..." />;
+  return <LogoLoading text="正在加载作品库..." />;
 }

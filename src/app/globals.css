@@ -48,6 +48,14 @@
 .game-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .game-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37,84,122,0.12); }
 
+/* 作品卡片逐个弹出动画 */
+@keyframes cardPopIn {
+  0%   { opacity: 0; transform: scale(0.85) translateY(18px); }
+  60%  { opacity: 1; transform: scale(1.03) translateY(-2px); }
+  80%  { transform: scale(0.98) translateY(1px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 .btn-primary { background: linear-gradient(135deg,#E38043,#F09055); color: #fff; transition: opacity .2s,transform .15s; }
 .btn-primary:hover { opacity: .92; transform: translateY(-1px); }
 
