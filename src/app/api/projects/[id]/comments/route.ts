@@ -1,33 +1,39 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { UserRole } from "@prisma/client";
 import { apiResponse, apiError } from "@/lib/utils";
 import { createNotification } from "@/lib/services/notification";
 
-// ── GET: 获取作品所有留言（含回复嵌套）──
+// ── GET: 获取作品留言（分页，含回复嵌套）──
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
+  const { searchParams } = request.nextUrl;
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
 
-  const comments = await prisma.comment.findMany({
-    where: { projectId, parentId: null },
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: { select: { id: true, name: true, image: true } },
-      replies: {
-        orderBy: { createdAt: "asc" },
-        include: {
-          user: { select: { id: true, name: true, image: true } },
+  const comments = await cachedQuery(`comments:${projectId}:limit${limit}`, () =>
+    prisma.comment.findMany({
+      where: { projectId, parentId: null },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: {
+        user: { select: { id: true, name: true, image: true } },
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: { select: { id: true, name: true, image: true } },
+          },
         },
+        _count: { select: { replies: true } },
       },
-      _count: { select: { replies: true } },
-    },
-  });
+    })
+  , 30);
 
-  const result = comments.map((c) => ({
+  return apiResponse(comments.map((c) => ({
     id: c.id,
     content: c.content,
     createdAt: c.createdAt,
@@ -39,9 +45,7 @@ export async function GET(
       createdAt: r.createdAt,
       user: { id: r.user.id, name: r.user.name, image: r.user.image },
     })),
-  }));
-
-  return apiResponse(result);
+  })));
 }
 
 // ── POST: 创建留言/回复（USER+权限，300字限制）──

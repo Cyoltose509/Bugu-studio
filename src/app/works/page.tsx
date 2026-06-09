@@ -27,9 +27,9 @@ export default async function WorksPage({ searchParams }: PageProps) {
     cachedQuery('works:sidebar:tags', () =>
       prisma.tag.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { projects: { where: { project: { status: "PUBLISHED" } } } } } } })
     , 120),
-    (params.q || params.tag)
-      ? prisma.project.count({ where: buildWhere(params) })
-      : cachedQuery('works:total', () => prisma.project.count({ where: buildWhere(params) }), 300),
+    cachedQuery(`works:count:${JSON.stringify(params)}`, () =>
+      prisma.project.count({ where: buildWhere(params) })
+    , 60),
     cachedQuery('works:sidebar:years', () =>
       prisma.project.groupBy({ by: ["developYear"], where: { status: ProjectStatus.PUBLISHED }, orderBy: { developYear: "desc" } })
     , 120),
@@ -155,21 +155,27 @@ async function WorksGrid({ params, page, total }: { params: Record<string, any>;
   const session = await auth().catch(() => null);
   let likedProjectIds = new Set<string>();
   if (session?.user?.id && projects.length > 0) {
-    const liked = await prisma.projectLike.findMany({
-      where: { projectId: { in: projects.map((p) => p.id) }, userId: session.user.id },
-      select: { projectId: true },
-    });
-    likedProjectIds = new Set(liked.map((l) => l.projectId));
+    const liked = await cachedQuery(`works:likes:${session.user.id}`, () =>
+      prisma.projectLike.findMany({
+        where: { userId: session.user.id },
+        select: { projectId: true },
+      })
+    , 60);
+    const projectIds = new Set(projects.map((p) => p.id));
+    likedProjectIds = new Set(liked.filter((l) => projectIds.has(l.projectId)).map((l) => l.projectId));
   }
 
   // 批量查询 members
   let membersMap = new Map<string, any[]>();
   if (projects.length > 0) {
-    const allMembers = await prisma.projectMember.findMany({
-      where: { projectId: { in: projects.map(p => p.id) } },
-      include: { member: { select: { displayName: true, avatar: true, user: { select: { image: true } } } } },
-      orderBy: { sortOrder: "asc" },
-    });
+    const memberCacheKey = `works:members:${projects.map(p => p.id).sort().join(",")}`;
+    const allMembers = await cachedQuery(memberCacheKey, () =>
+      prisma.projectMember.findMany({
+        where: { projectId: { in: projects.map(p => p.id) } },
+        include: { member: { select: { displayName: true, avatar: true, user: { select: { image: true } } } } },
+        orderBy: { sortOrder: "asc" },
+      })
+    , 60);
     for (const pm of allMembers) {
       const arr = membersMap.get(pm.projectId) || [];
       if (arr.length < 3) arr.push(pm);

@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { auth } from "@/lib/auth/auth";
 import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
@@ -24,26 +25,28 @@ interface PageProps { params: Promise<{ slug: string }> }
 /* ── 共享查询（React.cache 去重） ── */
 
 const getProject = cache(async (slug: string) => {
-  return prisma.project.findUnique({
-    where: { slug },
-    include: {
-      images: { orderBy: { sortOrder: "asc" } },
-      links: { orderBy: { sortOrder: "asc" } },
-      tags: { include: { tag: true } },
-      members: {
-        orderBy: { sortOrder: "asc" },
-        include: {
-          member: {
-            select: {
-              id: true, displayName: true, avatar: true, grade: true,
-              user: { select: { image: true } },
+  return cachedQuery(`project:detail:${slug}`, () =>
+    prisma.project.findUnique({
+      where: { slug },
+      include: {
+        images: { orderBy: { sortOrder: "asc" } },
+        links: { orderBy: { sortOrder: "asc" } },
+        tags: { include: { tag: true } },
+        members: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            member: {
+              select: {
+                id: true, displayName: true, avatar: true, grade: true,
+                user: { select: { image: true } },
+              },
             },
           },
         },
+        _count: { select: { likes: true } },
       },
-      _count: { select: { likes: true } },
-    },
-  });
+    })
+  , 120);
 });
 
 /* ── Metadata（复用同一查询，无额外 DB 开销） ── */

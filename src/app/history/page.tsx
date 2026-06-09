@@ -2,6 +2,7 @@
 import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
 import { prisma } from "@/lib/db/prisma";
+import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "社团历史", description: "记录布谷工作室每一年的成长与创作" };
@@ -10,11 +11,17 @@ export const revalidate = 3600; // 历史数据变化少，1小时缓存
 export default async function HistoryPage() {
   const currentYear = new Date().getFullYear();
 
-  // 从三个数据源收集所有有数据的年份
+  // 从三个数据源收集所有有数据的年份（历史数据几乎不变，缓存1小时）
   const [projectYearRows, memberGradeRows, eventYearRows] = await Promise.all([
-    prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED }, select: { developYear: true }, distinct: ["developYear"] }),
-    prisma.clubMember.findMany({ select: { grade: true }, distinct: ["grade"] }),
-    prisma.yearEvent.findMany({ select: { year: true }, distinct: ["year"] }),
+    cachedQuery("history:projectYears", () =>
+      prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED }, select: { developYear: true }, distinct: ["developYear"] }),
+    3600),
+    cachedQuery("history:memberGrades", () =>
+      prisma.clubMember.findMany({ select: { grade: true }, distinct: ["grade"] }),
+    3600),
+    cachedQuery("history:eventYears", () =>
+      prisma.yearEvent.findMany({ select: { year: true }, distinct: ["year"] }),
+    3600),
   ]);
 
   // 从 grade 字段提取年份（如 "2021级" → 2021）
@@ -42,15 +49,25 @@ export default async function HistoryPage() {
   }
 
   const yearDetails = [];
-  for (const year of allYears) {
-    const [projects, members, events] = await Promise.all([
-      prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
-      prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }),
-      prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
-    ]);
-    // 跳过没有任何数据的年份
-    if (projects.length === 0 && members.length === 0 && events.length === 0) continue;
-    yearDetails.push({ year, projects, members, events });
+  // 所有年份并行加载（替代原来的串行 for 循环）
+  const yearResults = await Promise.all(
+    allYears.map((year) =>
+      Promise.all([
+        cachedQuery(`history:year:${year}:projects`, () =>
+          prisma.project.findMany({ where: { status: ProjectStatus.PUBLISHED, developYear: year }, select: { id: true, slug: true, title: true, coverImage: true, type: true }, orderBy: { publishedAt: "desc" } }),
+        3600),
+        cachedQuery(`history:year:${year}:members`, () =>
+          prisma.clubMember.findMany({ where: { grade: { startsWith: String(year) } }, select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }),
+        3600),
+        cachedQuery(`history:year:${year}:events`, () =>
+          prisma.yearEvent.findMany({ where: { year }, orderBy: { sortOrder: "asc" }, include: { images: { orderBy: { sortOrder: "asc" } } } }),
+        3600),
+      ]).then(([projects, members, events]) => ({ year, projects, members, events }))
+    )
+  );
+  for (const detail of yearResults) {
+    if (detail.projects.length === 0 && detail.members.length === 0 && detail.events.length === 0) continue;
+    yearDetails.push(detail);
   }
 
   return (
