@@ -14,61 +14,72 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
   const [count, setCount] = useState(initialCount);
   const [liked, setLiked] = useState(initialLiked ?? false);
   const [animating, setAnimating] = useState(false);
-  // 根据 session 状态判断是否可点赞
   const [canLike, setCanLike] = useState(false);
-  const pendingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const likedRef = useRef(liked);
+  likedRef.current = liked;
 
-  // session 加载完成后，立即设置 canLike；同时拉取服务端准确状态
+  // session 加载完成后拉取准确状态
   useEffect(() => {
     if (status === "loading") return;
-    const cancelled = false;
+    const controller = new AbortController();
 
-    // 根据 session 立即判断
     const can = !!(session?.user?.id && session.user.role !== "GUEST");
     setCanLike(can);
 
-    // 拉取准确的点赞状态和 count（静默，不闪烁）
-    fetch(`/api/projects/${projectId}/like`, { method: "GET" })
+    fetch(`/api/projects/${projectId}/like`, { method: "GET", signal: controller.signal })
       .then((r) => r.json())
       .then((d: any) => {
-        if (cancelled) return;
         setCount(d.likeCount ?? initialCount);
         setLiked(d.liked ?? initialLiked ?? false);
         setCanLike(d.canLike ?? can);
       })
       .catch(() => {});
 
-    return () => { /* cancelled = true */ };
+    return () => controller.abort();
   }, [projectId, initialCount, initialLiked, status]);
 
   const toggle = useCallback(async () => {
-    if (!canLike || pendingRef.current) return;
-    pendingRef.current = true;
+    if (!canLike) return;
 
-    const wasLiked = liked;
+    // 取消上一次未完成的请求，允许快速连点
+    if (abortRef.current) abortRef.current.abort();
+
+    const intendedLiked = !likedRef.current;
     // 乐观更新
-    setLiked(!wasLiked);
-    setCount((c) => (wasLiked ? c - 1 : c + 1));
+    setLiked(intendedLiked);
+    setCount((c) => (intendedLiked ? c + 1 : c - 1));
     setAnimating(true);
-    setTimeout(() => setAnimating(false), 350);
+    setTimeout(() => setAnimating(false), 300);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/like`, { method: "POST" });
+      const res = await fetch(`/api/projects/${projectId}/like`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+      });
+      if (controller.signal.aborted) return;
+
       const json = await res.json();
       if (!res.ok) {
-        setLiked(wasLiked);
-        setCount((c) => (wasLiked ? c + 1 : c - 1));
+        // 回滚
+        setLiked(!intendedLiked);
+        setCount((c) => (intendedLiked ? c - 1 : c + 1));
       } else {
+        // 以服务端返回值为准
         setLiked(json.liked);
         setCount(json.likeCount);
       }
-    } catch {
-      setLiked(wasLiked);
-      setCount((c) => (wasLiked ? c + 1 : c - 1));
-    } finally {
-      pendingRef.current = false;
+    } catch (err: any) {
+      if (err.name === "AbortError") return; // 被新请求取消，无需回滚
+      // 网络错误：回滚
+      setLiked(!intendedLiked);
+      setCount((c) => (intendedLiked ? c - 1 : c + 1));
     }
-  }, [canLike, liked, projectId]);
+  }, [canLike, projectId]);
 
   return (
     <button
@@ -93,6 +104,7 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
         stroke={liked ? "#E38043" : "currentColor"}
         strokeWidth="2"
         className="transition-transform"
+        style={{ transform: animating ? "scale(1.3)" : "scale(1)" }}
       >
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
       </svg>

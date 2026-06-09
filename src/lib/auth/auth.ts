@@ -9,6 +9,10 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { loginSchema } from "@/lib/validations/auth";
 
+/** 短期内存缓存：减少 session callback 的 DB 查询（30s TTL） */
+const sessionCache = new Map<string, { data: any; ts: number }>();
+const SESSION_CACHE_TTL = 30_000; // 30 秒
+
 export const authConfig = {
   secret: process.env.AUTH_SECRET!,
   session: {
@@ -67,7 +71,7 @@ export const authConfig = {
         token.name = user.name ?? undefined;
       }
 
-      // trigger === "update" 时（client 端 useSession().update()），从 DB 刷新
+      // trigger === "update" 时（client 端 useSession().update()），从 DB 刷新并更新缓存
       if (trigger === "update" && token.id) {
         try {
           const { prisma } = await import("@/lib/db/prisma");
@@ -80,6 +84,8 @@ export const authConfig = {
             token.picture = dbUser.image ?? undefined;
             token.name = dbUser.name ?? undefined;
             token.role = dbUser.role;
+            // 更新缓存
+            sessionCache.set(token.id as string, { data: dbUser, ts: Date.now() });
           }
         } catch {
           // Edge Runtime 降级
@@ -97,13 +103,24 @@ export const authConfig = {
         session.user.image = (token.picture as string) ?? undefined;
         session.user.name = (token.name as string) ?? undefined;
 
-        // 每次读取 session 时从 DB 同步最新状态（仅 Node.js 环境，Edge 降级）
+        // 每次读取 session 时从 DB 同步最新状态（30s 内存缓存，降低 DB 压力）
         try {
           const { prisma } = await import("@/lib/db/prisma");
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { isActive: true, image: true, name: true, role: true },
-          });
+          const userId = token.id as string;
+
+          // 检查缓存
+          const cached = sessionCache.get(userId);
+          let dbUser: any;
+          if (cached && Date.now() - cached.ts < SESSION_CACHE_TTL) {
+            dbUser = cached.data;
+          } else {
+            dbUser = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { isActive: true, image: true, name: true, role: true },
+            });
+            if (dbUser) sessionCache.set(userId, { data: dbUser, ts: Date.now() });
+          }
+
           if (!dbUser?.isActive) {
             session.user = undefined as any;
           } else {
