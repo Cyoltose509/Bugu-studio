@@ -103,7 +103,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
             {/* ── 截图缩略图列表 ── */}
             {screenshotItems.length > 0 && (
                 <div>
-                    <h2 className="text-xl font-semibold mb-4" style={{color: "#25547A"}}>游戏截图</h2>
+                    {/*<h2 className="text-xl font-semibold mb-4" style={{color: "#25547A"}}>游戏截图</h2>*/}
                     <div className="flex flex-col gap-4">
                         {screenshotItems.map((img, i) => {
                             const globalIdx = coverItem ? i + 1 : i;

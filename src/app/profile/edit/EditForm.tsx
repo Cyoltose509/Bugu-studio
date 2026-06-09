@@ -26,7 +26,7 @@ interface LinkEntry {
     url: string;
 }
 
-const LINK_LABEL_PRESETS = ["GitHub", "Bilibili", "个人网站", "知乎",  "Steam", "itch.io"];
+const LINK_LABEL_PRESETS = ["GitHub", "Bilibili", "个人网站", "知乎", "Steam", "itch.io"];
 
 export default function EditForm({
                                      user,
@@ -347,7 +347,8 @@ export default function EditForm({
                             <div>
                                 <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="phone">
                                     电话
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded" style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                          style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
                                 </label>
                                 <input
                                     id="phone"
@@ -361,7 +362,8 @@ export default function EditForm({
                             <div>
                                 <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="wechat">
                                     微信
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded" style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                          style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
                                 </label>
                                 <input
                                     id="wechat"
@@ -375,7 +377,8 @@ export default function EditForm({
                             <div>
                                 <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="qq">
                                     QQ
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded" style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                          style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
                                 </label>
                                 <input
                                     id="qq"
@@ -408,9 +411,9 @@ export default function EditForm({
                         <div>
                             <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="grade">
                                 年级
-                                {!isAdmin && <span className="text-xs ml-1" style={{color: "#999"}}>(管理员设置)</span>}
+                                {/*{!isAdmin && <span className="text-xs ml-1" style={{color: "#999"}}>(管理员设置)</span>}*/}
                             </label>
-                            {isAdmin ? (
+                            {(
                                 <select
                                     id="grade"
                                     name="grade"
@@ -426,13 +429,6 @@ export default function EditForm({
                                         <option key={y} value={`${y}级`}>{y}级</option>
                                     ))}
                                 </select>
-                            ) : (
-                                <div
-                                    className="w-full rounded-lg bg-gray-50 border px-4 py-2.5 text-sm"
-                                    style={{borderColor: "#D0DEE8", color: "#666"}}
-                                >
-                                    {member.grade || "未设置（联系管理员）"}
-                                </div>
                             )}
                         </div>
 
