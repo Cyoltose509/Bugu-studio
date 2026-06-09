@@ -47,7 +47,7 @@ async function main() {
     if (existing) {
       await p.user.update({
         where: { email: "admin@bugu.studio" },
-        data: { role: UserRole.ADMIN, isActive: true, passwordHash: hashedPw },
+        data: { role: UserRole.ADMIN, isActive: true, passwordHash: hashedPw, emailVerified: new Date() },
       });
       console.log("✅ 管理员账号: admin@bugu.studio (已更新)\n");
     } else {
@@ -58,6 +58,7 @@ async function main() {
           role: UserRole.ADMIN,
           isActive: true,
           passwordHash: hashedPw,
+          emailVerified: new Date(),
         },
       });
       console.log("✅ 管理员账号已创建\n");
