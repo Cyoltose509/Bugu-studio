@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/auth/adminGuard";
 import { auth } from "@/lib/auth/auth";
 import { invalidateCache } from "@/lib/db/cache";
+import { createNotification } from "@/lib/services/notification";
 import { revalidatePath } from "next/cache";
 import { ActivityStatus, ProposalStatus, EnrollmentStatus } from "@prisma/client";
 
@@ -148,6 +149,33 @@ export async function updateActivityStatus(id: string, status: ActivityStatus) {
   await invalidateActivityCaches(id);
 }
 
+// ── 通知管理员：活动有新动态 ─────────────────────────────────
+async function notifyAdminsOfActivity(params: {
+  activityId: string;
+  userId: string;
+  userName: string;
+  title: string;
+  activityName: string;
+  notifType: string;
+  relatedType: string;
+}) {
+  try {
+    const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin.id,
+        type: params.notifType,
+        title: `活动有新${params.activityName}`,
+        content: `${params.userName} 提交了「${params.title}」`,
+        relatedId: params.activityId,
+        relatedType: params.relatedType,
+      });
+    }
+  } catch (err) {
+    console.error("[Notification] 通知管理员失败:", err);
+  }
+}
+
 // ── 例会：提交分享/展示申请 ───────────────────────────────────
 export async function submitProposal(formData: FormData) {
   const session = await auth();
@@ -163,7 +191,7 @@ export async function submitProposal(formData: FormData) {
   if (!activityId) return { error: "无效的活动" };
   if (!title)       return { error: "请填写标题" };
 
-  await prisma.meetingProposal.create({
+  const proposal = await prisma.meetingProposal.create({
     data: {
       activityId,
       userId,
@@ -173,6 +201,17 @@ export async function submitProposal(formData: FormData) {
     },
   });
 
+  // ── 通知管理员：有新申请 ──
+  await notifyAdminsOfActivity({
+    activityId,
+    userId,
+    userName: session.user.name || "未知用户",
+    title,
+    activityName: proposalType === "SHARE" ? "分享申请" : "展示申请",
+    notifType: "ACTIVITY_PROPOSAL",
+    relatedType: "Activity",
+  });
+
   revalidatePath(`/activities/${activityId}`);
   return { success: true };
 }
@@ -180,13 +219,33 @@ export async function submitProposal(formData: FormData) {
 // ── 审核：分享/展示申请 ──────────────────────────────────────
 export async function reviewProposal(id: string, status: ProposalStatus, adminNote?: string) {
   await requireAdmin();
-  const proposal = await prisma.meetingProposal.findUnique({ where: { id }, select: { activityId: true } });
+  const proposal = await prisma.meetingProposal.findUnique({
+    where: { id },
+    select: { activityId: true, userId: true, title: true, proposalType: true },
+  });
+  if (!proposal) throw new Error("申请不存在");
+
   await prisma.meetingProposal.update({
     where: { id },
     data: { status, adminNote: adminNote || undefined },
   });
+
+  // ── 通知申请人审核结果 ──
+  const approved = status === ProposalStatus.APPROVED;
+  const typeLabel = proposal.proposalType === "SHOWCASE" ? "展示" : "分享";
+  await createNotification({
+    userId: proposal.userId,
+    type: "PROPOSAL_REVIEW",
+    title: approved ? `${typeLabel}申请通过 ✅` : `${typeLabel}申请未通过 ❌`,
+    content: approved
+      ? `你在例会中的${typeLabel}申请「${proposal.title}」已通过审核`
+      : `你的${typeLabel}申请「${proposal.title}」未通过审核${adminNote ? `：${adminNote}` : ""}`,
+    relatedId: proposal.activityId,
+    relatedType: "Activity",
+  });
+
   revalidatePath("/admin/activities/proposals");
-  revalidatePath(`/activities/${proposal?.activityId}`);
+  revalidatePath(`/activities/${proposal.activityId}`);
 }
 
 // ── 公开课：报名 ──────────────────────────────────────────────
@@ -201,13 +260,24 @@ export async function enrollCourse(formData: FormData) {
 
   if (!activityId) return { error: "无效的活动" };
 
-  await prisma.courseEnrollment.create({
+  const enrollment = await prisma.courseEnrollment.create({
     data: {
       activityId,
       userId,
       topic: topic || undefined,
       status: EnrollmentStatus.ENROLLED,
     },
+  });
+
+  // ── 通知管理员：有新报名 ──
+  await notifyAdminsOfActivity({
+    activityId,
+    userId,
+    userName: session.user.name || "未知用户",
+    title: topic || "（未填写课题）",
+    activityName: "公开课报名",
+    notifType: "ACTIVITY_ENROLL",
+    relatedType: "Activity",
   });
 
   revalidatePath(`/activities/${activityId}`);
@@ -250,7 +320,7 @@ export async function submitCompetition(formData: FormData) {
   if (!activityId)    return { error: "无效的活动" };
   if (!submissionUrl) return { error: "请填写提交链接" };
 
-  await prisma.competitionSubmission.create({
+  const submission = await prisma.competitionSubmission.create({
     data: {
       activityId,
       userId,
@@ -259,6 +329,17 @@ export async function submitCompetition(formData: FormData) {
       submissionUrl,
       note: note || undefined,
     },
+  });
+
+  // ── 通知管理员：有新提交 ──
+  await notifyAdminsOfActivity({
+    activityId,
+    userId,
+    userName: session.user.name || "未知用户",
+    title: teamName || submissionUrl,
+    activityName: "比赛作品提交",
+    notifType: "ACTIVITY_SUBMISSION",
+    relatedType: "Activity",
   });
 
   revalidatePath(`/activities/${activityId}`);

@@ -127,6 +127,11 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
                           <SubmitButton type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#88C232" }} pendingText="通过中...">通过</SubmitButton>
                         </form>
                       )}
+                      {p.status === "REJECTED" && (
+                        <form action={updateProjectStatus.bind(null, p.id, "PUBLISHED")} className="inline">
+                          <SubmitButton type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#88C232" }} pendingText="通过中...">通过</SubmitButton>
+                        </form>
+                      )}
                       {p.status === "PENDING" && (
                         <form action={updateProjectStatus.bind(null, p.id, "REJECTED")} className="inline">
                           <SubmitButton type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#C62828" }} pendingText="拒绝中...">拒绝</SubmitButton>

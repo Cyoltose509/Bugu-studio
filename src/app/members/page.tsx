@@ -15,7 +15,7 @@ export default async function MembersPage() {
         joinYear: true, isActive: true, position: true,
         userId: true, skills: true,
         user: { select: { image: true } },
-        _count: { select: { projectMembers: true } },
+        _count: { select: { projectMembers: { where: { project: { status: "PUBLISHED" } } } } },
       },
     });
 
@@ -24,7 +24,7 @@ export default async function MembersPage() {
     const submitterCounts = userIds.length > 0
       ? await prisma.project.groupBy({
           by: ["submitterId"],
-          where: { submitterId: { in: userIds } },
+          where: { submitterId: { in: userIds }, status: "PUBLISHED" },
           _count: { submitterId: true },
         })
       : [];

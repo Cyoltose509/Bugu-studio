@@ -60,6 +60,8 @@ export interface ProjectFormProps {
   mode: "create" | "edit";
   tags: Tag[];
   initialData?: InitialData;
+  /** 项目的当前状态（编辑模式下用于判断是否显示"重新提交"） */
+  projectStatus?: string;
   /** 编辑模式下的提交处理，传入数据和 slug 跳转路径 */
   onSubmit?: (data: ProjectFormData) => Promise<{ success: boolean; error?: string; slug?: string }>;
 }
@@ -71,7 +73,7 @@ const inputStyle = { borderColor: "#D0DEE8", color: "#333" };
 const labelClass = "block text-sm font-medium mb-1.5";
 const labelStyle = { color: "#555" };
 
-export default function ProjectForm({ mode, tags, initialData, onSubmit }: ProjectFormProps) {
+export default function ProjectForm({ mode, tags, initialData, projectStatus, onSubmit }: ProjectFormProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -117,6 +119,7 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
   const [showCustomRole, setShowCustomRole] = useState(false);
 
   const isEdit = mode === "edit";
+  const isResubmit = isEdit && projectStatus === "REJECTED";
 
   // ── 成员搜索 ──
   const searchMembers = useCallback(async (q: string) => {
@@ -318,12 +321,12 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
   if (success) {
     return (
       <div className="animate-fade-in text-center py-16">
-        <div className="text-5xl mb-4">{isEdit ? "✅" : "🎉"}</div>
+        <div className="text-5xl mb-4">{isResubmit ? "📤" : isEdit ? "✅" : "🎉"}</div>
         <h2 className="text-2xl font-bold mb-2" style={{ color: "#25547A" }}>
-          {isEdit ? "保存成功！" : "提交成功！"}
+          {isResubmit ? "重新提交成功！" : isEdit ? "保存成功！" : "提交成功！"}
         </h2>
         <p className="mb-6" style={{ color: "#777" }}>
-          {isEdit ? "作品信息已更新。" : "你的作品已提交审核，管理员会尽快处理。"}
+          {isResubmit ? "你的作品已重新提交审核，管理员会尽快处理。" : isEdit ? "作品信息已更新。" : "你的作品已提交审核，管理员会尽快处理。"}
         </p>
         {isEdit && initialData ? (
           <a href={`/works/${initialData.slug || initialData.title}`} className="btn-primary px-6 py-2 rounded-lg text-sm inline-block"
@@ -690,12 +693,14 @@ export default function ProjectForm({ mode, tags, initialData, onSubmit }: Proje
         <button type="submit" disabled={loading}
           className="px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white"
           style={{ background: "#3388BB" }}>
-          {loading ? (isEdit ? "保存中..." : "提交中...") : (isEdit ? "保存修改" : "提交作品")}
+          {loading
+            ? (isResubmit ? "重新提交中..." : isEdit ? "保存中..." : "提交中...")
+            : (isResubmit ? "重新提交" : isEdit ? "保存修改" : "提交作品")}
         </button>
         {isEdit && initialData ? (
           <a href={`/works/${initialData.slug || initialData.title}`} className="text-sm" style={{ color: "#999" }}>取消</a>
         ) : (
-          <span className="text-xs" style={{ color: "#999" }}>提交后状态为"待审核"，管理员通过后即可公开展示</span>
+          <span className="text-xs" style={{ color: "#999" }}>{isResubmit ? "重新提交审核，管理员将通过或驳回" : "提交后状态为\"待审核\"，管理员通过后即可公开展示"}</span>
         )}
       </div>
     </form>

@@ -103,6 +103,7 @@ export default async function ProjectEditPage({ params }: PageProps) {
       >
         <ProjectEditForm
           projectId={project.id}
+          projectStatus={project.status}
           tags={tags}
           initialData={initialData}
         />

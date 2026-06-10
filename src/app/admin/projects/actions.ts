@@ -24,9 +24,17 @@ async function invalidateProjectCaches(id?: string) {
 
 export async function updateProjectStatus(id: string, status: ProjectStatus) {
   await requireAdmin();
-  const project = await prisma.project.findUnique({ where: { id }, select: { slug: true } });
+  const project = await prisma.project.findUnique({ where: { id }, select: { slug: true, status: true } });
+  if (!project) throw new Error("作品不存在");
+
+  // 允许的审核转换：PENDING → PUBLISHED/REJECTED，REJECTED → PUBLISHED
+  const isReviewAction = (status === "PUBLISHED" || status === "REJECTED");
+  if (isReviewAction && project.status !== "PENDING" && !(status === "PUBLISHED" && project.status === "REJECTED")) {
+    throw new Error(`该项目当前状态为"${project.status}"，无法执行此操作`);
+  }
+
   await prisma.project.update({ where: { id }, data: { status } });
-  await invalidateProjectCaches(project?.slug);
+  await invalidateProjectCaches(project.slug);
   revalidatePath("/admin/projects");
   revalidatePath("/members");
   revalidatePath("/works");

@@ -90,6 +90,10 @@ export default function NotificationBell() {
       const target = item.relatedSlug || item.relatedId;
       if (target) window.location.href = `/works/${target}`;
       else window.location.href = `/works`;
+    } else if (item.relatedType === "Activity") {
+      const target = item.relatedId;
+      if (target) window.location.href = `/activities/${target}`;
+      else window.location.href = `/activities`;
     }
   }
 
@@ -117,10 +121,14 @@ export default function NotificationBell() {
 
   function getIcon(type: string) {
     if (type === "PROJECT_REVIEW") return "✅";
+    if (type === "PROPOSAL_REVIEW") return "📋";
     if (type === "COMMENT_REPLY" || type === "COMMENT_LIKE") return "💬";
     if (type === "ROLE_CHANGE") return "🏷️";
     if (type === "NEW_PROJECT") return "🎮";
     if (type === "NEW_USER") return "👤";
+    if (type === "ACTIVITY_PROPOSAL") return "🎤";
+    if (type === "ACTIVITY_ENROLL") return "📚";
+    if (type === "ACTIVITY_SUBMISSION") return "🏆";
     return "🔔";
   }
 

@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
+import { ProjectStatus } from "@prisma/client";
 import MemberContactInfo from "./MemberContactInfo";
 import AdminMemberEditor from "./AdminMemberEditor";
 
@@ -44,6 +45,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
         socialLinks: { orderBy: { sortOrder: "asc" } },
         projectMembers: {
           orderBy: { sortOrder: "asc" },
+          where: { project: { status: ProjectStatus.PUBLISHED } },
           include: {
             project: {
               select: {
@@ -69,6 +71,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
           where: {
             submitterId: m.userId,
             id: { notIn: [...existingProjectIds] },
+            status: ProjectStatus.PUBLISHED,
           },
           select: {
             id: true, slug: true, title: true,

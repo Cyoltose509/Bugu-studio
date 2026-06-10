@@ -186,6 +186,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return apiError("数据验证失败", 422, parsed.error.flatten());
   }
 
+  // ── REJECTED 项目被提交者编辑 → 自动改为 PENDING（重新提交） ──
+  const isResubmit = project.status === ProjectStatus.REJECTED
+    && project.submitterId === session.user.id
+    && !isReviewerOrAbove(session.user.role as any); // 管理员/审核员编辑时不触发
+
   const { tagIds, memberRoles, links, customTags, images, ...projectData } = parsed.data;
 
   // 处理自定义标签：upsert 新标签并合并到 tagIds
@@ -210,6 +215,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     where: { id },
     data: {
       ...projectData,
+      ...(isResubmit && { status: ProjectStatus.PENDING }),
       ...(finalTagIds !== undefined && {
         tags: {
           deleteMany: {},
@@ -260,6 +266,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     userAgent,
     statusCode: 200,
   });
+
+  // ── 重新提交时通知管理员 ──
+  if (isResubmit) {
+    const submitterName = session.user.name || "未知用户";
+    await notifyNewProject(id, project.title, submitterName);
+  }
 
   // ── 清除缓存 ──
   await Promise.all([

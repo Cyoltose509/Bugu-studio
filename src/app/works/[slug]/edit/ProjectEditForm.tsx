@@ -12,11 +12,12 @@ interface Tag {
 
 interface Props {
   projectId: string;
+  projectStatus: string;
   tags: Tag[];
   initialData: InitialData;
 }
 
-export default function ProjectEditForm({ projectId, tags, initialData }: Props) {
+export default function ProjectEditForm({ projectId, projectStatus, tags, initialData }: Props) {
   const router = useRouter();
 
   async function handleSubmit(data: ProjectFormData) {
@@ -47,6 +48,7 @@ export default function ProjectEditForm({ projectId, tags, initialData }: Props)
   return (
     <ProjectForm
       mode="edit"
+      projectStatus={projectStatus}
       tags={tags}
       initialData={initialData}
       onSubmit={handleSubmit}
