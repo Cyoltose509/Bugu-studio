@@ -5,6 +5,7 @@
 
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
+import OrphanTablesDetector from "@/components/admin/OrphanTablesDetector";
 
 export const dynamic = "force-dynamic";
 
@@ -172,9 +173,9 @@ export default async function SupabaseMonitorPage() {
                 </tr>
               </thead>
               <tbody>
-                {tableStats.map((t) => (
+                {tableStats.map((t, idx) => (
                   <tr
-                    key={t.table}
+                    key={`${t.table}-${idx}`}
                     className="border-t"
                     style={{ borderColor: "#E6F0F8" }}
                   >
@@ -210,6 +211,11 @@ export default async function SupabaseMonitorPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* 野表检测 */}
+          <div className="mt-8">
+            <OrphanTablesDetector />
           </div>
         </>
       )}

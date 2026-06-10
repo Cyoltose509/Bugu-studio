@@ -6,6 +6,7 @@
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import OrphanFilesDetector from "@/components/admin/OrphanFilesDetector";
 
 export const dynamic = "force-dynamic";
 
@@ -189,6 +190,9 @@ export default async function R2MonitorPage() {
           </div>
         </>
       ) : null}
+
+      {/* 野文件检测 */}
+      <OrphanFilesDetector />
     </div>
   );
 }

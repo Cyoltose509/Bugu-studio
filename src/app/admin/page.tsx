@@ -7,8 +7,6 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import { ProjectStatus } from "@prisma/client";
-import SyncOrphanedButton from "./SyncOrphanedButton";
-import CompressAvatarsButton from "./CompressAvatarsButton";
 
 export const dynamic = "force-dynamic";
 
@@ -115,8 +113,6 @@ export default async function AdminDashboard() {
           <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">管理用户</Link>
           <Link href="/admin/settings" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">站点设置</Link>
           <Link href="/" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">返回前台</Link>
-          <SyncOrphanedButton />
-          <CompressAvatarsButton />
         </div>
       </div>
     </div>
