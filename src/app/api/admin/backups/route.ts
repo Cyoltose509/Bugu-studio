@@ -9,7 +9,7 @@ const TABLES = [
   "siteSetting", "tag", "user", "account", "session",
   "clubMember", "memberLink", "project", "projectImage",
   "projectMember", "projectLike", "projectLink", "projectTag",
-  "comment", "notification", "review", "announcement",
+  "comment", "notification", "review",
   "yearEvent", "eventImage", "inviteCode", "auditLog",
   "loginAttempt", "rateLimit", "verificationToken",
 ] as const;

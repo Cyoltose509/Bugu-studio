@@ -69,17 +69,6 @@ async function collectReferencedUrls(publicUrl: string): Promise<Set<string>> {
   });
   eventImages.forEach((ei) => addUrl(ei.url));
 
-  // CompetitionSubmission.submissionUrl
-  const submissions = await prisma.competitionSubmission.findMany({
-    where: { submissionUrl: { not: null } },
-    select: { submissionUrl: true },
-  });
-  submissions.forEach((s) => addUrl(s.submissionUrl));
-
-  // CompetitionSubmission.files (String[]) — 无法在 DB 层过滤空数组，全量查后在内存中处理
-  const allSubmissions = await prisma.competitionSubmission.findMany();
-  allSubmissions.forEach((s: any) => s.files?.forEach((f: string) => addUrl(f)));
-
   // JamSubmission.files (String[]) — Game Jam 作品提交截图
   const jamSubmissions = await prisma.jamSubmission.findMany();
   jamSubmissions.forEach((s: any) => {

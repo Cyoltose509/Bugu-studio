@@ -116,11 +116,6 @@ export default async function WorkDetailPage({ params }: PageProps) {
   };
   const externalLinks = [
     ...project.links.map((l) => ({ label: l.label, url: l.url, icon: LINK_ICONS[l.label.toLowerCase()] || "🔗" })),
-    ...[{ label: "Steam", url: project.steamUrl }, { label: "GitHub", url: project.githubUrl }, { label: "itch.io", url: project.itchUrl },
-       { label: "百度网盘", url: project.panUrl }, { label: "Google Drive", url: project.driveUrl }, { label: "OneDrive", url: project.onedriveUrl },
-       { label: "官网", url: project.websiteUrl }]
-      .filter((l) => l.url && !project.links.some((pl) => pl.url === l.url))
-      .map((l) => ({ ...l, icon: LINK_ICONS[l.label.toLowerCase()] || "🔗" })),
   ];
 
   return (
@@ -191,13 +186,6 @@ export default async function WorkDetailPage({ params }: PageProps) {
             <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>作品简介</h2>
             <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>{project.description}</p>
           </div>
-
-          {project.devlog && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4" style={{ color: "#25547A" }}>开发日志</h2>
-              <div className="rounded-xl p-6 whitespace-pre-wrap leading-relaxed border" style={{ background: "#F0F5F9", color: "#555", borderColor: "#D0DEE8" }}>{project.devlog}</div>
-            </div>
-          )}
 
           {/* ── 留言板 ── */}
           <Suspense fallback={<div className="text-xs" style={{ color: "#999" }}>留言加载中…</div>}>

@@ -63,13 +63,6 @@ enum AuditAction {
   OTHER
 }
 
-enum AnnouncementType {
-  INFO // 普通通知
-  SUCCESS // 成功通知
-  WARNING // 警告通知
-  DANGER // 危险通知
-}
-
 enum ActivityType {
   MEETING // 例会
   COURSE // 公开课
@@ -94,13 +87,6 @@ enum ProposalStatus {
   REJECTED // 已拒绝
 }
 
-enum EnrollmentStatus {
-  ENROLLED // 已报名
-  IN_PROGRESS // 进行中
-  COMPLETED // 已完成
-  DROPPED // 已退出
-}
-
 // ============================================================
 // 用户 & 认证
 // ============================================================
@@ -114,11 +100,9 @@ model User {
   passwordHash    String? // scrypt hash
   image           String? // 头像 URL（R2）
   avatarChangedAt DateTime? // 上次更换头像时间（限制7天一次）
-  nameChangedAt   DateTime? // 上次修改名称时间（限制7天一次）
   role            UserRole  @default(USER)
   isActive        Boolean   @default(true)
   lastLoginAt     DateTime?
-  lastLoginIp     String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -134,9 +118,6 @@ model User {
   notifications          Notification[]
   projectLikes           ProjectLike[]
   meetingProposals       MeetingProposal[]
-  courseEnrollments      CourseEnrollment[]
-  mentoredCourses        CourseEnrollment[]      @relation("CourseMentor")
-  competitionSubmissions CompetitionSubmission[]
 
   // Game Jam
   jamLedTeams           JamTeam[]
@@ -243,7 +224,6 @@ model ClubMember {
   avatar            String? // 头像 URL（R2）
   bio               String?  @db.Text
   grade             String? // 年级，如 "2021级"
-  cohortYear        Int? // 第几届（入学年份届别），取代 joinYear 的语义
   joinYear          Int? // 入社年份（保留兼容，新数据不再使用）
   graduateYear      Int? // 毕业年份（null = 在读）
   skills            String[] @default([]) // 职能标签
@@ -296,18 +276,7 @@ model Project {
   developYear Int // 开发年份
   publishedAt DateTime? // 实际发布时间
 
-  // 外部链接
-  steamUrl    String?
-  githubUrl   String?
-  itchUrl     String?
-  panUrl      String? // 百度网盘
-  driveUrl    String? // Google Drive
-  onedriveUrl String?
-  videoUrl    String? // 演示视频
-  websiteUrl  String? // 作品官网
-
   // 内容
-  devlog     String?  @db.Text // 开发日志（Markdown）
   techStack  String[] @default([])
   isFeatured Boolean  @default(false) // 精选作品
 
@@ -315,9 +284,6 @@ model Project {
   submitterId String
   submittedAt DateTime?
   reviewNote  String?   @db.Text // 审核意见
-
-  // 统计（非实时，定期更新）
-  viewCount Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -331,7 +297,6 @@ model Project {
   reviews                Review[]
   comments               Comment[]
   likes                  ProjectLike[]
-  competitionSubmissions CompetitionSubmission[]
   jamSubmissions         JamSubmission[]
 
   @@index([status])
@@ -438,24 +403,6 @@ model Review {
 
   @@index([projectId])
   @@index([reviewerId])
-}
-
-// ============================================================
-// 公告系统
-// ============================================================
-
-model Announcement {
-  id        String           @id @default(cuid())
-  title     String
-  content   String           @db.Text
-  type      AnnouncementType @default(INFO)
-  isActive  Boolean          @default(true)
-  startsAt  DateTime?
-  endsAt    DateTime?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  @@index([isActive, createdAt])
 }
 
 // ============================================================
@@ -633,8 +580,6 @@ model Activity {
   updatedAt        DateTime       @updatedAt
 
   proposals   MeetingProposal[]
-  enrollments CourseEnrollment[]
-  submissions CompetitionSubmission[]
 
   // Game Jam
   jamTeams       JamTeam[]
@@ -668,48 +613,6 @@ model MeetingProposal {
   @@index([activityId])
   @@index([userId])
   @@index([status])
-}
-
-// 公开课 — 报名记录
-model CourseEnrollment {
-  id         String           @id @default(cuid())
-  activityId String
-  userId     String
-  topic      String? // 选题
-  mentorId   String? // 导师 userId
-  status     EnrollmentStatus @default(ENROLLED)
-  score      Int? // 评分 (0-100)
-  createdAt  DateTime         @default(now())
-
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mentor   User?    @relation("CourseMentor", fields: [mentorId], references: [id], onDelete: SetNull)
-
-  @@unique([activityId, userId])
-  @@index([activityId])
-  @@index([userId])
-  @@index([mentorId])
-}
-
-// Game Jam — 作品提交
-model CompetitionSubmission {
-  id            String   @id @default(cuid())
-  activityId    String
-  userId        String
-  projectId     String? // 关联作品
-  teamName      String?
-  submissionUrl String? // 提交链接
-  note          String?  @db.Text // 备注
-  score         Int? // 评分 (0-100)
-  createdAt     DateTime @default(now())
-
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-
-  @@unique([activityId, userId])
-  @@index([activityId])
-  @@index([userId])
 }
 
 // ============================================================

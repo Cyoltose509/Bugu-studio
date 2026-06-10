@@ -37,7 +37,6 @@ const MODEL_FILTERS: { value: string; label: string }[] = [
   { value: "ClubMember", label: "社团成员" },
   { value: "ProjectMember", label: "作品成员" },
   { value: "Review", label: "审核" },
-  { value: "Announcement", label: "公告" },
   { value: "YearEvent", label: "大事记" },
   { value: "SiteSetting", label: "站点设置" },
   { value: "Tag", label: "标签" },

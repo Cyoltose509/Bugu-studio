@@ -76,14 +76,9 @@ export async function saveProfile(formData: FormData) {
     }),
   ]);
 
-  // ═══ 名称修改速率限制已移除 — 用户可随时修改 ═══
-
   // 更新 User（含 bio）
   const userUpdateData: any = { name };
   if (bio !== undefined) userUpdateData.bio = bio || null;
-  if (name !== dbUser?.name) {
-    userUpdateData.nameChangedAt = new Date();
-  }
   await prisma.user.update({
     where: { id: session.user.id },
     data: userUpdateData,

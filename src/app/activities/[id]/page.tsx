@@ -51,7 +51,6 @@ const getActivity = cache(async (id: string) => {
         where:  { id },
         include: {
           proposals:   { where: { status: ProposalStatus.APPROVED }, include: { user: { select: { id: true, name: true, image: true } } } },
-          submissions:  { include: { user: { select: { id: true, name: true, image: true } }, project: { select: { id: true, title: true, slug: true } } } },
           jamTeams: {
             include: {
               members: { include: { user: { select: { id: true, name: true, image: true } } } },
@@ -534,7 +533,6 @@ async function CompetitionSection({
     });
   }
 
-  const submissions = activity.submissions || [];
   const jamSubmissions = activity.jamSubmissions || [];
   const jamJudges = activity.jamJudges || [];
   const jamTeams = activity.jamTeams || [];

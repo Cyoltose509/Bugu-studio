@@ -63,11 +63,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   if (!project) return apiError("作品不存在", 404);
 
-  // 增加浏览量（异步，不等待）
-  prisma.project
-    .update({ where: { id: project.id }, data: { viewCount: { increment: 1 } } })
-    .catch(() => {});
-
   return apiResponse(project);
 }
 

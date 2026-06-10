@@ -62,7 +62,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
           orderBy: { startTime: "desc" },
           skip,
           take: pageSize,
-          include: { _count: { select: { proposals: true, enrollments: true, submissions: true } } },
+          include: { _count: { select: { proposals: true } } },
         }),
         prisma.activity.count({ where }),
         prisma.activity.groupBy({ by: ["status"], _count: { status: true } }),
@@ -140,7 +140,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
                   {activity.registrationOpen ? " · 开放报名" : ""}
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: "#999" }}>
-                  申请 {activity._count.proposals} · 报名 {activity._count.enrollments} · 提交 {activity._count.submissions}
+                  申请 {activity._count.proposals}
                 </p>
               </div>
 

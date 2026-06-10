@@ -58,7 +58,6 @@ export const projectCreateSchema = z.object({
     .max(new Date().getFullYear() + 1),
   links: z.array(linkEntrySchema).max(20).default([]),
   coverImage: z.string().max(2048).optional(),
-  devlog: z.string().max(50000).optional(),
   techStack: z.array(z.string().max(50)).max(20).default([]),
   tagIds: z.array(z.string()).max(10).default([]),
   customTags: z.array(z.string().min(1).max(30)).max(10).default([]),

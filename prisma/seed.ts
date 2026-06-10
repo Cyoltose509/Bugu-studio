@@ -2,7 +2,7 @@
  * 种子数据 - Supabase
  * 运行: npx ts-node prisma/seed.ts
  */
-import { PrismaClient, AnnouncementType } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -58,20 +58,6 @@ async function main() {
     await prisma.siteSetting.upsert({ where: { key: setting.key }, update: {}, create: setting });
   }
   console.log(`✅ 创建了 ${defaultSettings.length} 条站点设置`);
-
-  // 创建欢迎公告
-  await prisma.announcement.upsert({
-    where: { id: "welcome" },
-    update: {},
-    create: {
-      id: "welcome",
-      title: "欢迎来到布谷工作室！",
-      content: "这里是我们社团作品的展示与归档平台，记录着每一届成员的创造力与热情。",
-      type: AnnouncementType.INFO,
-      isActive: true,
-    },
-  });
-  console.log("✅ 创建欢迎公告");
 
   console.log("🎉 播种完成！");
 }

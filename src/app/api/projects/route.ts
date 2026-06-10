@@ -80,9 +80,6 @@ export async function GET(request: NextRequest) {
           developYear: true,
           publishedAt: true,
           isFeatured: true,
-          steamUrl: true,
-          githubUrl: true,
-          itchUrl: true,
           tags: {
             select: {
               tag: { select: { name: true, slug: true, color: true } },

@@ -25,17 +25,7 @@ async function main() {
   }
   console.log("✅ 站点设置\n");
 
-  // ── 2. 公告 ──
-  try {
-    await p.announcement.upsert({
-      where: { id: "welcome" },
-      update: {},
-      create: { id: "welcome", title: "欢迎回到布谷工作室！", content: "数据已重建。请通过管理后台重新添加内容。", type: "INFO", isActive: true },
-    });
-    console.log("✅ 公告\n");
-  } catch (e) { console.log("  ⚠️ " + (e as any).message?.slice(0, 60)); }
-
-  // ── 3. 社团成员：示例数据 ──
+  // ── 2. 社团成员：示例数据 ──
   // ClubMember 需要引用 User，所以先创建 user 再创建 member
   // 此处跳过，等用户有了 admin 账号后再通过 /admin/members 添加
 
