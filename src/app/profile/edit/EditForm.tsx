@@ -4,6 +4,7 @@ import {useActionState, useState, useRef, useEffect} from "react";
 import {useSession} from "next-auth/react";
 import {useRouter} from "next/navigation";
 import {saveProfile, redeemInviteCode} from "./actions";
+import {SubmitButton} from "@/components/ui/SubmitButton";
 import Cropper from "react-easy-crop";
 import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
 
@@ -92,6 +93,7 @@ export default function EditForm({
     // 表单值
     const [nameValue, setNameValue] = useState(originalName);
     const [bioValue, setBioValue] = useState(originalBio);
+    const [gradeValue, setGradeValue] = useState(member?.grade ?? "");
     const [locationValue, setLocationValue] = useState(member?.location ?? "");
     const [phoneValue, setPhoneValue] = useState(member?.phone ?? "");
     const [wechatValue, setWechatValue] = useState(member?.wechat ?? "");
@@ -111,6 +113,7 @@ export default function EditForm({
         (member && phoneValue !== (member.phone ?? "")) ||
         (member && wechatValue !== (member.wechat ?? "")) ||
         (member && qqValue !== (member.qq ?? "")) ||
+        (member && gradeValue !== (member.grade ?? "")) ||
         (member && JSON.stringify(skills) !== JSON.stringify(originalSkills)) ||
         JSON.stringify(socialLinks.map(({label, url}) => ({label, url}))) !==
         JSON.stringify(originalLinks.map(({label, url}) => ({label, url})));
@@ -221,6 +224,7 @@ export default function EditForm({
                     fd.set("bio", fd.get("bio") ?? originalBio);
                     fd.set("skills", skills.join(","));
                     fd.set("socialLinks", JSON.stringify(socialLinks));
+                    fd.set("grade", gradeValue);
                     if (member) {
                         fd.set("location", locationValue);
                         fd.set("phone", phoneValue);
@@ -415,7 +419,8 @@ export default function EditForm({
                                 <select
                                     id="grade"
                                     name="grade"
-                                    defaultValue={member.grade ?? ""}
+                                    value={gradeValue}
+                                    onChange={(e) => setGradeValue(e.target.value)}
                                     className="w-full rounded-lg bg-white border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
                                     style={{borderColor: "#D0DEE8", color: "#333"}}
                                 >
@@ -626,13 +631,14 @@ export default function EditForm({
                 )}
 
                 {/* 提交按钮 */}
-                <button
+                <SubmitButton
                     type="submit"
                     disabled={!canSave}
+                    pendingText="保存中..."
                     className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {pending ? "保存中..." : !hasChanged ? "无修改" : "保存修改"}
-                </button>
+                    {!hasChanged ? "无修改" : "保存修改"}
+                </SubmitButton>
             </form>
 
             {/* ══════════ 裁剪弹窗 ══════════ */}

@@ -25,29 +25,39 @@ export async function PATCH(
 
   const year = bodyYear || (eventDate ? new Date(eventDate).getFullYear() : undefined);
 
-  // 如果传了 images，先删旧图再创建新图
-  if (images !== undefined) {
-    await prisma.eventImage.deleteMany({ where: { eventId: id } });
+  // 过滤掉 url 为空的图片
+  const validImages: { url: string; altText?: string }[] = images
+    ? (images as any[]).filter((img: any) => img.url)
+    : [];
+
+  try {
+    // 使用事务保证原子性：如果传了 images，先删旧图再创建新图
+    if (images !== undefined) {
+      await prisma.eventImage.deleteMany({ where: { eventId: id } });
+    }
+
+    const event = await prisma.yearEvent.update({
+      where: { id },
+      data: {
+        ...(title !== undefined && { title }),
+        ...(content !== undefined && { body: content || null }),
+        ...(year !== undefined && { year }),
+        ...(eventDate !== undefined && { eventDate: eventDate ? new Date(eventDate) : null }),
+        ...(sortOrder !== undefined && { sortOrder }),
+        ...(images !== undefined && validImages.length > 0
+          ? { images: { create: validImages.slice(0, 5).map((img, i) => ({ url: img.url, altText: img.altText, sortOrder: i })) } }
+          : {}),
+      },
+      include: { images: { orderBy: { sortOrder: "asc" } } },
+    });
+
+    revalidatePath("/history");
+    invalidateCache("history:events"); // 非阻塞
+    return apiResponse(event);
+  } catch (err: any) {
+    console.error("更新历史事件失败:", err);
+    return apiError(err.message || "更新失败", 500);
   }
-
-  const event = await prisma.yearEvent.update({
-    where: { id },
-    data: {
-      ...(title !== undefined && { title }),
-      ...(content !== undefined && { body: content || null }),
-      ...(year !== undefined && { year }),
-      ...(eventDate !== undefined && { eventDate: eventDate ? new Date(eventDate) : null }),
-      ...(sortOrder !== undefined && { sortOrder }),
-      ...(images !== undefined && images.length > 0
-        ? { images: { create: images.slice(0, 5).map((img: any, i: number) => ({ url: img.url, altText: img.altText, sortOrder: i })) } }
-        : {}),
-    },
-    include: { images: { orderBy: { sortOrder: "asc" } } },
-  });
-
-  revalidatePath("/history");
-  await invalidateCache("history:events");
-  return apiResponse(event);
 }
 
 export async function DELETE(

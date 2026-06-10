@@ -65,11 +65,18 @@ export async function saveProfile(formData: FormData) {
     } catch { /* ignore malformed JSON */ }
   }
 
+  // 并行查询：User 和 ClubMember
+  const [dbUser, member] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { name: true },
+    }),
+    prisma.clubMember.findUnique({
+      where: { userId: session.user.id },
+    }),
+  ]);
+
   // ═══ 名称修改速率限制已移除 — 用户可随时修改 ═══
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { name: true },
-  });
 
   // 更新 User（含 bio）
   const userUpdateData: any = { name };
@@ -83,10 +90,6 @@ export async function saveProfile(formData: FormData) {
   });
 
   // 更新 ClubMember（如果存在）
-  const member = await prisma.clubMember.findUnique({
-    where: { userId: session.user.id },
-  });
-
   if (member) {
     // 删除旧链接，重建新链接
     await prisma.memberLink.deleteMany({ where: { memberId: member.id } });
@@ -117,23 +120,26 @@ export async function saveProfile(formData: FormData) {
     });
   }
 
-  // 清除所有相关缓存，确保其他页面立即显示新名称
-  await invalidateCache(`profile:user:${session.user.id}`);
-  await invalidateCache(`profile:member:${session.user.id}`);
-  await invalidateCache("members:all");
-  // ⭐ 清除作品相关缓存（作品详情/列表中使用了 displayName）
-  await invalidateCache("project:detail:");
-  await invalidateCache("works:");
-  await invalidateCache("api:projects:");
-  // ⭐ 清除 history 缓存（使用了 displayName）
-  await invalidateCache("history:");
-  // ⭐ 清除成员 API 缓存
-  await invalidateCache("api:members:");
+  // 清除所有相关缓存，确保其他页面立即显示新名称（并行）
+  const cacheTasks = [
+    invalidateCache(`profile:user:${session.user.id}`),
+    invalidateCache(`profile:member:${session.user.id}`),
+    invalidateCache("members:all"),
+    invalidateCache("project:detail:"),
+    invalidateCache("works:"),
+    invalidateCache("api:projects:"),
+    invalidateCache("history:"),
+    invalidateCache("api:members:"),
+  ];
   if (member) {
-    await invalidateCache(`member:meta:${member.id}`);
-    await invalidateCache(`member:detail:${member.id}`);
+    cacheTasks.push(
+      invalidateCache(`member:meta:${member.id}`),
+      invalidateCache(`member:detail:${member.id}`),
+    );
   }
+  await Promise.all(cacheTasks);
 
+  // revalidatePath 非阻塞（fire-and-forget），不等待
   revalidatePath("/profile");
   revalidatePath("/members");
   revalidatePath("/works");

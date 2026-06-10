@@ -40,27 +40,35 @@ export async function POST(request: NextRequest) {
 
   const year = body.year || new Date(eventDate).getFullYear();
 
-  const maxSort = await prisma.yearEvent.findFirst({
-    where: { year },
-    orderBy: { sortOrder: "desc" },
-    select: { sortOrder: true },
-  });
+  try {
+    const maxSort = await prisma.yearEvent.findFirst({
+      where: { year },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
 
-  const event = await prisma.yearEvent.create({
-    data: {
-      title,
-      body: content || null,
-      year,
-      eventDate: eventDate ? new Date(eventDate) : null,
-      sortOrder: (maxSort?.sortOrder ?? -1) + 1,
-      images: images?.length
-        ? { create: images.slice(0, 5).map((img, i) => ({ url: img.url, altText: img.altText, sortOrder: i })) }
-        : undefined,
-    },
-    include: { images: { orderBy: { sortOrder: "asc" } } },
-  });
+    // 过滤掉 url 为空的图片
+    const validImages = images?.filter((img) => img.url) ?? [];
 
-  revalidatePath("/history");
-  await invalidateCache("history:events");
-  return apiResponse(event, 201);
+    const event = await prisma.yearEvent.create({
+      data: {
+        title,
+        body: content || null,
+        year,
+        eventDate: eventDate ? new Date(eventDate) : null,
+        sortOrder: (maxSort?.sortOrder ?? -1) + 1,
+        images: validImages.length
+          ? { create: validImages.slice(0, 5).map((img, i) => ({ url: img.url, altText: img.altText, sortOrder: i })) }
+          : undefined,
+      },
+      include: { images: { orderBy: { sortOrder: "asc" } } },
+    });
+
+    revalidatePath("/history");
+    invalidateCache("history:events"); // 非阻塞
+    return apiResponse(event, 201);
+  } catch (err: any) {
+    console.error("创建历史事件失败:", err);
+    return apiError(err.message || "创建失败", 500);
+  }
 }
