@@ -84,7 +84,7 @@ export default async function ProposalsPage({ searchParams }: PageProps) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold" style={{ color: "#333" }}>{p.title}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#E6F0F8", color: "#3388BB" }}>
-                      {p.proposalType === "SHARE" ? "分享申请" : "展示申请"}
+                      分享申请
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       p.status === "APPROVED" ? "bg-green-100 text-green-700" :

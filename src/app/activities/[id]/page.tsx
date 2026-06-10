@@ -157,20 +157,18 @@ function MeetingSection({ activity, isOngoing, isUpcoming }: { activity: any; is
         </section>
       )}
 
-      {/* 申请入口 */}
+      {/* 报名分享入口 */}
       {(isOngoing || isUpcoming) && (
         <section className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>申请上台</h3>
-          <details className="group">
-            <summary className="cursor-pointer text-sm hover:text-[#3388BB]" style={{ color: "#555" }}>分享申请</summary>
-            <form action={async (f: FormData) => { "use server"; await submitProposal(f); }} className="mt-3 space-y-3">
-              <input type="hidden" name="activityId" value={activity.id} />
-              <input type="hidden" name="proposalType" value="SHARE" />
-              <input name="title" placeholder="分享主题…" required className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }} />
-              <textarea name="description" placeholder="简介（可选）" rows={2} className="w-full rounded-lg border px-3 py-2 text-sm resize-y" style={{ borderColor: "#D0DEE8" }} />
-              <button type="submit" className="btn-primary text-sm px-4 py-2 rounded-lg">提交申请</button>
-            </form>
-          </details>
+          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>📢 报名分享</h3>
+          <p className="text-xs mb-3" style={{ color: "#777" }}>报名分享你的主题，经管理员审核后将列入议程。</p>
+          <form action={async (f: FormData) => { "use server"; await submitProposal(f); }} className="space-y-3">
+            <input type="hidden" name="activityId" value={activity.id} />
+            <input type="hidden" name="proposalType" value="SHARE" />
+            <input name="title" placeholder="分享主题…" required className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }} />
+            <textarea name="description" placeholder="简介（可选）" rows={2} className="w-full rounded-lg border px-3 py-2 text-sm resize-y" style={{ borderColor: "#D0DEE8" }} />
+            <button type="submit" className="btn-primary text-sm px-4 py-2 rounded-lg">提交申请</button>
+          </form>
         </section>
       )}
     </div>
@@ -231,6 +229,21 @@ function CompetitionSection({ activity, isOngoing, isUpcoming }: { activity: any
           </form>
         </section>
       )}
+
+      {/* Game Jam 入口 */}
+      <section className="p-6 rounded-xl border-2 text-center" style={{ borderColor: "#E38043", background: "linear-gradient(135deg, #FFFDF7, #FFF8F0)" }}>
+        <p className="text-lg font-bold mb-2" style={{ color: "#E38043" }}>🏆 Game Jam</p>
+        <p className="text-sm mb-4" style={{ color: "#777" }}>
+          组队参赛 · 评委打分 · 角逐冠军
+        </p>
+        <a
+          href={`/activities/${activity.id}/game-jam`}
+          className="inline-block text-sm px-6 py-2.5 rounded-lg text-white font-semibold transition-transform hover:scale-105"
+          style={{ background: "linear-gradient(135deg, #E38043, #FFB347)" }}
+        >
+          进入 Game Jam
+        </a>
+      </section>
 
       {/* 排行榜 */}
       {submissions.length > 0 && (

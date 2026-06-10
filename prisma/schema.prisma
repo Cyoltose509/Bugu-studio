@@ -138,6 +138,15 @@ model User {
   mentoredCourses        CourseEnrollment[]      @relation("CourseMentor")
   competitionSubmissions CompetitionSubmission[]
 
+  // Game Jam
+  jamLedTeams           JamTeam[]
+  jamTeamMembers        JamTeamMember[]
+  jamTeamApplications   JamTeamApplication[]
+  sentInvitations       JamTeamInvitation[]  @relation("JamTeamInviter")
+  receivedInvitations   JamTeamInvitation[]  @relation("JamTeamInvitee")
+  jamJudges             JamJudge[]
+  jamScores             JamScore[]
+
   @@index([email])
   @@index([role])
   @@index([createdAt])
@@ -323,6 +332,7 @@ model Project {
   comments               Comment[]
   likes                  ProjectLike[]
   competitionSubmissions CompetitionSubmission[]
+  jamSubmissions         JamSubmission[]
 
   @@index([status])
   @@index([type])
@@ -615,6 +625,8 @@ model Activity {
   coverImage       String? // R2 URL
   registrationOpen Boolean        @default(false)
   maxParticipants  Int?
+  theme            String?        @db.Text // Game Jam — 比赛题目
+  themeRevealedAt  DateTime?               // Game Jam — 题目公布时间
   status           ActivityStatus @default(DRAFT)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -622,6 +634,11 @@ model Activity {
   proposals   MeetingProposal[]
   enrollments CourseEnrollment[]
   submissions CompetitionSubmission[]
+
+  // Game Jam
+  jamTeams       JamTeam[]
+  jamJudges      JamJudge[]
+  jamSubmissions JamSubmission[]
 
   @@index([status])
   @@index([type])
@@ -691,4 +708,136 @@ model CompetitionSubmission {
   @@unique([activityId, userId])
   @@index([activityId])
   @@index([userId])
+}
+
+// ============================================================
+// Game Jam 系统 (Game Jam System)
+// ============================================================
+
+// Game Jam — 参赛队伍
+model JamTeam {
+  id         String   @id @default(cuid())
+  activityId String
+  name       String
+  leaderId   String   // 队长 userId
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  activity     Activity            @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  leader       User                @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+  members      JamTeamMember[]
+  applications JamTeamApplication[]
+  invitations  JamTeamInvitation[]
+  submission   JamSubmission?
+
+  @@unique([activityId, name])
+  @@index([activityId])
+  @@index([leaderId])
+}
+
+// Game Jam — 队伍成员
+model JamTeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER") // LEADER | MEMBER
+  joinedAt DateTime @default(now())
+
+  team JamTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+// Game Jam — 入队申请
+model JamTeamApplication {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  message   String?  @db.Text
+  status    String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt DateTime @default(now())
+
+  team JamTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@index([status])
+}
+
+// Game Jam — 入队邀请
+model JamTeamInvitation {
+  id        String   @id @default(cuid())
+  teamId    String
+  inviterId String
+  inviteeId String
+  message   String?  @db.Text
+  status    String   @default("PENDING") // PENDING | ACCEPTED | REJECTED
+  createdAt DateTime @default(now())
+
+  team    JamTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inviter User    @relation("JamTeamInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User    @relation("JamTeamInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, inviteeId])
+  @@index([teamId])
+  @@index([inviteeId])
+  @@index([status])
+}
+
+// Game Jam — 作品提交
+model JamSubmission {
+  id          String   @id @default(cuid())
+  activityId  String
+  teamId      String   @unique // 每队只允许一个提交
+  projectId   String?  // 关联作品
+  title       String
+  description String?  @db.Text
+  files       String[] @default([]) // 截图/玩法 GIF 等文件 URL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  team     JamTeam  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  scores   JamScore[]
+
+  @@index([activityId])
+}
+
+// Game Jam — 评委
+model JamJudge {
+  id         String   @id @default(cuid())
+  activityId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, userId])
+  @@index([activityId])
+}
+
+// Game Jam — 评分
+model JamScore {
+  id           String  @id @default(cuid())
+  submissionId String
+  judgeId      String
+  // 评分维度: { "creativity": 85, "execution": 90, "theme": 80, "overall": 88 }
+  criteria     Json    @default("{}")
+  totalScore   Int
+  comment      String? @db.Text
+  createdAt    DateTime @default(now())
+
+  submission JamSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  judge      User          @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, judgeId])
+  @@index([submissionId])
+  @@index([judgeId])
 }

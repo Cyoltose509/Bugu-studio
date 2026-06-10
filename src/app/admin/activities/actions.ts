@@ -55,6 +55,8 @@ export async function createActivity(formData: FormData) {
   const endTime     = formData.get("endTime") as string;
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
   const regOpen     = formData.get("registrationOpen") === "on";
+  const theme       = (formData.get("theme") as string || "").trim();
+  const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
 
   if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
   if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
@@ -79,6 +81,8 @@ export async function createActivity(formData: FormData) {
       maxParticipants,
       registrationOpen: regOpen,
       status: ActivityStatus.DRAFT,
+      theme: theme || undefined,
+      themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
     },
   });
 
@@ -103,6 +107,8 @@ export async function updateActivity(id: string, formData: FormData) {
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
   const regOpen     = formData.get("registrationOpen") === "on";
   const status      = (formData.get("status") as string || "DRAFT");
+  const theme       = (formData.get("theme") as string || "").trim();
+  const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
 
   if (!title) return { error: "请填写活动标题" };
   if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
@@ -128,6 +134,8 @@ export async function updateActivity(id: string, formData: FormData) {
       maxParticipants,
       registrationOpen: regOpen,
       status: status as ActivityStatus,
+      theme: theme || undefined,
+      themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
     },
   });
 

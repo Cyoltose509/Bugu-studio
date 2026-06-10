@@ -114,6 +114,23 @@ export default function CreateActivityPage() {
           {type === "MEETING" && (
             <p className="text-xs mt-1" style={{ color: "#93B3C8" }}>修改开始时间时，结束时间将自动设为 +2 小时</p>
           )}
+          {type === "COMPETITION" && (
+            <div className="mt-4 space-y-4 p-4 rounded-lg border" style={{ borderColor: "#FFF3E0", background: "#FFFDF7" }}>
+              <p className="text-sm font-medium" style={{ color: "#E38043" }}>🏆 Game Jam 设置</p>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "#777" }} htmlFor="theme">比赛题目 <span className="text-xs" style={{ color: "#999" }}>(比赛开始后公布，留空则无需题目)</span></label>
+                <textarea id="theme" name="theme" rows={3} placeholder="如：主题是「时光倒流」—— 创作一个围绕时间回溯玩法的游戏"
+                  className="w-full rounded-lg border px-3 py-2 text-sm resize-y placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#E38043]"
+                  style={{ borderColor: "#D0DEE8", color: "#333" }} />
+              </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "#777" }} htmlFor="themeRevealedAt">题目公布时间 <span className="text-xs" style={{ color: "#999" }}>(默认为活动开始时间)</span></label>
+                <input id="themeRevealedAt" name="themeRevealedAt" type="datetime-local"
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
+                  style={{ borderColor: "#D0DEE8", color: "#333" }} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 简介 */}

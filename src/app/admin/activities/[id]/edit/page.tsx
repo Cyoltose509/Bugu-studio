@@ -145,6 +145,25 @@ export default async function EditActivityPage({ params }: PageProps) {
           <label className="text-sm" style={{ color: "#555" }}>开放报名</label>
         </div>
 
+        {/* Game Jam 设置（仅 COMPETITION 类型显示） */}
+        <div className="p-4 rounded-lg border" style={{ borderColor: "#FFF3E0", background: "#FFFDF7" }}>
+          <p className="text-sm font-medium mb-3" style={{ color: "#E38043" }}>🏆 Game Jam 设置</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#777" }}>比赛题目</label>
+              <textarea name="theme" rows={3} defaultValue={activity.theme || ""}
+                className="w-full rounded-lg border px-3 py-2 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-[#E38043]"
+                style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            </div>
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#777" }}>题目公布时间</label>
+              <input name="themeRevealedAt" type="datetime-local" defaultValue={activity.themeRevealedAt ? fmt(activity.themeRevealedAt) : ""}
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
+                style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            </div>
+          </div>
+        </div>
+
         <div className="pt-2 flex gap-3">
           <SubmitButton type="submit" className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm" pendingText="保存中...">保存修改</SubmitButton>
           <a href="/admin/activities" className="btn-secondary px-6 py-2.5 rounded-lg text-sm">取消</a>

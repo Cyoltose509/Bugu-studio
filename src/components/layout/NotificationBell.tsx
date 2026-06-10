@@ -94,6 +94,14 @@ export default function NotificationBell() {
       const target = item.relatedId;
       if (target) window.location.href = `/activities/${target}`;
       else window.location.href = `/activities`;
+    } else if (item.relatedType === "JamTeam") {
+      const target = item.relatedId;
+      if (target) {
+        const parts = target.split(":");
+        if (parts.length === 2) {
+          window.location.href = `/activities/${parts[0]}/game-jam/teams/${parts[1]}`;
+        }
+      }
     }
   }
 
@@ -129,6 +137,11 @@ export default function NotificationBell() {
     if (type === "ACTIVITY_PROPOSAL") return "🎤";
     if (type === "ACTIVITY_ENROLL") return "📚";
     if (type === "ACTIVITY_SUBMISSION") return "🏆";
+    if (type === "JAM_APPLICATION") return "📨";
+    if (type === "JAM_APPROVED") return "✅";
+    if (type === "JAM_REJECTED") return "❌";
+    if (type === "JAM_INVITATION") return "📩";
+    if (type === "JAM_INVITATION_ACCEPTED") return "🤝";
     return "🔔";
   }
 
