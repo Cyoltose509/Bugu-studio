@@ -14,9 +14,7 @@ const navItems = [
   { href: "/admin/activities", label: "活动管理", icon: "📅" },
   { href: "/admin/history-events", label: "历史事件", icon: "📆" },
   { href: "/admin/settings", label: "站点设置", icon: "⚙️" },
-  { href: "/admin/audit-logs", label: "审计日志", icon: "📋" },
-  { href: "/admin/backups", label: "备份管理", icon: "💾" },
-  { href: "/admin/monitoring", label: "系统监控", icon: "📡" },
+  { href: "/admin/monitoring", label: "系统管理", icon: "🗄️" },
   { href: "/", label: "返回前台", icon: "🏠" },
 ];
 

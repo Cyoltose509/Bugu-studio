@@ -1,11 +1,14 @@
 /**
- * Supabase / PostgreSQL 数据库监控页面
- * 通过 Prisma raw query 查询 pg 系统表
+ * Supabase / PostgreSQL 数据库综合管理页面
+ * 整合：数据库统计、表空间占用、审计日志、备份管理、野表检测
  */
 
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
+import CollapsibleTableStats from "@/components/admin/CollapsibleTableStats";
 import OrphanTablesDetector from "@/components/admin/OrphanTablesDetector";
+import AuditLogsSection from "@/components/admin/AuditLogsSection";
+import BackupSection from "@/components/admin/BackupSection";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +34,6 @@ export default async function SupabaseMonitorPage() {
   let error: string | null = null;
 
   try {
-    // 数据库总大小
     const sizeResult = await prisma.$queryRawUnsafe<{ size: string }[]>(
       `SELECT pg_size_pretty(pg_database_size(current_database())) as size`
     );
@@ -42,14 +44,10 @@ export default async function SupabaseMonitorPage() {
     );
     if (sizeBytes.length > 0) dbSizeBytes = Number(sizeBytes[0].size);
 
-    // 各表大小和行数
     const rawStats = await prisma.$queryRawUnsafe<
       { relname: string; total_size: bigint; n_live_tup: bigint }[]
     >(`
-      SELECT
-        relname,
-        pg_total_relation_size(relid) as total_size,
-        n_live_tup
+      SELECT relname, pg_total_relation_size(relid) as total_size, n_live_tup
       FROM pg_stat_user_tables
       ORDER BY total_size DESC
     `);
@@ -62,13 +60,11 @@ export default async function SupabaseMonitorPage() {
         rows: Number(r.n_live_tup),
       }));
 
-    // 当前连接数
     const connResult = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
       `SELECT count(*) as count FROM pg_stat_activity`
     );
     if (connResult.length > 0) connections = String(connResult[0].count);
 
-    // PostgreSQL 版本
     const verResult = await prisma.$queryRawUnsafe<{ version: string }[]>(
       `SELECT version()`
     );
@@ -81,173 +77,78 @@ export default async function SupabaseMonitorPage() {
   return (
     <div className="animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
-        <Link
-          href="/admin/monitoring"
-          className="text-sm hover:underline"
-          style={{ color: "#3388BB" }}
-        >
-          ← 监控总览
+        <Link href="/admin" className="text-sm hover:underline" style={{ color: "#3388BB" }}>
+          ← 管理后台
         </Link>
         <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>
-          🗄️ Supabase 数据库
+          🗄️ 数据库管理
         </h1>
+        {/* 子页面快捷入口 */}
+        <div className="ml-auto flex gap-2">
+          <Link href="/admin/monitoring/r2" className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50" style={{ borderColor: "#D0DEE8", color: "#555" }}>
+            📦 R2 存储
+          </Link>
+          <Link href="/admin/monitoring/resend" className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50" style={{ borderColor: "#D0DEE8", color: "#555" }}>
+            ✉️ 邮件监控
+          </Link>
+        </div>
       </div>
 
       {error ? (
-        <div
-          className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm"
-          style={{ color: "#C62828" }}
-        >
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm" style={{ color: "#C62828" }}>
           查询失败：{error}
         </div>
       ) : (
-        <>
-          {/* 概览卡片 */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <StatCard
-              label="数据库大小"
-              value={dbSize}
-              icon="💾"
-              color="#3ECF8E"
-            />
-            <StatCard
-              label="当前连接"
-              value={connections}
-              icon="🔗"
-              color="#3388BB"
-            />
-            <StatCard
-              label="用户表数"
-              value={String(tableStats.length)}
-              icon="📊"
-              color="#E8A040"
-            />
-            <StatCard
-              label="总行数"
-              value={String(
-                tableStats.reduce((sum, t) => sum + t.rows, 0)
-              )}
-              icon="📝"
-              color="#88C232"
-            />
-          </div>
+        <div className="space-y-8">
+          {/* ============ 第 1 节：概览统计 ============ */}
+          <section>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <StatCard label="数据库大小" value={dbSize} icon="💾" color="#3ECF8E" />
+              <StatCard label="当前连接" value={connections} icon="🔗" color="#3388BB" />
+              <StatCard label="用户表数" value={String(tableStats.length)} icon="📊" color="#E8A040" />
+              <StatCard label="总行数" value={String(tableStats.reduce((sum, t) => sum + t.rows, 0))} icon="📝" color="#88C232" />
+            </div>
+            <div className="bg-white border rounded-lg p-3 text-xs" style={{ borderColor: "#D0DEE8", color: "#777" }}>
+              {version}
+            </div>
+          </section>
 
-          {/* 版本信息 */}
-          <div
-            className="bg-white border rounded-lg p-3 mb-6 text-xs"
-            style={{ borderColor: "#D0DEE8", color: "#777" }}
-          >
-            {version}
-          </div>
+          {/* ============ 第 2 节：表空间占用（折叠展开） ============ */}
+          <section>
+            <h2 className="text-lg font-semibold mb-3" style={{ color: "#25547A" }}>
+              📁 表空间占用
+            </h2>
+            <CollapsibleTableStats tableStats={tableStats} dbSizeBytes={dbSizeBytes} />
+          </section>
 
-          {/* 表详情 */}
-          <h2 className="text-lg font-semibold mb-3" style={{ color: "#25547A" }}>
-            表空间占用
-          </h2>
-          <div
-            className="bg-white border rounded-lg overflow-hidden"
-            style={{ borderColor: "#D0DEE8" }}
-          >
-            <table className="w-full text-sm">
-              <thead style={{ background: "#F0F5FA" }}>
-                <tr>
-                  <th
-                    className="text-left px-4 py-2.5 font-medium"
-                    style={{ color: "#555" }}
-                  >
-                    表名
-                  </th>
-                  <th
-                    className="text-right px-4 py-2.5 font-medium"
-                    style={{ color: "#555" }}
-                  >
-                    大小
-                  </th>
-                  <th
-                    className="text-right px-4 py-2.5 font-medium"
-                    style={{ color: "#555" }}
-                  >
-                    行数
-                  </th>
-                  <th className="px-4 py-2.5" />
-                </tr>
-              </thead>
-              <tbody>
-                {tableStats.map((t, idx) => (
-                  <tr
-                    key={`${t.table}-${idx}`}
-                    className="border-t"
-                    style={{ borderColor: "#E6F0F8" }}
-                  >
-                    <td
-                      className="px-4 py-2.5 font-mono text-xs"
-                      style={{ color: "#333" }}
-                    >
-                      {t.table}
-                    </td>
-                    <td
-                      className="px-4 py-2.5 text-right font-mono text-xs"
-                      style={{ color: "#555" }}
-                    >
-                      {t.size}
-                    </td>
-                    <td
-                      className="px-4 py-2.5 text-right font-mono text-xs"
-                      style={{ color: "#555" }}
-                    >
-                      {t.rows.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div
-                        className="h-1 rounded-full"
-                        style={{
-                          width: `${Math.min(100, dbSizeBytes > 0 ? (t.rows / Math.max(1, tableStats.reduce((s, x) => s + x.rows, 0))) * 100 * 5 : 0)}px`,
-                          minWidth: "4px",
-                          background: "#3ECF8E",
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* ============ 第 3 节：审计日志 ============ */}
+          <section>
+            <AuditLogsSection />
+          </section>
 
-          {/* 野表检测 */}
-          <div className="mt-8">
+          {/* ============ 第 4 节：备份管理 ============ */}
+          <section>
+            <BackupSection />
+          </section>
+
+          {/* ============ 第 5 节：野表检测 ============ */}
+          <section>
             <OrphanTablesDetector />
-          </div>
-        </>
+          </section>
+        </div>
       )}
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  icon,
-  color,
-}: {
-  label: string;
-  value: string;
-  icon: string;
-  color: string;
-}) {
+function StatCard({ label, value, icon, color }: { label: string; value: string; icon: string; color: string }) {
   return (
-    <div
-      className="bg-white border rounded-xl p-4 shadow-sm"
-      style={{ borderColor: "#D0DEE8" }}
-    >
+    <div className="bg-white border rounded-xl p-4 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xl">{icon}</span>
-        <span className="text-xs" style={{ color: "#777" }}>
-          {label}
-        </span>
+        <span className="text-xs" style={{ color: "#777" }}>{label}</span>
       </div>
-      <div className="text-2xl font-bold" style={{ color }}>
-        {value}
-      </div>
+      <div className="text-2xl font-bold" style={{ color }}>{value}</div>
     </div>
   );
 }

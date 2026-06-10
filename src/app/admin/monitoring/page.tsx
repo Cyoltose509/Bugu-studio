@@ -9,7 +9,7 @@ const cards = [
     href: "/admin/monitoring/supabase",
     icon: "🗄️",
     title: "Supabase 数据库",
-    desc: "查看数据库大小、表空间占用、连接数等 PostgreSQL 指标",
+    desc: "数据库统计、表空间占用、审计日志、备份管理、野表检测",
     color: "#3ECF8E",
   },
   {
