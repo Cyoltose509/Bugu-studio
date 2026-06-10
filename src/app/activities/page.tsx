@@ -220,9 +220,14 @@ export default async function ActivitiesPage() {
           orderBy: { startTime: "asc" },
           take: 6,
         }),
-        // 已结束（最近 12 条）
+        // 已结束 / 归档（最近 12 条）
         prisma.activity.findMany({
-          where:  { status: ActivityStatus.PUBLISHED, endTime: { lt: now } },
+          where: {
+            OR: [
+              { status: ActivityStatus.PUBLISHED, endTime: { lt: now } },
+              { status: ActivityStatus.ARCHIVED },
+            ],
+          },
           orderBy: { endTime: "desc" },
           take: 12,
         }),
