@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import MiniLikeButton from "@/components/MiniLikeButton";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
 
@@ -19,17 +20,38 @@ interface Props {
   typeLabels: Record<string, string>;
 }
 
-/** 单张作品卡片 — 带逐个弹出动画 */
+/** 单张作品卡片 — 带逐个弹出动画，点击时显示加载反馈 */
 export default function StaggeredCard({ project: p, members, idx, liked, typeLabels }: Props) {
+  const router = useRouter();
+  const [clicking, setClicking] = useState(false);
   const delay = `${idx * 70}ms`;
+
+  function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    setClicking(true);
+    router.push(`/works/${p.slug}`);
+  }
 
   return (
     <div style={{ animation: `cardPopIn 0.45s ${delay} both` }}>
-      <Link
+      <a
         href={`/works/${p.slug}`}
-        className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md block"
-        style={{ borderColor: "#D0DEE8" }}
+        onClick={handleClick}
+        className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md block relative"
+        style={{ borderColor: "#D0DEE8", cursor: clicking ? "default" : "pointer", opacity: clicking ? 0.65 : 1, transition: "opacity 0.2s" }}
       >
+        {/* 点击加载反馈遮罩 */}
+        {clicking && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 rounded-xl">
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/90 shadow-lg" style={{ color: "#25547A" }}>
+              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.2" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <span className="text-sm font-medium">加载中…</span>
+            </div>
+          </div>
+        )}
         <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
           <ProjectCoverImage src={p.coverImage} alt={p.title} priority={idx === 0} />
           {!p.coverImage && (
@@ -111,7 +133,7 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
             </div>
           </div>
         </div>
-      </Link>
+      </a>
     </div>
   );
 }

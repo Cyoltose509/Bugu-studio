@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { setTeamTopic } from "./actions";
 
 export default function EditTopicForm({
@@ -16,6 +17,7 @@ export default function EditTopicForm({
   const [topic, setTopic] = useState(currentTopic || "");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const ref = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   // 当父组件传下新值时同步
   useEffect(() => {
@@ -32,6 +34,9 @@ export default function EditTopicForm({
           if (result.error) {
             setFeedback({ type: "error", msg: result.error });
           } else {
+            // 立即更新本地状态 + 触发页面刷新
+            if (result.topic) setTopic(result.topic);
+            router.refresh();
             setFeedback({ type: "success", msg: "讲题已更新" });
             setTimeout(() => setFeedback(null), 2000);
           }

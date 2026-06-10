@@ -220,7 +220,7 @@ export async function setTeamTopic(teamId: string, activityId: string, formData:
   invalidateCache(`jam:${activityId}:teams`);
   invalidateCache(`activity:detail:${activityId}`);
   revalidatePath(`/activities/${activityId}`);
-  return { success: true };
+  return { success: true, topic };
 }
 
 export async function disbandTeam(teamId: string, activityId: string) {

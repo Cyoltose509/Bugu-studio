@@ -173,11 +173,46 @@ export default function CommentSection({projectId}: Props) {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({content, parentId: parentId || undefined}),
             });
-            if (res.ok) {
+            const json = await res.json();
+            if (res.ok && json.success) {
                 setNewContent("");
                 setReplyContent("");
                 setReplyingTo(null);
-                load();
+                
+                // 乐观更新：立即插入新评论到本地状态
+                const newComment: Comment = {
+                    id: json.data.id,
+                    content: json.data.content,
+                    createdAt: json.data.createdAt,
+                    user: json.data.user,
+                    replyCount: 0,
+                    replies: [],
+                };
+                
+                if (parentId) {
+                    // 嵌套回复：插入到父评论的 replies 中
+                    setComments(prev => prev.map(c => {
+                        if (c.id === parentId) {
+                            return { ...c, replies: [...c.replies, newComment], replyCount: c.replyCount + 1 };
+                        }
+                        // 也可能回复的是二级评论
+                        return {
+                            ...c,
+                            replies: c.replies.map(r => {
+                                if (r.id === parentId) {
+                                    return { ...r, replies: [...(r.replies || []), newComment] };
+                                }
+                                return r;
+                            }),
+                        };
+                    }));
+                } else {
+                    // 顶层评论：插入到列表顶部
+                    setComments(prev => [newComment, ...prev]);
+                }
+                
+                // 后台刷新确保与服务端一致
+                setTimeout(() => load(), 500);
             }
         } finally {
             setSubmitting(false);
@@ -186,12 +221,30 @@ export default function CommentSection({projectId}: Props) {
 
     async function deleteComment(commentId: string) {
         if (!confirm("确定删除这条留言？")) return;
+
+        // 乐观删除：立即从本地状态中移除
+        setComments(prev => removeCommentById(prev, commentId));
+
         const res = await fetch(`/api/projects/${projectId}/comments`, {
             method: "PATCH",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({commentId, action: "delete"}),
         });
-        if (res.ok) load();
+        // 后台刷新确保与服务端一致
+        if (res.ok) {
+            setTimeout(() => load(), 500);
+        }
+    }
+
+    /** 递归从评论树中移除指定 ID 的评论，返回新数组 */
+    function removeCommentById(list: Comment[], targetId: string): Comment[] {
+        return list
+            .filter(c => c.id !== targetId)
+            .map(c => ({
+                ...c,
+                replies: c.replies ? removeCommentById(c.replies, targetId) : [],
+                replyCount: c.replies ? c.replies.filter(r => r.id !== targetId).length : c.replyCount,
+            }));
     }
 
     const handleReplyToggle = useCallback((id: string) => {

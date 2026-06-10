@@ -6,7 +6,8 @@ import {cachedQuery} from "@/lib/db/cache";
 import {ensureDefaultTags} from "@/lib/db/tags";
 import {auth} from "@/lib/auth/auth";
 import {ProjectStatus} from "@prisma/client";
-import StaggeredCard from "@/components/works/StaggeredCard";
+import WorkCardServer from "@/components/works/WorkCardServer";
+import WorkCardSkeleton from "@/components/works/WorkCardSkeleton";
 import LogoLoading from "@/components/ui/LogoLoading";
 import WorksToolbar from "./WorksToolbar";
 
@@ -127,13 +128,11 @@ export default async function WorksPage({searchParams}: PageProps) {
     );
 }
 
-/** 作品网格 — 数据库查询较慢，Suspense 流式加载 */
+/** 作品网格 — 渐进式流式加载：先获取 ID 列表，然后每个卡片独立加载独立渲染 */
 async function WorksGrid({params, page, total}: { params: Record<string, any>; page: number; total: number }) {
     const pageSize = 12;
     const skip = (page - 1) * pageSize;
     const sort = params.sort || "date";
-
-    const cacheKey = `works:list:${page}:${params.type || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`;
 
     const orderBy: any = sort === "name"
         ? [{title: "asc"}]
@@ -143,71 +142,51 @@ async function WorksGrid({params, page, total}: { params: Record<string, any>; p
 
     const where = buildWhere(params);
 
-    const projects = await cachedQuery(cacheKey, () =>
+    // 第一步：只查询 ID 列表（极快，无 include）
+    const projectIds = await cachedQuery(
+        `works:ids:${page}:${params.type || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
+        () =>
             prisma.project.findMany({
                 where,
                 skip,
                 take: pageSize,
                 orderBy,
-                include: {
-                    tags: {include: {tag: true}},
-                    _count: {select: {likes: true}},
-                },
-            })
-        , 120);
+                select: {id: true},
+            }),
+        120,
+    );
 
-    // 批量查询点赞状态
+    // 批量查询点赞状态（全局缓存，一次查询）
     const session = await auth().catch(() => null);
     let likedProjectIds = new Set<string>();
-    if (session?.user?.id && projects.length > 0) {
+    if (session?.user?.id && projectIds.length > 0) {
+        const ids = projectIds.map(p => p.id);
         const liked = await cachedQuery(`works:likes:${session.user.id}`, () =>
                 prisma.projectLike.findMany({
                     where: {userId: session.user.id},
                     select: {projectId: true},
                 })
             , 60);
-        const projectIds = new Set(projects.map((p) => p.id));
-        likedProjectIds = new Set(liked.filter((l) => projectIds.has(l.projectId)).map((l) => l.projectId));
-    }
-
-    // 批量查询 members
-    let membersMap = new Map<string, any[]>();
-    if (projects.length > 0) {
-        const memberCacheKey = `works:members:${projects.map(p => p.id).sort().join(",")}`;
-        const allMembers = await cachedQuery(memberCacheKey, () =>
-                prisma.projectMember.findMany({
-                    where: {projectId: {in: projects.map(p => p.id)}},
-                    include: {member: {select: {displayName: true, avatar: true, user: {select: {image: true}}}}},
-                    orderBy: {sortOrder: "asc"},
-                })
-            , 60);
-        for (const pm of allMembers) {
-            const arr = membersMap.get(pm.projectId) || [];
-            if (arr.length < 3) arr.push(pm);
-            membersMap.set(pm.projectId, arr);
-        }
+        const idSet = new Set(ids);
+        likedProjectIds = new Set(liked.filter((l) => idSet.has(l.projectId)).map((l) => l.projectId));
     }
 
     const totalPages = Math.ceil(total / pageSize);
 
     return (
         <>
-            {projects.length === 0 ? (
+            {projectIds.length === 0 ? (
                 <div className="text-center py-20" style={{color: "#999"}}>
                     <div className="text-4xl mb-4">🔍</div>
                     <p>没有找到匹配的作品</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                    {projects.map((p, idx) => (
-                        <StaggeredCard
-                            key={p.id}
-                            project={p}
-                            members={membersMap.get(p.id) || []}
-                            idx={idx}
-                            liked={likedProjectIds.has(p.id)}
-                            typeLabels={TYPE_LABELS}
-                        />
+                    {/* 每张卡片独立 Suspense — 数据到了就渲染，自然形成逐个弹出效果 */}
+                    {projectIds.map(({id}, idx) => (
+                        <Suspense key={id} fallback={<WorkCardSkeleton />}>
+                            <WorkCardServer id={id} idx={idx} liked={likedProjectIds.has(id)} />
+                        </Suspense>
                     ))}
                 </div>
             )}

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
-import { cachedQuery } from "@/lib/db/cache";
+import { cachedQuery, invalidateCache } from "@/lib/db/cache";
 import { UserRole } from "@prisma/client";
 import { apiResponse, apiError } from "@/lib/utils";
 import { createNotification } from "@/lib/services/notification";
@@ -26,6 +26,12 @@ export async function GET(
           orderBy: { createdAt: "asc" },
           include: {
             user: { select: { id: true, name: true, image: true } },
+            replies: {
+              orderBy: { createdAt: "asc" },
+              include: {
+                user: { select: { id: true, name: true, image: true } },
+              },
+            },
           },
         },
         _count: { select: { replies: true } },
@@ -44,6 +50,13 @@ export async function GET(
       content: r.content,
       createdAt: r.createdAt,
       user: { id: r.user.id, name: r.user.name, image: r.user.image },
+      replyCount: 0,
+      replies: (r.replies || []).map((rr: any) => ({
+        id: rr.id,
+        content: rr.content,
+        createdAt: rr.createdAt,
+        user: { id: rr.user.id, name: rr.user.name, image: rr.user.image },
+      })),
     })),
   })));
 }
@@ -126,6 +139,9 @@ export async function POST(
     });
   }
 
+  // ── 清除评论缓存，确保下次 GET 返回新数据 ──
+  await invalidateCache(`comments:${projectId}:`);
+
   return apiResponse({
     id: comment.id,
     content: comment.content,
@@ -167,6 +183,8 @@ export async function PATCH(
 
   if (body.action === "delete") {
     await prisma.comment.delete({ where: { id: body.commentId } });
+    // 清除评论缓存，确保下次 GET 返回最新数据
+    await invalidateCache(`comments:${projectId}:`);
     return apiResponse({ deleted: true });
   }
 
@@ -179,6 +197,9 @@ export async function PATCH(
     where: { id: body.commentId },
     data: { content: newContent },
   });
+
+  // 清除评论缓存
+  await invalidateCache(`comments:${projectId}:`);
 
   return apiResponse({ id: updated.id, content: updated.content, updatedAt: updated.updatedAt });
 }
