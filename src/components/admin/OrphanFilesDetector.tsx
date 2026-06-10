@@ -28,6 +28,8 @@ export default function OrphanFilesDetector() {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnosis, setDiagnosis] = useState<any>(null);
 
   // 图片扩展名集合
   const IMAGE_EXTS = new Set([
@@ -56,6 +58,22 @@ export default function OrphanFilesDetector() {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function diagnose() {
+    setDiagnosing(true);
+    setDiagnosis(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/r2/diagnose");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "诊断失败");
+      setDiagnosis(data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setDiagnosing(false);
     }
   }
 
@@ -218,6 +236,25 @@ export default function OrphanFilesDetector() {
             "🔍 检测野文件"
           )}
         </button>
+        <button
+          onClick={diagnose}
+          disabled={diagnosing}
+          className="px-3 py-2 rounded-lg text-sm font-medium border disabled:opacity-50"
+          style={{ borderColor: "#3388BB", color: "#3388BB" }}
+          title="诊断 R2 文件数与 Cloudflare Dashboard 的差异"
+        >
+          {diagnosing ? (
+            <span className="inline-flex items-center gap-1">
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.2" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              诊断中…
+            </span>
+          ) : (
+            "🩺 诊断"
+          )}
+        </button>
       </div>
 
       <p className="text-xs mb-4" style={{ color: "#777" }}>
@@ -227,6 +264,70 @@ export default function OrphanFilesDetector() {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm" style={{ color: "#C62828" }}>
           {error}
+        </div>
+      )}
+
+      {diagnosis && (
+        <div className="mb-4 border rounded-lg p-4 text-sm" style={{ borderColor: diagnosis.multipartUploads?.totalSize > 0 ? "#FFB347" : "#88C232", background: diagnosis.multipartUploads?.totalSize > 0 ? "#FFF8E1" : "#F1F8E9" }}>
+          <div className="font-semibold mb-2" style={{ color: "#25547A" }}>🩺 R2 诊断报告</div>
+
+          <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+            <div className="p-2 rounded" style={{ background: "#E8F4FD" }}>
+              <div className="font-medium" style={{ color: "#3388BB" }}>ListObjectsV2 扫描</div>
+              <div style={{ color: "#555" }}>{diagnosis.objects.count.toLocaleString()} 个文件，{diagnosis.objects.sizeFormatted}</div>
+              <div style={{ color: "#999" }}>扫描 {diagnosis.objects.listPages} 页，IsTruncated: {diagnosis.objects.isTruncated ? "是 ⚠️" : "否 ✅"}</div>
+            </div>
+            <div className="p-2 rounded" style={{ background: diagnosis.multipartUploads?.totalSize > 0 ? "#FFF3E0" : "#E8F5E9" }}>
+              <div className="font-medium" style={{ color: diagnosis.multipartUploads?.totalSize > 0 ? "#E38043" : "#2E7D32" }}>
+                未完成分片上传
+              </div>
+              <div style={{ color: "#555" }}>
+                {diagnosis.multipartUploads?.count} 个上传，{diagnosis.multipartUploads?.totalSizeFormatted}
+                （{diagnosis.multipartUploads?.totalParts} 个分片）
+              </div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded text-xs font-medium" style={{ background: "#F0F5FA", color: "#25547A" }}>
+            合计（对象 + 分片碎片）：{diagnosis.combined.totalSizeFormatted}
+            {diagnosis.multipartUploads?.totalSize > 0 && (
+              <span className="ml-1" style={{ color: "#E38043" }}>
+                — 其中 {diagnosis.multipartUploads.totalSizeFormatted} 为无法直接访问的碎片
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 text-xs" style={{ color: "#777" }}>{diagnosis.note}</div>
+
+          {diagnosis.multipartUploads?.uploads?.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs" style={{ color: "#3388BB" }}>
+                查看分片上传详情（{Math.min(diagnosis.multipartUploads.uploads.length, 100)} 条）
+              </summary>
+              <div className="mt-2 max-h-40 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ color: "#777" }}>
+                      <th className="text-left py-1">文件</th>
+                      <th className="text-right py-1">分片数</th>
+                      <th className="text-right py-1">大小</th>
+                      <th className="text-right py-1">发起时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diagnosis.multipartUploads.uploads.map((u: any) => (
+                      <tr key={u.uploadId} className="border-t" style={{ borderColor: "#E6F0F8" }}>
+                        <td className="py-1 font-mono truncate max-w-[200px]" title={u.key}>{u.key}</td>
+                        <td className="text-right py-1">{u.parts}</td>
+                        <td className="text-right py-1">{u.partsSizeFormatted}</td>
+                        <td className="text-right py-1" style={{ color: "#999" }}>{new Date(u.initiated).toLocaleString("zh-CN")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
         </div>
       )}
 
