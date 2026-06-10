@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { JamSubmitForm } from "./JamSubmitForm";
+import DeleteSubmissionButton from "./DeleteSubmissionButton";
+import SubmitToWorksButton from "./SubmitToWorksButton";
 
 export default async function JamSubmitPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -18,7 +20,7 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
   // 找用户的队伍
   const membership = await prisma.jamTeamMember.findFirst({
     where: { userId: session.user.id, team: { activityId } },
-    include: { team: { include: { members: { include: { user: { select: { id: true, name: true } } } } } } },
+    include: { team: { include: { members: { include: { user: { select: { id: true, name: true } } } }, submission: { select: { id: true, title: true, projectId: true } } } } },
   });
   if (!membership) {
     return (
@@ -43,6 +45,10 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
 
   const now = new Date();
   const isOngoing = now >= activity.startTime && now <= activity.endTime;
+  const isLeader = membership.role === "LEADER";
+  const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
+  const sub = existing || membership.team.submission;
+  const hasSubmittedToWorks = !!sub?.projectId;
 
   // 获取所有标签（供表单选择）
   const tags = await prisma.tag.findMany({ orderBy: { name: "asc" } });
@@ -64,12 +70,45 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
       </div>
 
       <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-        <h1 className="text-lg font-semibold mb-1" style={{ color: "#25547A" }}>
-          {existing ? "修改作品" : "提交作品"}
-        </h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-lg font-semibold" style={{ color: "#25547A" }}>
+            {sub ? "修改作品" : "提交作品"}
+          </h1>
+          {sub && (isLeader || isAdmin) && (
+            <DeleteSubmissionButton activityId={activityId} teamName={membership.team.name} />
+          )}
+        </div>
         <p className="text-sm mb-6" style={{ color: "#999" }}>
           队伍：{membership.team.name} · {membership.team.members.length} 人 · {isOngoing ? "比赛进行中" : "比赛尚未开始"}
         </p>
+
+        {/* 作品库状态 */}
+        {sub && (
+          <div className="p-3 rounded-lg mb-4 text-sm flex items-center justify-between" style={{ background: hasSubmittedToWorks ? "#E8F5E9" : "#FFFDF7", border: `1px solid ${hasSubmittedToWorks ? "#C8E6C9" : "#FFF3E0"}` }}>
+            {hasSubmittedToWorks ? (
+              <>
+                <span style={{ color: "#2E7D32" }}>✅ 已提交到作品库</span>
+                <Link
+                  href={`/works/${sub.projectId}`}
+                  target="_blank"
+                  className="text-xs hover:underline"
+                  style={{ color: "#3388BB" }}
+                >
+                  查看作品页 →
+                </Link>
+              </>
+            ) : (
+              <>
+                <span style={{ color: "#E65100" }}>📌 尚未提交到作品库（仅参赛）</span>
+                <SubmitToWorksButton
+                  activityId={activityId}
+                  submissionId={sub.id}
+                  title={sub.title}
+                />
+              </>
+            )}
+          </div>
+        )}
 
         {!isOngoing && (
           <div className="p-4 rounded-lg mb-4" style={{ background: "#FFFDF7", border: "1px solid #FFF3E0" }}>

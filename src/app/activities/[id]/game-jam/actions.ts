@@ -25,6 +25,116 @@ async function getTeamSizeInfo(teamId: string) {
   return { maxTeamSize, currentCount };
 }
 
+/** 将参赛作品数据创建为作品库 Project，返回 projectId */
+async function createProjectFromSubmission(data: {
+  title: string;
+  description: string;
+  coverImage?: string;
+  screenshots: string[];
+  creators: { name: string; roles: string[] }[];
+  links: { label: string; url: string }[];
+  tagIds: string[];
+  customTags: string[];
+  projectType: string;
+  developYear: number;
+  submitterId: string;
+  existingProjectId?: string;
+}): Promise<string> {
+  const {
+    title, description, coverImage, screenshots, creators,
+    links, tagIds, customTags, projectType, developYear,
+    submitterId, existingProjectId,
+  } = data;
+
+  // 生成 slug
+  const slugBase = title
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "")
+    .slice(0, 60);
+  let slug = slugBase || `jam-${Date.now()}`;
+  const slugExists = await prisma.project.findUnique({ where: { slug } });
+  if (slugExists) slug = `${slug}-${Date.now()}`;
+
+  // 处理自定义标签
+  const customTagRecords: { id: string }[] = [];
+  for (const name of customTags) {
+    const tagSlug = name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "")
+      .slice(0, 60);
+    const tag = await prisma.tag.upsert({
+      where: { name },
+      update: {},
+      create: { name, slug: tagSlug || `tag-${Date.now()}`, color: "#88C232" },
+      select: { id: true },
+    });
+    customTagRecords.push(tag);
+  }
+
+  const allTagIds = [...tagIds, ...customTagRecords.map((t) => t.id)];
+
+  if (existingProjectId) {
+    await prisma.project.update({
+      where: { id: existingProjectId },
+      data: {
+        title,
+        description,
+        type: projectType as any,
+        developYear,
+        coverImage: coverImage || undefined,
+        slug,
+      },
+    });
+    return existingProjectId;
+  }
+
+  const project = await prisma.project.create({
+    data: {
+      title,
+      description,
+      slug,
+      type: projectType as any,
+      developYear,
+      coverImage: coverImage || undefined,
+      status: "PENDING",
+      submitterId,
+      submittedAt: new Date(),
+      links: links.length > 0
+        ? { create: links.map((l, i) => ({ label: l.label, url: l.url, sortOrder: i })) }
+        : undefined,
+      members: creators.length > 0
+        ? {
+            create: creators.map((c) => ({
+              externalName: c.name,
+              roles: c.roles,
+            })),
+          }
+        : undefined,
+      images: screenshots.length > 0
+        ? { create: screenshots.map((url, i) => ({ url, sortOrder: i })) }
+        : undefined,
+      tags: allTagIds.length > 0
+        ? { create: allTagIds.map((tagId) => ({ tagId })) }
+        : undefined,
+    },
+  });
+
+  return project.id;
+}
+
+/** 清除作品库相关缓存 */
+async function invalidateWorksCaches() {
+  await Promise.all([
+    invalidateCache("api:projects:"),
+    invalidateCache("works:count:"),
+    invalidateCache("works:sidebar:tags"),
+    invalidateCache("admin:projects:"),
+    invalidateCache("admin:projectCount"),
+  ]);
+}
+
 // ============================================================
 // 队伍操作
 // ============================================================
@@ -470,91 +580,22 @@ export async function submitJamWork(activityId: string, formData: FormData) {
         ? parseInt(developYearStr, 10)
         : new Date().getFullYear();
 
-      // 生成 slug
-      const slugBase = title
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "")
-        .slice(0, 60);
-      let slug = slugBase || `jam-${Date.now()}`;
-      const slugExists = await prisma.project.findUnique({ where: { slug } });
-      if (slugExists) slug = `${slug}-${Date.now()}`;
+      projectId = await createProjectFromSubmission({
+        title,
+        description,
+        coverImage: coverImage || undefined,
+        screenshots,
+        creators,
+        links,
+        tagIds,
+        customTags,
+        projectType,
+        developYear,
+        submitterId: session.user.id,
+        existingProjectId: projectId,
+      });
 
-      // 处理自定义标签
-      const customTagRecords: { id: string }[] = [];
-      for (const name of customTags) {
-        const tagSlug = name
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "")
-          .slice(0, 60);
-        const tag = await prisma.tag.upsert({
-          where: { name },
-          update: {},
-          create: { name, slug: tagSlug || `tag-${Date.now()}`, color: "#88C232" },
-          select: { id: true },
-        });
-        customTagRecords.push(tag);
-      }
-
-      const allTagIds = [...tagIds, ...customTagRecords.map((t) => t.id)];
-
-      // 如果有 projectId（之前已提交到作品库），更新它
-      if (projectId) {
-        await prisma.project.update({
-          where: { id: projectId },
-          data: {
-            title,
-            description,
-            type: projectType as any,
-            developYear,
-            coverImage: coverImage || undefined,
-            slug,
-          },
-        });
-      } else {
-        // 创建新作品
-        const project = await prisma.project.create({
-          data: {
-            title,
-            description,
-            slug,
-            type: projectType as any,
-            developYear,
-            coverImage: coverImage || undefined,
-            status: "PENDING",
-            submitterId: session.user.id,
-            submittedAt: new Date(),
-            links: links.length > 0
-              ? { create: links.map((l, i) => ({ label: l.label, url: l.url, sortOrder: i })) }
-              : undefined,
-            members: creators.length > 0
-              ? {
-                  create: creators.map((c) => ({
-                    externalName: c.name,
-                    roles: c.roles,
-                  })),
-                }
-              : undefined,
-            images: screenshots.length > 0
-              ? { create: screenshots.map((url, i) => ({ url, sortOrder: i })) }
-              : undefined,
-            tags: allTagIds.length > 0
-              ? { create: allTagIds.map((tagId) => ({ tagId })) }
-              : undefined,
-          },
-        });
-        projectId = project.id;
-      }
-
-      // 清除相关缓存
-      await Promise.all([
-        invalidateCache("api:projects:"),
-        invalidateCache("works:count:"),
-        invalidateCache("works:sidebar:tags"),
-        invalidateCache("admin:projects:"),
-        invalidateCache("admin:projectCount"),
-      ]);
+      await invalidateWorksCaches();
     } catch (err: any) {
       console.error("[submitJamWork] 作品库提交失败:", err);
       return { error: `作品库提交失败: ${err.message}` };
@@ -725,4 +766,120 @@ export async function publishResults(activityId: string) {
   invalidateCache("home:activities");
   revalidatePath(`/activities/${activityId}`);
   return { success: true };
+}
+
+// ============================================================
+// 删除参赛作品（队长或管理员）
+// ============================================================
+
+export async function deleteJamSubmission(activityId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "请先登录" };
+
+  const isAdmin =
+    (session.user.role as string) === "ADMIN" ||
+    (session.user.role as string) === "SUPER_ADMIN";
+
+  // 查找用户在活动中的队伍
+  const membership = await prisma.jamTeamMember.findFirst({
+    where: { userId: session.user.id, team: { activityId } },
+    include: { team: { include: { submission: true } } },
+  });
+
+  if (!membership && !isAdmin) return { error: "你还没有加入队伍" };
+
+  const submission = isAdmin
+    ? await prisma.jamSubmission.findFirst({
+        where: { activityId },
+        include: { team: { include: { members: { where: { userId: session.user.id } } } } },
+      })
+    : membership!.team.submission;
+
+  // 对于非管理员，更精确地查找
+  if (!isAdmin) {
+    if (!submission) return { error: "该队伍还没有提交作品" };
+
+    // 检查是否是队长
+    const isLeader = membership!.role === "LEADER";
+    if (!isLeader) return { error: "只有队长或管理员可以删除作品" };
+  }
+
+  if (!submission) return { error: "未找到参赛作品" };
+
+  await prisma.jamSubmission.delete({ where: { id: submission.id } });
+
+  invalidateCache(`jam:${activityId}:submissions`);
+  revalidatePath(`/activities/${activityId}`);
+  revalidatePath(`/activities/${activityId}/game-jam/submit`);
+  return { success: true };
+}
+
+// ============================================================
+// 事后提交到作品库（队员或管理员）
+// ============================================================
+
+export async function submitToWorksLibrary(activityId: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "请先登录" };
+
+  const submissionId = (formData.get("submissionId") as string || "").trim();
+  const projectType = (formData.get("projectType") as string || "DEMO").trim();
+  const developYearStr = (formData.get("developYear") as string || "").trim();
+
+  if (!submissionId) return { error: "缺少提交 ID" };
+
+  const isAdmin =
+    (session.user.role as string) === "ADMIN" ||
+    (session.user.role as string) === "SUPER_ADMIN";
+
+  // 查找参赛作品
+  const submission = await prisma.jamSubmission.findUnique({
+    where: { id: submissionId },
+    include: { team: { include: { members: true } } },
+  });
+
+  if (!submission) return { error: "参赛作品不存在" };
+  if (submission.projectId) return { error: "该作品已在作品库中" };
+
+  // 权限：队员或管理员
+  if (!isAdmin) {
+    const isMember = submission.team.members.some((m) => m.userId === session.user.id);
+    if (!isMember) return { error: "只有队员或管理员可以执行此操作" };
+  }
+
+  const metadata = (submission.metadata || {}) as any;
+
+  const developYear = developYearStr
+    ? parseInt(developYearStr, 10)
+    : new Date().getFullYear();
+
+  try {
+    const projectId = await createProjectFromSubmission({
+      title: submission.title,
+      description: submission.description || "",
+      coverImage: metadata.coverImage,
+      screenshots: submission.files || [],
+      creators: metadata.creators || [],
+      links: metadata.links || [],
+      tagIds: metadata.tagIds || [],
+      customTags: metadata.customTags || [],
+      projectType,
+      developYear,
+      submitterId: session.user.id,
+    });
+
+    // 关联到 JamSubmission
+    await prisma.jamSubmission.update({
+      where: { id: submissionId },
+      data: { projectId },
+    });
+
+    await invalidateWorksCaches();
+    invalidateCache(`jam:${activityId}:submissions`);
+    revalidatePath(`/activities/${activityId}`);
+    return { success: true, projectId };
+  } catch (err: any) {
+    console.error("[submitToWorksLibrary] 提交失败:", err);
+    return { error: `提交失败: ${err.message}` };
+  }
 }

@@ -14,6 +14,7 @@ import { DisbandTeamButton } from "./game-jam/DisbandTeamButton";
 import { LeaveTeamButton } from "./game-jam/LeaveTeamButton";
 import { InvitationButtons } from "./game-jam/InvitationButtons";
 import { CreateTeamForm } from "./game-jam/CreateTeamForm";
+import SubmitToWorksButton from "./game-jam/submit/SubmitToWorksButton";
 import { cachedQuery } from "@/lib/db/cache";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -71,10 +72,7 @@ export default async function ActivityDetailPage({ params }: PageProps) {
           },
           jamJudges: { include: { user: { select: { id: true, name: true, image: true } } } },
           jamSubmissions: {
-            include: {
-              team: { select: { name: true } },
-              scores: { select: { totalScore: true } },
-            },
+            select: { id: true, title: true, projectId: true, team: { select: { name: true } }, scores: { select: { totalScore: true } } },
           },
         },
       }),
@@ -467,26 +465,46 @@ async function CompetitionSection({
           <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>🎮 参赛作品（{jamSubmissions.length}）</h3>
           <div className="grid gap-3">
             {jamSubmissions.map((sub: any) => (
-              <Link
+              <div
                 key={sub.id}
-                href={`/activities/${activityId}/game-jam/judging`}
                 className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
                 style={{ border: "1px solid #D0DEE8" }}
               >
-                <div>
+                <Link
+                  href={`/activities/${activityId}/game-jam/judging`}
+                  className="flex-1 min-w-0"
+                >
                   <span className="text-sm font-medium" style={{ color: "#25547A" }}>{sub.title}</span>
                   <span className="text-xs ml-2" style={{ color: "#999" }}>— {sub.team?.name || "未知队伍"}</span>
-                </div>
-                <div className="text-right">
-                  {sub.scores.length > 0 ? (
-                    <span className="text-sm font-semibold" style={{ color: "#E38043" }}>
-                      {Math.round(sub.scores.reduce((a: number, b: any) => a + b.totalScore, 0) / sub.scores.length)} 分
-                    </span>
+                </Link>
+                <div className="flex items-center gap-3 shrink-0 ml-3">
+                  {sub.projectId ? (
+                    <Link
+                      href={`/works/${sub.projectId}`}
+                      target="_blank"
+                      className="text-xs hover:underline"
+                      style={{ color: "#3388BB" }}
+                    >
+                      📚 作品页 →
+                    </Link>
                   ) : (
-                    <span className="text-xs" style={{ color: "#999" }}>待评分</span>
+                    <SubmitToWorksButton
+                      activityId={activityId}
+                      submissionId={sub.id}
+                      title={sub.title}
+                    />
                   )}
+                  <div className="text-right min-w-[60px]">
+                    {sub.scores.length > 0 ? (
+                      <span className="text-sm font-semibold" style={{ color: "#E38043" }}>
+                        {Math.round(sub.scores.reduce((a: number, b: any) => a + b.totalScore, 0) / sub.scores.length)} 分
+                      </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: "#999" }}>待评分</span>
+                    )}
+                  </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
