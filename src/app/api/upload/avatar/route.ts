@@ -11,6 +11,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { uploadToR2 } from "@/lib/utils/upload";
 import { isRateLimited, getRateLimitRemaining, resetRateLimit } from "@/lib/utils/rate-limit";
+import sharp from "sharp";
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "avatars");
 const AVATAR_CHANGE_DAYS = 7;
@@ -77,12 +78,20 @@ export async function POST(req: NextRequest) {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
+  // 压缩头像到 64×64（PNG 格式，体积极小）
+  const resizedBuffer = await sharp(buffer)
+    .resize(64, 64, { fit: "cover", position: "center" })
+    .png()
+    .toBuffer();
+  const resizedMime = "image/png";
+  const resizedName = file.name.replace(/\.[^.]+$/, ".png");
+
   let url: string;
 
   // R2 已配置时上传到 R2
   if (process.env.R2_ACCOUNT_ID && process.env.R2_PUBLIC_URL) {
     try {
-      const result = await uploadToR2(buffer, file.name, file.type, "avatar");
+      const result = await uploadToR2(resizedBuffer, resizedName, resizedMime, "avatar");
       url = result.url;
     } catch (err: any) {
       console.error("[avatar upload] R2 error:", err.message);
@@ -91,9 +100,8 @@ export async function POST(req: NextRequest) {
   } else {
     // 降级：存本地
     await mkdir(UPLOAD_DIR, { recursive: true });
-    const ext = file.name.split(".").pop() || "jpg";
-    const filename = `${session.user.id}-${Date.now()}.${ext}`;
-    await writeFile(join(UPLOAD_DIR, filename), buffer);
+    const filename = `${session.user.id}-${Date.now()}.png`;
+    await writeFile(join(UPLOAD_DIR, filename), resizedBuffer);
     url = `/uploads/avatars/${filename}`;
   }
 
