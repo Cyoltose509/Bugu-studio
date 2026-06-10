@@ -67,7 +67,7 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                         <div className="flex items-center gap-3 mt-1.5">
                             <button
                                 onClick={() => onReplyToggle(c.id)}
-                                className="text-xs inline-flex items-center gap-1 hover:underline transition-colors"
+                                className="text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70"
                                 style={{color: replyingTo === c.id ? "#3388BB" : "#999"}}
                                 title="回复"
                             >
@@ -79,7 +79,7 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                             {isMine && (
                                 <button
                                     onClick={() => onDelete(c.id)}
-                                    className="text-xs inline-flex items-center gap-1 hover:underline transition-colors"
+                                    className="text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70"
                                     style={{color: "#bbb"}}
                                     title="删除"
                                 >
@@ -101,11 +101,10 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                                    className="flex-1 text-xs px-2 py-1.5 rounded border focus:outline-none focus:ring-1 focus:ring-[#3388BB]"
                                    style={{borderColor: "#D0DEE8"}}/>
                             <button onClick={() => onReplySubmit(c.id)} disabled={!replyContent.trim() || submitting}
-                                    className="text-xs px-3 py-1.5 rounded text-white disabled:opacity-40 transition-opacity"
-                                    style={{background: "#3388BB"}}>发送
-                            </button>
+                                    className="text-xs px-3 py-1.5 rounded text-white disabled:opacity-40 transition-all active:scale-95 inline-flex items-center gap-1"
+                                    style={{background: "#3388BB"}}>{submitting ? <><svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>发送中</> : "发送"}</button>
                             <button onClick={() => onReplyToggle(c.id)}
-                                    className="text-xs px-2 py-1.5 rounded" style={{color: "#999"}}>取消
+                                    className="text-xs px-2 py-1.5 rounded hover:text-[#25547A] transition-colors active:opacity-70" style={{color: "#999"}}>取消
                             </button>
                         </div>
                     )}
@@ -270,7 +269,7 @@ export default function CommentSection({projectId, initialComments = []}: Props)
                       className="flex-1 text-sm px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-1 focus:ring-[#3388BB]"
                       style={{borderColor: "#D0DEE8"}}/>
                         <button onClick={() => submitComment()} disabled={!newContent.trim() || submitting}
-                                className="self-end px-4 py-2 rounded-lg text-sm text-white disabled:opacity-40 transition-opacity"
+                                className="self-end px-4 py-2 rounded-lg text-sm text-white disabled:opacity-40 transition-all active:scale-95 hover:opacity-90"
                                 style={{background: "#25547A"}}>
                             {submitting ? "发送中…" : "发表"}
                         </button>

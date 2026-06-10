@@ -25,7 +25,7 @@ export function SubmitButton({
   return (
     <button
       disabled={isDisabled}
-      className={`${className} ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+      className={`transition-all duration-150 hover:opacity-90 active:scale-[0.98] ${className} ${isDisabled ? "opacity-60 cursor-not-allowed !scale-100" : ""}`}
       {...props}
     >
       {pending ? (

@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { auth } from "@/lib/auth/auth";
 import NotificationBell from "./NotificationBell";
+import NavLink from "./NavLink";
 
 export async function Navbar() {
   const session = await auth();
@@ -20,7 +21,7 @@ export async function Navbar() {
         </Link>
 
         {/* 主导航 - 添加点击反馈的 CSS 类 */}
-        <nav className="hidden md:flex items-center gap-6 text-sm text-white/80">
+        <nav className="hidden md:flex items-center gap-6 text-sm">
           <NavLink href="/works">作品库</NavLink>
           <NavLink href="/members">成员</NavLink>
           <NavLink href="/activities">活动</NavLink>
@@ -69,22 +70,6 @@ export async function Navbar() {
         </div>
       </div>
     </header>
-  );
-}
-
-/**
- * 服务端导航链接辅助函数
- * 因为 Navbar 是 async server component，无法使用 useNavigation hook
- * 点击反馈通过 CSS :active 和全局 loading.tsx 实现
- */
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="hover:text-white transition-colors nav-link relative"
-    >
-      {children}
-    </Link>
   );
 }
 

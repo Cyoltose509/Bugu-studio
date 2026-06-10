@@ -212,7 +212,7 @@ export default function ProjectsTableClient({
                       <div className="flex justify-end gap-2 flex-wrap">
                         <Link
                           href={`/works/${p.slug}/edit`}
-                          className={`text-xs hover:underline ${
+                          className={`text-xs hover:underline active:opacity-70 ${
                             isProcessing ? "pointer-events-none opacity-40" : ""
                           }`}
                           style={{ color: "#3388BB" }}
@@ -226,7 +226,7 @@ export default function ProjectsTableClient({
                             type="button"
                             onClick={() => handleApprove(p.id)}
                             disabled={isProcessing}
-                            className="text-xs hover:underline cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="text-xs hover:underline cursor-pointer active:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ color: "#88C232" }}
                           >
                             {isProcessing ? "处理中..." : "通过"}
@@ -237,7 +237,7 @@ export default function ProjectsTableClient({
                             type="button"
                             onClick={() => handleReject(p.id)}
                             disabled={isProcessing}
-                            className="text-xs hover:underline cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="text-xs hover:underline cursor-pointer active:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ color: "#C62828" }}
                           >
                             {isProcessing ? "处理中..." : "拒绝"}

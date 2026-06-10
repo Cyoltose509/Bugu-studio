@@ -1,19 +1,29 @@
 "use client";
+import { useState } from "react";
 import { deleteInviteCode } from "./actions";
 
 export default function DeleteInviteCodeButton({ codeId }: { codeId: string }) {
-  function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
-    if (!confirm("确认删除此邀请码？")) {
-      e.preventDefault();
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (!confirm("确认删除此邀请码？")) return;
+    setDeleting(true);
+    try {
+      await deleteInviteCode(codeId);
+    } catch {
+      setDeleting(false);
     }
   }
 
   return (
-    <form action={deleteInviteCode.bind(null, codeId)} className="inline">
-      <button type="submit" onClick={handleClick}
-        className="text-xs hover:underline cursor-pointer" style={{ color: "#C62828" }}>
-        删除
-      </button>
-    </form>
+    <button
+      onClick={handleClick}
+      disabled={deleting}
+      className={`text-xs hover:underline transition-all ${deleting ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      style={{ color: deleting ? "#999" : "#C62828" }}
+    >
+      {deleting ? "删除中..." : "删除"}
+    </button>
   );
 }

@@ -112,7 +112,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
           else                                  timeLabel = "进行中";
 
           return (
-            <div key={activity.id} className="bg-white rounded-xl border p-4 shadow-sm flex flex-wrap items-center gap-4" style={{ borderColor: "#D0DEE8" }}>
+            <div key={activity.id} className="bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow flex flex-wrap items-center gap-4" style={{ borderColor: "#D0DEE8" }}>
               {/* 封面 */}
               <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0" style={{ background: "#E6F0F8" }}>
                 <img src={activity.coverImage || DEFAULT_COVER} alt="" className="w-full h-full object-cover" />
