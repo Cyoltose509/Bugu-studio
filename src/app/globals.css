@@ -61,3 +61,17 @@
 
 .btn-secondary { background: transparent; color: #3388BB; border: 1.5px solid #3388BB; transition: all .2s; }
 .btn-secondary:hover { background: #fff; color: #3388BB; border-color: #3388BB; }
+
+/* 导航链接点击反馈 */
+.nav-link:active {
+  opacity: 0.75;
+  transform: scale(0.97);
+  transition: opacity 0.1s, transform 0.1s;
+}
+
+/* Loading 条动画 */
+@keyframes loading-bar {
+  0%   { width: 0%; left: 0; }
+  50%  { width: 70%; left: 0; }
+  100% { width: 30%; left: 70%; }
+}

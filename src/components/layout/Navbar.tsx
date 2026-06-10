@@ -1,5 +1,6 @@
 ﻿/**
  * 导航栏 - 深蓝 #25547A + 白色文字
+ * 保持为 Server Component，用户会话直接在服务端获取
  */
 import Link from "next/link";
 import Image from "next/image";
@@ -13,17 +14,17 @@ export async function Navbar() {
     <header className="sticky top-0 z-50 shadow-md" style={{ background: "#25547A" }}>
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white">
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white hover:opacity-85 transition-opacity nav-link">
           <Image src="/images/logo.png" alt="布谷工作室" width={32} height={32} className="rounded" />
           <span>布谷工作室</span>
         </Link>
 
-        {/* 主导航 */}
+        {/* 主导航 - 添加点击反馈的 CSS 类 */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-white/80">
-          <Link href="/works" className="hover:text-white transition-colors">作品库</Link>
-          <Link href="/members" className="hover:text-white transition-colors">成员</Link>
-          <Link href="/activities" className="hover:text-white transition-colors">活动</Link>
-          <Link href="/history" className="hover:text-white transition-colors">历史</Link>
+          <NavLink href="/works">作品库</NavLink>
+          <NavLink href="/members">成员</NavLink>
+          <NavLink href="/activities">活动</NavLink>
+          <NavLink href="/history">历史</NavLink>
         </nav>
 
         {/* 用户区域 */}
@@ -31,17 +32,17 @@ export async function Navbar() {
           {session?.user ? (
             <div className="flex items-center gap-3">
               {(session.user.role === "MEMBER" || session.user.role === "REVIEWER" || session.user.role === "ADMIN") && (
-                <Link href="/submit" className="text-sm btn-primary px-3 py-1.5 rounded-md font-medium">
+                <Link href="/submit" className="text-sm btn-primary px-3 py-1.5 rounded-md font-medium nav-link">
                   提交作品
                 </Link>
               )}
               {session.user.role === "ADMIN" && (
-                <Link href="/admin" className="text-sm text-white/80 hover:text-white transition-colors">
+                <Link href="/admin" className="text-sm text-white/80 hover:text-white transition-colors nav-link">
                   管理后台
                 </Link>
               )}
               <NotificationBell />
-              <Link href="/profile" className="flex items-center gap-2 text-sm text-white/80 hover:text-white">
+              <Link href="/profile" className="flex items-center gap-2 text-sm text-white/80 hover:text-white nav-link">
                 {session.user.image ? (
                   <img
                     src={session.user.image}
@@ -58,8 +59,8 @@ export async function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link href="/auth/login" className="text-sm text-white/80 hover:text-white transition-colors">登录</Link>
-              <Link href="/auth/register" className="text-sm btn-primary px-3 py-1.5 rounded-md font-medium">注册</Link>
+              <Link href="/auth/login" className="text-sm text-white/80 hover:text-white transition-colors nav-link">登录</Link>
+              <Link href="/auth/register" className="text-sm btn-primary px-3 py-1.5 rounded-md font-medium nav-link">注册</Link>
             </div>
           )}
         </div>
@@ -67,3 +68,20 @@ export async function Navbar() {
     </header>
   );
 }
+
+/**
+ * 服务端导航链接辅助函数
+ * 因为 Navbar 是 async server component，无法使用 useNavigation hook
+ * 点击反馈通过 CSS :active 和全局 loading.tsx 实现
+ */
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="hover:text-white transition-colors nav-link relative"
+    >
+      {children}
+    </Link>
+  );
+}
+

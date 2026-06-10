@@ -55,7 +55,7 @@ function ScoreSlider({
           disabled={disabled}
           className="flex-1 h-2 rounded-full appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
-            background: `linear-gradient(to right, #e0e0e0 0%, #e0e0e0 ${pct}%, ${trackColor} ${pct}%, ${trackColor} 100%)`,
+            background: `linear-gradient(to right, ${trackColor} 0%, ${trackColor} ${pct}%, #e0e0e0 ${pct}%, #e0e0e0 100%)`,
             accentColor: trackColor,
           }}
         />
