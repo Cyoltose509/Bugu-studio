@@ -238,6 +238,14 @@ export async function submitProposal(formData: FormData) {
   if (!activityId) return { error: "无效的活动" };
   if (!title)       return { error: "请填写标题" };
 
+  // 检查是否已提交过申请（一人只能提交一份）
+  const existing = await prisma.meetingProposal.findFirst({
+    where: { activityId, userId },
+  });
+  if (existing) {
+    return { error: "你已提交过申请，不能重复提交" };
+  }
+
   const proposal = await prisma.meetingProposal.create({
     data: {
       activityId,

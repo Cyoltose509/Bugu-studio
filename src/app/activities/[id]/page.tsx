@@ -9,8 +9,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { ActivityStatus, ProposalType, ProposalStatus } from "@prisma/client";
-import { submitProposal } from "@/app/admin/activities/actions";
 import { reviewProposal } from "@/app/admin/activities/actions";
+import SubmitProposalForm from "./SubmitProposalForm";
 import { DisbandTeamButton } from "./game-jam/DisbandTeamButton";
 import { LeaveTeamButton } from "./game-jam/LeaveTeamButton";
 import { InvitationButtons } from "./game-jam/InvitationButtons";
@@ -92,6 +92,13 @@ export default async function ActivityDetailPage({ params }: PageProps) {
   const isUpcoming  = now < activity.startTime;
   const isPast       = now > activity.endTime;
 
+  // 查询当前用户在此活动的分享申请（用于限制重复提交）
+  const userProposal = activity.type === "MEETING" && session?.user
+    ? await prisma.meetingProposal.findFirst({
+        where: { activityId: id, userId: session.user.id },
+      })
+    : null;
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in">
       {/* ── 封面图 ──────────────────────────────────── */}
@@ -148,7 +155,7 @@ export default async function ActivityDetailPage({ params }: PageProps) {
       )}
 
       {/* ── 根据类型渲染 ──────────────────────────── */}
-      {activity.type === "MEETING"    && <MeetingSection activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} />}
+      {activity.type === "MEETING"    && <MeetingSection activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} userProposal={userProposal} />}
       {activity.type === "COURSE"     && <CourseSection  activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} isPast={isPast} />}
       {activity.type === "COMPETITION" && <CompetitionSection activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} isPast={isPast} />}
       {activity.type === "GENERAL"    && <GeneralSection activity={activity} />}
@@ -171,8 +178,8 @@ function AvatarImg({ user }: { user: { name?: string | null; image?: string | nu
 
 // ── 例会 ───────────────────────────────────────────────────
 async function MeetingSection({
-  activity, session, isOngoing, isUpcoming,
-}: { activity: any; session: any; isOngoing: boolean; isUpcoming: boolean }) {
+  activity, session, isOngoing, isUpcoming, userProposal,
+}: { activity: any; session: any; isOngoing: boolean; isUpcoming: boolean; userProposal: any }) {
   const proposals = activity.proposals || [];
   const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
 
@@ -251,14 +258,33 @@ async function MeetingSection({
       {(isOngoing || isUpcoming) && (
         <section className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
           <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>📢 报名分享</h3>
-          <p className="text-xs mb-3" style={{ color: "#777" }}>报名分享你的主题，经管理员审核后将列入议程。</p>
-          <form action={async (f: FormData) => { "use server"; await submitProposal(f); }} className="space-y-3">
-            <input type="hidden" name="activityId" value={activity.id} />
-            <input type="hidden" name="proposalType" value="SHARE" />
-            <input name="title" placeholder="分享主题…" required className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }} />
-            <textarea name="description" placeholder="简介（可选）" rows={2} className="w-full rounded-lg border px-3 py-2 text-sm resize-y" style={{ borderColor: "#D0DEE8" }} />
-            <button type="submit" className="btn-primary text-sm px-4 py-2 rounded-lg">提交申请</button>
-          </form>
+          {userProposal ? (
+            /* 已提交申请 — 显示状态 */
+            <div className="rounded-lg p-4" style={{ background: "#F0F6FA" }}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium text-sm" style={{ color: "#333" }}>{userProposal.title}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full" style={
+                  userProposal.status === "APPROVED"
+                    ? { background: "#E6F0F8", color: "#2E7D32" }
+                    : userProposal.status === "REJECTED"
+                    ? { background: "#FFEBEE", color: "#C62828" }
+                    : { background: "#FFF8E1", color: "#F57F17" }
+                }>
+                  {userProposal.status === "APPROVED" ? "已通过" : userProposal.status === "REJECTED" ? "已拒绝" : "审核中"}
+                </span>
+              </div>
+              {userProposal.description && <p className="text-xs" style={{ color: "#777" }}>{userProposal.description}</p>}
+              {userProposal.status === "REJECTED" && userProposal.adminNote && (
+                <p className="text-xs mt-1" style={{ color: "#C62828" }}>审核意见：{userProposal.adminNote}</p>
+              )}
+            </div>
+          ) : (
+            /* 未提交 — 显示表单 */
+            <>
+              <p className="text-xs mb-3" style={{ color: "#777" }}>报名分享你的主题，经管理员审核后将列入议程。每人限提交一份。</p>
+              <SubmitProposalForm activityId={activity.id} />
+            </>
+          )}
         </section>
       )}
     </div>

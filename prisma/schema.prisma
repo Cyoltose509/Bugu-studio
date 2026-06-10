@@ -664,6 +664,7 @@ model MeetingProposal {
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([activityId, userId])
   @@index([activityId])
   @@index([userId])
   @@index([status])
