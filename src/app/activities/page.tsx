@@ -198,7 +198,7 @@ function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
 export default async function ActivitiesPage() {
   const now = new Date();
 
-  const [ongoing, upcoming, past] = await cachedQuery(
+  const raw = await cachedQuery(
     "activities:home",
     () =>
       Promise.all([
@@ -221,8 +221,9 @@ export default async function ActivitiesPage() {
           take: 12,
         }),
       ]),
-    60
+    60,
   );
+  const [ongoing, upcoming, past] = Array.isArray(raw) ? raw : [[], [], []];
   const hero =
       ongoing[0] ??
       upcoming[0] ??
@@ -258,7 +259,7 @@ export default async function ActivitiesPage() {
 
                 <div className="lg:col-span-2">
                   <h2
-                      className="text-lg:col-span-2 font-semibold mb-3"
+                      className="text-lg font-semibold mb-3"
                       style={{ color: "#25547A" }}
                   >
                     ⏰ 即将开始
