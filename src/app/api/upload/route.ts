@@ -1,16 +1,12 @@
 /**
  * /api/upload — 通用图片上传（截图/历史事件图片等）
  * 权限：登录用户
- * 存储：优先 Cloudflare R2，未配置时降级到本地
+ * 存储：Cloudflare R2（生产）/ 本地降级（缺 R2 配置时）
  */
 
 import { auth } from "@/lib/auth/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
 import { uploadToR2 } from "@/lib/utils/upload";
-
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "screenshots");
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -39,25 +35,29 @@ export async function POST(req: NextRequest) {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  let url: string;
+  // ── 检查 R2 配置 ──
+  const missing: string[] = [];
+  if (!process.env.R2_ACCOUNT_ID) missing.push("R2_ACCOUNT_ID");
+  if (!process.env.R2_ACCESS_KEY_ID) missing.push("R2_ACCESS_KEY_ID");
+  if (!process.env.R2_SECRET_ACCESS_KEY) missing.push("R2_SECRET_ACCESS_KEY");
+  if (!process.env.R2_BUCKET_NAME) missing.push("R2_BUCKET_NAME");
+  if (!process.env.R2_PUBLIC_URL) missing.push("R2_PUBLIC_URL");
 
-  // R2 已配置时上传到 R2
-  if (process.env.R2_ACCOUNT_ID && process.env.R2_PUBLIC_URL) {
-    try {
-      const result = await uploadToR2(buffer, file.name, file.type, "screenshot");
-      url = result.url;
-    } catch (err: any) {
-      console.error("[upload] R2 error:", err.message);
-      return NextResponse.json({ error: "上传失败，请稍后重试" }, { status: 500 });
-    }
-  } else {
-    // 降级：存本地
-    await mkdir(UPLOAD_DIR, { recursive: true });
-    const ext = file.name.split(".").pop() || "jpg";
-    const filename = `${session.user.id}-${Date.now()}.${ext}`;
-    await writeFile(join(UPLOAD_DIR, filename), buffer);
-    url = `/uploads/screenshots/${filename}`;
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: `缺少 R2 环境变量: ${missing.join(", ")}` },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ url });
+  try {
+    const result = await uploadToR2(buffer, file.name, file.type, "screenshot");
+    return NextResponse.json({ url: result.url });
+  } catch (err: any) {
+    console.error("[upload] R2 error:", err);
+    return NextResponse.json(
+      { error: `R2 上传失败: ${err.message}` },
+      { status: 500 }
+    );
+  }
 }
