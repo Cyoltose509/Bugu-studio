@@ -6,7 +6,7 @@
 
 import { prisma } from "@/lib/db/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { auth } from "@/lib/auth/auth";
 
 function formatBytes(bytes: number): string {
@@ -148,6 +148,7 @@ export async function GET(_req: NextRequest) {
       region: "auto",
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
       credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+      forcePathStyle: true,
     });
 
     const referencedUrls = await collectReferencedUrls(publicUrl);
@@ -209,15 +210,34 @@ export async function POST(req: NextRequest) {
       region: "auto",
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
       credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+      forcePathStyle: true,
     });
 
-    const results: { key: string; success: boolean; error?: string }[] = [];
+    const results: { key: string; success: boolean; error?: string; stillExists?: boolean }[] = [];
     for (const key of keys) {
       try {
         await client.send(
           new DeleteObjectCommand({ Bucket: bucketName, Key: key })
         );
-        results.push({ key, success: true });
+        // 验证删除是否真的生效：HeadObject 应该返回 404
+        let stillExists = false;
+        try {
+          await client.send(
+            new HeadObjectCommand({ Bucket: bucketName, Key: key })
+          );
+          stillExists = true; // 文件还在，删除没生效
+        } catch (headErr: any) {
+          // 404 = 文件已删除，没错；其他错误也要记录
+          if (headErr.$metadata?.httpStatusCode !== 404) {
+            // 不是 404，可能网络问题，记录警告但不算失败
+            console.warn(`HeadObject after delete non-404:`, headErr.$metadata?.httpStatusCode);
+          }
+        }
+        if (stillExists) {
+          results.push({ key, success: false, error: "文件仍然存在，删除未生效", stillExists: true });
+        } else {
+          results.push({ key, success: true });
+        }
       } catch (e: any) {
         results.push({ key, success: false, error: e.message });
       }

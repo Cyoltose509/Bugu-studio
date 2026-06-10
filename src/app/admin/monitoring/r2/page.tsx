@@ -50,6 +50,7 @@ export default async function R2MonitorPage() {
         region: "auto",
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
         credentials: { accessKeyId: accessKey!, secretAccessKey: secretKey! },
+        forcePathStyle: true,
       });
 
       let continuationToken: string | undefined;

@@ -696,7 +696,7 @@ async function CompetitionSection({
       )}
 
       {/* ── 参赛作品 ───────────────────────────── */}
-      {(isPast || isAdmin) && jamSubmissions.length > 0 && (
+      {(isPast || isAdmin || isJudge) && jamSubmissions.length > 0 && (
         <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
           <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>🎮 参赛作品（{jamSubmissions.length}）</h3>
           <div className="grid gap-3">

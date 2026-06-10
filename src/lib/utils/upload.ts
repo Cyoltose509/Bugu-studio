@@ -43,6 +43,7 @@ function getR2Client(): S3Client {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
+      forcePathStyle: true,
     });
   }
   return r2Client;
@@ -112,12 +113,16 @@ export async function uploadToR2(
  */
 export async function deleteFromR2(key: string): Promise<void> {
   const client = getR2Client();
-  await client.send(
+  const res = await client.send(
     new DeleteObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
       Key: key,
     })
   );
+  const status = res.$metadata.httpStatusCode ?? -1;
+  if (status < 200 || status >= 300) {
+    throw new Error(`R2 删除失败: HTTP ${status}`);
+  }
 }
 
 /**

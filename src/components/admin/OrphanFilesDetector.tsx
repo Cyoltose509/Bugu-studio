@@ -14,8 +14,18 @@ export default function OrphanFilesDetector() {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [orphans, setOrphans] = useState<OrphanFile[]>([]);
+  const [totalObjects, setTotalObjects] = useState<number>(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [result, setResult] = useState<{ deleted: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{
+    deleted: number;
+    errors: string[];
+    stillExists?: string[];
+    totalBefore?: number;
+    totalAfter?: number;
+    orphansBefore?: number;
+    orphansAfter?: number;
+  } | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
@@ -41,6 +51,7 @@ export default function OrphanFilesDetector() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "扫描失败");
       setOrphans(data.orphans || []);
+      setTotalObjects(data.total || 0);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -52,6 +63,9 @@ export default function OrphanFilesDetector() {
     const keys = Array.from(selected);
     if (keys.length === 0) return;
     if (!confirm(`确定删除选中的 ${keys.length} 个文件？此操作不可撤销！`)) return;
+
+    const totalBefore = totalObjects;
+    const orphansBefore = orphans.length;
 
     setDeleting(true);
     setError(null);
@@ -65,14 +79,40 @@ export default function OrphanFilesDetector() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "删除失败");
 
-      const failed = data.results.filter((r: any) => !r.success);
-      setResult({
-        deleted: data.results.filter((r: any) => r.success).length,
-        errors: failed.map((r: any) => `${r.key}: ${r.error}`),
-      });
-      // 从列表中移除已删除的文件
-      setOrphans((prev) => prev.filter((o) => !keys.includes(o.key)));
+      const failedKeys = new Set(
+        data.results.filter((r: any) => !r.success).map((r: any) => r.key)
+      );
+      const successCount = data.results.filter((r: any) => r.success).length;
+      const stillExistsList = data.results.filter((r: any) => r.stillExists).map((r: any) => r.key);
+
+      // 删除后自动重扫验证
+      setVerifying(true);
+      let totalAfter = 0;
+      let orphansAfter = 0;
+      try {
+        const verifyRes = await fetch("/api/admin/r2/orphans");
+        const verifyData = await verifyRes.json();
+        totalAfter = verifyData.total || 0;
+        orphansAfter = (verifyData.orphans || []).length;
+        setOrphans(verifyData.orphans || []);
+        setTotalObjects(totalAfter);
+      } catch {
+        // 重扫失败不影响主流程，只保留删除失败的旧列表
+        setOrphans((prev) => prev.filter((o) => failedKeys.has(o.key)));
+      }
+      setVerifying(false);
+
       setSelected(new Set());
+
+      setResult({
+        deleted: successCount,
+        errors: data.results.filter((r: any) => !r.success).map((r: any) => `${r.key}: ${r.error}`),
+        stillExists: stillExistsList,
+        totalBefore,
+        totalAfter,
+        orphansBefore,
+        orphansAfter,
+      });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -83,6 +123,9 @@ export default function OrphanFilesDetector() {
   async function deleteAll() {
     if (orphans.length === 0) return;
     if (!confirm(`确定删除全部 ${orphans.length} 个野文件？此操作不可撤销！`)) return;
+
+    const totalBefore = totalObjects;
+    const orphansBefore = orphans.length;
 
     setDeleting(true);
     setError(null);
@@ -97,13 +140,39 @@ export default function OrphanFilesDetector() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "删除失败");
 
-      const failed = data.results.filter((r: any) => !r.success);
-      setResult({
-        deleted: data.results.filter((r: any) => r.success).length,
-        errors: failed.map((r: any) => `${r.key}: ${r.error}`),
-      });
-      setOrphans([]);
+      const failedKeys = new Set(
+        data.results.filter((r: any) => !r.success).map((r: any) => r.key)
+      );
+      const successCount = data.results.filter((r: any) => r.success).length;
+      const stillExistsList = data.results.filter((r: any) => r.stillExists).map((r: any) => r.key);
+
+      // 删除后自动重扫验证
+      setVerifying(true);
+      let totalAfter = 0;
+      let orphansAfter = 0;
+      try {
+        const verifyRes = await fetch("/api/admin/r2/orphans");
+        const verifyData = await verifyRes.json();
+        totalAfter = verifyData.total || 0;
+        orphansAfter = (verifyData.orphans || []).length;
+        setOrphans(verifyData.orphans || []);
+        setTotalObjects(totalAfter);
+      } catch {
+        setOrphans((prev) => prev.filter((o) => failedKeys.has(o.key)));
+      }
+      setVerifying(false);
+
       setSelected(new Set());
+
+      setResult({
+        deleted: successCount,
+        errors: data.results.filter((r: any) => !r.success).map((r: any) => `${r.key}: ${r.error}`),
+        stillExists: stillExistsList,
+        totalBefore,
+        totalAfter,
+        orphansBefore,
+        orphansAfter,
+      });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -163,7 +232,33 @@ export default function OrphanFilesDetector() {
 
       {result && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-sm" style={{ color: "#2E7D32" }}>
-          成功删除 {result.deleted} 个文件。
+          <div className="font-medium mb-1">成功删除 {result.deleted} 个文件</div>
+          {result.totalBefore !== undefined && result.totalAfter !== undefined && (
+            <div className="text-xs mb-1" style={{ color: "#555" }}>
+              R2 文件总数：{result.totalBefore.toLocaleString()} → {result.totalAfter.toLocaleString()}
+              （减少 {result.totalBefore - result.totalAfter}）
+            </div>
+          )}
+          {result.orphansBefore !== undefined && result.orphansAfter !== undefined && (
+            <div className="text-xs mb-1" style={{ color: "#555" }}>
+              野文件数：{result.orphansBefore} → {result.orphansAfter}
+              {result.orphansAfter === 0 ? " ✅ 已全部清理" : ` ⚠️ 还有 ${result.orphansAfter} 个`}
+            </div>
+          )}
+          {verifying && (
+            <div className="text-xs mt-1 flex items-center gap-1" style={{ color: "#999" }}>
+              <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.2" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              正在重新扫描 R2 以确认删除…
+            </div>
+          )}
+          {result.stillExists && result.stillExists.length > 0 && (
+            <div className="mt-2 text-xs" style={{ color: "#C62828" }}>
+              ⚠️ 以下文件删除后仍存在（R2 未删除，需排查）：{result.stillExists.join("、")}
+            </div>
+          )}
           {result.errors.length > 0 && (
             <div className="mt-2 text-xs" style={{ color: "#C62828" }}>
               失败：{result.errors.join("；")}
@@ -177,6 +272,11 @@ export default function OrphanFilesDetector() {
           <div className="flex items-center gap-3 mb-3">
             <span className="text-sm font-medium" style={{ color: "#555" }}>
               找到 {orphans.length} 个野文件（共 {orphans.reduce((s, o) => s + o.size, 0).toLocaleString()} 字节）
+              {totalObjects > 0 && (
+                <span className="text-xs ml-1" style={{ color: "#999" }}>
+                  / R2 共 {totalObjects.toLocaleString()} 个文件
+                </span>
+              )}
             </span>
             <button
               onClick={() => setSelected(new Set(orphans.map((o) => o.key)))}
