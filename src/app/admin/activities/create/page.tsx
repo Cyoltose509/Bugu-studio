@@ -10,6 +10,7 @@ import Link from "next/link";
 import { createActivity } from "../actions";
 import { ActivityType } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",    label: "例会" },
@@ -185,10 +186,10 @@ export default function CreateActivityPage() {
 
         {/* 提交 */}
         <div className="pt-2">
-          <button type="submit"
-            className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm">
+          <SubmitButton type="submit"
+            className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm" pendingText="创建中...">
             创建活动（草稿）
-          </button>
+          </SubmitButton>
           <p className="text-xs mt-2" style={{ color: "#999" }}>创建后为「草稿」状态，可在列表中发布。</p>
         </div>
       </form>

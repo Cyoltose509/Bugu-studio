@@ -6,6 +6,7 @@ import { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { reviewProposal, scoreEnrollment, scoreSubmission } from "../actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ProposalStatus, EnrollmentStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "活动审核 - 管理后台" };
@@ -103,10 +104,10 @@ export default async function ProposalsPage({ searchParams }: PageProps) {
 
               {p.status === "PENDING" && (
                 <div className="flex gap-2 items-center flex-wrap">
-                  <button name="action" value="APPROVED" type="submit"
-                    className="btn-primary px-3 py-1.5 text-xs rounded-lg">通过</button>
-                  <button name="action" value="REJECTED" type="submit"
-                    className="px-3 py-1.5 text-xs rounded-lg border" style={{ borderColor: "#EF4444", color: "#EF4444" }}>拒绝</button>
+                  <SubmitButton name="action" value="APPROVED" type="submit"
+                    className="btn-primary px-3 py-1.5 text-xs rounded-lg" pendingText="通过中...">通过</SubmitButton>
+                  <SubmitButton name="action" value="REJECTED" type="submit"
+                    className="px-3 py-1.5 text-xs rounded-lg border" style={{ borderColor: "#EF4444", color: "#EF4444" }} pendingText="拒绝中...">拒绝</SubmitButton>
                   <input name="adminNote" placeholder="审核意见（可选）"
                     className="flex-1 min-w-[120px] rounded-lg border px-3 py-1.5 text-xs placeholder-gray-400"
                     style={{ borderColor: "#D0DEE8" }} />

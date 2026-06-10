@@ -8,6 +8,7 @@ import { notFound, redirect } from "next/navigation";
 import { updateActivity } from "../../actions";
 import { ActivityType, ActivityStatus } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -145,7 +146,7 @@ export default async function EditActivityPage({ params }: PageProps) {
         </div>
 
         <div className="pt-2 flex gap-3">
-          <button type="submit" className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm">保存修改</button>
+          <SubmitButton type="submit" className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm" pendingText="保存中...">保存修改</SubmitButton>
           <a href="/admin/activities" className="btn-secondary px-6 py-2.5 rounded-lg text-sm">取消</a>
         </div>
       </form>

@@ -10,6 +10,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import { ActivityStatus, ActivityType } from "@prisma/client";
 import { deleteActivity, updateActivityStatus } from "./actions";
 import DeleteButton from "./DeleteButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 export const metadata: Metadata = { title: "活动管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -147,12 +148,12 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
               <div className="flex gap-2 shrink-0">
                 {activity.status === "DRAFT" && (
                   <form action={async () => { "use server"; await updateActivityStatus(activity.id, ActivityStatus.PUBLISHED); }}>
-                    <button type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#22C55E", color: "#22C55E" }}>发布</button>
+                    <SubmitButton type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#22C55E", color: "#22C55E" }} pendingText="发布中...">发布</SubmitButton>
                   </form>
                 )}
                 {activity.status === "PUBLISHED" && (
                   <form action={async () => { "use server"; await updateActivityStatus(activity.id, ActivityStatus.ARCHIVED); }}>
-                    <button type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#EAB308", color: "#EAB308" }}>归档</button>
+                    <SubmitButton type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#EAB308", color: "#EAB308" }} pendingText="归档中...">归档</SubmitButton>
                   </form>
                 )}
                 <Link href={`/admin/activities/${activity.id}/edit`} className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#3388BB", color: "#3388BB" }}>编辑</Link>

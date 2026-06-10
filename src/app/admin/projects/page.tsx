@@ -10,6 +10,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { updateProjectStatus, toggleFeatured } from "./actions";
 import DeleteProjectButton from "./DeleteProjectButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 export const metadata: Metadata = { title: "作品管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -123,12 +124,12 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
                       </Link>
                       {p.status === "PENDING" && (
                         <form action={updateProjectStatus.bind(null, p.id, "PUBLISHED")} className="inline">
-                          <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#88C232" }}>通过</button>
+                          <SubmitButton type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#88C232" }} pendingText="通过中...">通过</SubmitButton>
                         </form>
                       )}
                       {p.status === "PENDING" && (
                         <form action={updateProjectStatus.bind(null, p.id, "REJECTED")} className="inline">
-                          <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#C62828" }}>拒绝</button>
+                          <SubmitButton type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: "#C62828" }} pendingText="拒绝中...">拒绝</SubmitButton>
                         </form>
                       )}
                       <DeleteProjectButton projectId={p.id} />

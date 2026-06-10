@@ -171,16 +171,6 @@ function MeetingSection({ activity, isOngoing, isUpcoming }: { activity: any; is
               <button type="submit" className="btn-primary text-sm px-4 py-2 rounded-lg">提交申请</button>
             </form>
           </details>
-          <details className="group mt-3">
-            <summary className="cursor-pointer text-sm hover:text-[#3388BB]" style={{ color: "#555" }}>展示申请</summary>
-            <form action={async (f: FormData) => { "use server"; await submitProposal(f); }} className="mt-3 space-y-3">
-              <input type="hidden" name="activityId" value={activity.id} />
-              <input type="hidden" name="proposalType" value="SHOWCASE" />
-              <input name="title" placeholder="展示内容…" required className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }} />
-              <textarea name="description" placeholder="简介（可选）" rows={2} className="w-full rounded-lg border px-3 py-2 text-sm resize-y" style={{ borderColor: "#D0DEE8" }} />
-              <button type="submit" className="btn-primary text-sm px-4 py-2 rounded-lg">提交申请</button>
-            </form>
-          </details>
         </section>
       )}
     </div>
