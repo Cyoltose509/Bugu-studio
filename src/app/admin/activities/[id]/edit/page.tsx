@@ -161,6 +161,12 @@ export default async function EditActivityPage({ params }: PageProps) {
                 className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
                 style={{ borderColor: "#D0DEE8", color: "#333" }} />
             </div>
+            <div>
+              <label className="block text-xs mb-1" style={{ color: "#777" }}>每队最大人数 <span className="text-xs" style={{ color: "#999" }}>(默认 6，缩小后将自动踢出超限成员)</span></label>
+              <input name="maxTeamSize" type="number" min={1} max={50} defaultValue={activity.maxTeamSize ?? 6}
+                className="w-32 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
+                style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            </div>
           </div>
         </div>
 

@@ -18,7 +18,7 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
   // 找用户的队伍
   const membership = await prisma.jamTeamMember.findFirst({
     where: { userId: session.user.id, team: { activityId } },
-    include: { team: true },
+    include: { team: { include: { members: { include: { user: { select: { id: true, name: true } } } } } } },
   });
   if (!membership) {
     return (
@@ -44,6 +44,17 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
   const now = new Date();
   const isOngoing = now >= activity.startTime && now <= activity.endTime;
 
+  // 获取所有标签（供表单选择）
+  const tags = await prisma.tag.findMany({ orderBy: { name: "asc" } });
+
+  // 队伍成员列表（自动填入制作人员）
+  const teamMembers = membership.team.members.map((m) => ({
+    id: m.id,
+    userId: m.user.id,
+    userName: m.user.name || "未知",
+    role: m.role,
+  }));
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
@@ -57,12 +68,12 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
           {existing ? "修改作品" : "提交作品"}
         </h1>
         <p className="text-sm mb-6" style={{ color: "#999" }}>
-          队伍：{membership.team.name} · {isOngoing ? "比赛进行中" : "比赛尚未开始"}
+          队伍：{membership.team.name} · {membership.team.members.length} 人 · {isOngoing ? "比赛进行中" : "比赛尚未开始"}
         </p>
 
         {!isOngoing && (
           <div className="p-4 rounded-lg mb-4" style={{ background: "#FFFDF7", border: "1px solid #FFF3E0" }}>
-            <p className="text-sm" style={{ color: "#E38043" }}>⏰ 比赛尚未开始，开始后即可提交作品</p>
+            <p className="text-sm" style={{ color: "#E38043" }}>比赛尚未开始，开始后即可提交作品</p>
           </div>
         )}
 
@@ -70,6 +81,8 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
           activityId={activityId}
           isOngoing={isOngoing}
           existing={existing}
+          teamMembers={teamMembers}
+          tags={tags}
         />
       </div>
     </div>

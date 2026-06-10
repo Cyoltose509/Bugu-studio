@@ -129,6 +129,12 @@ export default function CreateActivityPage() {
                   className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
                   style={{ borderColor: "#D0DEE8", color: "#333" }} />
               </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "#777" }} htmlFor="maxTeamSize">每队最大人数 <span className="text-xs" style={{ color: "#999" }}>(默认 6)</span></label>
+                <input id="maxTeamSize" name="maxTeamSize" type="number" min={1} max={50} defaultValue={6}
+                  className="w-32 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
+                  style={{ borderColor: "#D0DEE8", color: "#333" }} />
+              </div>
             </div>
           )}
         </div>

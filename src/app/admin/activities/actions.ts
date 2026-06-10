@@ -17,6 +17,32 @@ function toSlug(title: string): string {
   return title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "").slice(0, 60);
 }
 
+/** 当 maxTeamSize 缩小时，自动移除超限队伍的成员（保留队长和最早加入的成员） */
+async function trimTeamMembers(activityId: string, maxTeamSize: number) {
+  const teams = await prisma.jamTeam.findMany({
+    where: { activityId },
+    include: {
+      members: { orderBy: { joinedAt: "asc" } },
+    },
+  });
+
+  for (const team of teams) {
+    if (team.members.length <= maxTeamSize) continue;
+
+    // 队长排第一位，然后按加入时间排序
+    const sorted = team.members.sort((a, b) => {
+      if (a.role === "LEADER") return -1;
+      if (b.role === "LEADER") return 1;
+      return a.joinedAt.getTime() - b.joinedAt.getTime();
+    });
+
+    const toRemove = sorted.slice(maxTeamSize);
+    await prisma.jamTeamMember.deleteMany({
+      where: { id: { in: toRemove.map((m) => m.id) } },
+    });
+  }
+}
+
 /** 如果标题为空，生成默认标题：YYYY年MM月DD日 + 活动类型 */
 function defaultTitle(type: string, startTime?: string): string {
   if (!startTime) return `新${TYPE_LABEL[type] || "活动"}`;
@@ -57,6 +83,7 @@ export async function createActivity(formData: FormData) {
   const regOpen     = formData.get("registrationOpen") === "on";
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
+  const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
 
   if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
   if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
@@ -65,6 +92,7 @@ export async function createActivity(formData: FormData) {
   const finalTitle = title || defaultTitle(type, startTime);
   const slug = toSlug(finalTitle);
   const maxParticipants = maxStr ? parseInt(maxStr, 10) : undefined;
+  const maxTeamSize = maxTeamSizeStr ? parseInt(maxTeamSizeStr, 10) : 6;
 
   const activity = await prisma.activity.create({
     data: {
@@ -83,6 +111,7 @@ export async function createActivity(formData: FormData) {
       status: ActivityStatus.DRAFT,
       theme: theme || undefined,
       themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
+      maxTeamSize,
     },
   });
 
@@ -109,14 +138,17 @@ export async function updateActivity(id: string, formData: FormData) {
   const status      = (formData.get("status") as string || "DRAFT");
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
+  const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
 
   if (!title) return { error: "请填写活动标题" };
   if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
   if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
 
-  const activity = await prisma.activity.findUnique({ where: { id }, select: { slug: true } });
+  const activity = await prisma.activity.findUnique({ where: { id }, select: { slug: true, maxTeamSize: true } });
   const slug = activity ? activity.slug : toSlug(title);
   const maxParticipants = maxStr ? parseInt(maxStr, 10) : undefined;
+  const newMaxTeamSize = maxTeamSizeStr ? parseInt(maxTeamSizeStr, 10) : 6;
+  const oldMaxTeamSize = activity?.maxTeamSize ?? 6;
 
   await prisma.activity.update({
     where: { id },
@@ -136,8 +168,14 @@ export async function updateActivity(id: string, formData: FormData) {
       status: status as ActivityStatus,
       theme: theme || undefined,
       themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
+      maxTeamSize: newMaxTeamSize,
     },
   });
+
+  // 如果缩小了 maxTeamSize，自动踢出超限队伍的成员
+  if (newMaxTeamSize < oldMaxTeamSize) {
+    await trimTeamMembers(id, newMaxTeamSize);
+  }
 
   await invalidateActivityCaches(id);
   return { success: true };

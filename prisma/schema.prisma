@@ -627,6 +627,7 @@ model Activity {
   maxParticipants  Int?
   theme            String?        @db.Text // Game Jam — 比赛题目
   themeRevealedAt  DateTime?               // Game Jam — 题目公布时间
+  maxTeamSize      Int?          @default(6) // Game Jam — 每队最大人数
   status           ActivityStatus @default(DRAFT)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -798,6 +799,7 @@ model JamSubmission {
   title       String
   description String?  @db.Text
   files       String[] @default([]) // 截图/玩法 GIF 等文件 URL
+  metadata    Json?    // 扩展数据：{ coverImage?, links?, creators?, tagIds?, customTags? }
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
