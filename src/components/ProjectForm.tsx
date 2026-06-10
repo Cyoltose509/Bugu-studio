@@ -208,7 +208,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "上传失败");
-      setScreenshots((prev) => [...prev, { url: json.data.url }]);
+      setScreenshots((prev) => [...prev, { url: json.url }]);
     } catch (err: any) {
       setScreenshotError(err.message || "上传失败");
     } finally {

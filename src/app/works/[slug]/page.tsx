@@ -15,6 +15,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import { auth } from "@/lib/auth/auth";
 import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
+import DeleteOwnProjectButton from "./DeleteOwnProjectButton";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
 
@@ -173,10 +174,11 @@ export default async function WorkDetailPage({ params }: PageProps) {
           </h1>
           {project.subtitle && <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>}
 
-          {/* 点赞 + 编辑 */}
+          {/* 点赞 + 编辑 + 删除 */}
           <div className="flex items-center gap-3 mb-4">
             <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={initialLiked} />
             <EditButton slug={project.slug} submitterId={project.submitterId} />
+            <DeleteOwnProjectButton projectId={project.id} submitterId={project.submitterId} />
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">

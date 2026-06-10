@@ -1,108 +1,63 @@
 /**
- * 文件上传 API
- * POST /api/upload - 上传图片到 R2
- * 允许: jpg, png, webp
- * MIME 检查 + Magic Bytes 双重验证
+ * /api/upload — 通用图片上传（截图/历史事件图片等）
+ * 权限：登录用户
+ * 存储：优先 Cloudflare R2，未配置时降级到本地
  */
 
-import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth/auth";
-import {
-  uploadToR2,
-  validateImageMagicBytes,
-  ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE,
-  type UploadType,
-} from "@/lib/utils/upload";
-import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/utils/rate-limit";
-import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
-import { apiResponse, apiError } from "@/lib/utils";
+import { NextRequest, NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { uploadToR2 } from "@/lib/utils/upload";
 
-export async function POST(request: NextRequest) {
+const UPLOAD_DIR = join(process.cwd(), "public", "uploads", "screenshots");
+
+export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user) return apiError("请先登录", 401);
-
-  const ip = getClientIp(request);
-  const rl = checkRateLimit(
-    `upload:${session.user.id}`,
-    RATE_LIMITS.UPLOAD
-  );
-  if (!rl.allowed) return apiError("上传过于频繁，请稍后再试", 429);
-
-  let formData: FormData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return apiError("无效的表单数据", 400);
+  if (!session?.user) {
+    return NextResponse.json({ error: "未登录" }, { status: 401 });
   }
 
+  const formData = await req.formData();
   const file = formData.get("file") as File | null;
-  const uploadType = (formData.get("type") as string) || "screenshot";
-
-  if (!file) return apiError("未找到文件", 400);
-
-  // 验证上传类型
-  const validTypes: UploadType[] = ["avatar", "cover", "screenshot"];
-  if (!validTypes.includes(uploadType as UploadType)) {
-    return apiError("无效的上传类型", 400);
+  if (!file) {
+    return NextResponse.json({ error: "未提供文件" }, { status: 400 });
   }
 
-  // 验证 MIME 类型（不信任 Content-Type，需要 Magic Bytes 验证）
-  const mimeType = file.type;
-  if (!ALLOWED_MIME_TYPES.includes(mimeType as any)) {
-    return apiError("仅支持 JPG、PNG、WebP 格式", 400);
-  }
-
-  // 读取文件内容
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  // Magic Bytes 验证（防止扩展名欺骗）
-  if (!validateImageMagicBytes(buffer)) {
-    await createAuditLog({
-      action: "SUSPICIOUS_REQUEST",
-      userId: session.user.id,
-      metadata: {
-        reason: "magic_bytes_mismatch",
-        declaredType: mimeType,
-        fileName: file.name,
-      },
-      ...extractRequestInfo(request),
-    });
-    return apiError("文件内容与声明类型不符", 400);
-  }
-
-  // 上传到 R2
-  let result;
-  try {
-    result = await uploadToR2(
-      buffer,
-      file.name,
-      mimeType,
-      uploadType as UploadType
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    return NextResponse.json(
+      { error: "仅支持 JPG/PNG/WebP 格式" },
+      { status: 400 }
     );
-  } catch (error: any) {
-    return apiError(error.message || "上传失败", 500);
   }
 
-  // 审计日志
-  await createAuditLog({
-    action: "FILE_UPLOAD",
-    userId: session.user.id,
-    metadata: {
-      uploadType,
-      fileSize: buffer.length,
-      mimeType,
-      key: result.key,
-    },
-    ...extractRequestInfo(request),
-    statusCode: 201,
-  });
+  if (file.size > 8 * 1024 * 1024) {
+    return NextResponse.json({ error: "文件大小不能超过 8MB" }, { status: 400 });
+  }
 
-  return apiResponse({ url: result.url, key: result.key }, 201);
-}
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
 
-// 禁止其他 HTTP 方法
-export async function GET() {
-  return apiError("方法不允许", 405);
+  let url: string;
+
+  // R2 已配置时上传到 R2
+  if (process.env.R2_ACCOUNT_ID && process.env.R2_PUBLIC_URL) {
+    try {
+      const result = await uploadToR2(buffer, file.name, file.type, "screenshot");
+      url = result.url;
+    } catch (err: any) {
+      console.error("[upload] R2 error:", err.message);
+      return NextResponse.json({ error: "上传失败，请稍后重试" }, { status: 500 });
+    }
+  } else {
+    // 降级：存本地
+    await mkdir(UPLOAD_DIR, { recursive: true });
+    const ext = file.name.split(".").pop() || "jpg";
+    const filename = `${session.user.id}-${Date.now()}.${ext}`;
+    await writeFile(join(UPLOAD_DIR, filename), buffer);
+    url = `/uploads/screenshots/${filename}`;
+  }
+
+  return NextResponse.json({ url });
 }

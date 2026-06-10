@@ -75,7 +75,7 @@ export default function AdminHistoryEventsPage() {
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "上传失败");
-      setFormImages((prev) => [...prev, { url: json.data.url }].slice(0, 5));
+      setFormImages((prev) => [...prev, { url: json.url }].slice(0, 5));
     } catch (err: any) {
       alert(err.message || "上传失败");
     } finally {

@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth/adminGuard";
 import { invalidateCache } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "@/lib/services/notification";
 
 async function invalidateProjectCaches(id?: string) {
   await Promise.all([
@@ -24,7 +25,10 @@ async function invalidateProjectCaches(id?: string) {
 
 export async function updateProjectStatus(id: string, status: ProjectStatus) {
   await requireAdmin();
-  const project = await prisma.project.findUnique({ where: { id }, select: { slug: true, status: true } });
+  const project = await prisma.project.findUnique({
+    where: { id },
+    select: { slug: true, status: true, title: true, submitterId: true },
+  });
   if (!project) throw new Error("作品不存在");
 
   // 允许的审核转换：PENDING → PUBLISHED/REJECTED，REJECTED → PUBLISHED
@@ -38,6 +42,19 @@ export async function updateProjectStatus(id: string, status: ProjectStatus) {
   revalidatePath("/admin/projects");
   revalidatePath("/members");
   revalidatePath("/works");
+
+  // ── 审核通过时通知制作者 ──
+  if (status === "PUBLISHED" && project.submitterId) {
+    const approved = project.status === "PENDING" ? "审核通过" : "重新审核通过";
+    await createNotification({
+      userId: project.submitterId,
+      type: "PROJECT_REVIEW",
+      title: `作品${approved} ✅`,
+      content: `你的作品《${project.title}》已${approved}，现在可以在社团主页公开展示了`,
+      relatedId: id,
+      relatedType: "Project",
+    });
+  }
 }
 
 export async function deleteProject(id: string) {
