@@ -199,7 +199,7 @@ export default async function ActivitiesPage() {
   const now = new Date();
 
   const raw = await cachedQuery(
-    "activities:home",
+    "activities:list",
     () =>
       Promise.all([
         // 进行中
@@ -224,22 +224,26 @@ export default async function ActivitiesPage() {
     60,
   );
   const [ongoing, upcoming, past] = Array.isArray(raw) ? raw : [[], [], []];
+  // 每个子元素也做守卫，防止缓存返回异常数据
+  const safeOngoing  = Array.isArray(ongoing)  ? ongoing  : [];
+  const safeUpcoming = Array.isArray(upcoming) ? upcoming : [];
+  const safePast     = Array.isArray(past)     ? past     : [];
   const hero =
-      ongoing[0] ??
-      upcoming[0] ??
-      past[0] ??
+      safeOngoing[0] ??
+      safeUpcoming[0] ??
+      safePast[0] ??
       null;
 
   // 判断 hero 的状态
   const heroStatus: "ongoing" | "upcoming" | "past" =
-    ongoing[0]?.id === hero?.id ? "ongoing"
-    : upcoming[0]?.id === hero?.id ? "upcoming"
+    safeOngoing[0]?.id === hero?.id ? "ongoing"
+    : safeUpcoming[0]?.id === hero?.id ? "upcoming"
     : "past";
 
   const upcomingList =
-      hero && upcoming[0]?.id === hero.id
-          ? upcoming.slice(1)
-          : upcoming;
+      hero && safeUpcoming[0]?.id === hero.id
+          ? safeUpcoming.slice(1)
+          : safeUpcoming;
   return (
       <div className="container mx-auto px-4 py-10 animate-fade-in">
 
@@ -276,7 +280,7 @@ export default async function ActivitiesPage() {
             </section>
         )}
 
-        {past.length > 0 && (
+        {safePast.length > 0 && (
             <section>
               <SectionTitle
                   emoji="📦"
@@ -284,7 +288,7 @@ export default async function ActivitiesPage() {
               />
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {past.map(a => (
+                {safePast.map(a => (
                     <ActivityCard key={a.id} a={a} />
                 ))}
               </div>

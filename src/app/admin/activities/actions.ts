@@ -30,7 +30,8 @@ function defaultTitle(type: string, startTime?: string): string {
 async function invalidateActivityCaches(id?: string) {
   await Promise.all([
     invalidateCache("api:activities:"),
-    invalidateCache("activities:home"),
+    invalidateCache("activities:list"),
+    invalidateCache("home:activities"),
     invalidateCache("admin:activities:"),
     ...(id ? [invalidateCache(`activity:detail:${id}`)] : []),
   ]);

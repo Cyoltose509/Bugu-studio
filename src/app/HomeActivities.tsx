@@ -20,7 +20,7 @@ const TYPE_LABELS: Record<string, string> = {
 async function getHomeActivities() {
   const now = new Date();
   return cachedQuery(
-    "activities:home",
+    "home:activities",
     () =>
       prisma.activity.findMany({
         where: {
