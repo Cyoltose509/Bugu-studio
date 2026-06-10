@@ -721,6 +721,7 @@ model JamTeam {
   activityId String
   name       String
   leaderId   String   // 队长 userId
+  topic      String?  // 公开课讲题 (仅 COURSE 类型使用)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

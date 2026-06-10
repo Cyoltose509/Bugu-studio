@@ -146,6 +146,7 @@ export default async function EditActivityPage({ params }: PageProps) {
         </div>
 
         {/* Game Jam 设置（仅 COMPETITION 类型显示） */}
+        {activity.type === "COMPETITION" && (
         <div className="p-4 rounded-lg border" style={{ borderColor: "#FFF3E0", background: "#FFFDF7" }}>
           <p className="text-sm font-medium mb-3" style={{ color: "#E38043" }}>🏆 Game Jam 设置</p>
           <div className="space-y-3">
@@ -169,6 +170,7 @@ export default async function EditActivityPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+        )}
 
         <div className="pt-2 flex gap-3">
           <SubmitButton type="submit" className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm" pendingText="保存中...">保存修改</SubmitButton>

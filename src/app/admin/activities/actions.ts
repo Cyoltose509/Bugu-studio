@@ -291,8 +291,8 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
     relatedType: "Activity",
   });
 
-  revalidatePath("/admin/activities/proposals");
   revalidatePath(`/activities/${proposal.activityId}`);
+  revalidatePath(`/admin/activities/${proposal.activityId}/edit`);
 }
 
 // ── 公开课：报名 ──────────────────────────────────────────────
@@ -396,8 +396,9 @@ export async function submitCompetition(formData: FormData) {
 // ── 比赛提交：删除 ──────────────────────────────────────────
 export async function deleteCompetitionSubmission(submissionId: string) {
   await requireAdmin();
-  await prisma.competitionSubmission.delete({ where: { id: submissionId } });
-  revalidatePath("/admin/activities/proposals");
+  await prisma.competitionSubmission.deleteMany({ where: { id: submissionId } });
+  await invalidateCache("admin:submissions:");
+  revalidatePath("/admin/activities");
   return { success: true };
 }
 

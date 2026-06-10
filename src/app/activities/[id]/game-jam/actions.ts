@@ -173,6 +173,7 @@ export async function createTeam(activityId: string, formData: FormData) {
   });
 
   invalidateCache(`jam:${activityId}:teams`);
+  invalidateCache(`activity:detail:${activityId}`);
   revalidatePath(`/activities/${activityId}`);
   return { success: true, teamId: team.id };
 }
@@ -198,6 +199,27 @@ export async function updateTeam(teamId: string, activityId: string, formData: F
   await prisma.jamTeam.update({ where: { id: teamId }, data: { name } });
   invalidateCache(`jam:${activityId}:teams`);
   revalidatePath(`/activities/${activityId}/game-jam/teams/${teamId}`);
+  return { success: true };
+}
+
+/** 设置队伍讲题 (仅 COURSE 类型活动) */
+export async function setTeamTopic(teamId: string, activityId: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "请先登录" };
+
+  const team = await prisma.jamTeam.findUnique({
+    where: { id: teamId },
+    include: { members: { where: { userId: session.user.id, role: "LEADER" } } },
+  });
+  if (!team || team.members.length === 0) return { error: "只有队长可以设置讲题" };
+
+  const topic = (formData.get("topic") as string || "").trim();
+  if (!topic || topic.length > 200) return { error: "讲题为 1-200 个字符" };
+
+  await prisma.jamTeam.update({ where: { id: teamId }, data: { topic } });
+  invalidateCache(`jam:${activityId}:teams`);
+  invalidateCache(`activity:detail:${activityId}`);
+  revalidatePath(`/activities/${activityId}`);
   return { success: true };
 }
 
