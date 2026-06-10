@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { reviewProposal, scoreEnrollment, scoreSubmission } from "../actions";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import DeleteSubmissionButton from "./DeleteSubmissionButton";
 import { ProposalStatus, EnrollmentStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "活动审核 - 管理后台" };
@@ -155,10 +156,13 @@ export default async function ProposalsPage({ searchParams }: PageProps) {
         <div className="space-y-3">
           {submissions.map(s => (
             <div key={s.id} className="bg-white rounded-xl border p-4 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm" style={{ color: "#333" }}>{s.user.name}</span>
-                <span className="text-xs" style={{ color: "#777" }}>{s.activity.title}</span>
-                {s.teamName && <span className="text-xs" style={{ color: "#999" }}>队伍：{s.teamName}</span>}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm" style={{ color: "#333" }}>{s.user.name}</span>
+                  <span className="text-xs" style={{ color: "#777" }}>{s.activity.title}</span>
+                  {s.teamName && <span className="text-xs" style={{ color: "#999" }}>队伍：{s.teamName}</span>}
+                </div>
+                <DeleteSubmissionButton id={s.id} userName={s.user.name} />
               </div>
               {s.submissionUrl && (
                 <a href={s.submissionUrl} target="_blank" rel="noreferrer"

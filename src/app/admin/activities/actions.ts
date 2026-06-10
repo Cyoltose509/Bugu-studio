@@ -393,6 +393,14 @@ export async function submitCompetition(formData: FormData) {
   return { success: true };
 }
 
+// ── 比赛提交：删除 ──────────────────────────────────────────
+export async function deleteCompetitionSubmission(submissionId: string) {
+  await requireAdmin();
+  await prisma.competitionSubmission.delete({ where: { id: submissionId } });
+  revalidatePath("/admin/activities/proposals");
+  return { success: true };
+}
+
 // ── Game Jam：评分 ────────────────────────────────────────────
 export async function scoreSubmission(submissionId: string, score: number) {
   await requireAdmin();
