@@ -102,31 +102,56 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
             </div>
             <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
               {ranked.map((sub, idx) => (
-                <div key={sub.id} className="p-4 flex items-center gap-4">
-                  <div className="text-2xl font-bold shrink-0 w-10 text-center" style={{
-                    color: idx < 3 ? medalColors[idx] : "#999",
-                    fontSize: idx < 3 ? "1.5rem" : "1rem",
-                  }}>
-                    {idx < 3 ? medalLabels[idx] : `#${idx + 1}`}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm" style={{ color: "#25547A" }}>{sub.title}</span>
-                      <span className="text-xs" style={{ color: "#999" }}>— {sub.team.name}</span>
+                <details key={sub.id} className="p-4">
+                  <summary className="flex items-center gap-4 cursor-pointer list-none">
+                    <div className="text-2xl font-bold shrink-0 w-10 text-center" style={{
+                      color: idx < 3 ? medalColors[idx] : "#999",
+                      fontSize: idx < 3 ? "1.5rem" : "1rem",
+                    }}>
+                      {idx < 3 ? medalLabels[idx] : `#${idx + 1}`}
                     </div>
-                    <div className="flex flex-wrap items-center gap-1 mt-1">
-                      {sub.team.members.map(m => (
-                        <span key={m.user.id} className="text-xs" style={{ color: "#777" }}>
-                          <AvatarImg user={m.user} />
-                        </span>
-                      ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm" style={{ color: "#25547A" }}>{sub.title}</span>
+                        <span className="text-xs" style={{ color: "#999" }}>— {sub.team.name}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
+                        {sub.team.members.map(m => (
+                          <span key={m.user.id} className="text-xs" style={{ color: "#777" }}>
+                            <AvatarImg user={m.user} />
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="text-xl font-bold" style={{ color: "#E38043" }}>{sub.avgScore}</div>
-                    <div className="text-xs" style={{ color: "#999" }}>{sub.scores.length} 位评委</div>
-                  </div>
-                </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-xl font-bold" style={{ color: "#E38043" }}>{sub.avgScore}</div>
+                      <div className="text-xs" style={{ color: "#999" }}>{sub.scores.length} 位评委</div>
+                    </div>
+                  </summary>
+
+                  {/* 各评委详评 */}
+                  {sub.scores.length > 0 && (
+                    <div className="mt-3 ml-14 space-y-2">
+                      {sub.scores.map(sc => {
+                        const c = (sc.criteria || {}) as Record<string, number>;
+                        return (
+                          <div key={sc.id} className="text-xs p-2 rounded flex items-start gap-3" style={{ background: "#F8FAFB" }}>
+                            <span className="font-medium shrink-0" style={{ color: "#555" }}>{sc.judge.name}</span>
+                            <div className="flex gap-3 text-[11px]">
+                              <span>🎨 {(c.art ?? c.creativity ?? "-")}</span>
+                              <span>📖 {(c.story ?? c.execution ?? "-")}</span>
+                              <span>🎮 {(c.gameplay ?? c.theme ?? "-")}</span>
+                            </div>
+                            <span className="font-bold shrink-0" style={{ color: "#E38043" }}>{sc.totalScore} 分</span>
+                            {sc.comment && (
+                              <span className="italic flex-1" style={{ color: "#999" }}>"{sc.comment}"</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </details>
               ))}
             </div>
           </div>

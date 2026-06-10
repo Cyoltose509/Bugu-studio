@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { submitScore } from "../actions";
 import { PublishResultsButton } from "./PublishResultsButton";
 import { AddJudgeForm } from "./AddJudgeForm";
 import { RemoveJudgeButton } from "./RemoveJudgeButton";
@@ -133,15 +132,36 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
 
                   {/* 已有评分 */}
                   {sub.scores.length > 0 && (
-                    <div className="mb-3 space-y-1">
+                    <div className="mb-3 space-y-2">
                       <p className="text-xs font-medium" style={{ color: "#555" }}>评委评分：</p>
-                      {sub.scores.map(sc => (
-                        <div key={sc.id} className="flex items-center gap-2 text-xs" style={{ color: "#777" }}>
-                          <AvatarImg user={{ name: sc.judge.name, image: undefined }} />
-                          <span>{sc.judge.name}</span>
-                          <span className="font-semibold" style={{ color: "#E38043" }}>{sc.totalScore} 分</span>
-                        </div>
-                      ))}
+                      {sub.scores.map(sc => {
+                        const c = (sc.criteria || {}) as Record<string, number>;
+                        return (
+                          <div key={sc.id} className="text-xs p-2 rounded" style={{ background: "#F8FAFB" }}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <AvatarImg user={{ name: sc.judge.name, image: undefined }} />
+                              <span style={{ color: "#555" }}>{sc.judge.name}</span>
+                              <span className="font-bold" style={{ color: "#E38043" }}>{sc.totalScore} 分</span>
+                            </div>
+                            <div className="flex gap-3 ml-8 text-[11px]">
+                              <span style={{ color: "#777" }}>
+                                🎨 <span style={{ color: "#555" }}>{c.art ?? c.creativity ?? "-"}</span>
+                              </span>
+                              <span style={{ color: "#777" }}>
+                                📖 <span style={{ color: "#555" }}>{c.story ?? c.execution ?? "-"}</span>
+                              </span>
+                              <span style={{ color: "#777" }}>
+                                🎮 <span style={{ color: "#555" }}>{c.gameplay ?? c.theme ?? "-"}</span>
+                              </span>
+                            </div>
+                            {sc.comment && (
+                              <p className="text-[11px] mt-1 ml-8 italic" style={{ color: "#999" }}>
+                                "{sc.comment}"
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

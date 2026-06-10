@@ -731,18 +731,18 @@ export async function submitScore(activityId: string, formData: FormData) {
   const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
   if (!isJudge && !isAdmin) return { error: "只有评委或管理员可以打分" };
 
-  const creativity = parseInt((formData.get("creativity") as string) || "0", 10);
-  const execution = parseInt((formData.get("execution") as string) || "0", 10);
-  const themeFit = parseInt((formData.get("theme") as string) || "0", 10);
-  const overall = parseInt((formData.get("overall") as string) || "0", 10);
+  const art = parseInt((formData.get("art") as string) || "0", 10);
+  const story = parseInt((formData.get("story") as string) || "0", 10);
+  const gameplay = parseInt((formData.get("gameplay") as string) || "0", 10);
   const comment = (formData.get("comment") as string || "").trim();
 
-  if (creativity < 0 || execution < 0 || themeFit < 0 || overall < 0) return { error: "分数不能为负" };
-  if (creativity > 100 || execution > 100 || themeFit > 100 || overall > 100) return { error: "分数不能超过 100" };
+  if (art < 0 || story < 0 || gameplay < 0) return { error: "分数不能为负" };
+  if (art > 100 || story > 100 || gameplay > 100) return { error: "分数不能超过 100" };
 
-  const totalScore = creativity + execution + themeFit + overall;
+  // 总分 = 三维度的平均分，四舍五入取整
+  const totalScore = Math.round((art + story + gameplay) / 3);
 
-  const criteria = { creativity, execution, theme: themeFit, overall };
+  const criteria = { art, story, gameplay };
 
   const existing = await prisma.jamScore.findFirst({
     where: { submissionId, judgeId: session.user.id },
