@@ -15,10 +15,18 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") || "";
 
+  // 退役用户排除条件：没有关联的 ClubMember，或者 ClubMember.isActive 不为 false
+  const excludeRetired = {
+    NOT: { member: { isActive: false } },
+  };
+
   if (q.length < 1) {
-    // 返回最近活跃的用户（最多 20）
+    // 返回最近活跃的用户（最多 20），排除 Guest 和退役成员
     const users = await prisma.user.findMany({
-      where: { role: { not: "GUEST" } },
+      where: {
+        role: { not: "GUEST" },
+        ...excludeRetired,
+      },
       take: 20,
       orderBy: { updatedAt: "desc" },
       select: {
@@ -34,6 +42,7 @@ export async function GET(request: NextRequest) {
     where: {
       name: { contains: q, mode: "insensitive" },
       role: { not: "GUEST" },
+      ...excludeRetired,
     },
     take: 20,
     orderBy: { name: "asc" },

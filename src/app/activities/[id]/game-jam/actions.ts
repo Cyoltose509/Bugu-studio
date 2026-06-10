@@ -376,9 +376,12 @@ export async function inviteMember(teamId: string, activityId: string, formData:
   // 查找被邀请者
   const invitee = await prisma.user.findUnique({
     where: { id: inviteeUserId },
+    include: { member: { select: { isActive: true } } },
   });
   if (!invitee) return { error: "找不到该用户" };
   if (invitee.id === session.user.id) return { error: "不能邀请自己" };
+  if (invitee.role === "GUEST") return { error: "Guest 用户不能被邀请" };
+  if (invitee.member && !invitee.member.isActive) return { error: "该用户已退役，不能被邀请" };
 
   // 检查是否已在队伍中
   const alreadyMember = await prisma.jamTeamMember.findFirst({
@@ -682,9 +685,13 @@ export async function addJudge(activityId: string, formData: FormData) {
   const judgeUserId = (formData.get("judgeUserId") as string || "").trim();
   if (!judgeUserId) return { error: "请选择评委" };
 
-  const judge = await prisma.user.findUnique({ where: { id: judgeUserId } });
+  const judge = await prisma.user.findUnique({
+    where: { id: judgeUserId },
+    include: { member: { select: { isActive: true } } },
+  });
   if (!judge) return { error: "找不到该用户" };
   if (judge.role === "GUEST") return { error: "Guest 用户不能担任评委" };
+  if (judge.member && !judge.member.isActive) return { error: "该用户已退役，不能担任评委" };
 
   const existing = await prisma.jamJudge.findFirst({
     where: { activityId, userId: judge.id },

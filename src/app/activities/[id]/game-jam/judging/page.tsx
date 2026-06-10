@@ -33,11 +33,46 @@ function LightboxLink({ src, children, className }: { src: string; children: Rea
   );
 }
 
+/* ── 自动确保所有非退役管理员加入评委团 ── */
+
+async function ensureAdminJudges(activityId: string) {
+  const adminUsers = await prisma.user.findMany({
+    where: {
+      role: "ADMIN",
+      NOT: { member: { isActive: false } },
+    },
+    select: { id: true },
+  });
+  if (adminUsers.length === 0) return;
+
+  const existingJudges = await prisma.jamJudge.findMany({
+    where: { activityId },
+    select: { userId: true },
+  });
+  const existingIds = new Set(existingJudges.map(j => j.userId));
+
+  const toAdd = adminUsers.filter(u => !existingIds.has(u.id));
+  if (toAdd.length > 0) {
+    await prisma.jamJudge.createMany({
+      data: toAdd.map(u => ({ activityId, userId: u.id })),
+      skipDuplicates: true,
+    });
+  }
+}
+
 /* ── 页面主体 ── */
 
 export default async function JamJudgingPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const activityId = (await params).id;
+
+  // 自动将非退役管理员加入评委团
+  if (session?.user) {
+    const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
+    if (isAdmin) {
+      await ensureAdminJudges(activityId);
+    }
+  }
 
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },
