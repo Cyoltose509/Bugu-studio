@@ -217,7 +217,7 @@ function CompetitionSection({ activity, isOngoing, isUpcoming }: { activity: any
   return (
     <div className="space-y-6">
       {/* 提交入口 */}
-      {(isOngoing || isUpcoming) && activity.registrationOpen && (
+      {isOngoing && activity.registrationOpen && (
         <section className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
           <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>🏆 提交作品</h3>
           <form action={async (f: FormData) => { "use server"; await submitCompetition(f); }} className="space-y-3">

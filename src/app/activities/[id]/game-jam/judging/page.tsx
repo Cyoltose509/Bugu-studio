@@ -2,7 +2,8 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { addJudge, removeJudge, submitScore, publishResults } from "../actions";
+import { addJudge, removeJudge, submitScore } from "../actions";
+import { PublishResultsButton } from "./PublishResultsButton";
 
 function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
   const initial = (user.name || "?")[0];
@@ -86,16 +87,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold" style={{ color: "#25547A" }}>🎮 参赛作品（{rankedSubmissions.length}）</h2>
           {isAdmin && activity.status !== "ARCHIVED" && (
-            <form action={async () => { "use server"; await publishResults(activityId); }}>
-              <button
-                type="submit"
-                className="text-sm px-4 py-2 rounded-lg text-white font-semibold"
-                style={{ background: "linear-gradient(135deg, #E38043, #FFB347)" }}
-                onClick={(e) => { if (!confirm("确定公布比赛结果？公布后将结束活动。")) e.preventDefault(); }}
-              >
-                🏆 公布结果
-              </button>
-            </form>
+            <PublishResultsButton activityId={activityId} />
           )}
         </div>
 
