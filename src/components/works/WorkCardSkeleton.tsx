@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 /** 作品卡片骨架屏 — 加载中占位 */
 export default function WorkCardSkeleton() {
   return (
@@ -10,7 +12,7 @@ export default function WorkCardSkeleton() {
       {/* 封面骨架 */}
       <div className="aspect-video" style={{ background: "#E6F0F8" }}>
         <div className="w-full h-full flex items-center justify-center">
-          <img src="/images/logo.png" alt="" width={36} height={36} className="opacity-20" />
+          <Image src="/images/logo.png" alt="" width={36} height={36} className="opacity-20" />
         </div>
       </div>
       {/* 内容骨架 */}

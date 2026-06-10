@@ -4,6 +4,8 @@
  */
 
 import { Metadata, ResolvingMetadata } from "next";
+import { cache } from "react";
+import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -40,25 +42,9 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata(
-  { params }: PageProps,
-  _parent: ResolvingMetadata,
-): Promise<Metadata> {
-  const { id } = await params;
-  const a = await prisma.activity.findUnique({ where: { id }, select: { title: true, summary: true } });
-  if (!a) return { title: "活动不存在" };
-  return {
-    title: `${a.title} - 活动 - 布谷工作室`,
-    description: a.summary || a.title,
-  };
-}
-
-export default async function ActivityDetailPage({ params }: PageProps) {
-  const session = await auth();
-  const { id } = await params;
-  const now = new Date();
-
-  const activity = await cachedQuery(
+// React.cache() 去重：generateMetadata 和页面组件共用同一查询
+const getActivity = cache(async (id: string) => {
+  return cachedQuery(
     `activity:detail:${id}`,
     () =>
       prisma.activity.findUnique({
@@ -86,6 +72,27 @@ export default async function ActivityDetailPage({ params }: PageProps) {
       }),
     120,
   );
+});
+
+export async function generateMetadata(
+  { params }: PageProps,
+  _parent: ResolvingMetadata,
+): Promise<Metadata> {
+  const { id } = await params;
+  const a = await getActivity(id);
+  if (!a) return { title: "活动不存在" };
+  return {
+    title: `${a.title} - 活动 - 布谷工作室`,
+    description: (a as any).summary || a.title,
+  };
+}
+
+export default async function ActivityDetailPage({ params }: PageProps) {
+  const session = await auth();
+  const { id } = await params;
+  const now = new Date();
+
+  const activity = await getActivity(id);
 
   if (!activity) notFound();
 
@@ -103,11 +110,14 @@ export default async function ActivityDetailPage({ params }: PageProps) {
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in">
       {/* ── 封面图 ──────────────────────────────────── */}
-      <div className="mb-6 rounded-xl overflow-hidden aspect-video" style={{ background: "#E6F0F8" }}>
-        <img
+      <div className="mb-6 rounded-xl overflow-hidden relative aspect-video" style={{ background: "#E6F0F8" }}>
+        <Image
           src={activity.coverImage || DEFAULT_COVER}
           alt={activity.title}
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 896px"
+          priority
         />
       </div>
 

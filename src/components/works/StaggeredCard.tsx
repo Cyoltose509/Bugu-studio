@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import MiniLikeButton from "@/components/MiniLikeButton";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
+import Image from "next/image";
+import UserAvatar from "@/components/UserAvatar";
 
 const TYPE_LABELS: Record<string, string> = {
   DEMO: "Demo 演示",
@@ -56,7 +58,7 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
           <ProjectCoverImage src={p.coverImage} alt={p.title} priority={idx === 0} />
           {!p.coverImage && (
             <div className="w-full h-full flex items-center justify-center" style={{ background: "#E6F0F8" }}>
-              <img src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
+              <Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
             </div>
           )}
           <div className="absolute top-2 left-2">
@@ -117,12 +119,7 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
                       title={name}
                     >
                       {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={name}
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
+                        <UserAvatar src={avatarUrl} name={name} size={20} />
                       ) : (
                         name[0]
                       )}

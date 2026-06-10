@@ -129,12 +129,13 @@ export default async function MemberDetailPage({ params }: PageProps) {
           {/* 顶部信息卡片 */}
           <div className="flex flex-col sm:flex-row items-start gap-6 mb-10 p-6 rounded-xl border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
             {/* 头像 */}
-            <div className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white shrink-0 overflow-hidden"
-              style={{ background: "linear-gradient(135deg, #E38043, #F09055)" }}>
+            <div className="w-24 h-24 rounded-full shrink-0 overflow-hidden">
               {(member.user?.image || member.avatar) ? (
-                <img src={(member.user?.image || member.avatar)!} alt={member.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <Image src={(member.user?.image || member.avatar)!} alt={member.displayName} width={96} height={96} className="w-full h-full object-cover" referrerPolicy="no-referrer" sizes="96px" />
               ) : (
-                member.displayName[0]
+                <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white" style={{ background: "linear-gradient(135deg, #E38043, #F09055)" }}>
+                  {member.displayName[0]}
+                </div>
               )}
             </div>
 

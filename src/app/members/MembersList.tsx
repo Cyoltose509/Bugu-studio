@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import UserAvatar from "@/components/UserAvatar";
 
 interface MemberItem {
   id: string;
@@ -104,8 +105,8 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {groupedFiltered[key].map(m => (
                 <Link key={m.id} href={`/members/${m.id}`} className="group text-center p-4 rounded-xl bg-white border shadow-sm hover:shadow-md transition-all" style={{ borderColor: "#D0DEE8" }}>
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3 overflow-hidden" style={{ background: "#E38043", color: "#fff" }}>
-                    {(m.user?.image || m.avatar) ? <img src={(m.user?.image || m.avatar)!} alt={m.displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : m.displayName[0]}
+                  <div className="w-16 h-16 mx-auto mb-3 overflow-hidden">
+                    <UserAvatar src={m.user?.image || m.avatar} name={m.displayName} size={64} className="mx-auto" />
                   </div>
                   <div className="text-sm font-medium group-hover:text-[#3388BB] transition-colors line-clamp-1 flex items-center gap-1" style={{ color: "#333" }}>
                     {m.displayName}

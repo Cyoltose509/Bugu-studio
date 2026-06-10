@@ -4,6 +4,7 @@
  */
 import { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityType, ActivityStatus } from "@prisma/client";
@@ -52,10 +53,12 @@ function ActivityCard({ a, badge, countdown }: {
 
         {/* 封面图 */}
         <div className="relative aspect-video overflow-hidden" style={{ background: "#E6F0F8" }}>
-          <img
+          <Image
             src={coverSrc}
             alt={a.title}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           {/* 类型标签 + 状态 */}
           <div className="absolute top-2 left-2 flex items-center gap-1.5 flex-wrap">
@@ -116,10 +119,13 @@ function HeroCard({ a, status }: { a: any; status: "ongoing" | "upcoming" | "pas
             style={{ borderColor: "#D0DEE8" }}
         >
           <div className="relative aspect-[16/9] overflow-hidden">
-            <img
+            <Image
                 src={coverSrc}
                 alt={a.title}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                fill
+                className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                sizes="(max-width: 768px) 100vw, 896px"
+                priority
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
@@ -167,8 +173,8 @@ function UpcomingItem({ a }: { a: any }) {
             style={{ borderColor: "#D0DEE8" }}
         >
           {/* 缩略图 */}
-          <div className="w-14 h-10 rounded-md overflow-hidden shrink-0" style={{ background: "#E6F0F8" }}>
-            <img src={thumbSrc} alt="" className="w-full h-full object-cover" />
+          <div className="w-14 h-10 rounded-md overflow-hidden shrink-0 relative" style={{ background: "#E6F0F8" }}>
+            <Image src={thumbSrc} alt="" fill className="object-cover" sizes="56px" />
           </div>
 
           <div className="flex-1 min-w-0 flex justify-between items-start gap-2">

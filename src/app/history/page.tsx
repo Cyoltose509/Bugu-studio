@@ -75,53 +75,76 @@ export default async function HistoryPage() {
         allYears.push(y);
     }
 
-    const yearDetails = [];
-    // 分批并发加载（每批2年=8并发，避免超过 PgBouncer pool_size=15）
-    const BATCH_SIZE = 2;
-    for (let i = 0; i < allYears.length; i += BATCH_SIZE) {
-        const batch = allYears.slice(i, i + BATCH_SIZE);
-        const batchResults = await Promise.all(
-            batch.map((year) => {
-                const nextYear = new Date(year + 1, 0, 1); // 次年1月1日
-                return Promise.all([
-                    cachedQuery(`history:year:${year}:projects`, () =>
-                            prisma.project.findMany({
-                                where: {status: ProjectStatus.PUBLISHED, developYear: year},
-                                select: {id: true, slug: true, title: true, coverImage: true, type: true},
-                                orderBy: {publishedAt: "desc"}
-                            }),
-                        3600),
-                    cachedQuery(`history:year:${year}:members`, () =>
-                            prisma.clubMember.findMany({
-                                where: {grade: {startsWith: String(year)}},
-                                select: {id: true, displayName: true, avatar: true, user: {select: {image: true}}}
-                            }),
-                        3600),
-                    cachedQuery(`history:year:${year}:events`, () =>
-                            prisma.yearEvent.findMany({
-                                where: {year},
-                                orderBy: {sortOrder: "asc"},
-                                include: {images: {orderBy: {sortOrder: "asc"}}}
-                            }),
-                        3600),
-                    cachedQuery(`history:year:${year}:activities`, () =>
-                            prisma.activity.findMany({
-                                where: {
-                                    status: ActivityStatus.PUBLISHED,
-                                    type: {not: "MEETING"},
-                                    startTime: {gte: new Date(year, 0, 1), lt: nextYear}
-                                },
-                                select: {id: true, title: true, type: true, startTime: true, endTime: true, summary: true, coverImage: true},
-                                orderBy: {startTime: "asc"},
-                            }),
-                        3600),
-                ]).then(([projects, members, events, activities]) => ({year, projects, members, events, activities}))
-            })
-        );
-        for (const detail of batchResults) {
-            if (detail.projects.length === 0 && detail.members.length === 0 && detail.events.length === 0 && detail.activities.length === 0) continue;
-            yearDetails.push(detail);
+    // 单次批量查询所有年份数据，在 JS 中分组 — 减少查询次数
+    const yearDetails: { year: number; projects: any[]; members: any[]; events: any[]; activities: any[] }[] = [];
+    
+    const [
+      allProjects,
+      allMembers,
+      allEvents,
+      allActivities,
+    ] = await Promise.all([
+      cachedQuery('history:allProjects', () =>
+        prisma.project.findMany({
+          where: { status: ProjectStatus.PUBLISHED },
+          select: { id: true, slug: true, title: true, coverImage: true, type: true, developYear: true },
+          orderBy: { publishedAt: "desc" }
+        }), 3600),
+      cachedQuery('history:allMembers', () =>
+        prisma.clubMember.findMany({
+          where: { grade: { not: null } },
+          select: { id: true, displayName: true, avatar: true, grade: true, user: { select: { image: true } } }
+        }), 3600),
+      cachedQuery('history:allEvents', () =>
+        prisma.yearEvent.findMany({
+          orderBy: { sortOrder: "asc" },
+          include: { images: { orderBy: { sortOrder: "asc" } } }
+        }), 3600),
+      cachedQuery('history:allActivities', () =>
+        prisma.activity.findMany({
+          where: { status: ActivityStatus.PUBLISHED, type: { not: "MEETING" } },
+          select: { id: true, title: true, type: true, startTime: true, endTime: true, summary: true, coverImage: true },
+          orderBy: { startTime: "asc" }
+        }), 3600),
+    ]);
+
+    // 在 JS 中按年份分组 — 比每年4次独立查询高效得多
+    const projectByYear = new Map<number, any[]>();
+    for (const p of allProjects) {
+      const y = p.developYear;
+      if (y && (!projectByYear.has(y) || [])) {
+        if (!projectByYear.has(y)) projectByYear.set(y, []);
+        projectByYear.get(y)!.push(p);
+      }
+    }
+
+    const membersByYear = new Map<number, any[]>();
+    for (const m of allMembers) {
+      const grade = m.grade;
+      if (grade) {
+        const match = grade.match(/^(\d{4})/);
+        if (match) {
+          const y = parseInt(match[1]);
+          if (!membersByYear.has(y)) membersByYear.set(y, []);
+          membersByYear.get(y)!.push(m);
         }
+      }
+    }
+
+    const activitiesByYear = new Map<number, any[]>();
+    for (const a of allActivities) {
+      const y = new Date(a.startTime).getFullYear();
+      if (!activitiesByYear.has(y)) activitiesByYear.set(y, []);
+      activitiesByYear.get(y)!.push(a);
+    }
+
+    for (const year of allYears) {
+      const projects = projectByYear.get(year) || [];
+      const members = membersByYear.get(year) || [];
+      const events = allEvents.filter(e => e.year === year);
+      const activities = activitiesByYear.get(year) || [];
+      if (projects.length === 0 && members.length === 0 && events.length === 0 && activities.length === 0) continue;
+      yearDetails.push({ year, projects, members, events, activities });
     }
 
     return (
@@ -219,7 +242,7 @@ export default async function HistoryPage() {
                                                                             style={{color: "#777"}}>{event.body}</div>}
                                                         {event.images && event.images.length > 0 && (
                                                             <div className="flex gap-2 mt-2 flex-wrap">
-                                                                {event.images.map((img) => (
+                                                                {event.images.map((img: any) => (
                                                                     <div key={img.id}
                                                                          className="relative w-20 h-14 rounded overflow-hidden border"
                                                                          style={{borderColor: "#D0DEE8"}}>

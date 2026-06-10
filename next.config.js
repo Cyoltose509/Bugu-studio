@@ -23,6 +23,19 @@ const nextConfig = {
         protocol: "https",
         hostname: "cdn.bugoostudio.com",
       },
+      // OAuth 头像域名 — 使 next/Image 能优化用户头像
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.githubusercontent.com",
+      },
     ],
   },
   experimental: {
@@ -75,7 +88,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.r2.dev https://cdn.bugoostudio.com",
+              "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.r2.dev https://cdn.bugoostudio.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://*.githubusercontent.com",
               "font-src 'self' data: https://fonts.gstatic.com",
               "media-src 'self' data: blob:",
               "connect-src 'self' https://bugoostudio.com https://www.bugoostudio.com https://*.vercel-insights.com https://vitals.vercel-insights.com",

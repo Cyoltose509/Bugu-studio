@@ -2,6 +2,7 @@
 
 import {useState, useCallback, useEffect} from "react";
 import {useSession} from "next-auth/react";
+import UserAvatar from "./UserAvatar";
 
 interface CommentUser {
     id: string;
@@ -20,21 +21,11 @@ interface Comment {
 
 interface Props {
     projectId: string;
+    initialComments?: Comment[];
 }
 
 function Avatar({user}: { user: CommentUser }) {
-    const initial = (user.name || "?")[0];
-    if (user.image) {
-        return (
-            <img src={user.image} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" referrerPolicy="no-referrer"/>
-        );
-    }
-    return (
-        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs shrink-0"
-             style={{background: "#E38043"}}>
-            {initial}
-        </div>
-    );
+    return <UserAvatar src={user.image} name={user.name} size={28} />;
 }
 
 function formatTime(iso: string) {
@@ -136,13 +127,13 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
     );
 }
 
-export default function CommentSection({projectId}: Props) {
+export default function CommentSection({projectId, initialComments = []}: Props) {
     const {data: session} = useSession();
     const isLoggedIn = !!session?.user;
     const canOperate = isLoggedIn && session.user.role !== "GUEST";
 
-    const [comments, setComments] = useState<Comment[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [comments, setComments] = useState<Comment[]>(initialComments);
+    const [loading, setLoading] = useState(initialComments.length === 0);
     const [submitting, setSubmitting] = useState(false);
     const [newContent, setNewContent] = useState("");
     const [replyingTo, setReplyingTo] = useState<string | null>(null);

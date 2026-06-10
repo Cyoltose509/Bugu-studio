@@ -44,11 +44,14 @@ export async function Navbar() {
               <NotificationBell />
               <Link href="/profile" className="flex items-center gap-2 text-sm text-white/80 hover:text-white nav-link">
                 {session.user.image ? (
-                  <img
+                  <Image
                     src={session.user.image}
                     alt={session.user.name || ""}
-                    className="w-7 h-7 rounded-full object-cover border border-white/30"
+                    width={28}
+                    height={28}
+                    className="rounded-full object-cover border border-white/30"
                     referrerPolicy="no-referrer"
+                    sizes="28px"
                   />
                 ) : (
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#E38043" }}>

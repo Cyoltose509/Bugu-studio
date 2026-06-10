@@ -4,6 +4,7 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityType, ActivityStatus } from "@prisma/client";
@@ -58,8 +59,7 @@ export default async function HomeActivities() {
               <div className="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all" style={{ borderColor: "#D0DEE8" }}>
                 {/* 封面 */}
                 <div className="relative aspect-video overflow-hidden" style={{ background: "#E6F0F8" }}>
-                  <img src={coverSrc} alt={a.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <Image src={coverSrc} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, 33vw" />
                   <div className="absolute top-2 left-2 flex items-center gap-1.5">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
                       {TYPE_LABELS[a.type] || a.type}
