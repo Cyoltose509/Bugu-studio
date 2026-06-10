@@ -5,6 +5,9 @@ import { notFound } from "next/navigation";
 import { updateTeam, applyToTeam, handleApplication } from "../../actions";
 import { InviteMemberForm } from "./InviteMemberForm";
 import { RemoveMemberButton } from "./RemoveMemberButton";
+import { EditTeamNameForm } from "./EditTeamNameForm";
+import { ApplyToTeamForm } from "./ApplyToTeamForm";
+import { ApplicationButtons } from "./ApplicationButtons";
 
 function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
   const initial = (user.name || "?")[0];
@@ -43,9 +46,28 @@ export default async function JamTeamDetailPage({
 
   if (!team) notFound();
 
+  // 获取该活动所有队伍的成员 ID（用于邀请时排除已在队伍中的用户）
+  const allTeamMemberIds = session?.user?.id ? (
+    await prisma.jamTeamMember.findMany({
+      where: {
+        team: { activityId },
+        userId: { not: session.user.id },
+      },
+      select: { userId: true },
+    })
+  ).map(m => m.userId) : [];
+
   const isLeader = team.members.some(m => m.userId === session?.user?.id && m.role === "LEADER");
   const isMember = team.members.some(m => m.userId === session?.user?.id);
   const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
+
+  // 检查是否已在该活动的任意队伍中
+  const alreadyInAnotherTeam = !isMember && session?.user?.id ? await prisma.jamTeamMember.findFirst({
+    where: {
+      userId: session.user.id,
+      team: { activityId, id: { not: teamId } },
+    },
+  }) : null;
 
   // 检查是否已申请
   const myApplication = await prisma.jamTeamApplication.findFirst({
@@ -75,13 +97,7 @@ export default async function JamTeamDetailPage({
         {isLeader && (
           <details className="mb-6" style={{ display: "block" }}>
             <summary className="text-xs cursor-pointer list-none" style={{ color: "#999" }}>✏️ 编辑队伍名称</summary>
-            <form action={async (f: FormData) => { "use server"; await updateTeam(teamId, activityId, f); }} className="mt-2 flex gap-2">
-              <input name="name" defaultValue={team.name} maxLength={30} required
-                className="flex-1 rounded-lg border px-3 py-1.5 text-sm" style={{ borderColor: "#D0DEE8" }} />
-              <button type="submit" className="text-xs px-3 py-1.5 rounded-lg text-white" style={{ background: "#3388BB" }}>
-                保存
-              </button>
-            </form>
+            <EditTeamNameForm teamId={teamId} activityId={activityId} defaultName={team.name} />
           </details>
         )}
 
@@ -107,21 +123,22 @@ export default async function JamTeamDetailPage({
         </div>
       </div>
 
-      {/* 入队申请（非成员） */}
-      {!isMember && session?.user && (
+      {/* 入队申请（非成员、未在其他队伍中） */}
+      {!isMember && !alreadyInAnotherTeam && session?.user && (
         <div className="bg-white rounded-xl border p-6 mb-6" style={{ borderColor: "#D0DEE8" }}>
           <h2 className="text-sm font-semibold mb-3" style={{ color: "#25547A" }}>申请加入</h2>
           {myApplication ? (
             <p className="text-sm" style={{ color: "#E38043" }}>⏳ 申请已提交，等待队长审批</p>
           ) : (
-            <form action={async (f: FormData) => { "use server"; await applyToTeam(teamId, activityId, f); }} className="space-y-3">
-              <textarea name="message" rows={2} placeholder="留言（可选，如介绍你的技能）"
-                className="w-full rounded-lg border px-3 py-2 text-sm resize-y" style={{ borderColor: "#D0DEE8" }} />
-              <button type="submit" className="text-sm px-4 py-2 rounded-lg text-white" style={{ background: "#E38043" }}>
-                提交申请
-              </button>
-            </form>
+            <ApplyToTeamForm teamId={teamId} activityId={activityId} />
           )}
+        </div>
+      )}
+
+      {/* 已在其他队伍中，不能申请 */}
+      {!isMember && alreadyInAnotherTeam && (
+        <div className="bg-white rounded-xl border p-6 mb-6" style={{ borderColor: "#D0DEE8" }}>
+          <p className="text-sm" style={{ color: "#999" }}>🚫 你已加入其他队伍，请先退出当前队伍后再申请。</p>
         </div>
       )}
 
@@ -139,18 +156,7 @@ export default async function JamTeamDetailPage({
                     {app.message && <p className="text-xs mt-0.5" style={{ color: "#999" }}>{app.message}</p>}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <form action={async () => { "use server"; await handleApplication(teamId, activityId, app.id, "APPROVED"); }}>
-                    <button type="submit" className="text-xs px-3 py-1 rounded text-white" style={{ background: "#3388BB" }}>
-                      通过
-                    </button>
-                  </form>
-                  <form action={async () => { "use server"; await handleApplication(teamId, activityId, app.id, "REJECTED"); }}>
-                    <button type="submit" className="text-xs px-3 py-1 rounded" style={{ color: "#999", border: "1px solid #D0DEE8" }}>
-                      拒绝
-                    </button>
-                  </form>
-                </div>
+                <ApplicationButtons teamId={teamId} activityId={activityId} applicationId={app.id} />
               </div>
             ))}
           </div>
@@ -164,7 +170,7 @@ export default async function JamTeamDetailPage({
           <InviteMemberForm
             teamId={teamId}
             activityId={activityId}
-            existingMemberIds={team.members.map(m => m.userId)}
+            existingMemberIds={allTeamMemberIds}
           />
         </div>
       )}

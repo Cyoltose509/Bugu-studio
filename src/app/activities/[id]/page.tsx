@@ -10,8 +10,9 @@ import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { ActivityType, ActivityStatus, ProposalType, ProposalStatus, EnrollmentStatus } from "@prisma/client";
 import { submitProposal, enrollCourse, submitCompetition } from "@/app/admin/activities/actions";
-import { createTeam, handleInvitation } from "./game-jam/actions";
 import { DisbandTeamButton } from "./game-jam/DisbandTeamButton";
+import { InvitationButtons } from "./game-jam/InvitationButtons";
+import { CreateTeamForm } from "./game-jam/CreateTeamForm";
 import { cachedQuery } from "@/lib/db/cache";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -373,18 +374,7 @@ async function CompetitionSection({
                     <span className="text-sm font-medium" style={{ color: "#25547A" }}>{inv.team.name}</span>
                     <span className="text-xs ml-2" style={{ color: "#999" }}>来自 {inv.inviter.name}</span>
                   </div>
-                  <div className="flex gap-2">
-                    <form action={async () => { "use server"; await handleInvitation(inv.id, activityId, "ACCEPTED"); }}>
-                      <button type="submit" className="text-xs px-3 py-1 rounded text-white" style={{ background: "#3388BB" }}>
-                        接受
-                      </button>
-                    </form>
-                    <form action={async () => { "use server"; await handleInvitation(inv.id, activityId, "REJECTED"); }}>
-                      <button type="submit" className="text-xs px-3 py-1 rounded" style={{ color: "#999", border: "1px solid #D0DEE8" }}>
-                        拒绝
-                      </button>
-                    </form>
-                  </div>
+                  <InvitationButtons invitationId={inv.id} activityId={activityId} />
                 </div>
               ))}
             </div>
@@ -399,20 +389,56 @@ async function CompetitionSection({
               >
                 查看队伍
               </Link>
-              <details className="group">
-                <summary className="text-sm px-4 py-2 rounded-lg border cursor-pointer list-none" style={{ borderColor: "#D0DEE8", color: "#555" }}>
-                  创建队伍
-                </summary>
-                <form action={async (f: FormData) => { "use server"; await createTeam(activityId, f); }} className="mt-3 space-y-2">
-                  <input name="name" placeholder="队伍名称（1-30字）" maxLength={30} required
-                    className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }} />
-                  <button type="submit" className="text-sm px-4 py-2 rounded-lg text-white" style={{ background: "#E38043" }}>
-                    创建
-                  </button>
-                </form>
-              </details>
+              <CreateTeamForm activityId={activityId} />
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── 所有参赛队伍 ───────────────────────── */}
+      {jamTeams.length > 0 && (
+        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold" style={{ color: "#25547A" }}>
+              👥 参赛队伍（{jamTeams.length}）
+            </h3>
+            <Link
+              href={`/activities/${activityId}/game-jam/teams`}
+              className="text-xs hover:underline"
+              style={{ color: "#3388BB" }}
+            >
+              查看全部 →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {jamTeams.map((team: any) => (
+              <Link
+                key={team.id}
+                href={`/activities/${activityId}/game-jam/teams/${team.id}`}
+                className="p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ border: `2px solid ${myTeam?.id === team.id ? "#3388BB" : "#D0DEE8"}` }}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-medium text-sm truncate" style={{ color: "#25547A" }}>{team.name}</span>
+                  {myTeam?.id === team.id && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full text-white shrink-0 ml-1" style={{ background: "#3388BB", fontSize: "10px" }}>我的</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs" style={{ color: "#999" }}>
+                  <span>👑 {team.members.find((m: any) => m.role === "LEADER")?.user?.name || "?"}</span>
+                  <span>· {team._count.members} 人</span>
+                </div>
+                <div className="flex mt-2 gap-1">
+                  {team.members.slice(0, 5).map((m: any) => (
+                    <AvatarImg key={m.id} user={m.user} />
+                  ))}
+                  {team._count.members > 5 && (
+                    <span className="text-xs self-center" style={{ color: "#999" }}>+{team._count.members - 5}</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

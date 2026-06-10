@@ -1,23 +1,20 @@
 "use client";
 
 import { useTransition } from "react";
-import { removeMember } from "../../actions";
+import { removeJudge } from "../actions";
 
-export function RemoveMemberButton({
-  teamId,
+export function RemoveJudgeButton({
   activityId,
-  memberId,
+  judgeId,
 }: {
-  teamId: string;
   activityId: string;
-  memberId: string;
+  judgeId: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
   function handleRemove() {
-    if (!confirm("确定移除该成员？")) return;
     startTransition(async () => {
-      await removeMember(teamId, activityId, memberId);
+      await removeJudge(activityId, judgeId);
     });
   }
 
@@ -26,10 +23,10 @@ export function RemoveMemberButton({
       type="button"
       onClick={handleRemove}
       disabled={isPending}
-      className="text-xs px-2 py-1 rounded disabled:opacity-40"
+      className="text-xs disabled:opacity-40"
       style={{ color: "#bbb" }}
     >
-      {isPending ? "移除中…" : "移除"}
+      {isPending ? "…" : "✕"}
     </button>
   );
 }

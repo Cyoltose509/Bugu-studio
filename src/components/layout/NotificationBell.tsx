@@ -94,6 +94,10 @@ export default function NotificationBell() {
       const target = item.relatedId;
       if (target) window.location.href = `/activities/${target}`;
       else window.location.href = `/activities`;
+    } else if (item.type === "JAM_INVITATION") {
+      // 邀请通知 → 跳转到活动页的 Game Jam 区（显示邀请）
+      if (item.relatedId) window.location.href = `/activities/${item.relatedId}#jam`;
+      else window.location.href = `/activities`;
     } else if (item.relatedType === "JamTeam") {
       const target = item.relatedId;
       if (target) {

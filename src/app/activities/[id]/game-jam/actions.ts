@@ -229,6 +229,15 @@ export async function inviteMember(teamId: string, activityId: string, formData:
   });
   if (alreadyMember) return { error: "该用户已在队伍中" };
 
+  // 检查是否已加入该活动的其他队伍
+  const inOtherTeam = await prisma.jamTeamMember.findFirst({
+    where: {
+      userId: invitee.id,
+      team: { activityId, id: { not: teamId } },
+    },
+  });
+  if (inOtherTeam) return { error: "该用户已加入其他队伍" };
+
   // 检查是否已有待处理邀请
   const existingInv = await prisma.jamTeamInvitation.findFirst({
     where: { teamId, inviteeId: invitee.id, status: "PENDING" },
@@ -245,14 +254,14 @@ export async function inviteMember(teamId: string, activityId: string, formData:
 
   // 通知被邀请者
   await prisma.notification.create({
-    data: {
-      userId: invitee.id,
-      type: "JAM_INVITATION",
-      title: "队伍邀请",
-      content: `${session.user.name || "有人"} 邀请你加入队伍「${team.name}」`,
-      relatedId: teamId,
-      relatedType: "JamTeam",
-    },
+      data: {
+        userId: invitee.id,
+        type: "JAM_INVITATION",
+        title: "队伍邀请",
+        content: `${session.user.name || "有人"} 邀请你加入队伍「${team.name}」`,
+        relatedId: activityId,
+        relatedType: "Activity",
+      },
   });
 
   revalidatePath(`/activities/${activityId}/game-jam/teams/${teamId}`);

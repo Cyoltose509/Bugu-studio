@@ -2,9 +2,11 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { addJudge, removeJudge, submitScore } from "../actions";
+import { submitScore } from "../actions";
 import { PublishResultsButton } from "./PublishResultsButton";
 import { AddJudgeForm } from "./AddJudgeForm";
+import { RemoveJudgeButton } from "./RemoveJudgeButton";
+import { SubmitScoreForm } from "./SubmitScoreForm";
 
 function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
   const initial = (user.name || "?")[0];
@@ -67,9 +69,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
               <span key={j.id} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0F6FA" }}>
                 <AvatarImg user={j.user} />
                 <span style={{ color: "#25547A" }}>{j.user.name}</span>
-                <form action={async () => { "use server"; await removeJudge(activityId, j.id); }}>
-                  <button type="submit" className="text-xs" style={{ color: "#bbb" }}>✕</button>
-                </form>
+                <RemoveJudgeButton activityId={activityId} judgeId={j.id} />
               </span>
             ))}
           </div>
@@ -147,44 +147,11 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
 
                   {/* 打分表单 */}
                   {canAccess && (
-                    <details className="mt-2">
-                      <summary className="text-xs cursor-pointer list-none" style={{ color: myScore ? "#3388BB" : "#E38043" }}>
-                        {myScore ? "✏️ 修改评分" : "📝 打分"}
-                      </summary>
-                      <form action={async (f: FormData) => { "use server"; await submitScore(activityId, f); }} className="mt-3 space-y-3 p-3 rounded-lg" style={{ background: "#F8FAFB" }}>
-                        <input type="hidden" name="submissionId" value={sub.id} />
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          <div>
-                            <label className="block text-xs mb-1" style={{ color: "#777" }}>创意</label>
-                            <input name="creativity" type="number" min={0} max={100} defaultValue={myScore ? (myScore.criteria as any).creativity : ""}
-                              className="w-full rounded-lg border px-2 py-1.5 text-sm" style={{ borderColor: "#D0DEE8" }} />
-                          </div>
-                          <div>
-                            <label className="block text-xs mb-1" style={{ color: "#777" }}>执行</label>
-                            <input name="execution" type="number" min={0} max={100} defaultValue={myScore ? (myScore.criteria as any).execution : ""}
-                              className="w-full rounded-lg border px-2 py-1.5 text-sm" style={{ borderColor: "#D0DEE8" }} />
-                          </div>
-                          <div>
-                            <label className="block text-xs mb-1" style={{ color: "#777" }}>主题</label>
-                            <input name="theme" type="number" min={0} max={100} defaultValue={myScore ? (myScore.criteria as any).theme : ""}
-                              className="w-full rounded-lg border px-2 py-1.5 text-sm" style={{ borderColor: "#D0DEE8" }} />
-                          </div>
-                          <div>
-                            <label className="block text-xs mb-1" style={{ color: "#777" }}>整体</label>
-                            <input name="overall" type="number" min={0} max={100} defaultValue={myScore ? (myScore.criteria as any).overall : ""}
-                              className="w-full rounded-lg border px-2 py-1.5 text-sm" style={{ borderColor: "#D0DEE8" }} />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs mb-1" style={{ color: "#777" }}>评语（可选）</label>
-                          <textarea name="comment" rows={2} defaultValue={myScore?.comment || ""}
-                            className="w-full rounded-lg border px-3 py-1.5 text-sm resize-y" style={{ borderColor: "#D0DEE8" }} />
-                        </div>
-                        <button type="submit" className="text-xs px-4 py-1.5 rounded-lg text-white" style={{ background: "#3388BB" }}>
-                          提交评分
-                        </button>
-                      </form>
-                    </details>
+                    <SubmitScoreForm
+                      activityId={activityId}
+                      submissionId={sub.id}
+                      myScore={myScore}
+                    />
                   )}
                 </div>
               );

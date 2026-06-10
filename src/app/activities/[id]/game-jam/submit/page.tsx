@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { submitJamWork } from "../actions";
+import { JamSubmitForm } from "./JamSubmitForm";
 
 export default async function JamSubmitPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -66,41 +66,11 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        <form action={async (f: FormData) => { "use server"; await submitJamWork(activityId, f); }} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1" style={{ color: "#555" }}>作品标题 *</label>
-            <input name="title" required defaultValue={existing?.title || ""} maxLength={100}
-              className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }}
-              disabled={!isOngoing} />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1" style={{ color: "#555" }}>作品描述</label>
-            <textarea name="description" rows={4} defaultValue={existing?.description || ""}
-              className="w-full rounded-lg border px-3 py-2 text-sm resize-y" style={{ borderColor: "#D0DEE8" }}
-              disabled={!isOngoing} />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1" style={{ color: "#555" }}>关联作品链接（可选）</label>
-            <input name="projectId" defaultValue={existing?.projectId || ""} placeholder="如：作品 ID" maxLength={200}
-              className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }}
-              disabled={!isOngoing} />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1" style={{ color: "#555" }}>截图/GIF链接（多个用逗号分隔）</label>
-            <input name="fileUrls" defaultValue={existing?.files?.join(", ") || ""} placeholder="https://xxx.png, https://xxx.gif"
-              className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "#D0DEE8" }}
-              disabled={!isOngoing} />
-          </div>
-
-          {isOngoing && (
-            <button type="submit" className="text-sm px-6 py-2 rounded-lg text-white" style={{ background: "#25547A" }}>
-              {existing ? "更新作品" : "提交作品"}
-            </button>
-          )}
-        </form>
+        <JamSubmitForm
+          activityId={activityId}
+          isOngoing={isOngoing}
+          existing={existing}
+        />
       </div>
     </div>
   );
