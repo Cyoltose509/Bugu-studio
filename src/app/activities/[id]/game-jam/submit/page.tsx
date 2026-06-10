@@ -23,8 +23,8 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
   if (!membership) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <Link href={`/activities/${activityId}/game-jam`} className="text-sm hover:underline" style={{ color: "#999" }}>
-          ← 返回 Game Jam
+        <Link href={`/activities/${activityId}`} className="text-sm hover:underline" style={{ color: "#999" }}>
+          ← 返回活动
         </Link>
         <div className="bg-white rounded-xl border p-8 mt-4 text-center" style={{ borderColor: "#D0DEE8" }}>
           <p className="text-lg mb-2" style={{ color: "#25547A" }}>你还没有加入队伍</p>
@@ -47,8 +47,8 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/activities/${activityId}/game-jam`} className="text-sm hover:underline" style={{ color: "#999" }}>
-          ← 返回 Game Jam
+        <Link href={`/activities/${activityId}`} className="text-sm hover:underline" style={{ color: "#999" }}>
+          ← 返回活动
         </Link>
       </div>
 

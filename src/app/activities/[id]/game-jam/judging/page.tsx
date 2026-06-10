@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addJudge, removeJudge, submitScore } from "../actions";
 import { PublishResultsButton } from "./PublishResultsButton";
+import { AddJudgeForm } from "./AddJudgeForm";
 
 function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
   const initial = (user.name || "?")[0];
@@ -52,8 +53,8 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/activities/${activityId}/game-jam`} className="text-sm hover:underline" style={{ color: "#999" }}>
-          ← 返回 Game Jam
+        <Link href={`/activities/${activityId}`} className="text-sm hover:underline" style={{ color: "#999" }}>
+          ← 返回活动
         </Link>
       </div>
 
@@ -72,13 +73,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
               </span>
             ))}
           </div>
-          <form action={async (f: FormData) => { "use server"; await addJudge(activityId, f); }} className="flex gap-2">
-            <input name="judgeName" placeholder="输入评委昵称" required
-              className="flex-1 max-w-xs rounded-lg border px-3 py-1.5 text-sm" style={{ borderColor: "#D0DEE8" }} />
-            <button type="submit" className="text-sm px-4 py-1.5 rounded-lg text-white" style={{ background: "#3388BB" }}>
-              添加评委
-            </button>
-          </form>
+          <AddJudgeForm activityId={activityId} existingJudgeIds={activity.jamJudges.map(j => j.userId)} />
         </div>
       )}
 

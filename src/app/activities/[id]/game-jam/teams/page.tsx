@@ -40,8 +40,8 @@ export default async function JamTeamsPage({ params }: { params: Promise<{ id: s
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/activities/${activityId}/game-jam`} className="text-sm hover:underline" style={{ color: "#999" }}>
-          ← 返回 Game Jam
+        <Link href={`/activities/${activityId}`} className="text-sm hover:underline" style={{ color: "#999" }}>
+          ← 返回活动
         </Link>
       </div>
 

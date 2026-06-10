@@ -44,7 +44,7 @@ export async function createTeam(activityId: string, formData: FormData) {
   });
 
   invalidateCache(`jam:${activityId}:teams`);
-  revalidatePath(`/activities/${activityId}/game-jam`);
+  revalidatePath(`/activities/${activityId}`);
   return { success: true, teamId: team.id };
 }
 
@@ -84,8 +84,8 @@ export async function disbandTeam(teamId: string, activityId: string) {
 
   await prisma.jamTeam.delete({ where: { id: teamId } });
   invalidateCache(`jam:${activityId}:teams`);
-  revalidatePath(`/activities/${activityId}/game-jam`);
-  redirect(`/activities/${activityId}/game-jam`);
+  revalidatePath(`/activities/${activityId}`);
+  redirect(`/activities/${activityId}`);
 }
 
 // ============================================================
@@ -206,8 +206,8 @@ export async function inviteMember(teamId: string, activityId: string, formData:
   const session = await auth();
   if (!session?.user?.id) return { error: "请先登录" };
 
-  const inviteeName = (formData.get("invitee") as string || "").trim();
-  if (!inviteeName) return { error: "请输入要邀请的成员昵称" };
+  const inviteeUserId = (formData.get("inviteeUserId") as string || "").trim();
+  if (!inviteeUserId) return { error: "请选择要邀请的成员" };
 
   // 检查是否是队长
   const team = await prisma.jamTeam.findUnique({
@@ -217,8 +217,8 @@ export async function inviteMember(teamId: string, activityId: string, formData:
   if (!team || team.members.length === 0) return { error: "只有队长可以邀请" };
 
   // 查找被邀请者
-  const invitee = await prisma.user.findFirst({
-    where: { name: inviteeName },
+  const invitee = await prisma.user.findUnique({
+    where: { id: inviteeUserId },
   });
   if (!invitee) return { error: "找不到该用户" };
   if (invitee.id === session.user.id) return { error: "不能邀请自己" };
@@ -305,7 +305,7 @@ export async function handleInvitation(
     });
   }
 
-  revalidatePath(`/activities/${activityId}/game-jam`);
+  revalidatePath(`/activities/${activityId}`);
   return { success: true };
 }
 
@@ -386,7 +386,7 @@ export async function submitJamWork(activityId: string, formData: FormData) {
   }
 
   invalidateCache(`jam:${activityId}:submissions`);
-  revalidatePath(`/activities/${activityId}/game-jam`);
+  revalidatePath(`/activities/${activityId}`);
   return { success: true };
 }
 
@@ -401,10 +401,10 @@ export async function addJudge(activityId: string, formData: FormData) {
   // 检查是否是管理员或社员
   if (session.user.role === "GUEST") return { error: "权限不足" };
 
-  const judgeName = (formData.get("judgeName") as string || "").trim();
-  if (!judgeName) return { error: "请输入评委昵称" };
+  const judgeUserId = (formData.get("judgeUserId") as string || "").trim();
+  if (!judgeUserId) return { error: "请选择评委" };
 
-  const judge = await prisma.user.findFirst({ where: { name: judgeName } });
+  const judge = await prisma.user.findUnique({ where: { id: judgeUserId } });
   if (!judge) return { error: "找不到该用户" };
   if (judge.role === "GUEST") return { error: "Guest 用户不能担任评委" };
 
@@ -508,6 +508,6 @@ export async function publishResults(activityId: string) {
 
   invalidateCache("activities:list");
   invalidateCache("home:activities");
-  revalidatePath(`/activities/${activityId}/game-jam`);
+  revalidatePath(`/activities/${activityId}`);
   return { success: true };
 }

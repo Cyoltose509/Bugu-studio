@@ -2,7 +2,9 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateTeam, applyToTeam, handleApplication, inviteMember, removeMember } from "../../actions";
+import { updateTeam, applyToTeam, handleApplication } from "../../actions";
+import { InviteMemberForm } from "./InviteMemberForm";
+import { RemoveMemberButton } from "./RemoveMemberButton";
 
 function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
   const initial = (user.name || "?")[0];
@@ -53,8 +55,8 @@ export default async function JamTeamDetailPage({
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/activities/${activityId}/game-jam`} className="text-sm hover:underline" style={{ color: "#999" }}>
-          ← 返回 Game Jam
+        <Link href={`/activities/${activityId}`} className="text-sm hover:underline" style={{ color: "#999" }}>
+          ← 返回活动
         </Link>
       </div>
 
@@ -98,12 +100,7 @@ export default async function JamTeamDetailPage({
                 </div>
               </div>
               {isLeader && m.role !== "LEADER" && (
-                <form action={async () => { "use server"; await removeMember(teamId, activityId, m.id); }}>
-                  <button type="submit" className="text-xs px-2 py-1 rounded" style={{ color: "#bbb" }}
-                    onClick={(e) => { if (!confirm("确定移除该成员？")) e.preventDefault(); }}>
-                    移除
-                  </button>
-                </form>
+                <RemoveMemberButton teamId={teamId} activityId={activityId} memberId={m.id} />
               )}
             </div>
           ))}
@@ -164,13 +161,11 @@ export default async function JamTeamDetailPage({
       {isLeader && (
         <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
           <h2 className="text-sm font-semibold mb-3" style={{ color: "#25547A" }}>邀请队员</h2>
-          <form action={async (f: FormData) => { "use server"; await inviteMember(teamId, activityId, f); }} className="flex gap-2">
-            <input name="invitee" placeholder="输入对方昵称" required
-              className="flex-1 rounded-lg border px-3 py-1.5 text-sm" style={{ borderColor: "#D0DEE8" }} />
-            <button type="submit" className="text-sm px-4 py-1.5 rounded-lg text-white" style={{ background: "#3388BB" }}>
-              发送邀请
-            </button>
-          </form>
+          <InviteMemberForm
+            teamId={teamId}
+            activityId={activityId}
+            existingMemberIds={team.members.map(m => m.userId)}
+          />
         </div>
       )}
     </div>
