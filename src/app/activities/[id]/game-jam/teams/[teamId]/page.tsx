@@ -8,6 +8,8 @@ import { RemoveMemberButton } from "./RemoveMemberButton";
 import { EditTeamNameForm } from "./EditTeamNameForm";
 import { ApplyToTeamForm } from "./ApplyToTeamForm";
 import { ApplicationButtons } from "./ApplicationButtons";
+import { DisbandTeamButton } from "../../DisbandTeamButton";
+import { LeaveTeamButton } from "../../LeaveTeamButton";
 
 function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
   const initial = (user.name || "?")[0];
@@ -121,6 +123,17 @@ export default async function JamTeamDetailPage({
             </div>
           ))}
         </div>
+
+        {/* 退出 / 解散 */}
+        {isMember && (
+          <div className="mt-6 pt-4 border-t" style={{ borderColor: "#D0DEE8" }}>
+            {isLeader ? (
+              <DisbandTeamButton teamId={teamId} activityId={activityId} />
+            ) : (
+              <LeaveTeamButton teamId={teamId} activityId={activityId} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* 入队申请（非成员、未在其他队伍中） */}

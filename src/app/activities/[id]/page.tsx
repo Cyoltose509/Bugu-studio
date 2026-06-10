@@ -11,6 +11,7 @@ import { auth } from "@/lib/auth/auth";
 import { ActivityType, ActivityStatus, ProposalType, ProposalStatus, EnrollmentStatus } from "@prisma/client";
 import { submitProposal, enrollCourse, submitCompetition } from "@/app/admin/activities/actions";
 import { DisbandTeamButton } from "./game-jam/DisbandTeamButton";
+import { LeaveTeamButton } from "./game-jam/LeaveTeamButton";
 import { InvitationButtons } from "./game-jam/InvitationButtons";
 import { CreateTeamForm } from "./game-jam/CreateTeamForm";
 import { cachedQuery } from "@/lib/db/cache";
@@ -345,18 +346,22 @@ async function CompetitionSection({
           </div>
 
           {/* 提交作品 & 解散 */}
-          {isOngoing && (
+          {(isUpcoming || isOngoing) && (
             <div className="mt-4 flex gap-2">
-              {myTeam.members.some((m: any) => m.role === "LEADER" && m.userId === userId) && (
+              {myTeam.members.some((m: any) => m.role === "LEADER" && m.userId === userId) ? (
                 <DisbandTeamButton teamId={myTeam.id} activityId={activityId} />
+              ) : (
+                <LeaveTeamButton teamId={myTeam.id} activityId={activityId} />
               )}
-              <Link
-                href={`/activities/${activityId}/game-jam/submit`}
-                className="text-xs px-3 py-1.5 rounded-lg text-white"
-                style={{ background: "#25547A" }}
-              >
-                {jamSubmissions.some((s: any) => s.teamId === myTeam.id) ? "修改作品" : "提交作品"}
-              </Link>
+              {isOngoing && (
+                <Link
+                  href={`/activities/${activityId}/game-jam/submit`}
+                  className="text-xs px-3 py-1.5 rounded-lg text-white"
+                  style={{ background: "#25547A" }}
+                >
+                  {jamSubmissions.some((s: any) => s.teamId === myTeam.id) ? "修改作品" : "提交作品"}
+                </Link>
+              )}
             </div>
           )}
         </div>

@@ -86,17 +86,17 @@ export default function NotificationBell() {
       });
     }
     setOpen(false);
-    if (item.relatedType === "Project") {
+    // JAM 邀请通知需要优先匹配（type 判断），因为新通知的 relatedType 也是 "Activity"
+    if (item.type === "JAM_INVITATION") {
+      if (item.relatedId) window.location.href = `/activities/${item.relatedId}#jam`;
+      else window.location.href = `/activities`;
+    } else if (item.relatedType === "Project") {
       const target = item.relatedSlug || item.relatedId;
       if (target) window.location.href = `/works/${target}`;
       else window.location.href = `/works`;
     } else if (item.relatedType === "Activity") {
       const target = item.relatedId;
       if (target) window.location.href = `/activities/${target}`;
-      else window.location.href = `/activities`;
-    } else if (item.type === "JAM_INVITATION") {
-      // 邀请通知 → 跳转到活动页的 Game Jam 区（显示邀请）
-      if (item.relatedId) window.location.href = `/activities/${item.relatedId}#jam`;
       else window.location.href = `/activities`;
     } else if (item.relatedType === "JamTeam") {
       const target = item.relatedId;

@@ -308,7 +308,7 @@ export async function handleInvitation(
         type: "JAM_INVITATION_ACCEPTED",
         title: "邀请已被接受",
         content: `${session.user.name || "有人"} 已接受你的队伍邀请`,
-        relatedId: inv.teamId,
+        relatedId: `${activityId}:${inv.teamId}`,
         relatedType: "JamTeam",
       },
     });
@@ -336,6 +336,37 @@ export async function removeMember(teamId: string, activityId: string, memberId:
 
   await prisma.jamTeamMember.delete({ where: { id: memberId } });
   revalidatePath(`/activities/${activityId}/game-jam/teams/${teamId}`);
+  return { success: true };
+}
+
+export async function leaveTeam(teamId: string, activityId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "请先登录" };
+
+  const membership = await prisma.jamTeamMember.findFirst({
+    where: { teamId, userId: session.user.id },
+  });
+  if (!membership) return { error: "你不在此队伍中" };
+
+  if (membership.role === "LEADER") {
+    // 队长退出 = 解散队伍（先检查是否有其他成员）
+    const otherMembers = await prisma.jamTeamMember.count({
+      where: { teamId, userId: { not: session.user.id } },
+    });
+    if (otherMembers > 0) return { error: "队长不能直接退出，请先转让队长或解散队伍" };
+
+    // 只有队长一人 → 解散队伍
+    await prisma.jamTeam.delete({ where: { id: teamId } });
+    invalidateCache(`jam:${activityId}:teams`);
+    revalidatePath(`/activities/${activityId}`);
+    redirect(`/activities/${activityId}`);
+  }
+
+  // 普通成员直接退出
+  await prisma.jamTeamMember.delete({ where: { id: membership.id } });
+  invalidateCache(`jam:${activityId}:teams`);
+  revalidatePath(`/activities/${activityId}/game-jam/teams/${teamId}`);
+  revalidatePath(`/activities/${activityId}`);
   return { success: true };
 }
 
