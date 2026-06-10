@@ -9,8 +9,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { ActivityStatus, ProposalType, ProposalStatus } from "@prisma/client";
-import { reviewProposal } from "@/app/admin/activities/actions";
 import SubmitProposalForm from "./SubmitProposalForm";
+import DeleteProposalButton from "./DeleteProposalButton";
+import ReviewProposalForm from "./ReviewProposalForm";
 import { DisbandTeamButton } from "./game-jam/DisbandTeamButton";
 import { LeaveTeamButton } from "./game-jam/LeaveTeamButton";
 import { InvitationButtons } from "./game-jam/InvitationButtons";
@@ -201,35 +202,14 @@ async function MeetingSection({
           <h2 className="text-xl font-semibold mb-3" style={{ color: "#E38043" }}>⏳ 待审核分享申请</h2>
           <div className="space-y-3">
             {pendingProposals.map((p: any) => (
-              <form
+              <ReviewProposalForm
                 key={p.id}
-                action={async (f: FormData) => {
-                  "use server";
-                  await reviewProposal(p.id, f.get("action") as any, f.get("adminNote") as string || undefined);
-                }}
-                className="bg-white rounded-xl border p-4 space-y-3"
-                style={{ borderColor: "#FFF3E0" }}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold" style={{ color: "#333" }}>{p.title}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">待审核</span>
-                    </div>
-                    <p className="text-xs mt-1" style={{ color: "#777" }}>by {p.user.name} · {p.createdAt.toLocaleDateString("zh-CN")}</p>
-                    {p.description && <p className="text-sm mt-1" style={{ color: "#555" }}>{p.description}</p>}
-                  </div>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <button name="action" value="APPROVED" type="submit"
-                    className="text-xs px-3 py-1.5 rounded-lg text-white" style={{ background: "#3388BB" }}>通过</button>
-                  <button name="action" value="REJECTED" type="submit"
-                    className="text-xs px-3 py-1.5 rounded-lg border" style={{ borderColor: "#EF4444", color: "#EF4444" }}>拒绝</button>
-                  <input name="adminNote" placeholder="审核意见（可选）"
-                    className="flex-1 min-w-[120px] rounded-lg border px-3 py-1.5 text-xs placeholder-gray-400"
-                    style={{ borderColor: "#D0DEE8" }} />
-                </div>
-              </form>
+                proposalId={p.id}
+                title={p.title}
+                userName={p.user.name}
+                createdAt={p.createdAt.toLocaleDateString("zh-CN")}
+                description={p.description}
+              />
             ))}
           </div>
         </section>
@@ -241,14 +221,21 @@ async function MeetingSection({
           <div className="space-y-3">
             {proposals.map((p: any) => (
               <div key={p.id} className="bg-white rounded-xl border p-4" style={{ borderColor: "#D0DEE8" }}>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold" style={{ color: "#333" }}>{p.title}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#E6F0F8", color: "#3388BB" }}>
-                    {p.proposalType === "SHARE" ? "分享" : "展示"}
-                  </span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold" style={{ color: "#333" }}>{p.title}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: "#E6F0F8", color: "#3388BB" }}>
+                        {p.proposalType === "SHARE" ? "分享" : "展示"}
+                      </span>
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: "#777" }}>by {p.user.name}</p>
+                    {p.description && <p className="text-sm mt-1" style={{ color: "#555" }}>{p.description}</p>}
+                  </div>
+                  {isAdmin && (
+                    <DeleteProposalButton proposalId={p.id} />
+                  )}
                 </div>
-                <p className="text-xs mt-1" style={{ color: "#777" }}>by {p.user.name}</p>
-                {p.description && <p className="text-sm mt-1" style={{ color: "#555" }}>{p.description}</p>}
               </div>
             ))}
           </div>

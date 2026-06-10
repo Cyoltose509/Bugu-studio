@@ -271,6 +271,23 @@ export async function submitProposal(formData: FormData) {
   return { success: true };
 }
 
+// ── 删除议程项 ────────────────────────────────────────────────
+export async function deleteProposal(formData: FormData) {
+  await requireAdmin();
+  const proposalId = formData.get("proposalId") as string;
+  if (!proposalId) return { error: "缺少申请 ID" };
+
+  const proposal = await prisma.meetingProposal.findUnique({
+    where: { id: proposalId },
+    select: { activityId: true },
+  });
+  if (!proposal) return { error: "申请不存在" };
+
+  await prisma.meetingProposal.delete({ where: { id: proposalId } });
+  revalidatePath(`/activities/${proposal.activityId}`);
+  return { success: true };
+}
+
 // ── 审核：分享/展示申请 ──────────────────────────────────────
 export async function reviewProposal(id: string, status: ProposalStatus, adminNote?: string) {
   await requireAdmin();
