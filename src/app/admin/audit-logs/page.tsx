@@ -6,6 +6,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import AuditLogDeletePanel from "@/components/admin/AuditLogDeletePanel";
 import type { AuditAction } from "@prisma/client";
 
 export const metadata: Metadata = { title: "审计日志 - 管理后台" };
@@ -93,6 +94,10 @@ export default async function AdminAuditLogsPage({ searchParams }: PageProps) {
     return new URLSearchParams(p).toString();
   }
 
+  // 今日操作数
+  const todayStr = new Date().toDateString();
+  const todayCount = logs.filter((l: any) => new Date(l.createdAt).toDateString() === todayStr).length;
+
   return (
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
@@ -111,11 +116,7 @@ export default async function AdminAuditLogsPage({ searchParams }: PageProps) {
         <div className="bg-white rounded-xl border p-4 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
           <div className="text-xs" style={{ color: "#777" }}>今日操作</div>
           <div className="text-2xl font-bold" style={{ color: "#88C232" }}>
-            {logs.filter((l: any) => {
-              const d = new Date(l.createdAt);
-              const today = new Date();
-              return d.toDateString() === today.toDateString();
-            }).length}
+            {todayCount}
           </div>
         </div>
         <div className="bg-white rounded-xl border p-4 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
@@ -131,6 +132,9 @@ export default async function AdminAuditLogsPage({ searchParams }: PageProps) {
           </div>
         </div>
       </div>
+
+      {/* 删除管理面板 */}
+      <AuditLogDeletePanel total={total} />
 
       {/* 操作类型筛选 */}
       <div className="bg-white rounded-xl border p-4 shadow-sm space-y-3" style={{ borderColor: "#D0DEE8" }}>

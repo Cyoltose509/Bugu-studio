@@ -45,6 +45,13 @@ export default function AuditLogsSection() {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
 
+  // 删除相关状态
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState("");
+  const [showDeleteLastN, setShowDeleteLastN] = useState(false);
+  const [deleteN, setDeleteN] = useState("");
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+
   async function fetchLogs(p: number, a: string, m: string) {
     setLoading(true);
     setError(null);
@@ -79,6 +86,30 @@ export default function AuditLogsSection() {
       fetchLogs(1, "", "");
     } else {
       setExpanded(false);
+    }
+  }
+
+  async function handleDelete(mode: "lastN" | "all", n?: number) {
+    setDeleting(true);
+    setDeleteMsg("");
+    try {
+      const res = await fetch("/api/admin/audit-logs", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mode === "lastN" ? { mode: "lastN", n } : { mode: "all" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "删除失败");
+      setDeleteMsg(`已删除 ${json.deleted} 条记录`);
+      setShowDeleteLastN(false);
+      setShowDeleteAll(false);
+      setDeleteN("");
+      // 刷新当前视图
+      fetchLogs(page, action, model);
+    } catch (e: any) {
+      setDeleteMsg(e.message || "删除失败");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -131,6 +162,119 @@ export default function AuditLogsSection() {
               {total > 0 && <span className="text-xs ml-2" style={{ color: "#999" }}>共 {total} 条</span>}
             </div>
           </div>
+
+          {/* 删除操作栏 */}
+          {total > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              {!showDeleteLastN ? (
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setShowDeleteLastN(true)}
+                  className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-50"
+                  style={{ borderColor: "#D0DEE8", color: "#777", background: "#fff" }}
+                >
+                  🗑️ 删末尾N条
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs" style={{ color: "#555" }}>删最后</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={Math.min(total, 1000)}
+                    value={deleteN}
+                    onChange={(e) => setDeleteN(e.target.value)}
+                    placeholder="N"
+                    className="w-16 rounded border px-1.5 py-0.5 text-xs text-center"
+                    style={{ borderColor: "#D0DEE8", color: "#333" }}
+                  />
+                  <span className="text-xs" style={{ color: "#555" }}>条</span>
+                  <button
+                    type="button"
+                    disabled={deleting || !deleteN || parseInt(deleteN, 10) < 1}
+                    onClick={() => {
+                      const n = parseInt(deleteN, 10);
+                      if (n > 0 && confirm(`确认删除最后 ${n} 条审计日志？不可撤回。`)) {
+                        handleDelete("lastN", n);
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded text-white transition-colors disabled:opacity-50"
+                    style={{ background: "#E38043" }}
+                  >
+                    {deleting ? "删除中..." : "确认"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => { setShowDeleteLastN(false); setDeleteN(""); }}
+                    className="text-xs px-1.5 py-0.5 rounded border transition-colors disabled:opacity-50"
+                    style={{ borderColor: "#D0DEE8", color: "#999", background: "#fff" }}
+                  >
+                    取消
+                  </button>
+                </div>
+              )}
+
+              {!showDeleteAll ? (
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setShowDeleteAll(true)}
+                  className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-50"
+                  style={{ borderColor: "#FDE8E8", color: "#C62828", background: "#fff" }}
+                >
+                  🗑️ 删除全部
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs" style={{ color: "#C62828" }}>
+                    输入「确认删除」：
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="确认删除"
+                    className="rounded border px-1.5 py-0.5 text-xs"
+                    style={{ borderColor: "#FDE8E8", color: "#333" }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.target as HTMLInputElement).value === "确认删除") {
+                        handleDelete("all");
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => {
+                      const input = document.querySelector('input[placeholder="确认删除"]') as HTMLInputElement;
+                      if (input?.value === "确认删除") handleDelete("all");
+                    }}
+                    className="text-xs px-2 py-0.5 rounded text-white transition-colors disabled:opacity-50"
+                    style={{ background: "#C62828" }}
+                  >
+                    {deleting ? "删除中..." : "确认全部删除"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => setShowDeleteAll(false)}
+                    className="text-xs px-1.5 py-0.5 rounded border transition-colors disabled:opacity-50"
+                    style={{ borderColor: "#D0DEE8", color: "#999", background: "#fff" }}
+                  >
+                    取消
+                  </button>
+                </div>
+              )}
+
+              {deleteMsg && (
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  deleteMsg.includes("已删除") ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#FDE8E8] text-[#C62828]"
+                }`}>
+                  {deleteMsg}
+                </span>
+              )}
+            </div>
+          )}
 
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">⚠️ {error}</div>}
 

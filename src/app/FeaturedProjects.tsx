@@ -17,7 +17,7 @@ async function getProjects() {
     prisma.project.findMany({
       where: { status: ProjectStatus.PUBLISHED, isFeatured: true },
       orderBy: { publishedAt: "desc" },
-      take: 6,
+      take: 3,
       include: {
         tags: { include: { tag: true } },
         members: {

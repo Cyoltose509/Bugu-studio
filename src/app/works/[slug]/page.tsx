@@ -16,6 +16,7 @@ import { auth } from "@/lib/auth/auth";
 import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
 import DeleteOwnProjectButton from "./DeleteOwnProjectButton";
+import FeaturedToggle from "./FeaturedToggle";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
 
@@ -142,13 +143,6 @@ export default async function WorkDetailPage({ params }: PageProps) {
                "此作品已被拒绝，你可以修改后重新提交。"}
             </div>
           </div>
-          <div className="ml-auto">
-            <Link href={`/works/${project.slug}/edit`}
-              className="text-sm px-4 py-2 rounded-lg font-medium text-white"
-              style={{ background: "#3388BB" }}>
-              ✏️ 编辑
-            </Link>
-          </div>
         </div>
       )}
 
@@ -163,17 +157,24 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
           <h1 className="text-3xl font-bold mb-2" style={{ color: "#25547A" }}>
             {project.title}
+            {project.isFeatured && (
+              <span className="inline-block ml-3 text-xs px-2 py-0.5 rounded-full align-middle"
+                    style={{ background: "#FFE384", color: "#5C4B00" }}>
+                ★ 精选
+              </span>
+            )}
             {statusBadge && (
               <span className="inline-block ml-3 text-xs px-2 py-0.5 rounded-full align-middle" style={{ background: statusBadge.bg, color: statusBadge.color }}>{statusBadge.label}</span>
             )}
           </h1>
           {project.subtitle && <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>}
 
-          {/* 点赞 + 编辑 + 删除 */}
-          <div className="flex items-center gap-3 mb-4">
+          {/* 点赞 + 编辑 + 删除 + 精选 */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
             <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={initialLiked} />
             <EditButton slug={project.slug} submitterId={project.submitterId} />
             <DeleteOwnProjectButton projectId={project.id} submitterId={project.submitterId} />
+            <FeaturedToggle projectId={project.id} isFeatured={project.isFeatured} />
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">

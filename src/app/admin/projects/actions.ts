@@ -69,9 +69,31 @@ export async function deleteProject(id: string) {
 
 export async function toggleFeatured(id: string, current: boolean) {
   await requireAdmin();
+
+  // 先取 slug，后续用于缓存失效和路径刷新
+  const project = await prisma.project.findUnique({
+    where: { id },
+    select: { slug: true },
+  });
+  if (!project) throw new Error("作品不存在");
+
+  // 设为精选时，检查是否已达上限（最多 3 个）
+  if (!current) {
+    const featuredCount = await prisma.project.count({
+      where: { isFeatured: true, status: ProjectStatus.PUBLISHED },
+    });
+    if (featuredCount >= 3) {
+      throw new Error("精选作品最多 3 个，请先取消其他作品的精选后再试");
+    }
+  }
+
   await prisma.project.update({ where: { id }, data: { isFeatured: !current } });
-  await invalidateProjectCaches();
+
+  // 精准清理缓存 + 刷新所有相关页面
+  await invalidateProjectCaches(project.slug);
+  revalidatePath("/");
   revalidatePath("/admin/projects");
   revalidatePath("/members");
   revalidatePath("/works");
+  revalidatePath(`/works/${project.slug}`);
 }
