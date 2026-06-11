@@ -147,7 +147,7 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
                     )}
                   </div>
                   <div className="text-xs mt-0.5" style={{ color: "#999" }}>{m.projectCount ?? 0} 个项目</div>
-                  {!m.isActive && <div className="text-xs mt-0.5" style={{ color: "#aaa" }}>已毕业</div>}
+                  {!m.isActive && <div className="text-xs mt-0.5" style={{ color: "#aaa" }}>已退役</div>}
                 </Link>
               ))}
             </div>

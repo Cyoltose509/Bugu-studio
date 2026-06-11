@@ -586,7 +586,7 @@ export default function EditForm({
                                         onChange={(e) => setCollegeVal(e.target.value)}
                                         className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                                         style={{borderColor: "#D0DEE8", color: "#333"}}
-                                        placeholder="如：软件学院"
+                                        placeholder="如：计算机学院"
                                     />
                                 </div>
                                 <div>
