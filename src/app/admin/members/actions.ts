@@ -27,10 +27,12 @@ export async function updateMemberDetails(id: string, formData: FormData) {
 
   const gradeRaw = formData.get("grade") as string;
   const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
+  const joinYearRaw = formData.get("joinYear") as string;
+  const joinYear = joinYearRaw ? parseInt(joinYearRaw, 10) : null;
   const position = formData.get("position") as string;
   const isActiveStr = formData.get("isActive") as string;
 
-  const isValidPosition = ["MEMBER", "PRESIDENT", "VICE_PRESIDENT"].includes(position);
+  const isValidPosition = ["MEMBER", "PRESIDENT", "VICE_PRESIDENT", "FOUNDER"].includes(position);
 
   // 先查当前成员信息，用于通知
   const current = await prisma.clubMember.findUnique({
@@ -42,6 +44,7 @@ export async function updateMemberDetails(id: string, formData: FormData) {
     where: { id },
     data: {
       ...(grade !== null && { grade }),
+      ...(joinYear !== null && { joinYear }),
       ...(isValidPosition && { position }),
       ...(isActiveStr !== null && { isActive: isActiveStr === "true" }),
     },
@@ -50,7 +53,7 @@ export async function updateMemberDetails(id: string, formData: FormData) {
   // ── 通知成员身份变更 ──
   if (current && isValidPosition) {
     const posLabel: Record<string, string> = {
-      MEMBER: "普通成员", PRESIDENT: "社长", VICE_PRESIDENT: "副社长",
+      MEMBER: "普通成员", PRESIDENT: "社长", VICE_PRESIDENT: "副社长", FOUNDER: "创始人",
     };
     if (current.position !== position) {
       await createNotification({

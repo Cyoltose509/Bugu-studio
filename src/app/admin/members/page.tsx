@@ -10,6 +10,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import { toggleMemberActive } from "./actions";
 import DeleteMemberButton from "./DeleteMemberButton";
 import EditableSelect from "./EditableSelect";
+import EditableNumber from "./EditableNumber";
 
 export const metadata: Metadata = { title: "成员管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -18,15 +19,11 @@ interface PageProps {
   searchParams: Promise<{ page?: string }>;
 }
 
-const GRADE_OPTIONS = Array.from(
-  { length: new Date().getFullYear() - 2016 },
-  (_, i) => 2017 + i
-);
-
 const POSITION_OPTIONS: { value: string; label: string }[] = [
   { value: "MEMBER", label: "成员" },
   { value: "VICE_PRESIDENT", label: "副社长" },
   { value: "PRESIDENT", label: "社长" },
+  { value: "FOUNDER", label: "创始人" },
 ];
 
 export default async function AdminMembersPage({ searchParams }: PageProps) {
@@ -66,6 +63,7 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
               <tr className="border-b" style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>名称</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>年级</th>
+                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>入社年份</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>身份</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>状态</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>用户角色</th>
@@ -80,16 +78,25 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                     <div className="text-xs" style={{ color: "#999" }}>{m.user.email}</div>
                   </td>
                   <td className="p-3">
-                    <EditableSelect
+                    <EditableNumber
                       memberId={m.id}
                       field="grade"
-                      currentValue={m.grade ?? ""}
-                      options={[
-                        { value: "", label: "未设置" },
-                        ...GRADE_OPTIONS.map((y) => ({ value: `${y}级`, label: `${y}级` })),
-                      ]}
+                      currentValue={typeof m.grade === "number" ? m.grade : null}
                       preserveValues={{
                         position: m.position || "MEMBER",
+                        joinYear: m.joinYear != null ? String(m.joinYear) : "",
+                        isActive: String(m.isActive),
+                      }}
+                    />
+                  </td>
+                  <td className="p-3">
+                    <EditableNumber
+                      memberId={m.id}
+                      field="joinYear"
+                      currentValue={m.joinYear ?? null}
+                      preserveValues={{
+                        position: m.position || "MEMBER",
+                        grade: m.grade != null ? String(m.grade) : "",
                         isActive: String(m.isActive),
                       }}
                     />
@@ -101,7 +108,8 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                       currentValue={m.position || "MEMBER"}
                       options={POSITION_OPTIONS}
                       preserveValues={{
-                        grade: m.grade ?? "",
+                        grade: m.grade != null ? String(m.grade) : "",
+                        joinYear: m.joinYear != null ? String(m.joinYear) : "",
                         isActive: String(m.isActive),
                       }}
                     />
