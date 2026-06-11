@@ -38,7 +38,7 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
     <>
       {/* 移动端汉堡按钮 */}
       <button
-        className="lg:hidden fixed top-3 left-3 z-50 w-10 h-10 flex items-center justify-center rounded-lg shadow-md text-white"
+        className="lg:hidden fixed top-3 left-3 z-[60] w-10 h-10 flex items-center justify-center rounded-lg shadow-md text-white"
         style={{ background: "#25547A" }}
         onClick={() => setOpen(!open)}
         aria-label="菜单"
@@ -49,14 +49,14 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
       {/* 遮罩层 */}
       {open && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/40"
+          className="lg:hidden fixed inset-0 z-[45] bg-black/40"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* 侧边栏 */}
       <aside
-        className={`w-56 shrink-0 text-white flex flex-col fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-200 ${
+        className={`w-56 shrink-0 text-white flex flex-col fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-[50] transition-transform duration-200 ${
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
         style={{ background: "#25547A" }}

@@ -6,6 +6,17 @@ import { UserRole } from "@prisma/client";
 import { apiResponse, apiError } from "@/lib/utils";
 import { createNotification } from "@/lib/services/notification";
 
+/** 递归收集某评论的所有子孙 ID */
+async function collectAllChildIds(commentId: string): Promise<string[]> {
+  const children = await prisma.comment.findMany({
+    where: { parentId: commentId },
+    select: { id: true },
+  });
+  const childIds = children.map((c) => c.id);
+  const grandChildIds = await Promise.all(childIds.map((id) => collectAllChildIds(id)));
+  return [...childIds, ...grandChildIds.flat()];
+}
+
 // ── GET: 获取作品留言（分页，含回复嵌套）──
 export async function GET(
   request: NextRequest,
@@ -182,10 +193,13 @@ export async function PATCH(
   }
 
   if (body.action === "delete") {
-    await prisma.comment.delete({ where: { id: body.commentId } });
+    // ── 递归收集所有子留言 ID（防止 onDelete: SetNull 导致子留言浮到顶层）──
+    const allChildIds = await collectAllChildIds(body.commentId);
+    const idsToDelete = [body.commentId, ...allChildIds];
+    await prisma.comment.deleteMany({ where: { id: { in: idsToDelete } } });
     // 清除评论缓存，确保下次 GET 返回最新数据
     await invalidateCache(`comments:${projectId}:`);
-    return apiResponse({ deleted: true });
+    return apiResponse({ deleted: true, deletedCount: idsToDelete.length });
   }
 
   // 编辑

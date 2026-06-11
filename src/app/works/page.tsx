@@ -9,6 +9,7 @@ import {ProjectStatus} from "@prisma/client";
 import WorkCardServer from "@/components/works/WorkCardServer";
 import WorkCardSkeleton from "@/components/works/WorkCardSkeleton";
 import LogoLoading from "@/components/ui/LogoLoading";
+import FilterSidebarClient from "@/components/works/FilterSidebarClient";
 import WorksToolbar from "./WorksToolbar";
 
 export const metadata: Metadata = {title: "作品库", description: "浏览历届社员创作的所有游戏作品"};
@@ -58,62 +59,64 @@ export default async function WorksPage({searchParams}: PageProps) {
         return ia - ib;
     });
 
+    const filterContent = (
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>类型</h3>
+                <div className="space-y-1.5">
+                    <FilterLink href={buildUrl(params, {type: void 0, page: 1})} active={!params.type} label="全部"/>
+                    {Object.entries(TYPE_LABELS).map(([v, l]) => <FilterLink key={v} href={buildUrl(params, {type: v, page: 1})}
+                                                                             active={params.type === v} label={l}/>)}
+                </div>
+            </div>
+            {years.length > 0 && (
+                <div>
+                    <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>年份</h3>
+                    <div className="space-y-1.5">
+                        <FilterLink href={buildUrl(params, {year: void 0, page: 1})} active={!params.year} label="全部年份"/>
+                        {years.map(y => <FilterLink key={y.developYear}
+                                                    href={buildUrl(params, {year: String(y.developYear), page: 1})}
+                                                    active={params.year === String(y.developYear)}
+                                                    label={String(y.developYear)}/>)}
+                    </div>
+                </div>
+            )}
+            <div>
+                <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>标签</h3>
+                <div className="space-y-3">
+                    {sortedGroups.map((group) => (
+                        <div key={group}>
+                            <h4 className="text-xs font-medium mb-1.5" style={{color: "#999"}}>{group}</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {(tagGroups[group] || []).map(tag => (
+                                    <Link key={tag.slug} href={buildUrl(params, {
+                                        tag: params.tag === tag.slug ? void 0 : tag.slug,
+                                        page: 1
+                                    })}
+                                          className={`text-xs px-2 py-1 rounded transition-all ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1" : "opacity-70 hover:opacity-100"}`}
+                                          style={{backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232"}}>
+                                        {tag.name} ({tag._count.projects})
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold" style={{color: "#25547A"}}>作品库</h1>
-                <p style={{color: "#777"}} className="mt-2">共 {total} 件作品</p>
+                {/* 桌面端统计，移动端统计在 FilterSidebarClient 中 */}
+                <p style={{color: "#777"}} className="mt-2 hidden lg:block">共 {total} 件作品</p>
             </div>
             <div className="flex flex-col lg:flex-row gap-8">
-                {/* 侧栏 — 立即渲染 */}
-                <aside className="lg:w-56 shrink-0">
-                    <div className="space-y-6">
-                        <div>
-                            <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>类型</h3>
-                            <div className="space-y-1.5">
-                                <FilterLink href={buildUrl(params, {type: void 0, page: 1})} active={!params.type} label="全部"/>
-                                {Object.entries(TYPE_LABELS).map(([v, l]) => <FilterLink key={v} href={buildUrl(params, {type: v, page: 1})}
-                                                                                         active={params.type === v} label={l}/>)}
-                            </div>
-                        </div>
-                        {years.length > 0 && (
-                            <div>
-                                <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>年份</h3>
-                                <div className="space-y-1.5">
-                                    <FilterLink href={buildUrl(params, {year: void 0, page: 1})} active={!params.year} label="全部年份"/>
-                                    {years.map(y => <FilterLink key={y.developYear}
-                                                                href={buildUrl(params, {year: String(y.developYear), page: 1})}
-                                                                active={params.year === String(y.developYear)}
-                                                                label={String(y.developYear)}/>)}
-                                </div>
-                            </div>
-                        )}
-                        <div>
-                            <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>标签</h3>
-                            {(
-                                <div className="space-y-3">
-                                    {sortedGroups.map((group) => (
-                                        <div key={group}>
-                                            <h4 className="text-xs font-medium mb-1.5" style={{color: "#999"}}>{group}</h4>
-                                            <div className="flex flex-wrap gap-2">
-                                                {(tagGroups[group] || []).map(tag => (
-                                                    <Link key={tag.slug} href={buildUrl(params, {
-                                                        tag: params.tag === tag.slug ? void 0 : tag.slug,
-                                                        page: 1
-                                                    })}
-                                                          className={`text-xs px-2 py-1 rounded transition-all ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1" : "opacity-70 hover:opacity-100"}`}
-                                                          style={{backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232"}}>
-                                                        {tag.name} ({tag._count.projects})
-                                                    </Link>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </aside>
+                <FilterSidebarClient total={total}>
+                    {filterContent}
+                </FilterSidebarClient>
 
                 {/* 主区域 — 工具栏 + 作品网格 */}
                 <div className="flex-1">

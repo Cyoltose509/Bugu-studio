@@ -268,7 +268,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     await notifyNewProject(id, project.title, submitterName);
   }
 
-  // ── 清除缓存 ──
+  // ── 清除缓存（使用更新后的 slug，防止修改 slug 后缓存未命中）──
   await Promise.all([
     invalidateCache("members:all"),
     invalidateCache("api:projects:"),
@@ -277,12 +277,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     invalidateCache("works:count:"),
     invalidateCache("admin:projects:"),
     invalidateCache("admin:projectCount"),
-    // ⭐ 清除作品详情页缓存（/works/[slug] 使用的是 project:detail:${slug}）
-    invalidateCache(`project:detail:${project.slug}`),
+    invalidateCache(`project:detail:${updated.slug}`),
   ]);
   revalidatePath("/members");
   revalidatePath("/works");
-  revalidatePath(`/works/${project.slug}`);
+  revalidatePath(`/works/${updated.slug}`);
   revalidatePath("/admin/projects");
   return apiResponse(updated);
 }

@@ -21,9 +21,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen">
       <AdminSidebar userEmail={session.user.email!} />
 
-      {/* 主内容 */}
+      {/* 主内容 — pt-14 用于避免移动端顶部导航遮挡 */}
       <div className="flex-1 overflow-auto" style={{ background: "#F0F5F9" }}>
-        <div className="p-4 lg:p-6 pt-14 lg:pt-6">{children}</div>
+        <div className="p-4 lg:p-6 pt-16 lg:pt-6">{children}</div>
       </div>
     </div>
   );

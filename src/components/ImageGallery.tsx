@@ -72,8 +72,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
     const screenshotItems = allImages.filter((i) => i.kind === "screenshot");
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[4fr_1fr] gap-4 lg:gap-6 mb-8">
-
+        <div className="mb-8 space-y-6">
             {/* ── 封面（大图） ── */}
             {coverItem && (
                 <div
@@ -92,7 +91,6 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                         alt={coverItem.alt}
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    {/* 悬浮提示 */}
                     <div
                         className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                         🔍 查看大图
@@ -100,11 +98,10 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                 </div>
             )}
 
-            {/* ── 截图缩略图列表 ── */}
+            {/* ── 截图缩略图：桌面纵向2列，手机3张一排横向 ── */}
             {screenshotItems.length > 0 && (
                 <div>
-                    {/*<h2 className="text-xl font-semibold mb-4" style={{color: "#25547A"}}>游戏截图</h2>*/}
-                    <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-3 lg:grid-cols-2 gap-3">
                         {screenshotItems.map((img, i) => {
                             const globalIdx = coverItem ? i + 1 : i;
                             return (

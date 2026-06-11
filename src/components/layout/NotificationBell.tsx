@@ -98,6 +98,8 @@ export default function NotificationBell() {
       const target = item.relatedId;
       if (target) window.location.href = `/activities/${target}`;
       else window.location.href = `/activities`;
+    } else if (item.relatedType === "User") {
+      window.location.href = `/admin/users`;
     } else if (item.relatedType === "JamTeam") {
       const target = item.relatedId;
       if (target) {
