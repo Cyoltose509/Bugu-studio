@@ -15,7 +15,7 @@ import { getClientIp, checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { apiResponse, apiError, generateSlug } from "@/lib/utils";
 import { invalidateCache } from "@/lib/db/cache";
-import { createNotification, notifyNewProject } from "@/lib/services/notification";
+import { createNotification, notifyNewProject, notifyProjectEdit } from "@/lib/services/notification";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
@@ -186,6 +186,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     && project.submitterId === session.user.id
     && !isReviewerOrAbove(session.user.role as any); // 管理员/审核员编辑时不触发
 
+  // ── PUBLISHED 项目被提交者编辑 → 自动改为 PENDING（回到待审核） ──
+  const isReEdit = project.status === ProjectStatus.PUBLISHED
+    && project.submitterId === session.user.id
+    && !isReviewerOrAbove(session.user.role as any); // 管理员/审核员编辑时不触发
+
   const { tagIds, memberRoles, links, customTags, images, ...projectData } = parsed.data;
 
   // 处理自定义标签：upsert 新标签并合并到 tagIds
@@ -210,7 +215,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     where: { id },
     data: {
       ...projectData,
-      ...(isResubmit && { status: ProjectStatus.PENDING }),
+      ...((isResubmit || isReEdit) && { status: ProjectStatus.PENDING }),
       ...(finalTagIds !== undefined && {
         tags: {
           deleteMany: {},
@@ -266,6 +271,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (isResubmit) {
     const submitterName = session.user.name || "未知用户";
     await notifyNewProject(id, project.title, submitterName);
+  }
+
+  // ── 已发布作品编辑后通知提交者和管理员 ──
+  if (isReEdit) {
+    const submitterName = session.user.name || "未知用户";
+    await notifyProjectEdit(id, updated.title, session.user.id, submitterName);
   }
 
   // ── 清除缓存（使用更新后的 slug，防止修改 slug 后缓存未命中）──

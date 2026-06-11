@@ -52,7 +52,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         where: { userId },
         select: {
           id: true, displayName: true, bio: true, grade: true,
-          graduateYear: true, skills: true, position: true,
+          graduated: true, realName: true, joinYear: true,
+          college: true, major: true, workLocation: true, workPosition: true,
+          skills: true, position: true,
           location: true, phone: true, wechat: true, qq: true,
           isActive: true,
           socialLinks: { orderBy: { sortOrder: "asc" } },
@@ -215,20 +217,30 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               <div className="flex items-center gap-1.5" style={{ color: "#333" }}>
                 {member.displayName}
                 {member.position && member.position !== "MEMBER" && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#25547A", color: "#fff" }}>
-                    {member.position === "PRESIDENT" ? "社长" : member.position === "VICE_PRESIDENT" ? "副社长" : member.position}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={member.position === "FOUNDER" ? { background: "#FFE384", color: "#5C4B00" } : { background: "#25547A", color: "#fff" }}>
+                    {member.position === "FOUNDER" ? "创始人" : member.position === "PRESIDENT" ? "社长" : member.position === "VICE_PRESIDENT" ? "副社长" : member.position}
                   </span>
                 )}
               </div>
             </div>
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>年级</div>
-              <div style={{ color: "#333" }}>{member.grade || "—"}</div>
+              <div style={{ color: "#333" }}>{member.grade != null ? `${member.grade}级` : "—"}</div>
+            </div>
+            <div>
+              <div className="text-xs mb-0.5" style={{ color: "#999" }}>入社年份</div>
+              <div style={{ color: "#333" }}>{member.joinYear != null ? `${member.joinYear}年` : "—"}</div>
             </div>
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>状态</div>
               <div style={member.isActive ? { color: "#88C232" } : { color: "#777" }}>
-                {member.isActive ? "活跃成员" : member.graduateYear ? `已毕业 (${member.graduateYear}届)` : "已离社"}
+                {member.isActive ? "活跃成员" : member.graduated ? "已毕业" : "已离社"}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs mb-0.5" style={{ color: "#999" }}>毕业状态</div>
+              <div style={member.graduated ? { color: "#E38043" } : { color: "#3388BB" }}>
+                {member.graduated ? "已毕业" : "在读"}
               </div>
             </div>
           </div>
@@ -244,6 +256,43 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 {member.qq && <ContactRow label="QQ" value={member.qq} />}
               </div>
             </div>
+          )}
+
+          {/* 真实姓名 — 敏感项，仅成员+可见 */}
+          {canSeeSensitive && member.realName && (
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
+              <div className="text-xs mb-2 flex items-center gap-1" style={{ color: "#999" }}>
+                🔒 真实姓名（仅成员可见）
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm" style={{ color: "#333" }}>{member.realName}</span>
+                <span className="text-[10px] px-1 py-0.5 rounded" style={{ background: "#FDE8E8", color: "#C62828" }}>敏感</span>
+              </div>
+            </div>
+          )}
+
+          {/* 在校信息/工作信息 — 敏感项，仅成员+可见 */}
+          {canSeeSensitive && (
+            <>
+              {!member.graduated && (member.college || member.major) && (
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
+                  <div className="text-xs mb-2" style={{ color: "#999" }}>在校信息（仅成员可见）</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    {member.college && <ContactRow label="学院" value={member.college} />}
+                    {member.major && <ContactRow label="专业" value={member.major} />}
+                  </div>
+                </div>
+              )}
+              {member.graduated && (member.workLocation || member.workPosition) && (
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
+                  <div className="text-xs mb-2" style={{ color: "#999" }}>工作信息（仅成员可见）</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    {member.workLocation && <ContactRow label="工作所在地" value={member.workLocation} />}
+                    {member.workPosition && <ContactRow label="工作岗位" value={member.workPosition} />}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {member.bio && (

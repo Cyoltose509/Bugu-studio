@@ -16,13 +16,20 @@ const schema = z.object({
   name: z.string().min(1, "名称不能为空").max(50),
   bio: z.string().max(2000).optional().or(z.literal("")),
   memberBio: z.string().max(2000).optional().or(z.literal("")),
-  grade: z.string().max(20).optional().or(z.literal("")),
+  grade: z.coerce.number().int().min(2000).max(2100).optional(),
   skills: z.string().max(500).optional().or(z.literal("")),
   socialLinks: z.string().optional().or(z.literal("")),
   location: z.string().max(100).optional().or(z.literal("")),
   phone: z.string().max(30).optional().or(z.literal("")),
   wechat: z.string().max(50).optional().or(z.literal("")),
   qq: z.string().max(30).optional().or(z.literal("")),
+  graduated: z.boolean().optional(),
+  realName: z.string().max(50).optional().or(z.literal("")),
+  joinYear: z.coerce.number().int().min(2000).max(2100).optional(),
+  college: z.string().max(100).optional().or(z.literal("")),
+  major: z.string().max(100).optional().or(z.literal("")),
+  workLocation: z.string().max(100).optional().or(z.literal("")),
+  workPosition: z.string().max(100).optional().or(z.literal("")),
 });
 
 export async function saveProfile(formData: FormData) {
@@ -35,13 +42,20 @@ export async function saveProfile(formData: FormData) {
     name: (formData.get("name") as string) || "",
     bio: (formData.get("bio") as string) || "",
     memberBio: (formData.get("memberBio") as string) || "",
-    grade: (formData.get("grade") as string) || "",
+    grade: formData.get("grade") ? Number(formData.get("grade")) : undefined,
     skills: (formData.get("skills") as string) || "",
     socialLinks: (formData.get("socialLinks") as string) || "",
     location: (formData.get("location") as string) || "",
     phone: (formData.get("phone") as string) || "",
     wechat: (formData.get("wechat") as string) || "",
     qq: (formData.get("qq") as string) || "",
+    graduated: formData.get("graduated") === "true",
+    realName: (formData.get("realName") as string) || null,
+    joinYear: formData.get("joinYear") ? Number(formData.get("joinYear")) : undefined,
+    college: (formData.get("college") as string) || null,
+    major: (formData.get("major") as string) || null,
+    workLocation: (formData.get("workLocation") as string) || null,
+    workPosition: (formData.get("workPosition") as string) || null,
   };
 
   const result = schema.safeParse(raw);
@@ -49,7 +63,7 @@ export async function saveProfile(formData: FormData) {
     return { error: result.error.errors[0].message };
   }
 
-  const { name, bio, memberBio, grade, skills, socialLinks: socialLinksJson, location, phone, wechat, qq } = result.data;
+  const { name, bio, memberBio, grade, skills, socialLinks: socialLinksJson, location, phone, wechat, qq, graduated, realName, joinYear, college, major, workLocation, workPosition } = result.data;
 
   // 解析链接 JSON
   let socialLinks: { label: string; url: string }[] = [];
@@ -94,7 +108,7 @@ export async function saveProfile(formData: FormData) {
       data: {
         ...(name !== dbUser?.name && { displayName: name }),
         ...(memberBio !== undefined && { bio: memberBio || null }),
-        ...(grade !== undefined && { grade: grade || null }),
+        ...(grade !== undefined && { grade }),
         ...(skills !== undefined && {
           skills: skills
             ? skills.split(",").map((s: string) => s.trim()).filter(Boolean)
@@ -104,6 +118,13 @@ export async function saveProfile(formData: FormData) {
         ...(phone !== undefined && { phone: phone || null }),
         ...(wechat !== undefined && { wechat: wechat || null }),
         ...(qq !== undefined && { qq: qq || null }),
+        ...(graduated !== undefined && { graduated }),
+        ...(realName !== undefined && { realName: realName || null }),
+        ...(joinYear !== undefined && { joinYear }),
+        ...(college !== undefined && { college: college || null }),
+        ...(major !== undefined && { major: major || null }),
+        ...(workLocation !== undefined && { workLocation: workLocation || null }),
+        ...(workPosition !== undefined && { workPosition: workPosition || null }),
         socialLinks: {
           create: socialLinks.map((l, i) => ({
             label: l.label,
@@ -213,7 +234,6 @@ export async function redeemInviteCode(inviteCode: string) {
         data: {
           userId: session.user.id,
           displayName: session.user.name ?? "新成员",
-          joinYear: new Date().getFullYear(),
         },
       });
     }

@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     // ── 通知所有管理员有新用户注册 ──
     const admins = await prisma.user.findMany({
-      where: { role: "ADMIN" },
+      where: { role: "ADMIN", member: { isActive: true } },
       select: { id: true },
     });
     for (const admin of admins) {

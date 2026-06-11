@@ -68,7 +68,7 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
     const { prisma } = await import("@/lib/db/prisma");
 
     const [admins, notifMembers] = await Promise.all([
-      prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } }),
+      prisma.user.findMany({ where: { role: "ADMIN", member: { isActive: true } }, select: { id: true } }),
       prisma.clubMember.findMany({
         where: { notifyNewProjects: true },
         select: { userId: true },
@@ -113,5 +113,55 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
     }
   } catch (err) {
     console.error("[Notification] 作品上新通知失败:", err);
+  }
+}
+
+/**
+ * 作品编辑后通知（已发布作品被编辑 → 回到待审核）
+ * - 通知提交者：你的作品已更新，等待重新审核
+ * - 通知所有在线管理员（排除已退役）
+ */
+export async function notifyProjectEdit(projectId: string, projectTitle: string, submitterId: string, submitterName: string) {
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN", member: { isActive: true } },
+      select: { id: true },
+    });
+
+    const items: Array<{
+      userId: string; type: string; title: string;
+      content: string; relatedId: string; relatedType: string;
+    }> = [
+      {
+        userId: submitterId,
+        type: "PROJECT_UPDATE",
+        title: "作品已更新，等待重新审核",
+        content: `你的作品《${projectTitle}》已更新，等待管理员重新审核`,
+        relatedId: projectId,
+        relatedType: "Project",
+      },
+    ];
+
+    for (const a of admins) {
+      items.push({
+        userId: a.id,
+        type: "PROJECT_UPDATE",
+        title: "作品更新待审",
+        content: `${submitterName} 更新了作品《${projectTitle}》，需要重新审核`,
+        relatedId: projectId,
+        relatedType: "Project",
+      });
+    }
+
+    if (items.length > 0) {
+      await prisma.notification.createMany({
+        data: items,
+        skipDuplicates: true,
+      });
+    }
+  } catch (err) {
+    console.error("[Notification] 作品编辑通知失败:", err);
   }
 }

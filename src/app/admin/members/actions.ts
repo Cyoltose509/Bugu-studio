@@ -25,7 +25,8 @@ export async function deleteMember(id: string) {
 export async function updateMemberDetails(id: string, formData: FormData) {
   await requireAdmin();
 
-  const grade = formData.get("grade") as string;
+  const gradeRaw = formData.get("grade") as string;
+  const grade = gradeRaw ? parseInt(gradeRaw, 10) : null;
   const position = formData.get("position") as string;
   const isActiveStr = formData.get("isActive") as string;
 
@@ -40,7 +41,7 @@ export async function updateMemberDetails(id: string, formData: FormData) {
   await prisma.clubMember.update({
     where: { id },
     data: {
-      ...(grade !== undefined && { grade: grade || null }),
+      ...(grade !== null && { grade }),
       ...(isValidPosition && { position }),
       ...(isActiveStr !== null && { isActive: isActiveStr === "true" }),
     },

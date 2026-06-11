@@ -223,13 +223,18 @@ model ClubMember {
   displayName       String // 展示名
   avatar            String? // 头像 URL（R2）
   bio               String?  @db.Text
-  grade             String? // 年级，如 "2021级"
-  joinYear          Int? // 入社年份（保留兼容，新数据不再使用）
-  graduateYear      Int? // 毕业年份（null = 在读）
+  grade             Int? // 年级（入学年份，如2021=2021级）
+  joinYear          Int? // 入社年份
+  realName          String? // 真名（敏感信息，仅成员可见）
+  college           String? // 就读学院（敏感信息，仅成员可见，未毕业时填写）
+  major             String? // 专业（敏感信息，仅成员可见，未毕业时填写）
+  workLocation      String? // 工作所在地（敏感信息，仅成员可见，已毕业时填写）
+  workPosition      String? // 工作岗位（敏感信息，仅成员可见，已毕业时填写）
+  graduated         Boolean  @default(false) // 是否已毕业
   skills            String[] @default([]) // 职能标签
   isActive          Boolean  @default(true) // 是否在读/活跃
   sortOrder         Int      @default(0)
-  position          String   @default("MEMBER") // MEMBER | PRESIDENT | VICE_PRESIDENT
+  position          String   @default("MEMBER") // MEMBER | PRESIDENT | VICE_PRESIDENT | FOUNDER
   location          String? // 所在地（省份/国家）
   phone             String? // 电话（敏感项，仅成员+可见）
   wechat            String? // 微信（敏感项，仅成员+可见）

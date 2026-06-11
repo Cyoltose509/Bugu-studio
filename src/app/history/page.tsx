@@ -23,7 +23,7 @@ export default async function HistoryPage() {
             3600),
         cachedQuery("history:activityYears", () =>
                 prisma.activity.findMany({
-                    where: {status: ActivityStatus.PUBLISHED, type: {not: "MEETING"}},
+                    where: {status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, type: {not: "MEETING"}},
                     select: {startTime: true},
                 }),
             3600),
@@ -33,8 +33,8 @@ export default async function HistoryPage() {
     const memberYearSet = new Set(
         memberGradeRows
             .filter((m) => m.grade != null)
-            .map((m) => parseInt(m.grade!, 10))
-            .filter((n) => !isNaN(n) && n >= 2000 && n <= currentYear)
+            .map((m) => m.grade!)
+            .filter((n) => n >= 2000 && n <= currentYear)
     );
 
     // 从 activity 的 startTime 提取年份
@@ -79,7 +79,7 @@ export default async function HistoryPage() {
         }), 3600),
       cachedQuery('history:allMembers', () =>
         prisma.clubMember.findMany({
-          select: { id: true, userId: true, displayName: true, avatar: true, grade: true, user: { select: { image: true } }, _count: { select: { projectMembers: true } } }
+          select: { id: true, userId: true, displayName: true, avatar: true, grade: true, joinYear: true, user: { select: { image: true } }, _count: { select: { projectMembers: true } } }
         }), 3600),
       cachedQuery('history:allEvents', () =>
         prisma.yearEvent.findMany({
@@ -88,8 +88,8 @@ export default async function HistoryPage() {
         }), 3600),
       cachedQuery('history:allActivities', () =>
         prisma.activity.findMany({
-          where: { status: ActivityStatus.PUBLISHED },
-          select: { id: true, title: true, type: true, startTime: true, endTime: true, summary: true, description: true, coverImage: true },
+          where: { status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] } },
+          select: { id: true, title: true, type: true, status: true, startTime: true, endTime: true, summary: true, description: true, coverImage: true },
           orderBy: { startTime: "asc" }
         }), 3600),
       // 活跃度计算 — 比赛参与（JamTeamMember → JamTeam → Activity）
@@ -121,16 +121,21 @@ export default async function HistoryPage() {
       }
     }
 
-    const membersByYear = new Map<number, any[]>();
+    // 从 joinYear 分组成员（用于"新血液"）
+    const newBloodByYear = new Map<number, any[]>();
     for (const m of allMembers) {
-      const grade = m.grade;
-      if (grade) {
-        const match = grade.match(/^(\d{4})/);
-        if (match) {
-          const y = parseInt(match[1]);
-          if (!membersByYear.has(y)) membersByYear.set(y, []);
-          membersByYear.get(y)!.push(m);
-        }
+      if (m.joinYear) {
+        if (!newBloodByYear.has(m.joinYear)) newBloodByYear.set(m.joinYear, []);
+        newBloodByYear.get(m.joinYear)!.push(m);
+      }
+    }
+
+    // 从 grade 分组成员（用于显示年级信息）
+    const membersByGrade = new Map<number, any[]>();
+    for (const m of allMembers) {
+      if (m.grade) {
+        if (!membersByGrade.has(m.grade)) membersByGrade.set(m.grade, []);
+        membersByGrade.get(m.grade)!.push(m);
       }
     }
 
@@ -143,10 +148,10 @@ export default async function HistoryPage() {
 
     for (const year of allYears) {
       const projects = projectByYear.get(year) || [];
-      const members = membersByYear.get(year) || [];
+      const newBlood = newBloodByYear.get(year) || [];
       const events = allEvents.filter(e => e.year === year);
       const activities = activitiesByYear.get(year) || [];
-      if (projects.length === 0 && members.length === 0 && events.length === 0 && activities.length === 0) continue;
+      if (newBlood.length === 0 && events.length === 0 && activities.length === 0 && projects.length === 0) continue;
       
       // ─── 活跃度计算（跨年统计 — 统计所有成员在该年的贡献） ───
       // 作品制作：该年作品中的 memberId 计数
@@ -218,7 +223,7 @@ export default async function HistoryPage() {
         .filter(Boolean)
         .sort((a: any, b: any) => b.score - a.score);
       
-      yearDetails.push({ year, projects, members, events, activities, activeMembers });
+      yearDetails.push({ year, projects, members: newBlood, events, activities, activeMembers });
     }
 
     return (

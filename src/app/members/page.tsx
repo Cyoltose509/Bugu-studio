@@ -38,9 +38,9 @@ export default async function MembersPage() {
       ),
     }));
   }, 300);
-  // 按 grade（如 "2024级"）分组，无 grade 时按 joinYear 分组
+  // 按 grade（如 2024 → "2024级"）分组，无 grade 时按 joinYear 分组
   const grouped = members.reduce<Record<string, typeof members>>((acc, m: any) => {
-    const key = m.grade || `${m.joinYear} 年入社`;
+    const key = m.grade ? `${m.grade}级` : (m.joinYear ? `${m.joinYear} 年入社` : "未知");
     (acc[key] ??= []).push(m);
     return acc;
   }, {});
@@ -51,11 +51,13 @@ export default async function MembersPage() {
     return yB - yA;
   });
 
+  const activeCount = members.filter((m: any) => m.isActive).length;
+
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
       <div className="mb-10">
         <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>成员列表</h1>
-        <p className="mt-2" style={{ color: "#777" }}>共 {members.length} 位历届成员</p>
+        <p className="mt-2" style={{ color: "#777" }}>共 {members.length} 位历届成员，{activeCount} 位现任成员</p>
       </div>
       <MembersList
         members={members as any}

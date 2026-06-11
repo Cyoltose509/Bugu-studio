@@ -2,11 +2,12 @@
 
 import { useRef, useCallback, useState } from "react";
 import { toPng } from "html-to-image";
+import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
-  id: string; displayName: string; avatar: string | null; grade: string | null;
+  id: string; displayName: string; avatar: string | null; grade: number | null; joinYear: number | null;
   user?: { image: string | null } | null;
 }
 interface Project {
@@ -20,7 +21,7 @@ interface EventItem {
   images?: { id: string; url: string; altText?: string | null }[];
 }
 interface Activity {
-  id: string; title: string; type: string; startTime: Date | string; coverImage: string | null;
+  id: string; title: string; type: string; status?: string | null; startTime: Date | string; coverImage: string | null;
   description: string | null; summary: string | null;
 }
 interface ActiveMember extends Member {
@@ -221,7 +222,7 @@ const Q: Record<string, React.CSSProperties> = {
   tlDate: { fontSize: 11, color: GOLD, fontFamily: "Georgia,serif", fontStyle: "italic" },
   tlBody: { fontSize: 12, color: INK3, lineHeight: 1.8, marginTop: 4, whiteSpace: "pre-wrap" as const },
   tlImages: { display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" as const },
-  tlImgWrap: { width: 100, height: 68, borderRadius: 2, overflow: "hidden", border: `1px solid ${LINEL}` },
+  tlImgWrap: { position: "relative" as const, width: 120, height: 80, borderRadius: 2, overflow: "hidden", border: `1px solid ${LINEL}`, cursor: "zoom-in", flexShrink: 0 },
   // 底栏
   colophon: { textAlign: "center" as const, fontSize: 11, color: LINE, lineHeight: 1.8, fontFamily: "system-ui,'Microsoft YaHei',sans-serif", letterSpacing: 3 },
   colophonUrl: { fontSize: 9, letterSpacing: 1, color: LINEL, fontFamily: "Georgia,serif" },
@@ -265,6 +266,7 @@ function StatBox({ num, label }: { num: number; label: string }) {
 export default function YearNewspaper({ year, members, projects, events, activities, activeMembers, startYear }: Props) {
   const paperRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const yearIndex = year - startYear + 1;
 
   const topNarrative = generateMemberHighlight(activeMembers);
@@ -295,6 +297,7 @@ export default function YearNewspaper({ year, members, projects, events, activit
   if (!hasContent) return null;
 
   return (
+    <>
     <article style={Q.outer}>
       {/* 保存按钮 */}
       <div style={Q.saveRow}>
@@ -375,15 +378,21 @@ export default function YearNewspaper({ year, members, projects, events, activit
               {/* 年度代表作（大头） */}
               {featuredWork && (
                 <div style={Q.featuredWrap}>
-                  <div style={Q.featuredImgArea}>
-                    {featuredWork.coverImage ? (
-                      <SafeImage src={featuredWork.coverImage} alt={featuredWork.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div style={Q.featuredImgPH}><span style={{ fontSize: 48, opacity: 0.4 }}>🎮</span></div>
-                    )}
-                  </div>
+                  <Link href={`/works/${featuredWork.slug}`} style={{ display: "block" }}>
+                    <div style={Q.featuredImgArea}>
+                      {featuredWork.coverImage ? (
+                        <SafeImage src={featuredWork.coverImage} alt={featuredWork.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div style={Q.featuredImgPH}><span style={{ fontSize: 48, opacity: 0.4 }}>🎮</span></div>
+                      )}
+                    </div>
+                  </Link>
                   <div style={Q.featuredInfo}>
-                    <div style={Q.featuredTitle}>{featuredWork.title}</div>
+                    <div style={Q.featuredTitle}>
+                      <Link href={`/works/${featuredWork.slug}`} style={{ color: "inherit", textDecoration: "none" }}>
+                        {featuredWork.title}
+                      </Link>
+                    </div>
                     {featuredWork.subtitle && <div style={Q.featuredSubtitle}>{featuredWork.subtitle}</div>}
                     <div style={Q.featuredMeta}>
                       <span style={Q.featuredTypeTag}>{TYPE_DESC[featuredWork.type] || featuredWork.type}</span>
@@ -408,16 +417,20 @@ export default function YearNewspaper({ year, members, projects, events, activit
                 <div style={Q.worksSpread}>
                   {otherWorks.map((p) => (
                     <div key={p.id} style={Q.workItem}>
-                      <div style={Q.workImgWrapSm}>
-                        {p.coverImage ? (
-                          <SafeImage src={p.coverImage} alt={p.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <div style={Q.workImgPH}><span style={Q.workPHIcon}>🎮</span></div>
-                        )}
-                      </div>
+                      <Link href={`/works/${p.slug}`} style={{ display: "block" }}>
+                        <div style={Q.workImgWrapSm}>
+                          {p.coverImage ? (
+                            <SafeImage src={p.coverImage} alt={p.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div style={Q.workImgPH}><span style={Q.workPHIcon}>🎮</span></div>
+                          )}
+                        </div>
+                      </Link>
                       <div style={Q.workCaption}>
                         <div style={Q.workName}>
-                          {p.title}
+                          <Link href={`/works/${p.slug}`} style={{ color: "inherit", textDecoration: "none" }}>
+                            {p.title}
+                          </Link>
                           <span style={Q.workType}>{TYPE_DESC[p.type] || p.type}</span>
                         </div>
                         {p.tags && p.tags.length > 0 && (
@@ -449,13 +462,15 @@ export default function YearNewspaper({ year, members, projects, events, activit
                   const avatarUrl = m.avatar || m.user?.image;
                   return (
                     <div key={m.id} style={Q.rosterItem}>
-                      <div style={Q.rosterAvatar}>
-                        {avatarUrl ? (
-                          <SafeImage src={avatarUrl} alt={m.displayName} className="w-full h-full object-cover" />
-                        ) : (
-                          <span style={Q.rosterInitial}>{m.displayName[0]}</span>
-                        )}
-                      </div>
+                      <Link href={`/members/${m.id}`} style={{ display: "block", flexShrink: 0 }}>
+                        <div style={Q.rosterAvatar}>
+                          {avatarUrl ? (
+                            <SafeImage src={avatarUrl} alt={m.displayName} className="w-full h-full object-cover" />
+                          ) : (
+                            <span style={Q.rosterInitial}>{m.displayName[0]}</span>
+                          )}
+                        </div>
+                      </Link>
                       <span style={Q.rosterName}>{m.displayName}</span>
                     </div>
                   );
@@ -511,7 +526,10 @@ export default function YearNewspaper({ year, members, projects, events, activit
                       <div key={a.id} style={Q.activityItem}>
                         <div style={Q.activityHeader}>
                           <span style={activityTypeTagStyle(a.type)}>{ACT_LABELS[a.type] || a.type}</span>
-                          <span style={Q.activityTitle}>{a.title}</span>
+                          <Link href={`/activities/${a.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                            <span style={Q.activityTitle}>{a.title}</span>
+                          </Link>
+                          {a.status === "ARCHIVED" && <span style={{ fontSize: 10, color: INK3, fontStyle: "italic" }}>(已归档)</span>}
                           <span style={Q.activityDate}>{d.getFullYear()}.{String(d.getMonth()+1).padStart(2,"0")}.{String(d.getDate()).padStart(2,"0")}</span>
                         </div>
                         {desc && <div style={Q.activityDesc}>{desc}</div>}
@@ -546,9 +564,15 @@ export default function YearNewspaper({ year, members, projects, events, activit
                         {e.images && e.images.length > 0 && (
                           <div style={Q.tlImages}>
                             {e.images.map((img) => (
-                              <div key={img.id} style={Q.tlImgWrap}>
-                                <SafeImage src={img.url} alt={img.altText || e.title} className="object-cover w-full h-full" />
-                              </div>
+                              <button
+                                key={img.id}
+                                type="button"
+                                style={Q.tlImgWrap}
+                                onClick={() => setLightboxSrc(img.url)}
+                                aria-label="查看大图"
+                              >
+                                <SafeImage src={img.url} alt={img.altText || e.title} fill style={{ objectFit: "contain" }} />
+                              </button>
                             ))}
                           </div>
                         )}
@@ -570,5 +594,11 @@ export default function YearNewspaper({ year, members, projects, events, activit
         </div>
       </div>
     </article>
-  );
-}
+      {lightboxSrc && (
+        <div onClick={() => setLightboxSrc(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out" }}>
+          <img src={lightboxSrc} style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain" }} alt="" />
+        </div>
+      )}
+    </>
+    );
+  }

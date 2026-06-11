@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
           avatar: true,
           grade: true,
           joinYear: true,
-          graduateYear: true,
           bio: true,
           skills: true,
           socialLinks: {

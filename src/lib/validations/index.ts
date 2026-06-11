@@ -100,9 +100,8 @@ export const reviewSchema = z.object({
 export const memberUpdateSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
   bio: z.string().max(2000).optional(),
-  grade: z.string().max(20).optional(),
+  grade: z.number().int().min(2000).max(2100).optional(),
   joinYear: z.number().int().min(2000).max(2100).optional(),
-  graduateYear: z.number().int().min(2000).max(2100).nullable().optional(),
   skills: z.array(z.string().max(30)).max(20).optional(),
 });
 

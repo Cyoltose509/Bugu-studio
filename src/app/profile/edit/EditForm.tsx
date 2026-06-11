@@ -13,13 +13,20 @@ type MemberSnippet = {
     id: string;
     displayName: string;
     bio: string | null;
-    grade: string | null;
+    grade: number | null;
     skills: string[];
     location: string | null;
     phone: string | null;
     wechat: string | null;
     qq: string | null;
     socialLinks: { id: string; label: string; url: string; sortOrder: number }[];
+    graduated: boolean;
+    realName: string | null;
+    joinYear: number | null;
+    college: string | null;
+    major: string | null;
+    workLocation: string | null;
+    workPosition: string | null;
 };
 type CooldownInfo = { canEdit: boolean; remainingDays: number };
 
@@ -93,11 +100,18 @@ export default function EditForm({
     // 表单值
     const [nameValue, setNameValue] = useState(originalName);
     const [bioValue, setBioValue] = useState(originalBio);
-    const [gradeValue, setGradeValue] = useState(member?.grade ?? "");
+    const [gradeValue, setGradeValue] = useState<number | null>(member?.grade ?? null);
     const [locationValue, setLocationValue] = useState(member?.location ?? "");
     const [phoneValue, setPhoneValue] = useState(member?.phone ?? "");
     const [wechatValue, setWechatValue] = useState(member?.wechat ?? "");
     const [qqValue, setQqValue] = useState(member?.qq ?? "");
+    const [graduatedVal, setGraduatedVal] = useState(member?.graduated ?? false);
+    const [realNameVal, setRealNameVal] = useState(member?.realName ?? "");
+    const [joinYearVal, setJoinYearVal] = useState(member?.joinYear ?? null);
+    const [collegeVal, setCollegeVal] = useState(member?.college ?? "");
+    const [majorVal, setMajorVal] = useState(member?.major ?? "");
+    const [workLocationVal, setWorkLocationVal] = useState(member?.workLocation ?? "");
+    const [workPositionVal, setWorkPositionVal] = useState(member?.workPosition ?? "");
 
     // 自定义链接
     const [socialLinks, setSocialLinks] = useState<LinkEntry[]>(originalLinks);
@@ -113,7 +127,14 @@ export default function EditForm({
         (member && phoneValue !== (member.phone ?? "")) ||
         (member && wechatValue !== (member.wechat ?? "")) ||
         (member && qqValue !== (member.qq ?? "")) ||
-        (member && gradeValue !== (member.grade ?? "")) ||
+        (member && gradeValue !== (member.grade ?? null)) ||
+        (member && graduatedVal !== (member.graduated ?? false)) ||
+        (member && realNameVal !== (member.realName ?? "")) ||
+        (member && joinYearVal !== (member.joinYear ?? null)) ||
+        (member && collegeVal !== (member.college ?? "")) ||
+        (member && majorVal !== (member.major ?? "")) ||
+        (member && workLocationVal !== (member.workLocation ?? "")) ||
+        (member && workPositionVal !== (member.workPosition ?? "")) ||
         (member && JSON.stringify(skills) !== JSON.stringify(originalSkills)) ||
         JSON.stringify(socialLinks.map(({label, url}) => ({label, url}))) !==
         JSON.stringify(originalLinks.map(({label, url}) => ({label, url})));
@@ -224,7 +245,14 @@ export default function EditForm({
                     fd.set("bio", fd.get("bio") ?? originalBio);
                     fd.set("skills", skills.join(","));
                     fd.set("socialLinks", JSON.stringify(socialLinks));
-                    fd.set("grade", gradeValue);
+                    fd.set("grade", gradeValue != null ? String(gradeValue) : "");
+                    fd.set("graduated", graduatedVal.toString());
+                    fd.set("realName", realNameVal);
+                    fd.set("joinYear", joinYearVal != null ? String(joinYearVal) : "");
+                    fd.set("college", collegeVal);
+                    fd.set("major", majorVal);
+                    fd.set("workLocation", workLocationVal);
+                    fd.set("workPosition", workPositionVal);
                     if (member) {
                         fd.set("location", locationValue);
                         fd.set("phone", phoneValue);
@@ -409,30 +437,176 @@ export default function EditForm({
                             />
                         </div>
 
+                        {/* 毕业情况、真名、入社年份 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm mb-1.5" style={{color: "#555"}}>
+                                    毕业情况
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={graduatedVal}
+                                        onChange={(e) => setGraduatedVal(e.target.checked)}
+                                        className="w-4 h-4 rounded"
+                                        style={{accentColor: "#3388BB"}}
+                                    />
+                                    <span className="text-sm" style={{color: "#333"}}>已毕业</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="realName">
+                                    真名
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                          style={{background: "#FDE8E8", color: "#C62828"}}
+                                          title="仅成员可见">敏感</span>
+                                </label>
+                                <input
+                                    id="realName"
+                                    value={realNameVal}
+                                    onChange={(e) => setRealNameVal(e.target.value)}
+                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    placeholder="真实姓名"
+                                />
+                            </div>
+                        </div>
+
+                        {/* 入社年份 */}
+                        <div>
+                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="joinYear">
+                                入社年份
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setJoinYearVal(Math.max(2000, (joinYearVal ?? 2024) - 1))}
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                >-</button>
+                                <input
+                                    id="joinYear"
+                                    type="number"
+                                    value={joinYearVal ?? ""}
+                                    onChange={(e) => setJoinYearVal(e.target.value ? Number(e.target.value) : null)}
+                                    min={2000}
+                                    max={2100}
+                                    className="w-24 text-center rounded-lg bg-white border px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setJoinYearVal(Math.min(2100, (joinYearVal ?? 2024) + 1))}
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                >+</button>
+                                <span className="text-sm" style={{color: "#777"}}>{joinYearVal != null ? `${joinYearVal}年` : "未设置"}</span>
+                            </div>
+                        </div>
+
+                        {/* 条件字段 */}
+                        {!graduatedVal ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="college">
+                                        学院
+                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                              style={{background: "#FDE8E8", color: "#C62828"}}
+                                              title="仅成员可见">敏感</span>
+                                    </label>
+                                    <input
+                                        id="college"
+                                        value={collegeVal}
+                                        onChange={(e) => setCollegeVal(e.target.value)}
+                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        placeholder="如：软件学院"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="major">
+                                        专业
+                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                              style={{background: "#FDE8E8", color: "#C62828"}}
+                                              title="仅成员可见">敏感</span>
+                                    </label>
+                                    <input
+                                        id="major"
+                                        value={majorVal}
+                                        onChange={(e) => setMajorVal(e.target.value)}
+                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        placeholder="如：软件工程"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workLocation">
+                                        工作所在地
+                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                              style={{background: "#FDE8E8", color: "#C62828"}}
+                                              title="仅成员可见">敏感</span>
+                                    </label>
+                                    <input
+                                        id="workLocation"
+                                        value={workLocationVal}
+                                        onChange={(e) => setWorkLocationVal(e.target.value)}
+                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        placeholder="如：北京 / 深圳"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workPosition">
+                                        工作岗位
+                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                              style={{background: "#FDE8E8", color: "#C62828"}}
+                                              title="仅成员可见">敏感</span>
+                                    </label>
+                                    <input
+                                        id="workPosition"
+                                        value={workPositionVal}
+                                        onChange={(e) => setWorkPositionVal(e.target.value)}
+                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        placeholder="如：前端工程师"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         {/* 年级 */}
                         <div>
                             <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="grade">
-                                年级
-                                {/*{!isAdmin && <span className="text-xs ml-1" style={{color: "#999"}}>(管理员设置)</span>}*/}
+                                年级（以本科入学为起点）
                             </label>
-                            {(
-                                <select
-                                    id="grade"
-                                    name="grade"
-                                    value={gradeValue}
-                                    onChange={(e) => setGradeValue(e.target.value)}
-                                    className="w-full rounded-lg bg-white border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setGradeValue(Math.max(2000, (gradeValue ?? 2024) - 1))}
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
                                     style={{borderColor: "#D0DEE8", color: "#333"}}
-                                >
-                                    <option value="">请选择年级</option>
-                                    {Array.from(
-                                        {length: new Date().getFullYear() - 2017},
-                                        (_, i) => 2018 + i
-                                    ).map((y) => (
-                                        <option key={y} value={`${y}级`}>{y}级</option>
-                                    ))}
-                                </select>
-                            )}
+                                >-</button>
+                                <input
+                                    id="grade"
+                                    type="number"
+                                    value={gradeValue ?? ""}
+                                    onChange={(e) => setGradeValue(e.target.value ? Number(e.target.value) : null)}
+                                    min={2000}
+                                    max={2100}
+                                    className="w-24 text-center rounded-lg bg-white border px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setGradeValue(Math.min(2100, (gradeValue ?? 2024) + 1))}
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
+                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                >+</button>
+                                <span className="text-sm" style={{color: "#777"}}>{gradeValue != null ? `${gradeValue}级` : "未设置"}</span>
+                            </div>
                         </div>
 
                         {/* 职能标签 */}

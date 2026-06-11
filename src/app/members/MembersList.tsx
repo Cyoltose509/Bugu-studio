@@ -8,7 +8,7 @@ interface MemberItem {
   id: string;
   displayName: string;
   avatar: string | null;
-  grade: string | null;
+  grade: number | null;
   joinYear: number | null;
   isActive: boolean;
   position: string;
@@ -27,16 +27,29 @@ interface Props {
 
 export default function MembersList({ members: allMembers, grouped: initialGrouped, sortedKeys: initialSortedKeys }: Props) {
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<"grade" | "joinYear">("grade");
 
-  // 客户端过滤
+  // 客户端过滤 + 按模式分组
   const { filtered, groupedFiltered, sortedKeysFiltered } = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) {
-      return {
-        filtered: allMembers,
-        groupedFiltered: initialGrouped,
-        sortedKeysFiltered: initialSortedKeys,
-      };
+      // 无搜索时：按当前模式重新分组
+      const groups: Record<string, MemberItem[]> = {};
+      for (const m of allMembers) {
+        let key: string;
+        if (mode === "grade") {
+          key = m.grade != null ? `${m.grade}级` : "未设置";
+        } else {
+          key = m.joinYear != null ? `${m.joinYear}年入社` : "未设置";
+        }
+        (groups[key] ??= []).push(m);
+      }
+      const keys = Object.keys(groups).sort((a, b) => {
+        const nA = parseInt(a) || 0;
+        const nB = parseInt(b) || 0;
+        return nB - nA;
+      });
+      return { filtered: allMembers, groupedFiltered: groups, sortedKeysFiltered: keys };
     }
     const matched = allMembers.filter((m) => {
       const name = m.displayName.toLowerCase();
@@ -46,16 +59,21 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
     // 重新分组
     const groups: Record<string, MemberItem[]> = {};
     for (const m of matched) {
-      const key = m.grade || `${m.joinYear} 年入社`;
+      let key: string;
+      if (mode === "grade") {
+        key = m.grade != null ? `${m.grade}级` : "未设置";
+      } else {
+        key = m.joinYear != null ? `${m.joinYear}年入社` : "未设置";
+      }
       (groups[key] ??= []).push(m);
     }
     const keys = Object.keys(groups).sort((a, b) => {
-      const yA = parseInt(a) || 0;
-      const yB = parseInt(b) || 0;
-      return yB - yA;
+      const nA = parseInt(a) || 0;
+      const nB = parseInt(b) || 0;
+      return nB - nA;
     });
     return { filtered: matched, groupedFiltered: groups, sortedKeysFiltered: keys };
-  }, [query, allMembers, initialGrouped, initialSortedKeys]);
+  }, [query, allMembers, mode]);
 
   return (
     <>
@@ -87,6 +105,18 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
             找到 {filtered.length} 位匹配成员
           </p>
         )}
+      </div>
+
+      {/* 模式切换 */}
+      <div className="flex gap-2 mb-6">
+        <button type="button" onClick={() => setMode("grade")}
+          className="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+          style={mode === "grade" ? {background: "#25547A", color: "#fff"} : {background: "#F0F5F9", color: "#555"}}
+        >按年级</button>
+        <button type="button" onClick={() => setMode("joinYear")}
+          className="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+          style={mode === "joinYear" ? {background: "#25547A", color: "#fff"} : {background: "#F0F5F9", color: "#555"}}
+        >按入社年份</button>
       </div>
 
       {/* 成员列表 */}
