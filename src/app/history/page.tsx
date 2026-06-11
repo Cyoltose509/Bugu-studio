@@ -49,35 +49,37 @@ export default async function HistoryPage() {
     for (const e of eventYearRows) allYearsSet.add(e.year);
     for (const y of activityYearSet) allYearsSet.add(y);
 
-    // 兜底：确保至少检测到 2017 年
+    // 兜底：从 2019 起步（创始人是 2017 届但 2019 年起才有实际产出）
+    const START_YEAR = 2019;
     const maxYear = allYearsSet.size > 0 ? Math.max(...allYearsSet) : currentYear;
-    const minYear = allYearsSet.size > 0 ? Math.min(Math.min(...allYearsSet), 2017) : 2017;
+    const minYear = Math.max(START_YEAR, allYearsSet.size > 0 ? Math.min(...allYearsSet) : START_YEAR);
 
-    // 生成所有需要检查的年份（从最新到最远）
+    // 生成所有需要检查的年份（从最新到最早 → 最新年报排最上面）
     const allYears: number[] = [];
     for (let y = maxYear; y >= minYear; y--) {
         allYears.push(y);
     }
 
     // 单次批量查询所有年份数据，在 JS 中分组 — 减少查询次数
-    const yearDetails: { year: number; projects: any[]; members: any[]; events: any[]; activities: any[] }[] = [];
+    const yearDetails: { year: number; projects: any[]; members: any[]; events: any[]; activities: any[]; activeMembers: any[] }[] = [];
     
     const [
       allProjects,
       allMembers,
       allEvents,
       allActivities,
+      allJamMembers,
+      allMeetingShares,
     ] = await Promise.all([
       cachedQuery('history:allProjects', () =>
         prisma.project.findMany({
           where: { status: ProjectStatus.PUBLISHED },
-          select: { id: true, slug: true, title: true, coverImage: true, type: true, developYear: true },
+          select: { id: true, slug: true, title: true, subtitle: true, coverImage: true, type: true, developYear: true, tags: { select: { tag: { select: { name: true } } } }, members: { select: { memberId: true, externalName: true, roles: true, member: { select: { displayName: true } } } }, _count: { select: { likes: true } } },
           orderBy: { publishedAt: "desc" }
         }), 3600),
       cachedQuery('history:allMembers', () =>
         prisma.clubMember.findMany({
-          where: { grade: { not: null } },
-          select: { id: true, displayName: true, avatar: true, grade: true, user: { select: { image: true } } }
+          select: { id: true, userId: true, displayName: true, avatar: true, grade: true, user: { select: { image: true } }, _count: { select: { projectMembers: true } } }
         }), 3600),
       cachedQuery('history:allEvents', () =>
         prisma.yearEvent.findMany({
@@ -86,11 +88,28 @@ export default async function HistoryPage() {
         }), 3600),
       cachedQuery('history:allActivities', () =>
         prisma.activity.findMany({
-          where: { status: ActivityStatus.PUBLISHED, type: { not: "MEETING" } },
-          select: { id: true, title: true, type: true, startTime: true, endTime: true, summary: true, coverImage: true },
+          where: { status: ActivityStatus.PUBLISHED },
+          select: { id: true, title: true, type: true, startTime: true, endTime: true, summary: true, description: true, coverImage: true },
           orderBy: { startTime: "asc" }
         }), 3600),
+      // 活跃度计算 — 比赛参与（JamTeamMember → JamTeam → Activity）
+      cachedQuery('history:jamMembers', () =>
+        prisma.jamTeamMember.findMany({
+          select: { userId: true, team: { select: { activity: { select: { startTime: true, type: true } } } } }
+        }), 3600),
+      // 活跃度计算 — 例会分享（MeetingProposal APPROVED）
+      cachedQuery('history:meetingShares', () =>
+        prisma.meetingProposal.findMany({
+          where: { status: "APPROVED" },
+          select: { userId: true, activity: { select: { startTime: true, type: true } } }
+        }), 3600),
     ]);
+
+    // userId → ClubMember 映射（用于活跃度计算）
+    const userIdToMember = new Map<string, any>();
+    for (const m of allMembers) {
+      if (m.userId) userIdToMember.set(m.userId, m);
+    }
 
     // 在 JS 中按年份分组 — 比每年4次独立查询高效得多
     const projectByYear = new Map<number, any[]>();
@@ -128,7 +147,78 @@ export default async function HistoryPage() {
       const events = allEvents.filter(e => e.year === year);
       const activities = activitiesByYear.get(year) || [];
       if (projects.length === 0 && members.length === 0 && events.length === 0 && activities.length === 0) continue;
-      yearDetails.push({ year, projects, members, events, activities });
+      
+      // ─── 活跃度计算（跨年统计 — 统计所有成员在该年的贡献） ───
+      // 作品制作：该年作品中的 memberId 计数
+      const projectContrib = new Map<string, number>();
+      for (const p of projects) {
+        for (const pm of (p.members || [])) {
+          if (pm.memberId) {
+            projectContrib.set(pm.memberId, (projectContrib.get(pm.memberId) || 0) + 1);
+          }
+        }
+      }
+      
+      // 比赛参与：该年 COMPETITION 活动中，JamTeamMember 通过 userId → memberId
+      const competitionContrib = new Map<string, number>();
+      for (const jm of allJamMembers) {
+        const actYear = jm.team?.activity?.startTime ? new Date(jm.team.activity.startTime).getFullYear() : null;
+        if (actYear === year && jm.team?.activity?.type === "COMPETITION") {
+          const member = userIdToMember.get(jm.userId);
+          if (member) {
+            competitionContrib.set(member.id, (competitionContrib.get(member.id) || 0) + 1);
+          }
+        }
+      }
+      
+      // 公开课参与：该年 COURSE 活动中，JamTeamMember 通过 userId → memberId（与比赛同一套报名系统）
+      const courseContrib = new Map<string, number>();
+      for (const jm of allJamMembers) {
+        const actYear = jm.team?.activity?.startTime ? new Date(jm.team.activity.startTime).getFullYear() : null;
+        if (actYear === year && jm.team?.activity?.type === "COURSE") {
+          const member = userIdToMember.get(jm.userId);
+          if (member) {
+            courseContrib.set(member.id, (courseContrib.get(member.id) || 0) + 1);
+          }
+        }
+      }
+      
+      // 例会分享：该年 MEETING 活动中 APPROVED 的 MeetingProposal
+      const meetingContrib = new Map<string, number>();
+      for (const mp of allMeetingShares) {
+        const actYear = mp.activity?.startTime ? new Date(mp.activity.startTime).getFullYear() : null;
+        if (actYear === year && mp.activity?.type === "MEETING") {
+          const member = userIdToMember.get(mp.userId);
+          if (member) {
+            meetingContrib.set(member.id, (meetingContrib.get(member.id) || 0) + 1);
+          }
+        }
+      }
+      
+      // 汇总得分：作品×1 + 比赛×1 + 例会×0.4 + 公开课×0.8
+      const scoreMap = new Map<string, { score: number; projects: number; competitions: number; courses: number; meetings: number }>();
+      const allMemberIds = new Set([
+        ...projectContrib.keys(), ...competitionContrib.keys(), ...courseContrib.keys(), ...meetingContrib.keys(),
+      ]);
+      for (const mid of allMemberIds) {
+        const p = projectContrib.get(mid) || 0;
+        const c = competitionContrib.get(mid) || 0;
+        const r = courseContrib.get(mid) || 0;
+        const m = meetingContrib.get(mid) || 0;
+        const score = p * 1 + c * 1 + r * 0.8 + m * 0.4;
+        if (score > 0) scoreMap.set(mid, { score: Math.round(score * 10) / 10, projects: p, competitions: c, courses: r, meetings: m });
+      }
+      
+      // 归档活跃成员（按得分降序）
+      const activeMembers = [...scoreMap.entries()]
+        .map(([memberId, s]) => {
+          const member = allMembers.find(m => m.id === memberId);
+          return member ? { ...member, ...s } : null;
+        })
+        .filter(Boolean)
+        .sort((a: any, b: any) => b.score - a.score);
+      
+      yearDetails.push({ year, projects, members, events, activities, activeMembers });
     }
 
     return (
@@ -137,12 +227,12 @@ export default async function HistoryPage() {
                 <h1 className="text-3xl font-bold" style={{color: "#25547A"}}>社团历史</h1>
                 <p className="mt-2" style={{color: "#777"}}>记录每一届成员的努力与成果</p>
                 <p className="mt-1 text-xs" style={{color: "#b8a590"}}>
-                    共 {yearDetails.length} 年 · 点击年报中的"保存/打印"按钮即可保存为 PDF
+                    共 {yearDetails.length} 年年报（2019年至今）· 点击年报下方的"保存图片"按钮即可保存为图片
                 </p>
             </div>
 
             <div className="space-y-8">
-                {yearDetails.map(({year, projects, members, events, activities}) => (
+                {yearDetails.map(({year, projects, members, events, activities, activeMembers}) => (
                     <YearNewspaper
                         key={year}
                         year={year}
@@ -150,7 +240,8 @@ export default async function HistoryPage() {
                         projects={projects}
                         events={events}
                         activities={activities}
-                        totalYears={allYears.length}
+                        activeMembers={activeMembers}
+                        startYear={START_YEAR}
                     />
                 ))}
             </div>
