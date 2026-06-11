@@ -101,7 +101,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
             {/* ── 截图缩略图：桌面纵向2列，手机3张一排横向 ── */}
             {screenshotItems.length > 0 && (
                 <div>
-                    <div className="grid grid-cols-3 lg:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                         {screenshotItems.map((img, i) => {
                             const globalIdx = coverItem ? i + 1 : i;
                             return (

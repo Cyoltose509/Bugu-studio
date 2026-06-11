@@ -120,6 +120,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
   const isEdit = mode === "edit";
   const isResubmit = isEdit && projectStatus === "REJECTED";
+  const isReEdit = isEdit && projectStatus === "PUBLISHED";
 
   // ── 成员搜索 ──
   const searchMembers = useCallback(async (q: string) => {
@@ -288,25 +289,39 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
           setError(result.error || "保存失败");
         }
       } else {
-        // 创建模式：调用 Server Action (通过 fetch 包装)
-        const res = await fetch("/api/projects/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        if (!res.ok) {
-          setError(json.error || "提交失败");
+        // 创建模式：带重试的 fetch
+        let res: Response | null = null;
+        let lastErr: Error | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            res = await fetch("/api/projects/submit", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            if (res.ok || res.status >= 400) break; // 非网络错误，直接处理
+          } catch (e: any) {
+            lastErr = e;
+            if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          }
+        }
+        if (!res) {
+          setError(`网络连接失败，已重试3次。${lastErr?.message || ""}`);
         } else {
-          setSuccess(true);
-          // 重置表单
-          setCoverPreview(null);
-          setCoverUrl("");
-          setSelectedTags([]);
-          setCustomTags([]);
-          setLinks([]);
-          setSelectedMembers([]);
-          setScreenshots([]);
+          const json = await res.json().catch(() => null);
+          if (!res.ok) {
+            setError(json?.error || `提交失败 (${res.status})`);
+          } else {
+            setSuccess(true);
+            // 重置表单
+            setCoverPreview(null);
+            setCoverUrl("");
+            setSelectedTags([]);
+            setCustomTags([]);
+            setLinks([]);
+            setSelectedMembers([]);
+            setScreenshots([]);
+          }
         }
       }
     } catch (err: any) {
@@ -321,12 +336,18 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   if (success) {
     return (
       <div className="animate-fade-in text-center py-16">
-        <div className="text-5xl mb-4">{isResubmit ? "📤" : isEdit ? "✅" : "🎉"}</div>
+        <div className="text-5xl mb-4">{isReEdit ? "📝" : isResubmit ? "📤" : isEdit ? "✅" : "🎉"}</div>
         <h2 className="text-2xl font-bold mb-2" style={{ color: "#25547A" }}>
-          {isResubmit ? "重新提交成功！" : isEdit ? "保存成功！" : "提交成功！"}
+          {isReEdit ? "已提交重新审核" : isResubmit ? "重新提交成功！" : isEdit ? "保存成功！" : "提交成功！"}
         </h2>
         <p className="mb-6" style={{ color: "#777" }}>
-          {isResubmit ? "你的作品已重新提交审核，管理员会尽快处理。" : isEdit ? "作品信息已更新。" : "你的作品已提交审核，管理员会尽快处理。"}
+          {isReEdit
+            ? "你的作品已回到待审核状态，非成员将暂时无法查看。管理员审核通过后会重新公开。"
+            : isResubmit
+            ? "你的作品已重新提交审核，管理员会尽快处理。"
+            : isEdit
+            ? "作品信息已更新。"
+            : "你的作品已提交审核，管理员会尽快处理。"}
         </p>
         {isEdit && initialData ? (
           <a href={`/works/${initialData.slug || initialData.title}`} className="btn-primary px-6 py-2 rounded-lg text-sm inline-block"

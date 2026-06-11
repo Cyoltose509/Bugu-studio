@@ -246,6 +246,7 @@ model ClubMember {
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectMembers ProjectMember[]
   socialLinks    MemberLink[]
+  workExperiences WorkExperience[]
 
   @@index([joinYear])
   @@index([isActive])
@@ -263,6 +264,24 @@ model MemberLink {
   member ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId])
+}
+
+// 工作经历（仅成员可见）
+model WorkExperience {
+  id        String    @id @default(cuid())
+  memberId  String
+  company   String // 公司名称
+  position  String // 职位
+  startDate DateTime // 入职时间
+  endDate   DateTime? // 辞职时间（null=至今）
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  member ClubMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([memberId, sortOrder])
 }
 
 // ============================================================

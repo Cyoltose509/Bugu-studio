@@ -10,6 +10,8 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import MemberContactInfo from "./MemberContactInfo";
+import MemberSensitiveInfo from "./MemberSensitiveInfo";
+import MemberWorkHistory from "./MemberWorkHistory";
 import AdminMemberEditor from "./AdminMemberEditor";
 
 // ISR: 成员信息变化少，5 分钟缓存
@@ -43,6 +45,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
       include: {
         user: { select: { id: true, role: true, image: true, bio: true } },
         socialLinks: { orderBy: { sortOrder: "asc" } },
+        workExperiences: { orderBy: { sortOrder: "asc" } },
         projectMembers: {
           orderBy: { sortOrder: "asc" },
           where: { project: { status: ProjectStatus.PUBLISHED } },
@@ -235,6 +238,19 @@ export default async function MemberDetailPage({ params }: PageProps) {
             qq: member.qq,
           }} />
 
+          {/* 敏感信息 — 仅社团成员可见 */}
+          <MemberSensitiveInfo data={{
+            realName: member.realName,
+            college: member.college,
+            major: member.major,
+            workLocation: member.workLocation,
+            workPosition: member.workPosition,
+            isGraduated: member.graduated,
+          }} />
+
+          {/* 工作经历 — 仅社团成员可见 */}
+          <MemberWorkHistory experiences={member.workExperiences} />
+
           {/* 外部链接 */}
           {links.length > 0 && (
             <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
@@ -266,11 +282,6 @@ export default async function MemberDetailPage({ params }: PageProps) {
               {!member.graduated && member.isActive && <InfoRow label="在读状态" value="在读" />}
               {member.joinYear && <InfoRow label="入社年份" value={String(member.joinYear)} />}
               {member.grade && <InfoRow label="年级" value={`${member.grade}级`} />}
-              {member.realName && <InfoRow label="真名" value={member.realName} />}
-              {!member.graduated && member.college && <InfoRow label="学院" value={member.college} />}
-              {!member.graduated && member.major && <InfoRow label="专业" value={member.major} />}
-              {member.graduated && member.workLocation && <InfoRow label="工作所在地" value={member.workLocation} />}
-              {member.graduated && member.workPosition && <InfoRow label="工作岗位" value={member.workPosition} />}
               <InfoRow label="参与项目数" value={String(member.projectMembers.length)} />
             </dl>
           </div>

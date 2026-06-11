@@ -46,6 +46,7 @@ export default async function EditProfilePage() {
         workLocation: true,
         workPosition: true,
         socialLinks: { orderBy: { sortOrder: "asc" } },
+        workExperiences: { orderBy: { sortOrder: "asc" } },
       },
     }),
   ]);

@@ -20,6 +20,7 @@ type MemberSnippet = {
     wechat: string | null;
     qq: string | null;
     socialLinks: { id: string; label: string; url: string; sortOrder: number }[];
+    workExperiences: { id: string; company: string; position: string; startDate: Date; endDate: Date | null; sortOrder: number }[];
     graduated: boolean;
     realName: string | null;
     joinYear: number | null;
@@ -115,9 +116,20 @@ export default function EditForm({
 
     // 自定义链接
     const [socialLinks, setSocialLinks] = useState<LinkEntry[]>(originalLinks);
-    const [newLinkLabel, setNewLinkLabel] = useState("");
-    const [newLinkUrl, setNewLinkUrl] = useState("");
-    const [showCustomLabel, setShowCustomLabel] = useState(false);
+  const [newLinkLabel, setNewLinkLabel] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [showCustomLabel, setShowCustomLabel] = useState(false);
+
+  // 工作经历
+  const [workExperiences, setWorkExperiences] = useState<MemberSnippet["workExperiences"]>(
+    member?.workExperiences ?? []
+  );
+  const [newExpCompany, setNewExpCompany] = useState("");
+  const [newExpPosition, setNewExpPosition] = useState("");
+  const [newExpStart, setNewExpStart] = useState("");
+  const [newExpEnd, setNewExpEnd] = useState("");
+  const [expSaving, setExpSaving] = useState(false);
+  const [expMsg, setExpMsg] = useState("");
 
     // dirty state 检测
     const hasChanged =
@@ -164,9 +176,63 @@ export default function EditForm({
         setShowCustomLabel(false);
     }
 
-    function removeLink(index: number) {
-        setSocialLinks(socialLinks.filter((_, i) => i !== index));
+  function removeLink(index: number) {
+    setSocialLinks(socialLinks.filter((_, i) => i !== index));
+  }
+
+  // ── 工作经历 CRUD ──
+  async function addWorkExperience() {
+    const company = newExpCompany.trim();
+    const position = newExpPosition.trim();
+    const startDate = newExpStart;
+    if (!company || !position || !startDate || !member) return;
+    setExpSaving(true);
+    setExpMsg("");
+    try {
+      const res = await fetch(`/api/members/${member.id}/work-experience`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company, position, startDate, endDate: newExpEnd || null }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || "添加失败");
+      }
+      const created = await res.json();
+      setWorkExperiences((prev: MemberSnippet["workExperiences"]) => [...prev, created]);
+      setNewExpCompany("");
+      setNewExpPosition("");
+      setNewExpStart("");
+      setNewExpEnd("");
+      setExpMsg("已添加");
+      setTimeout(() => setExpMsg(""), 2000);
+    } catch (e: any) {
+      setExpMsg(e.message || "添加失败");
+    } finally {
+      setExpSaving(false);
     }
+  }
+
+  async function removeWorkExperience(expId: string) {
+    if (!member) return;
+    setExpSaving(true);
+    setExpMsg("");
+    try {
+      const res = await fetch(`/api/members/${member.id}/work-experience`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ experienceId: expId }),
+      });
+      if (!res.ok) throw new Error("删除失败");
+      setWorkExperiences((prev: MemberSnippet["workExperiences"]) => prev.filter((e: MemberSnippet["workExperiences"][number]) => e.id !== expId));
+      setExpMsg("已删除");
+      setTimeout(() => setExpMsg(""), 2000);
+    } catch {
+      setExpMsg("删除失败");
+    } finally {
+      setExpSaving(false);
+    }
+  }
 
     // 文件选择 → 打开裁剪弹窗
     async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -759,6 +825,105 @@ export default function EditForm({
                                 </button>
                             </div>
                         </div>
+
+                        {/* ══════════ 工作经历（仅已毕业可添加）══════════ */}
+                        {graduatedVal && (
+                          <div>
+                            <label className="block text-sm mb-1.5" style={{color: "#555"}}>
+                              工作经历
+                              <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                    style={{background: "#FDE8E8", color: "#C62828"}}
+                                    title="仅成员可见">敏感</span>
+                            </label>
+
+                            {/* 已有工作经历列表 */}
+                            {workExperiences.length > 0 && (
+                              <div className="space-y-2 mb-3">
+                                {workExperiences.map((exp) => {
+                                  const startStr = `${new Date(exp.startDate).getFullYear()}.${String(new Date(exp.startDate).getMonth() + 1).padStart(2, "0")}`;
+                                  const endStr = exp.endDate
+                                    ? `${new Date(exp.endDate).getFullYear()}.${String(new Date(exp.endDate).getMonth() + 1).padStart(2, "0")}`
+                                    : "至今";
+                                  return (
+                                    <div key={exp.id} className="flex items-center gap-3 p-2.5 rounded-lg border text-sm"
+                                         style={{borderColor: "#D0DEE8", background: "#FAFBFC"}}>
+                                      <div className="w-2 h-2 rounded-full shrink-0" style={{background: "#88C232"}} />
+                                      <div className="flex-1 min-w-0">
+                                        <span className="font-medium" style={{color: "#333"}}>{exp.company}</span>
+                                        <span className="mx-1" style={{color: "#999"}}>·</span>
+                                        <span style={{color: "#777"}}>{exp.position}</span>
+                                      </div>
+                                      <span className="text-xs shrink-0" style={{color: "#999"}}>{startStr} ~ {endStr}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeWorkExperience(exp.id)}
+                                        disabled={expSaving}
+                                        className="text-xs shrink-0 hover:underline disabled:opacity-50"
+                                        style={{color: "#E38043"}}
+                                      >
+                                        移除
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* 添加新工作经历 */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                              <input
+                                value={newExpCompany}
+                                onChange={(e) => setNewExpCompany(e.target.value)}
+                                placeholder="公司名称"
+                                className="rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                              />
+                              <input
+                                value={newExpPosition}
+                                onChange={(e) => setNewExpPosition(e.target.value)}
+                                placeholder="职位"
+                                className="rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                              />
+                              <div>
+                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>入职时间</label>
+                                <input
+                                  type="month"
+                                  value={newExpStart}
+                                  onChange={(e) => setNewExpStart(e.target.value)}
+                                  className="w-full rounded-lg bg-white border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                  style={{borderColor: "#D0DEE8", color: "#333"}}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>辞职时间（留空=至今）</label>
+                                <input
+                                  type="month"
+                                  value={newExpEnd}
+                                  onChange={(e) => setNewExpEnd(e.target.value)}
+                                  className="w-full rounded-lg bg-white border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                  style={{borderColor: "#D0DEE8", color: "#333"}}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={addWorkExperience}
+                                disabled={expSaving || !newExpCompany.trim() || !newExpPosition.trim() || !newExpStart}
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                                style={{background: "#88C232"}}
+                              >
+                                {expSaving ? "保存中..." : "+ 添加工作经历"}
+                              </button>
+                              {expMsg && (
+                                <span className="text-xs" style={{color: expMsg === "添加失败" || expMsg === "删除失败" ? "#E38043" : "#88C232"}}>
+                                  {expMsg}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                     </>
                 )}
 
