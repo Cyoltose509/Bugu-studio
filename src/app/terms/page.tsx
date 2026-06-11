@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 };
 
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "布谷工作室";
-const contactEmail = "cyoltose@gmail.com";
-const lastUpdated = "2026-06-08";
+const contactEmail = "connect@bugoostudio.com";
+const lastUpdated = "2026-06-11";
 
 export default function TermsPage() {
   return (

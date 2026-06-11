@@ -9,6 +9,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import MiniLikeButton from "@/components/MiniLikeButton";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
+import { positionLabel, positionColor } from "@/lib/position";
 
 export const dynamic = "force-dynamic";
 
@@ -216,11 +217,14 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>展示名称</div>
               <div className="flex items-center gap-1.5" style={{ color: "#333" }}>
                 {member.displayName}
-                {member.position && member.position !== "MEMBER" && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={member.position === "FOUNDER" ? { background: "#FFE384", color: "#5C4B00" } : { background: "#25547A", color: "#fff" }}>
-                    {member.position === "FOUNDER" ? "创始人" : member.position === "PRESIDENT" ? "社长" : member.position === "VICE_PRESIDENT" ? "副社长" : member.position}
-                  </span>
-                )}
+                {member.position && member.position !== "MEMBER" && (() => {
+                  const color = positionColor(member.position);
+                  return (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: color.bg, color: color.text }}>
+                      {positionLabel(member.position)}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             <div>

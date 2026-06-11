@@ -13,6 +13,7 @@ import MemberContactInfo from "./MemberContactInfo";
 import MemberSensitiveInfo from "./MemberSensitiveInfo";
 import MemberWorkHistory from "./MemberWorkHistory";
 import AdminMemberEditor from "./AdminMemberEditor";
+import { positionLabel, positionColor } from "@/lib/position";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -145,11 +146,14 @@ export default async function MemberDetailPage({ params }: PageProps) {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1 flex-wrap">
                 <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>{member.displayName}</h1>
-                {member.position && member.position !== "MEMBER" && (
-                  <span className="text-xs px-2 py-1 rounded font-medium" style={member.position === "FOUNDER" ? { background: "#FFE384", color: "#5C4B00" } : { background: "#25547A", color: "#fff" }}>
-                    {member.position === "PRESIDENT" ? "社长" : member.position === "VICE_PRESIDENT" ? "副社长" : member.position === "FOUNDER" ? "创始人" : member.position}
-                  </span>
-                )}
+                {member.position && member.position !== "MEMBER" && (() => {
+                  const color = positionColor(member.position);
+                  return (
+                    <span className="text-xs px-2 py-1 rounded font-medium" style={{ background: color.bg, color: color.text }}>
+                      {positionLabel(member.position)}
+                    </span>
+                  );
+                })()}
                 {member.isActive ? (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(136,194,50,0.15)", color: "#88C232" }}>在读</span>
                 ) : (

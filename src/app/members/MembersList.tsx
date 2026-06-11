@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import UserAvatar from "@/components/UserAvatar";
+import { positionLabel, positionColor } from "@/lib/position";
 
 interface MemberItem {
   id: string;
@@ -135,16 +136,19 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {groupedFiltered[key].map(m => (
                 <Link key={m.id} href={`/members/${m.id}`} className="group text-center p-4 rounded-xl bg-white border shadow-sm hover:shadow-md transition-all" style={{ borderColor: "#D0DEE8" }}>
-                  <div className="w-16 h-16 mx-auto mb-3 overflow-hidden">
-                    <UserAvatar src={m.user?.image || m.avatar} name={m.displayName} size={64} className="mx-auto" />
+                  <div className="w-16 h-16 mx-auto  overflow-hidden">
+                    <UserAvatar src={m.user?.image || m.avatar} name={m.displayName} size={48} className="mx-auto" />
                   </div>
-                  <div className="text-sm font-medium group-hover:text-[#3388BB] transition-colors line-clamp-1 flex items-center gap-1" style={{ color: "#333" }}>
+                  <div className="text-sm mt-0.5 mx-auto font-medium group-hover:text-[#3388BB] transition-colors line-clamp-1 flex items-center gap-1 justify-center" style={{ color: "#333" }}>
                     {m.displayName}
-                    {m.position && m.position !== "MEMBER" && (
-                      <span className="text-[10px] px-1 py-0.5 rounded" style={m.position === "FOUNDER" ? { background: "#FFE384", color: "#5C4B00" } : { background: "#25547A", color: "#fff" }}>
-                        {m.position === "PRESIDENT" ? "社长" : m.position === "VICE_PRESIDENT" ? "副社长" : m.position === "FOUNDER" ? "创始人" : m.position}
-                      </span>
-                    )}
+                    {m.position && m.position !== "MEMBER" && (() => {
+                      const color = positionColor(m.position);
+                      return (
+                        <span className="text-[10px] px-1 py-0.5 rounded" style={{ background: color.bg, color: color.text }}>
+                          {positionLabel(m.position)}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="text-xs mt-0.5" style={{ color: "#999" }}>{m.projectCount ?? 0} 个项目</div>
                   {!m.isActive && <div className="text-xs mt-0.5" style={{ color: "#aaa" }}>已退役</div>}

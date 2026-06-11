@@ -10,7 +10,7 @@ import FeaturedProjects from "./FeaturedProjects";
 import LatestProjects from "./LatestProjects";
 import HomeActivities from "./HomeActivities";
 
-export const metadata = { title: "首页" };
+export const metadata = { title: "布谷工作室" };
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 export default function HomePage() {
@@ -21,7 +21,7 @@ export default function HomePage() {
         <div className="container mx-auto max-w-3xl relative">
           <Image src="/images/logo.png" alt="布谷工作室" width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg" priority />
           <h1 className="text-4xl md:text-6xl font-bold mb-4" style={{ color: "#25547A" }}>布谷工作室</h1>
-          <p className="text-xl mb-3" style={{ color: "#555" }}>作品档案馆</p>
+          <p className="text-xl mb-3" style={{ color: "#555" }}>官方网站</p>
           <p className="mb-8 max-w-xl mx-auto" style={{ color: "#777" }}>
             我们是一群热爱游戏开发的同学，这里存档了历届社员的每一份作品与心血。
           </p>

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/auth/adminGuard";
 import { invalidateCache } from "@/lib/db/cache";
 import { createNotification } from "@/lib/services/notification";
+import { POSITION_LABEL } from "@/lib/position";
 import { revalidatePath } from "next/cache";
 
 export async function toggleMemberActive(id: string, isActive: boolean) {
@@ -52,15 +53,12 @@ export async function updateMemberDetails(id: string, formData: FormData) {
 
   // ── 通知成员身份变更 ──
   if (current && isValidPosition) {
-    const posLabel: Record<string, string> = {
-      MEMBER: "普通成员", PRESIDENT: "社长", VICE_PRESIDENT: "副社长", FOUNDER: "创始人",
-    };
     if (current.position !== position) {
       await createNotification({
         userId: current.userId,
         type: "ROLE_CHANGE",
         title: "社团身份已变更",
-        content: `你的身份已变更为「${posLabel[position] || position}」`,
+        content: `你的身份已变更为「${POSITION_LABEL[position] || position}」`,
         relatedId: id,
         relatedType: "User",
       });

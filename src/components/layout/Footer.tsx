@@ -23,6 +23,7 @@ export function Footer() {
                         <ul className="space-y-2 text-sm" style={{color: "#777"}}>
                             <li><Link href="/works" className="hover:text-[#3388BB] transition-colors">作品库</Link></li>
                             <li><Link href="/members" className="hover:text-[#3388BB] transition-colors">成员列表</Link></li>
+                            <li><Link href="/activities" className="hover:text-[#3388BB] transition-colors">社团活动</Link></li>
                             <li><Link href="/history" className="hover:text-[#3388BB] transition-colors">社团历史</Link></li>
                         </ul>
                     </div>
