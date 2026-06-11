@@ -16,6 +16,10 @@ const POSITION_OPTIONS = [
   { value: "MEMBER", label: "成员" },
   { value: "VICE_PRESIDENT", label: "副社长" },
   { value: "PRESIDENT", label: "社长" },
+];
+
+const POSITION_OPTIONS_WITH_FOUNDER = [
+  ...POSITION_OPTIONS,
   { value: "FOUNDER", label: "创始人" },
 ];
 
@@ -25,6 +29,9 @@ export default function AdminMemberEditor({ memberId, currentGrade, currentJoinY
   const [saved, setSaved] = useState(false);
   const [gradeVal, setGradeVal] = useState(currentGrade ?? null);
   const [joinYearVal, setJoinYearVal] = useState(currentJoinYear ?? null);
+
+  const positionOptions = currentPosition === "FOUNDER" ? POSITION_OPTIONS_WITH_FOUNDER : POSITION_OPTIONS;
+  const isFounder = currentPosition === "FOUNDER";
 
   if (!session?.user || session.user.role !== "ADMIN") return null;
 
@@ -89,13 +96,17 @@ export default function AdminMemberEditor({ memberId, currentGrade, currentJoinY
           <select
             name="position"
             defaultValue={currentPosition}
-            className="w-full text-sm rounded border px-3 py-2 bg-white cursor-pointer"
+            disabled={isFounder}
+            className="w-full text-sm rounded border px-3 py-2 bg-white cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ borderColor: "#D0DEE8", color: "#333" }}
           >
-            {POSITION_OPTIONS.map((opt) => (
+            {positionOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {isFounder && (
+            <p className="text-xs mt-1" style={{ color: "#999" }}>创始人身份不可修改</p>
+          )}
         </div>
 
         {/* 退役 / 活跃 */}

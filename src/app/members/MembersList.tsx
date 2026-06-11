@@ -141,8 +141,8 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
                   <div className="text-sm font-medium group-hover:text-[#3388BB] transition-colors line-clamp-1 flex items-center gap-1" style={{ color: "#333" }}>
                     {m.displayName}
                     {m.position && m.position !== "MEMBER" && (
-                      <span className="text-[10px] px-1 py-0.5 rounded" style={{ background: "#25547A", color: "#fff" }}>
-                        {m.position === "PRESIDENT" ? "社长" : m.position === "VICE_PRESIDENT" ? "副社长" : m.position}
+                      <span className="text-[10px] px-1 py-0.5 rounded" style={m.position === "FOUNDER" ? { background: "#FFE384", color: "#5C4B00" } : { background: "#25547A", color: "#fff" }}>
+                        {m.position === "PRESIDENT" ? "社长" : m.position === "VICE_PRESIDENT" ? "副社长" : m.position === "FOUNDER" ? "创始人" : m.position}
                       </span>
                     )}
                   </div>

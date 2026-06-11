@@ -50,16 +50,18 @@ export async function saveProfile(formData: FormData) {
     wechat: (formData.get("wechat") as string) || "",
     qq: (formData.get("qq") as string) || "",
     graduated: formData.get("graduated") === "true",
-    realName: (formData.get("realName") as string) || null,
+    realName: (formData.get("realName") as string) || undefined,
     joinYear: formData.get("joinYear") ? Number(formData.get("joinYear")) : undefined,
-    college: (formData.get("college") as string) || null,
-    major: (formData.get("major") as string) || null,
-    workLocation: (formData.get("workLocation") as string) || null,
-    workPosition: (formData.get("workPosition") as string) || null,
+    college: (formData.get("college") as string) || undefined,
+    major: (formData.get("major") as string) || undefined,
+    workLocation: (formData.get("workLocation") as string) || undefined,
+    workPosition: (formData.get("workPosition") as string) || undefined,
   };
 
   const result = schema.safeParse(raw);
   if (!result.success) {
+    console.error("[saveProfile] Zod errors:", JSON.stringify(result.error.issues, null, 2));
+    console.error("[saveProfile] Raw data:", JSON.stringify(raw, null, 2));
     return { error: result.error.errors[0].message };
   }
 

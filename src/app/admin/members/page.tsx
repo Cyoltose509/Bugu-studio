@@ -23,6 +23,10 @@ const POSITION_OPTIONS: { value: string; label: string }[] = [
   { value: "MEMBER", label: "成员" },
   { value: "VICE_PRESIDENT", label: "副社长" },
   { value: "PRESIDENT", label: "社长" },
+];
+
+const POSITION_OPTIONS_WITH_FOUNDER: { value: string; label: string }[] = [
+  ...POSITION_OPTIONS,
   { value: "FOUNDER", label: "创始人" },
 ];
 
@@ -106,12 +110,13 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                       memberId={m.id}
                       field="position"
                       currentValue={m.position || "MEMBER"}
-                      options={POSITION_OPTIONS}
+                      options={m.position === "FOUNDER" ? POSITION_OPTIONS_WITH_FOUNDER : POSITION_OPTIONS}
                       preserveValues={{
                         grade: m.grade != null ? String(m.grade) : "",
                         joinYear: m.joinYear != null ? String(m.joinYear) : "",
                         isActive: String(m.isActive),
                       }}
+                      readOnly={m.position === "FOUNDER"}
                     />
                   </td>
                   <td className="p-3">

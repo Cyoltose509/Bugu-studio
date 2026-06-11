@@ -16,9 +16,11 @@ interface Props {
   options: Option[];
   /** 需要保留的其他字段值，通过 hidden input 传递 */
   preserveValues: Record<string, string>;
+  /** 只读模式（不可修改） */
+  readOnly?: boolean;
 }
 
-export default function EditableSelect({ memberId, field, currentValue, options, preserveValues }: Props) {
+export default function EditableSelect({ memberId, field, currentValue, options, preserveValues, readOnly }: Props) {
   const [localValue, setLocalValue] = useState(currentValue);
   const [isPending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -56,7 +58,7 @@ export default function EditableSelect({ memberId, field, currentValue, options,
       <select
         value={localValue}
         onChange={handleChange}
-        disabled={isPending}
+        disabled={isPending || readOnly}
         className="text-xs rounded border px-2 py-1 bg-white cursor-pointer transition-opacity"
         style={{
           borderColor: "#D0DEE8",
