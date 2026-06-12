@@ -1,23 +1,54 @@
 /**
  * 打印/导出工具
  *
- * 图片（长图）：克隆所有报纸 → 附加到 body 末尾（正常流，浏览器会正确渲染）→ 图片预处理 → html-to-image 渲染
- * PDF：图片预处理 → 克隆 DOM → 新窗口 → 完整 HTML → 测量高度 → 动态 @page → window.print()
+ * 核心原则：绝不移变原始 DOM。所有路径都先 cloneNode → wrapper → 在 wrapper 上操作 → 渲染后移除 wrapper。
+ * 这确保第二次保存不会因为前次 restore 的残留状态而出错。
  */
 
-import { elementToCanvas, renderElementToCanvas, prepareImagesForExport } from "./image-export";
+import { renderElementToCanvas, prepareImagesForExport } from "./image-export";
+
+// ═══════════════════════════════════════════════════════
+//  Clone helper（所有 save 路径共享）
+// ═══════════════════════════════════════════════════════
+
+/** 把原件克隆到临时容器（absolute 定位在视口原点），附加到 body，返回 wrapper */
+function mountClone(el: HTMLElement): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText =
+    "position:absolute;left:0;top:0;width:880px;z-index:99999;";
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+  return wrapper;
+}
+
+/** 移除临时容器 */
+function unmountClone(wrapper: HTMLElement): void {
+  wrapper.remove();
+}
 
 // ═══════════════════════════════════════════════════════
 //  图片导出
 // ═══════════════════════════════════════════════════════
 
-/** 单个报纸保存为图片 */
+/** 单个报纸保存为图片（不碰原 DOM） */
 export async function saveElementAsImage(
   el: HTMLElement,
   filename: string
 ): Promise<void> {
-  const canvas = await elementToCanvas(el, { scale: 3, bg: "#faf8f5" });
-  downloadCanvas(canvas, filename, "image/png");
+  const wrapper = mountClone(el);
+  try {
+    await prepareImagesForExport(wrapper); // 在克隆上准备图片（restore 无需关心，wrapper 会被移除）
+    const canvas = await renderElementToCanvas(wrapper, { scale: 3, bg: "#faf8f5" });
+    if (canvas.width > 0 && canvas.height > 0) {
+      downloadCanvas(canvas, filename, "image/png");
+    } else {
+      console.error("保存图片失败: canvas 尺寸为 0");
+    }
+  } finally {
+    unmountClone(wrapper);
+  }
 }
 
 /**
@@ -75,22 +106,25 @@ export async function saveAllAsLongImage(
 //  PDF 导出（新窗口 → 动态 @page 高度 → 连续单页）
 // ═══════════════════════════════════════════════════════
 
-/** 单个报纸 → PDF */
+/** 单个报纸 → PDF（不碰原 DOM） */
 export async function saveElementAsPDF(
   el: HTMLElement,
   filename: string
 ): Promise<void> {
-  const restore = await prepareImagesForExport(el);
+  const wrapper = mountClone(el);
   try {
-    const clone = el.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
-    printInNewWindow([clone], filename, false);
-  } finally {
-    restore();
+    await prepareImagesForExport(wrapper);
+    const clone = wrapper.firstElementChild!.cloneNode(true) as HTMLElement;
+    // unmmount 之后原 DOM 完全未变，clone 独立存在
+    unmountClone(wrapper);
+    printInNewWindow([clone.outerHTML], filename, false);
+  } catch (e) {
+    unmountClone(wrapper);
+    throw e;
   }
 }
 
-/** 全部报纸 → 一份 PDF */
+/** 全部报纸 → 一份 PDF（不碰原 DOM） */
 export async function saveAllAsPDF(
   els: HTMLElement[],
   filename: string,
@@ -98,21 +132,19 @@ export async function saveAllAsPDF(
 ): Promise<void> {
   if (els.length === 0) return;
 
-  const restores: Array<() => void> = [];
+  // 逐个克隆 → 准备图片 → 提取 HTML → 清理（串行，保持逻辑简单）
+  const htmls: string[] = [];
   for (const el of els) {
-    restores.push(await prepareImagesForExport(el));
+    const wrapper = mountClone(el);
+    try {
+      await prepareImagesForExport(wrapper);
+      htmls.push((wrapper.firstElementChild! as HTMLElement).outerHTML);
+    } finally {
+      unmountClone(wrapper);
+    }
   }
 
-  try {
-    const clones = els.map((el) => {
-      const clone = el.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
-      return clone;
-    });
-    printInNewWindow(clones, filename, true, gap);
-  } finally {
-    for (const r of restores) r();
-  }
+  printInNewWindow(htmls, filename, true, gap);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -120,7 +152,7 @@ export async function saveAllAsPDF(
 // ═══════════════════════════════════════════════════════
 
 function printInNewWindow(
-  clones: HTMLElement[],
+  htmls: string[],
   filename: string,
   showGap: boolean,
   gap = 24
@@ -128,10 +160,10 @@ function printInNewWindow(
   const stylesheets = collectStylesheets();
 
   // 构建 HTML
-  const bodies = clones
-    .map((clone) => {
+  const bodies = htmls
+    .map((html) => {
       const margin = showGap ? `padding-bottom:${gap}px;` : "";
-      return `<div class="pw-article" style="max-width:880px;margin:0 auto;${margin}">${clone.outerHTML}</div>`;
+      return `<div class="pw-article" style="max-width:880px;margin:0 auto;${margin}">${html}</div>`;
     })
     .join("");
 
@@ -151,11 +183,15 @@ ${stylesheets}
   .pw-article{page-break-after:auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   /* 确保报头渐变线在打印时可见（强制渲染背景） */
   .pw-article *{ -webkit-print-color-adjust:exact;print-color-adjust:exact }
+  /* 反制收集来的 HistoryClient @media print 样式（它用 display:none 隐藏所有 header/nav/footer） */
+  .pw-article header,.pw-article nav,.pw-article footer{display:block!important}
   @media print{
     body{padding:0 16px!important;background:#fff!important}
     @page{margin:8mm}
     /* 报纸卡片在打印时保留背景色和阴影 */
     .newspaper-paper{background:#faf8f5!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    /* 更高优先级覆盖：报头必须显示 */
+    .pw-article header,.pw-article nav,.pw-article footer{display:block!important}
   }
 </style>
 </head>
