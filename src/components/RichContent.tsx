@@ -3,29 +3,58 @@ import { parseRichContent, extractMentionName, type TextSegment } from "@/lib/ri
 
 /**
  * 服务端组件：将纯文本渲染为富文本 HTML
- * 支持 @成员名(displayName) → 可点击成员链接，URL → 可点击外部链接
+ * 支持 @displayName(memberId) 新版格式 + @displayName 旧版格式
  */
 export async function RichContent({ text }: { text: string }) {
   const segments = parseRichContent(text);
 
-  // 收集所有 mention 名称
-  const mentionNames = segments
-    .filter((s) => s.type === "mention")
-    .map((s) => extractMentionName(s.raw!))
-    .filter((n) => n.length > 0);
-
-  // 批量查找 ClubMember（按 displayName）
+  const mentions = segments.filter((s) => s.type === "mention");
   const memberMap = new Map<string, string>();
-  if (mentionNames.length > 0) {
-    const members = await prisma.clubMember.findMany({
-      where: {
-        displayName: { in: mentionNames },
-      },
-      select: { id: true, displayName: true },
-    });
 
-    for (const m of members) {
-      if (m.displayName) memberMap.set(m.displayName, `/members/${m.id}`);
+  if (mentions.length > 0) {
+    const memberIds: string[] = [];
+    const displayNames: string[] = [];
+    const idToRaw: Map<string, string[]> = new Map();
+
+    for (const seg of mentions) {
+      if (seg.memberId) {
+        memberIds.push(seg.memberId);
+        const existing = idToRaw.get(seg.memberId) || [];
+        existing.push(seg.raw || seg.content);
+        idToRaw.set(seg.memberId, existing);
+      } else {
+        const name = extractMentionName(seg.raw || "");
+        if (name) displayNames.push(name);
+      }
+    }
+
+    if (memberIds.length > 0) {
+      const membersById = await prisma.clubMember.findMany({
+        where: { id: { in: memberIds } },
+        select: { id: true, displayName: true },
+      });
+      for (const m of membersById) {
+        if (!m.displayName) continue;
+        const raws = idToRaw.get(m.id) || [];
+        for (const raw of raws) {
+          memberMap.set(raw, `/members/${m.id}:${m.displayName}`);
+        }
+      }
+    }
+
+    if (displayNames.length > 0) {
+      const membersByName = await prisma.clubMember.findMany({
+        where: {
+          displayName: { in: displayNames },
+          ...(memberIds.length > 0 ? { id: { notIn: memberIds } } : {}),
+        },
+        select: { id: true, displayName: true },
+      });
+      for (const m of membersByName) {
+        if (m.displayName) {
+          memberMap.set(`@${m.displayName}`, `/members/${m.id}`);
+        }
+      }
     }
   }
 
@@ -39,8 +68,6 @@ export async function RichContent({ text }: { text: string }) {
   );
 }
 
-// ── HTML 转义 ──
-
 function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -52,8 +79,6 @@ function esc(s: string): string {
 function escAttr(s: string): string {
   return esc(s).replace(/'/g, "&#39;");
 }
-
-// ── 片段 → HTML ──
 
 function segmentsToHtml(
   segments: TextSegment[],
@@ -68,12 +93,14 @@ function segmentsToHtml(
           return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="rich-link" style="color:#3388BB;text-decoration:underline;">${text}</a>`;
         }
         case "mention": {
-          const name = extractMentionName(seg.raw || "");
-          const href = memberMap.get(name);
-          if (href) {
-            return `<a href="${escAttr(href)}" class="rich-mention" style="color:#3388BB;font-weight:500;text-decoration:none;border-bottom:1px dashed #3388BB;">${esc(seg.content)}</a>`;
+          const rawKey = seg.raw || seg.content;
+          const lookup = memberMap.get(rawKey);
+          if (lookup) {
+            const [idPart, currentName] = lookup.split(":");
+            const displayText = currentName ? `@${currentName}` : seg.content;
+            return `<a href="${escAttr(idPart)}" class="rich-mention" style="color:#3388BB;font-weight:500;text-decoration:none;border-bottom:1px dashed #3388BB;">${esc(displayText)}</a>`;
           }
-          return esc(seg.content);
+          return `<span style="color:#E38043;font-weight:500">${esc(seg.content)}</span>`;
         }
         default:
           return esc(seg.content).replace(/\n/g, "<br/>");

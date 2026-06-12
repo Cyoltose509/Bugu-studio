@@ -186,35 +186,74 @@ export async function notifyMentions(
   try {
     const { prisma } = await import("@/lib/db/prisma");
 
-    // 提取 @mention 的成员名
-    const mentionRe = /@([^\s@]+)/g;
-    const mentionedNames = new Set<string>();
+    // 步骤1：提取新版 @displayName(memberId) → 直接拿 memberId
+    const newMentionRe = /@([^(]+)\(([a-zA-Z0-9_]+)\)/g;
+    const memberIds = new Set<string>();
     let m;
-    while ((m = mentionRe.exec(content)) !== null) {
-      mentionedNames.add(m[1]);
+    while ((m = newMentionRe.exec(content)) !== null) {
+      memberIds.add(m[2]);
     }
 
-    if (mentionedNames.size === 0) return;
+    // 步骤2：提取旧版 @displayName（排除已被新版覆盖的）
+    const plainMentionRe = /@([^\s@]+)/g;
+    const mentionedNames = new Set<string>();
+    while ((m = plainMentionRe.exec(content)) !== null) {
+      // 检查这个位置是否已被新版格式覆盖
+      const isInNew = [...newMentionRe.exec(content) || []]; // 重置
+      mentionedNames.add(m[1]);
+    }
+    // 更精确的方法：先标记新版 mention 覆盖范围
+    const newMentionSpans: Array<{ start: number; end: number }> = [];
+    const nmRe = /@([^(]+)\(([a-zA-Z0-9_]+)\)/g;
+    let nm;
+    while ((nm = nmRe.exec(content)) !== null) {
+      newMentionSpans.push({ start: nm.index, end: nmRe.lastIndex });
+    }
+    const pmRe = /@([^\s@]+)/g;
+    let pm;
+    while ((pm = pmRe.exec(content)) !== null) {
+      const inNew = newMentionSpans.some(s => pm!.index >= s.start && pm!.index < s.end);
+      if (!inNew) {
+        mentionedNames.add(pm[1]);
+      }
+    }
 
-    // 查找被提及的成员（排除发起人自己）
-    const members = await prisma.clubMember.findMany({
-      where: {
-        displayName: { in: [...mentionedNames] },
-        user: { id: { not: fromUserId } },
-      },
-      select: { userId: true, displayName: true },
-    });
+    if (memberIds.size === 0 && mentionedNames.size === 0) return;
 
-    if (members.length === 0) return;
+    // 按 memberId 精确查找（新版格式，不受改名影响）
+    const membersById = memberIds.size > 0
+      ? await prisma.clubMember.findMany({
+          where: {
+            id: { in: [...memberIds] },
+            user: { id: { not: fromUserId } },
+          },
+          select: { userId: true, displayName: true },
+        })
+      : [];
 
-    // 上下文字段映射
+    // 按 displayName 查找（旧版格式，排除已通过 ID 找到的）
+    const foundUserIds = new Set(membersById.map(m => m.userId));
+    const membersByName = mentionedNames.size > 0
+      ? await prisma.clubMember.findMany({
+          where: {
+            displayName: { in: [...mentionedNames] },
+            user: { id: { not: fromUserId } },
+            ...(foundUserIds.size > 0 ? { userId: { notIn: [...foundUserIds] } } : {}),
+          },
+          select: { userId: true, displayName: true },
+        })
+      : [];
+
+    const allMembers = [...membersById, ...membersByName];
+    if (allMembers.length === 0) return;
+
     const relatedTypeMap: Record<string, string> = {
       Project: "Project",
       Activity: "Activity",
       HistoryEvent: "HistoryEvent",
     };
 
-    const items = members.map((member) => ({
+    const items = allMembers.map((member) => ({
       userId: member.userId,
       type: "MENTION",
       title: `${fromName} 在${contextTitle(context.type)}中 @你`,

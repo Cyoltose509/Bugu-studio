@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -16,6 +16,12 @@ export const metadata: Metadata = {
   description: "布谷工作室官方网站，展示历届成员作品与社团历史。",
   keywords: ["游戏开发", "社团", "独立游戏", "Game Jam", "Unity", "Unreal"],
   icons: { icon: "/images/logo.png", apple: "/images/logo.png", shortcut: "/images/logo.png" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

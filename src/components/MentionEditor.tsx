@@ -25,7 +25,7 @@ interface MentionEditorProps {
   richPreview?: boolean;
 }
 
-/** 常见 TLD 列表（用于裸域名识别） */
+/** 常见 TLD 列表 */
 const COMMON_TLDS = new Set([
   "com","org","net","io","dev","app","co","info","xyz","me","cc","tv","fm","be","to","nl","de","fr","uk","eu","ai","sh","ac","tw","hk","jp","kr","sg","in","au","nz","br","mx","ru","pl","it","es","pt","se","no","fi","dk","cz","ro","bg","hr","si","sk","lt","lv","ee","hu","gr","cy","mt","lu","at","ch","li","mc","ad","sm","va","tk","ws","am","az","ge","kg","kz","md","mn","th","tr","uz","vn","ph","id","my","pk","bd","lk","np","mm","kh","la","bn","tl","pg","fj","nc","pf","wf","yt","pm","bl","mf","gl","bq","cw","sx","aw","je","gg","im","tc","vi","pr","as","gu","mp","um","is","fo","sj","bv","hm","gs","tf","aq",
   "com.cn","net.cn","org.cn","gov.cn","edu.cn","co.uk","co.jp","co.kr","co.nz","ac.uk","ac.cn","ac.jp",
@@ -34,36 +34,54 @@ const COMMON_TLDS = new Set([
 /** URL 正则 — 匹配 http(s):// 或 www. 开头的完整 URL */
 const URL_RE = /(?:https?:\/\/|www\.)[^\s<>"'，。！？、；：（）【】《》\u2018\u2019\u201c\u201d]+(?:\/[^\s<>"'，。！？、；：（）【】《》\u2018\u2019\u201c\u201d]*)?/gi;
 
-/** 裸域名粗略正则 — 匹配 xxx.yy 模式（yy 为 2-6 位字母），二次验证 TLD */
+/** 裸域名粗略正则 */
 const BARE_DOMAIN_RE = /(?<![.@\/])([a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,6})/g;
 
-/** @mention 正则 — 匹配 @后跟非空格的名称片段（光标前） */
+/**
+ * 新版 @mention 正则（内嵌 memberId）：@displayName(memberId)
+ * 用于在文本中识别已解析的 mention
+ */
+const RESOLVED_MENTION_RE = /@([^(]+)\(([a-zA-Z0-9_]+)\)/g;
+
+/** 旧版 @mention 正则 — @后跟非空格名称片段 */
+const PLAIN_MENTION_RE = /@[^\s@]+/g;
+
+/**
+ * @mention 触发检测正则（光标前）— 仅匹配 @后 1-30 个非空字符
+ * 确保在 @displayName(memberId) 之后的新 @ 也能触发
+ */
 const MENTION_RE = /@([^\s@]{1,30})$/;
 
-/** 验证裸域名的 TLD 是否在常见列表中 */
+/** 验证裸域名的 TLD */
 function isValidTld(word: string): boolean {
   const lastDot = word.lastIndexOf(".");
   if (lastDot === -1) return false;
   const tld = word.slice(lastDot + 1).split(/[/?#]/)[0].toLowerCase();
   if (!/^[a-z]{2,6}$/.test(tld)) return false;
-  // 排除纯数字段（IP 地址）
   if (/^\d+\.\d+\.\d+\.\d+$/.test(word)) return false;
   return COMMON_TLDS.has(tld);
 }
 
+interface Token {
+  text: string;
+  type: "text" | "url" | "mention";
+  /** 新版 mention 携带的 memberId */
+  memberId?: string;
+}
+
 /**
  * 将纯文本拆分为片段数组，标记 URL 和 @mention
- * 支持三种 URL 格式：
- * 1. http(s)://xxx
- * 2. www.xxx
- * 3. 裸域名（仅当 TLD 在常见列表中）
+ * 支持：
+ *   1. http(s)://xxx / www.xxx URL
+ *   2. 裸域名（常见 TLD）
+ *   3. 新版 @mention：@displayName(memberId)
+ *   4. 旧版 @mention：@displayName
  */
-function tokenize(text: string): Array<{ text: string; type: "text" | "url" | "mention" }> {
-  const tokens: Array<{ text: string; type: "text" | "url" | "mention" }> = [];
-  const mentionAllRe = /@[^\s@]+/g;
+function tokenize(text: string): Token[] {
+  const tokens: Token[] = [];
   let lastIdx = 0;
 
-  // ── 步骤 1: 标记带协议头的 URL（http(s)://）和 www. 开头的 URL ──
+  // ── 步骤 1: 标记带协议的 URL + www. URL ──
   const urlMatches: Array<{ start: number; end: number }> = [];
   let m: RegExpExecArray | null;
   URL_RE.lastIndex = 0;
@@ -71,42 +89,61 @@ function tokenize(text: string): Array<{ text: string; type: "text" | "url" | "m
     urlMatches.push({ start: m.index, end: URL_RE.lastIndex });
   }
 
-  // ── 步骤 2: 标记裸域名（在被已有 URL 覆盖的区域之外） ──
+  // ── 步骤 2: 标记裸域名 ──
   BARE_DOMAIN_RE.lastIndex = 0;
   while ((m = BARE_DOMAIN_RE.exec(text)) !== null) {
     const word = m[1];
     if (!isValidTld(word)) continue;
     const start = m.index;
     const end = m.index + word.length;
-    // 不与已有 URL 重叠
     const overlap = urlMatches.some(u => start < u.end && end > u.start);
-    if (!overlap) {
-      urlMatches.push({ start, end });
-    }
+    if (!overlap) urlMatches.push({ start, end });
   }
   urlMatches.sort((a, b) => a.start - b.start);
 
-  // ── 步骤 3: 标记 @mention（排除 URL 内的部分） ──
-  mentionAllRe.lastIndex = 0;
-  const mentionMatches: Array<{ start: number; end: number }> = [];
-  while ((m = mentionAllRe.exec(text)) !== null) {
+  // ── 步骤 3: 标记新版 @mention（带 memberId） ──
+  const mentionMatches: Array<{ start: number; end: number; memberId: string }> = [];
+  RESOLVED_MENTION_RE.lastIndex = 0;
+  while ((m = RESOLVED_MENTION_RE.exec(text)) !== null) {
     const isInUrl = urlMatches.some(u => m!.index >= u.start && m!.index < u.end);
     if (!isInUrl) {
-      mentionMatches.push({ start: m.index, end: mentionAllRe.lastIndex });
+      mentionMatches.push({
+        start: m.index,
+        end: RESOLVED_MENTION_RE.lastIndex,
+        memberId: m[2],
+      });
     }
   }
 
-  // ── 步骤 4: 合并所有标记，按位置排序 ──
+  // ── 步骤 4: 标记旧版 @mention（排除已匹配的新版和 URL） ──
+  PLAIN_MENTION_RE.lastIndex = 0;
+  while ((m = PLAIN_MENTION_RE.exec(text)) !== null) {
+    const inResolved = mentionMatches.some(r => m!.index >= r.start && m!.index < r.end);
+    const inUrl = urlMatches.some(u => m!.index >= u.start && m!.index < u.end);
+    if (!inResolved && !inUrl) {
+      mentionMatches.push({
+        start: m.index,
+        end: PLAIN_MENTION_RE.lastIndex,
+        memberId: "",
+      });
+    }
+  }
+
+  // ── 步骤 5: 合并所有标记，按位置排序 ──
   const allMarks = [
-    ...urlMatches.map(m => ({ ...m, type: "url" as const })),
-    ...mentionMatches.map(m => ({ ...m, type: "mention" as const })),
+    ...urlMatches.map(mrk => ({ start: mrk.start, end: mrk.end, type: "url" as const, memberId: "" })),
+    ...mentionMatches.map(mrk => ({ start: mrk.start, end: mrk.end, type: "mention" as const, memberId: mrk.memberId })),
   ].sort((a, b) => a.start - b.start);
 
   for (const mark of allMarks) {
     if (mark.start > lastIdx) {
       tokens.push({ text: text.slice(lastIdx, mark.start), type: "text" });
     }
-    tokens.push({ text: text.slice(mark.start, mark.end), type: mark.type });
+    tokens.push({
+      text: text.slice(mark.start, mark.end),
+      type: mark.type,
+      memberId: mark.memberId || undefined,
+    });
     lastIdx = mark.end;
   }
   if (lastIdx < text.length) {
@@ -205,7 +242,7 @@ export default function MentionEditor({
     }
     syncScroll();
 
-    // 检测 @mention
+    // 检测 @mention 触发
     const pos = e.target.selectionStart;
     const beforeCursor = newValue.slice(0, pos);
     const match = beforeCursor.match(MENTION_RE);
@@ -219,19 +256,21 @@ export default function MentionEditor({
     }
   }, [isControlled, controlledOnChange, syncScroll]);
 
-  // ── 选择提及成员 ──
+  // ── 选择提及成员 → 插入 @displayName(memberId) 格式 ──
   const selectMember = useCallback((member: Member) => {
     if (mentionStart < 0) return;
     const before = value.slice(0, mentionStart);
     const after = value.slice(textareaRef.current?.selectionStart ?? value.length);
-    const newValue = `${before}@${member.displayName} ${after}`;
+    // 新版格式：@displayName(memberId) — 内嵌 ID 确保改名后仍可解析
+    const mentionText = `@${member.displayName}(${member.id})`;
+    const newValue = `${before}${mentionText} ${after}`;
     if (isControlled) {
       controlledOnChange?.(newValue);
     } else {
       setInternalValue(newValue);
     }
 
-    const cursorPos = mentionStart + member.displayName.length + 2;
+    const cursorPos = mentionStart + mentionText.length + 1; // 空格后
     requestAnimationFrame(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
@@ -263,7 +302,11 @@ export default function MentionEditor({
     }
   }, [showPopup, members, popupIdx, selectMember]);
 
-  // ── 构建高亮版文本 ──
+  // ── 构建高亮版文本（编辑器的 overlay 背景层） ──
+  // 新版 @mention：显示 @displayName 橙色，(memberId) 灰色淡化
+  // 旧版 @mention：显示 @displayName 橙色
+  // URL：蓝色带下划线
+  // 普通文本：深灰色
   const highlightHtml = useMemo(() => {
     if (!richPreview || !value) return "";
     const tokens = tokenize(value);
@@ -272,7 +315,15 @@ export default function MentionEditor({
         return `<span style="color:#3388BB;text-decoration:underline">${escHtml(t.text)}</span>`;
       }
       if (t.type === "mention") {
-        return `<span style="color:#E38043;font-weight:500">${escHtml(t.text)}</span>`;
+        const text = t.text;
+        // 解析 @displayName(memberId) 格式
+        const rm = text.match(/^@([^(]+)\(([^)]+)\)$/);
+        if (rm) {
+          // 新版格式：名字橙色，ID 淡灰
+          return `<span style="color:#E38043;font-weight:500">@${escHtml(rm[1])}</span><span style="color:#ccc;font-size:0.85em">(${escHtml(rm[2])})</span>`;
+        }
+        // 旧版格式
+        return `<span style="color:#E38043;font-weight:500">${escHtml(text)}</span>`;
       }
       return `<span style="color:#333">${escHtml(t.text).replace(/\n/g, "<br>")}</span>`;
     }).join("");

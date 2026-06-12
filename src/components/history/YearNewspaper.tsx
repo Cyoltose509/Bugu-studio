@@ -1,10 +1,10 @@
 "use client";
 
-import {useRef, useCallback, useState} from "react";
-import {toPng} from "html-to-image";
+import {useRef, useCallback, useState, useEffect} from "react";
 import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
 import { RichContentClient } from "@/components/RichContentClient";
+import { saveElementAsPDF, saveElementAsImage } from "@/lib/print-utils";
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
@@ -66,9 +66,9 @@ interface Props {
     activities: Activity[];
     activeMembers: ActiveMember[];
     startYear: number;
+    registerRef?: (el: HTMLDivElement | null) => void;
 }
 
-// ─── 常量 ────────────────────────────────────────────
 const TYPE_DESC: Record<string, string> = {DEMO: "技术演示", STEAM: "Steam 发布", ITCH: "itch.io 独立发布", OTHER: "创作项目"};
 const ACT_LABELS: Record<string, string> = {COMPETITION: "比赛", COURSE: "公开课", GENERAL: "普通活动", MEETING: "例会"};
 const ACT_ORDER = ["COMPETITION", "COURSE", "GENERAL", "MEETING"] as const;
@@ -204,7 +204,7 @@ const Q: Record<string, React.CSSProperties> = {
     clubName: {fontSize: 18, fontWeight: 700, color: A, letterSpacing: 5, fontFamily: "system-ui,'Microsoft YaHei',sans-serif"},
     clubSub: {fontSize: 9, color: GOLD, letterSpacing: 3, fontFamily: "Georgia,serif", marginTop: 1},
     mastLabel: {fontSize: 12, color: GOLD, letterSpacing: 10, fontFamily: "system-ui,'Microsoft YaHei',sans-serif", marginBottom: 2},
-    mastYear: {fontSize: 78, fontWeight: 900, lineHeight: 0.95, color: A, fontFamily: "Georgia,'Times New Roman',serif"},
+    mastYear: {fontSize: 78, fontWeight: 900, lineHeight: 0.95, color: A, fontFamily: "Georgia,'Times New Roman',serif", textRendering: "geometricPrecision" as const},
     mastIssue: {fontSize: 12, color: INK3, fontFamily: "system-ui,sans-serif"},
     mastDate: {fontSize: 10, color: LINE, marginTop: 3},
     // 正文
@@ -422,6 +422,22 @@ function saveBtnStyle(loading: boolean): React.CSSProperties {
     };
 }
 
+const pdfBtnStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "8px 18px",
+    borderRadius: 8,
+    border: `1.5px solid ${C}`,
+    background: "transparent",
+    color: C,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "system-ui,sans-serif",
+    transition: "all 0.2s",
+};
+
 function actDotStyle(t: string): React.CSSProperties {
     const colors: Record<string, string> = {COMPETITION: B, COURSE: A, GENERAL: C, MEETING: LINE};
     return {width: 8, height: 8, borderRadius: "50%", background: colors[t] || LINE, flexShrink: 0};
@@ -479,11 +495,20 @@ function StatBox({num, label}: { num: number; label: string }) {
 // ═══════════════════════════════════════════════════════
 //  主组件
 // ═══════════════════════════════════════════════════════
-export default function YearNewspaper({year, members, projects, events, activities, activeMembers, startYear}: Props) {
+export default function YearNewspaper({year, members, projects, events, activities, activeMembers, startYear, registerRef}: Props) {
     const paperRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
+    const [savingPdf, setSavingPdf] = useState(false);
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
     const yearIndex = year - startYear + 1;
+
+    // 向父组件注册 paperRef
+    useEffect(() => {
+        if (registerRef && paperRef.current) {
+            registerRef(paperRef.current);
+            return () => registerRef(null);
+        }
+    }, [registerRef]);
 
     const topNarrative = generateMemberHighlight(activeMembers);
     const leadText = generateLead(year, members, projects, activities, events, yearIndex, activeMembers);
@@ -496,21 +521,31 @@ export default function YearNewspaper({year, members, projects, events, activiti
     const nonMeeting = activities.filter(a => a.type !== "MEETING");
     const meetingCount = activities.filter(a => a.type === "MEETING").length;
 
+    // ── 保存图片（html-to-image: SVG foreignObject） ──
     const saveImage = useCallback(async () => {
         if (!paperRef.current || saving) return;
         setSaving(true);
         try {
-            const dataUrl = await toPng(paperRef.current, {quality: 0.95, pixelRatio: 2, backgroundColor: "#faf8f5"});
-            const link = document.createElement("a");
-            link.download = `布谷工作室·${year}年度回顾.png`;
-            link.href = dataUrl;
-            link.click();
+            await saveElementAsImage(paperRef.current, `布谷工作室·${year}年度回顾.png`);
         } catch (e) {
-            console.error("保存失败", e);
+            console.error("保存图片失败", e);
         } finally {
             setSaving(false);
         }
     }, [saving, year]);
+
+    // ── 保存PDF（新窗口 + 动态 @page 尺寸 → 链接可点击 + 不截页） ──
+    const savePDF = useCallback(async () => {
+        if (!paperRef.current || savingPdf) return;
+        setSavingPdf(true);
+        try {
+            await saveElementAsPDF(paperRef.current, `布谷工作室·${year}年度回顾.pdf`);
+        } catch (e) {
+            console.error("保存PDF失败", e);
+        } finally {
+            setSavingPdf(false);
+        }
+    }, [savingPdf, year]);
 
     const hasContent = members.length > 0 || projects.length > 0 || events.length > 0 || activities.length > 0;
     if (!hasContent) return null;
@@ -518,17 +553,8 @@ export default function YearNewspaper({year, members, projects, events, activiti
     return (
         <>
             <article style={Q.outer}>
-                {/* 保存按钮 */}
-                <div style={Q.saveRow}>
-                    <button type="button" onClick={saveImage} disabled={saving} style={saveBtnStyle(saving)}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                        </svg>
-                        {saving ? "生成中…" : "保存图片"}
-                    </button>
-                </div>
 
-                <div ref={paperRef} style={Q.paper}>
+                <div ref={paperRef} className="newspaper-paper" style={Q.paper}>
                     {/* ═══ 报头 ═══ */}
                     <header style={Q.masthead}>
                         <div style={Q.mastTop}/>
@@ -553,7 +579,6 @@ export default function YearNewspaper({year, members, projects, events, activiti
 
                         {/* ─── 卷首语 ─── */}
                         <div style={Q.lead}>
-                            <span style={Q.dropCap}>这</span>
                             <span style={Q.leadText}>{leadText}</span>
                         </div>
 
@@ -804,8 +829,15 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                                                     onClick={() => setLightboxSrc(img.url)}
                                                                     aria-label="查看大图"
                                                                 >
-                                                                    <SafeImage src={img.url} alt={img.altText || e.title} fill
-                                                                               style={{objectFit: "contain"}}/>
+                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                    <img
+                                                                        src={img.url}
+                                                                        alt={img.altText || e.title}
+                                                                        width={120}
+                                                                        height={80}
+                                                                        style={{width: "100%", height: "100%", objectFit: "cover", display: "block"}}
+                                                                        loading="lazy"
+                                                                    />
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -827,9 +859,28 @@ export default function YearNewspaper({year, members, projects, events, activiti
                         </div>
                     </div>
                 </div>
+
+                {/* ─── 保存按钮（报纸下方） ─── */}
+                <div data-save-buttons style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10}}>
+                    <button type="button" onClick={saveImage} disabled={saving} style={saveBtnStyle(saving)}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                        {saving ? "生成中…" : "保存图片"}
+                    </button>
+                    <button type="button" onClick={savePDF} disabled={savingPdf} style={pdfBtnStyle}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="12" y1="18" x2="12" y2="12"/>
+                            <polyline points="9 15 12 18 15 15"/>
+                        </svg>
+                        {savingPdf ? "生成中…" : "保存PDF"}
+                    </button>
+                </div>
             </article>
             {lightboxSrc && (
-                <div onClick={() => setLightboxSrc(null)} style={{
+                <div data-lightbox onClick={() => setLightboxSrc(null)} style={{
                     position: "fixed",
                     inset: 0,
                     background: "rgba(0,0,0,0.85)",
@@ -839,6 +890,7 @@ export default function YearNewspaper({year, members, projects, events, activiti
                     justifyContent: "center",
                     cursor: "zoom-out"
                 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={lightboxSrc} style={{maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain"}} alt=""/>
                 </div>
             )}

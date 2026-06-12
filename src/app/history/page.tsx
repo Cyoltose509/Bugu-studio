@@ -1,5 +1,5 @@
 ﻿import {Metadata} from "next";
-import YearNewspaper from "@/components/history/YearNewspaper";
+import HistoryClient from "@/components/history/HistoryClient";
 import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
 import {batchRenderRichContent} from "@/lib/renderRichContent";
@@ -224,7 +224,7 @@ export default async function HistoryPage() {
         const c = competitionContrib.get(mid) || 0;
         const r = courseContrib.get(mid) || 0;
         const m = meetingContrib.get(mid) || 0;
-        const score = p * 1 + c * 1 + r * 0.8 + m * 0.4;
+        const score = p + c + r * 0.8 + m * 0.4;
         if (score > 0) scoreMap.set(mid, { score: Math.round(score * 10) / 10, projects: p, competitions: c, courses: r, meetings: m });
       }
       
@@ -242,28 +242,16 @@ export default async function HistoryPage() {
 
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
-            <div className="mb-10 text-center">
+            <div className="mb-8 text-center">
                 <h1 className="text-3xl font-bold" style={{color: "#25547A"}}>社团历史</h1>
                 <p className="mt-2" style={{color: "#777"}}>记录每一届成员的努力与成果</p>
-                <p className="mt-1 text-xs" style={{color: "#b8a590"}}>
-                    共 {yearDetails.length} 年年报（2019年至今）· 点击年报下方的"保存图片"按钮即可保存为图片
-                </p>
             </div>
 
-            <div className="space-y-8">
-                {yearDetails.map(({year, projects, members, events, activities, activeMembers}) => (
-                    <YearNewspaper
-                        key={year}
-                        year={year}
-                        members={members}
-                        projects={projects}
-                        events={events}
-                        activities={activities}
-                        activeMembers={activeMembers}
-                        startYear={START_YEAR}
-                    />
-                ))}
-            </div>
+            <HistoryClient
+                yearDetails={yearDetails}
+                startYear={START_YEAR}
+                yearCount={yearDetails.length}
+            />
         </div>
     );
 }

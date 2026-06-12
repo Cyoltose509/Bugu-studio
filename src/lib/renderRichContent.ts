@@ -1,6 +1,11 @@
 /**
  * 服务端富文本渲染工具
  * 批量处理文本 → HTML，支持 @mention + URL 链接
+ *
+ * @mention 渲染策略：
+ *   1. 有 memberId → 按 ID 精确查找（不受改名影响），查找当前 displayName
+ *   2. 无 memberId → 按 displayName 查找（旧版兼容）
+ *   3. 找不到 → 显示存储时的 displayName，无链接
  */
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -29,14 +34,7 @@ export async function batchRenderRichContent(
   if (valid.length === 0) return new Map();
 
   const allSegments = valid.map((t) => parseRichContent(t));
-  const allMentionNames = new Set(
-    allSegments
-      .flat()
-      .filter((s) => s.type === "mention")
-      .map((s) => extractMentionName(s.raw!))
-  );
-
-  const memberMap = await buildMemberMapFromNames([...allMentionNames]);
+  const memberMap = await buildMemberMapFromSegments(allSegments);
 
   const result = new Map<string, string>();
   for (let i = 0; i < valid.length; i++) {
@@ -50,29 +48,76 @@ export async function batchRenderRichContent(
 async function buildMemberMap(
   segments: TextSegment[]
 ): Promise<Map<string, string>> {
-  const names = segments
-    .filter((s) => s.type === "mention")
-    .map((s) => extractMentionName(s.raw!))
-    .filter((n) => n.length > 0);
-  return buildMemberMapFromNames(names);
+  return buildMemberMapFromSegments([segments]);
 }
 
-async function buildMemberMapFromNames(
-  names: string[]
+/**
+ * 从所有 segments 构建 member 查找表
+ * 优先按 memberId 查找（新版），其次按 displayName（旧版兼容）
+ * Map key: raw mention text → "/members/{id}"
+ */
+async function buildMemberMapFromSegments(
+  allSegments: TextSegment[][]
 ): Promise<Map<string, string>> {
   const map = new Map<string, string>();
-  if (names.length === 0) return map;
 
-  const members = await prisma.clubMember.findMany({
-    where: {
-      displayName: { in: names },
-    },
-    select: { id: true, displayName: true },
-  });
+  const mentions = allSegments
+    .flat()
+    .filter((s) => s.type === "mention");
 
-  for (const m of members) {
-    if (m.displayName) map.set(m.displayName, `/members/${m.id}`);
+  if (mentions.length === 0) return map;
+
+  // 收集 memberId（新版格式）和 displayName（旧版格式）
+  const memberIds: string[] = [];
+  const displayNames: string[] = [];
+  const idToRaw: Map<string, string[]> = new Map(); // memberId → [raw1, raw2, ...]
+
+  for (const seg of mentions) {
+    if (seg.memberId) {
+      memberIds.push(seg.memberId);
+      const existing = idToRaw.get(seg.memberId) || [];
+      existing.push(seg.raw || seg.content);
+      idToRaw.set(seg.memberId, existing);
+    } else {
+      const name = extractMentionName(seg.raw || "");
+      if (name) displayNames.push(name);
+    }
   }
+
+  // 按 memberId 批量查找
+  if (memberIds.length > 0) {
+    const membersById = await prisma.clubMember.findMany({
+      where: { id: { in: memberIds } },
+      select: { id: true, displayName: true },
+    });
+
+    for (const m of membersById) {
+      if (!m.displayName) continue;
+      const raws = idToRaw.get(m.id) || [];
+      for (const raw of raws) {
+        map.set(raw, `/members/${m.id}:${m.displayName}`);
+      }
+    }
+  }
+
+  // 按 displayName 查找（仅未被 memberId 覆盖的）
+  if (displayNames.length > 0) {
+    const membersByName = await prisma.clubMember.findMany({
+      where: {
+        displayName: { in: displayNames },
+        // 排除已通过 memberId 找到的
+        ...(memberIds.length > 0 ? { id: { notIn: memberIds } } : {}),
+      },
+      select: { id: true, displayName: true },
+    });
+
+    for (const m of membersByName) {
+      if (m.displayName) {
+        map.set(`@${m.displayName}`, `/members/${m.id}`);
+      }
+    }
+  }
+
   return map;
 }
 
@@ -98,15 +143,19 @@ function segmentsToHtml(
         case "link": {
           const href = escAttr(seg.href || seg.content);
           const text = esc(seg.content);
-          return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="rich-link" style="color:#3388BB;text-decoration:underline;">${text}</a>`;
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="rich-link" style="color:#3388BB;text-decoration:none;border-bottom:1px solid #3388BB;padding-bottom:1px;">${text}</a>`;
         }
         case "mention": {
-          const name = extractMentionName(seg.raw || "");
-          const href = memberMap.get(name);
-          if (href) {
-            return `<a href="${escAttr(href)}" class="rich-mention" style="color:#3388BB;font-weight:500;text-decoration:none;border-bottom:1px dashed #3388BB;">${esc(seg.content)}</a>`;
+          const rawKey = seg.raw || seg.content;
+          const lookup = memberMap.get(rawKey);
+          if (lookup) {
+            // lookup 格式: "/members/{id}" 或 "/members/{id}:{currentName}"
+            const [idPart, currentName] = lookup.split(":");
+            const displayText = currentName ? `@${currentName}` : seg.content;
+            return `<a href="${escAttr(idPart)}" class="rich-mention" style="color:#3388BB;font-weight:500;text-decoration:none;border-bottom:1px dashed #3388BB;">${esc(displayText)}</a>`;
           }
-          return esc(seg.content);
+          // 未找到 → 显示存储时的 displayName，无链接
+          return `<span style="color:#E38043;font-weight:500">${esc(seg.content)}</span>`;
         }
         default:
           return esc(seg.content).replace(/\n/g, "<br/>");
