@@ -82,22 +82,21 @@ export default function HistoryClient({
     if (savingAllImg) return;
     setSavingAllImg(true);
     try {
-      // 按年份降序排列（最新在上）
       const sorted = [...paperRefs.current.entries()]
         .sort(([a], [b]) => b - a);
       const els = sorted.map(([, el]) => el).filter(Boolean);
 
       if (els.length === 0) return;
 
-      // 直接对可见元素渲染（html-to-image via SVG foreignObject）
       await saveAllAsLongImage(
         els,
         `布谷工作室·${startYear}-至今·年度回顾.png`,
         24
       );
+      // 保存完毕后强制刷新页面，杜绝第二次保存时图片错乱
+      setTimeout(() => window.location.reload(), 300);
     } catch (e) {
       console.error("保存全部长图失败", e);
-    } finally {
       setSavingAllImg(false);
     }
   }, [savingAllImg, startYear]);
@@ -116,9 +115,10 @@ export default function HistoryClient({
         `布谷工作室·${startYear}-至今·年度回顾.pdf`,
         24
       );
+      // 刷新页面确保下次保存状态干净
+      setTimeout(() => window.location.reload(), 300);
     } catch (e) {
       console.error("保存全部PDF失败", e);
-    } finally {
       setSavingAllPdf(false);
     }
   }, [savingAllPdf, startYear]);
@@ -175,7 +175,7 @@ export default function HistoryClient({
           <span className="text-sm mr-2" style={{ color: "#777" }}>
             共 {yearCount} 年年报（{startYear}年至今）
           </span>
-          <button type="button" onClick={saveAllPDF} disabled={savingAllPdf} style={topBtn(savingAllPdf)}>
+          <button type="button" onClick={saveAllPDF} disabled={savingAllPdf} style={topBtn(savingAllPdf)} title="可能需要关闭浏览器的窗口拦截">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -184,7 +184,7 @@ export default function HistoryClient({
             </svg>
             {savingAllPdf ? "生成中…" : "保存全部为PDF"}
           </button>
-          <button type="button" onClick={saveAllAsImage} disabled={savingAllImg} style={topBtn(savingAllImg)}>
+          <button type="button" onClick={saveAllAsImage} disabled={savingAllImg} style={topBtn(savingAllImg)} title="页面左侧上暂时出现图片是正常现象">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>

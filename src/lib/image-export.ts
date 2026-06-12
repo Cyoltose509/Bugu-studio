@@ -46,6 +46,7 @@ export async function renderElementToCanvas(
       pixelRatio: scale,
       backgroundColor: bg,
       skipAutoScale: true,
+      cacheBust: true,
     });
     return await dataUrlToCanvas(dataUrl);
   } catch (htmlToImageErr) {

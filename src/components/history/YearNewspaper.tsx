@@ -527,9 +527,10 @@ export default function YearNewspaper({year, members, projects, events, activiti
         setSaving(true);
         try {
             await saveElementAsImage(paperRef.current, `布谷工作室·${year}年度回顾.png`);
+            // 保存完毕后强制刷新页面，杜绝第二次保存时图片错乱
+            setTimeout(() => window.location.reload(), 300);
         } catch (e) {
             console.error("保存图片失败", e);
-        } finally {
             setSaving(false);
         }
     }, [saving, year]);
@@ -540,9 +541,10 @@ export default function YearNewspaper({year, members, projects, events, activiti
         setSavingPdf(true);
         try {
             await saveElementAsPDF(paperRef.current, `布谷工作室·${year}年度回顾.pdf`);
+            // 刷新页面确保下次保存状态干净
+            setTimeout(() => window.location.reload(), 300);
         } catch (e) {
             console.error("保存PDF失败", e);
-        } finally {
             setSavingPdf(false);
         }
     }, [savingPdf, year]);
@@ -561,7 +563,7 @@ export default function YearNewspaper({year, members, projects, events, activiti
                         <div style={Q.mastContent}>
                             <div style={Q.mastLeft}>
                                 <div style={Q.clubName}>布谷工作室</div>
-                                <div style={Q.clubSub}>BUGU STUDIO</div>
+                                <div style={Q.clubSub}>BUGOO STUDIO</div>
                             </div>
                             <div style={Q.mastCenter}>
                                 <div style={Q.mastLabel}>年 度 回 顾</div>
@@ -862,13 +864,13 @@ export default function YearNewspaper({year, members, projects, events, activiti
 
                 {/* ─── 保存按钮（报纸下方） ─── */}
                 <div data-save-buttons style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10}}>
-                    <button type="button" onClick={saveImage} disabled={saving} style={saveBtnStyle(saving)}>
+                    <button type="button" onClick={saveImage} disabled={saving} style={saveBtnStyle(saving)} title="页面左侧上暂时出现图片是正常现象">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                         </svg>
                         {saving ? "生成中…" : "保存图片"}
                     </button>
-                    <button type="button" onClick={savePDF} disabled={savingPdf} style={pdfBtnStyle}>
+                    <button type="button" onClick={savePDF} disabled={savingPdf} style={pdfBtnStyle} title="可能需要关闭浏览器的窗口拦截">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                             <polyline points="14 2 14 8 20 8"/>

@@ -11,12 +11,20 @@ import { renderElementToCanvas, prepareImagesForExport } from "./image-export";
 //  Clone helper（所有 save 路径共享）
 // ═══════════════════════════════════════════════════════
 
-/** 把原件克隆到临时容器（absolute 定位在视口原点），附加到 body，返回 wrapper */
+/**
+ * 把原件克隆到临时容器（absolute 定位在视口原点），附加到 body，返回 wrapper
+ *
+ * 使用 DOMParser（而非 cloneNode）确保完全独立的 DOM 节点——
+ * 序列化 → 反序列化，切断所有隐式引用，杜绝第二次保存时的图片错乱。
+ */
 function mountClone(el: HTMLElement): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.style.cssText =
     "position:absolute;left:0;top:0;width:880px;z-index:99999;";
-  const clone = el.cloneNode(true) as HTMLElement;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(el.outerHTML, "text/html");
+  const clone = doc.body.firstElementChild as HTMLElement;
+  if (!clone) throw new Error("mountClone: 解析 HTML 失败");
   clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
@@ -42,7 +50,7 @@ export async function saveElementAsImage(
     await prepareImagesForExport(wrapper); // 在克隆上准备图片（restore 无需关心，wrapper 会被移除）
     const canvas = await renderElementToCanvas(wrapper, { scale: 3, bg: "#faf8f5" });
     if (canvas.width > 0 && canvas.height > 0) {
-      downloadCanvas(canvas, filename, "image/png");
+      await downloadCanvas(canvas, filename, "image/png");
     } else {
       console.error("保存图片失败: canvas 尺寸为 0");
     }
@@ -70,8 +78,11 @@ export async function saveAllAsLongImage(
   wrapper.style.cssText =
     "position:absolute;left:0;top:0;width:880px;background:#faf8f5;padding:32px 0;box-sizing:content-box;z-index:99999;";
 
+  const parser = new DOMParser();
   for (let i = 0; i < els.length; i++) {
-    const clone = els[i].cloneNode(true) as HTMLElement;
+    const doc = parser.parseFromString(els[i].outerHTML, "text/html");
+    const clone = doc.body.firstElementChild as HTMLElement;
+    if (!clone) continue;
     clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
     wrapper.appendChild(clone);
     if (i < els.length - 1) {
@@ -90,7 +101,7 @@ export async function saveAllAsLongImage(
     // 3. 一次渲染
     const canvas = await renderElementToCanvas(wrapper, { scale: 3, bg: "#faf8f5" });
     if (canvas.width > 0 && canvas.height > 0) {
-      downloadCanvas(canvas, filename, "image/png");
+      await downloadCanvas(canvas, filename, "image/png");
     } else {
       console.error("保存全部长图失败: canvas 尺寸为 0");
     }
@@ -114,10 +125,10 @@ export async function saveElementAsPDF(
   const wrapper = mountClone(el);
   try {
     await prepareImagesForExport(wrapper);
-    const clone = wrapper.firstElementChild!.cloneNode(true) as HTMLElement;
-    // unmmount 之后原 DOM 完全未变，clone 独立存在
+    const prepared = wrapper.firstElementChild as HTMLElement;
+    const html = prepared.outerHTML;
     unmountClone(wrapper);
-    printInNewWindow([clone.outerHTML], filename, false);
+    printInNewWindow([html], filename, false);
   } catch (e) {
     unmountClone(wrapper);
     throw e;
@@ -279,14 +290,17 @@ async function waitForWindowReady(w: Window): Promise<void> {
 
 // ═══════════════════════════════════════════════════════
 
-function downloadCanvas(canvas: HTMLCanvasElement, filename: string, type: string): void {
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.download = filename;
-    a.href = url;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }, type, 0.95);
+function downloadCanvas(canvas: HTMLCanvasElement, filename: string, type: string): Promise<void> {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (!blob) { resolve(); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.download = filename;
+      a.href = url;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      resolve();
+    }, type, 0.95);
+  });
 }
