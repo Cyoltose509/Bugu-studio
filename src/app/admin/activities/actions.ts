@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { requireAdmin } from "@/lib/auth/adminGuard";
 import { auth } from "@/lib/auth/auth";
 import { invalidateCache } from "@/lib/db/cache";
-import { createNotification } from "@/lib/services/notification";
+import { createNotification, notifyMentions } from "@/lib/services/notification";
 import { revalidatePath } from "next/cache";
 import { ActivityStatus, ProposalStatus } from "@prisma/client";
 
@@ -115,6 +115,18 @@ export async function createActivity(formData: FormData) {
     },
   });
 
+  // @mention 通知
+  if (description) {
+    const session = await auth();
+    if (session?.user) {
+      await notifyMentions(description, session.user.name || "未知用户", session.user.id, {
+        type: "Activity",
+        id: slug,
+        title: finalTitle,
+      });
+    }
+  }
+
   await invalidateActivityCaches();
   revalidatePath("/admin/activities");
   return { success: true, id: activity.id, slug: activity.slug };
@@ -171,6 +183,18 @@ export async function updateActivity(id: string, formData: FormData) {
       maxTeamSize: newMaxTeamSize,
     },
   });
+
+  // @mention 通知
+  if (description) {
+    const session = await auth();
+    if (session?.user) {
+      await notifyMentions(description, session.user.name || "未知用户", session.user.id, {
+        type: "Activity",
+        id: slug,
+        title,
+      });
+    }
+  }
 
   // 如果缩小了 maxTeamSize，自动踢出超限队伍的成员
   if (newMaxTeamSize < oldMaxTeamSize) {

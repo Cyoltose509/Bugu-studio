@@ -11,6 +11,7 @@ import { createActivity } from "../actions";
 import { ActivityType } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import MentionEditor from "@/components/MentionEditor";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",    label: "例会" },
@@ -150,9 +151,8 @@ export default function CreateActivityPage() {
         {/* 描述 */}
         <div>
           <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="description">详细描述</label>
-          <textarea id="description" name="description" rows={5} placeholder="活动详细说明（支持 Markdown）"
-            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] resize-y"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+          <MentionEditor id="description" name="description" rows={5} placeholder="活动详细说明"
+            className="w-full rounded-lg border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]" />
         </div>
 
         {/* 封面 */}

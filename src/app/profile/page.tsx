@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import MiniLikeButton from "@/components/MiniLikeButton";
+import { RichContent } from "@/components/RichContent";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
 
@@ -201,7 +202,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       {user?.bio && (
         <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
           <h2 className="font-semibold mb-3" style={{ color: "#25547A" }}>个人介绍</h2>
-          <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>{user.bio}</p>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>
+            <RichContent text={user.bio} />
+          </p>
         </div>
       )}
 
@@ -302,7 +305,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           {member.bio && (
             <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
               <div className="text-xs mb-1" style={{ color: "#999" }}>个人简介</div>
-              <div className="text-sm" style={{ color: "#555" }}>{member.bio}</div>
+              <div className="text-sm" style={{ color: "#555" }}>
+                <RichContent text={member.bio} />
+              </div>
             </div>
           )}
 

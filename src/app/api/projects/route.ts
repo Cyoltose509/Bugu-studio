@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     return apiError("参数格式错误", 400, queryResult.error.flatten());
   }
 
-  const { page, pageSize, q, type, tag, year, featured } = queryResult.data;
+  const { page, pageSize, q, type, tag, year } = queryResult.data;
   const { skip, take } = getPagination(page, pageSize);
 
   // 构造查询条件
@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
     status: ProjectStatus.PUBLISHED,
     ...(type && { type }),
     ...(year && { developYear: year }),
-    ...(featured !== undefined && { isFeatured: featured }),
     ...(q && {
       OR: [
         { title: { contains: q, mode: "insensitive" } },
@@ -60,7 +59,7 @@ export async function GET(request: NextRequest) {
     }),
   };
 
-  const cacheKey = `api:projects:${JSON.stringify({ page, pageSize, q, type, tag, year, featured })}`;
+  const cacheKey = `api:projects:${JSON.stringify({ page, pageSize, q, type, tag, year })}`;
 
   const result = await cachedQuery(cacheKey, () =>
     Promise.all([
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
         where,
         skip,
         take,
-        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+        orderBy: [{ publishedAt: "desc" }],
         select: {
           id: true,
           slug: true,
@@ -79,7 +78,6 @@ export async function GET(request: NextRequest) {
           type: true,
           developYear: true,
           publishedAt: true,
-          isFeatured: true,
           tags: {
             select: {
               tag: { select: { name: true, slug: true, color: true } },

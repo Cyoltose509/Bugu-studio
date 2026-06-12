@@ -16,10 +16,8 @@ export const metadata: Metadata = {title: "作品库", description: "浏览历�
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 interface PageProps {
-    searchParams: Promise<{ q?: string; type?: string; tag?: string; year?: string; page?: string; sort?: string }>;
+    searchParams: Promise<{ q?: string; types?: string; tag?: string; year?: string; page?: string; sort?: string }>;
 }
-
-const TYPE_LABELS: Record<string, string> = {DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他"};
 
 export default async function WorksPage({searchParams}: PageProps) {
     await ensureDefaultTags();
@@ -61,14 +59,6 @@ export default async function WorksPage({searchParams}: PageProps) {
 
     const filterContent = (
         <div className="space-y-6">
-            <div>
-                <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>类型</h3>
-                <div className="space-y-1.5">
-                    <FilterLink href={buildUrl(params, {type: void 0, page: 1})} active={!params.type} label="全部"/>
-                    {Object.entries(TYPE_LABELS).map(([v, l]) => <FilterLink key={v} href={buildUrl(params, {type: v, page: 1})}
-                                                                             active={params.type === v} label={l}/>)}
-                </div>
-            </div>
             {years.length > 0 && (
                 <div>
                     <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>年份</h3>
@@ -141,13 +131,13 @@ async function WorksGrid({params, page, total}: { params: Record<string, any>; p
         ? [{title: "asc"}]
         : sort === "likes"
             ? [{likes: {_count: "desc"}}, {publishedAt: "desc"}]
-            : [{isFeatured: "desc"}, {publishedAt: "desc"}];
+            : [{developYear: "desc"}, {publishedAt: "desc"}];
 
     const where = buildWhere(params);
 
     // 第一步：只查询 ID 列表（极快，无 include）
     const projectIds = await cachedQuery(
-        `works:ids:${page}:${params.type || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
+        `works:ids:${page}:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
         () =>
             prisma.project.findMany({
                 where,
@@ -208,7 +198,10 @@ async function WorksGrid({params, page, total}: { params: Record<string, any>; p
 
 function buildWhere(params: Record<string, any>) {
     const where: any = {status: ProjectStatus.PUBLISHED};
-    if (params.type) where.type = params.type;
+    if (params.types) {
+        const typeList = params.types.split(",").filter(Boolean);
+        if (typeList.length > 0) where.type = { in: typeList };
+    }
     if (params.year) where.developYear = parseInt(params.year);
     if (params.q) where.OR = [{title: {contains: params.q, mode: "insensitive"}}, {description: {contains: params.q, mode: "insensitive"}}];
     if (params.tag) where.tags = {some: {tag: {slug: params.tag}}};

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { submitJamWork } from "../actions";
+import MentionEditor from "@/components/MentionEditor";
 
 const PROJECT_TYPES = [
   { value: "DEMO", label: "Demo 演示" },
@@ -267,14 +268,14 @@ export function JamSubmitForm({
           <label className="block text-sm mb-1.5" style={{ color: "#555" }}>
             作品描述 <span style={{ color: "#C62828" }}>*</span>
           </label>
-          <textarea
+          <MentionEditor
             name="description"
+            defaultValue={existing?.description || ""}
+            placeholder="介绍一下这个作品（至少 10 字）"
+            rows={4}
             required
             minLength={10}
             maxLength={10000}
-            rows={4}
-            defaultValue={existing?.description || ""}
-            placeholder="介绍一下这个作品（至少 10 字）"
             className={inputClass}
             style={inputStyle}
             disabled={!isOngoing || loading}

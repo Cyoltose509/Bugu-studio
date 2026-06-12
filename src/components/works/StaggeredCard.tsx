@@ -66,13 +66,6 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
               {typeLabels[p.type]}
             </span>
           </div>
-          {p.isFeatured && (
-            <div className="absolute top-2 right-2">
-              <span className="text-xs px-2 py-0.5 rounded text-white" style={{ background: "#E38043" }}>
-                精选
-              </span>
-            </div>
-          )}
         </div>
         <div className="p-4">
           <h3

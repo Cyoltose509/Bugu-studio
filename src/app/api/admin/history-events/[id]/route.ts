@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
+import { notifyMentions } from "@/lib/services/notification";
 
 export async function PATCH(
   request: NextRequest,
@@ -50,6 +51,15 @@ export async function PATCH(
       },
       include: { images: { orderBy: { sortOrder: "asc" } } },
     });
+
+    // @mention 通知
+    if (content) {
+      await notifyMentions(content, session.user.name || "未知用户", session.user.id, {
+        type: "HistoryEvent",
+        id: event.id,
+        title: title || event.title,
+      });
+    }
 
     revalidatePath("/history");
     invalidateCache("history:events"); // 非阻塞

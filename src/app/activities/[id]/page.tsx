@@ -13,6 +13,7 @@ import { auth } from "@/lib/auth/auth";
 import { ActivityStatus, ProposalType, ProposalStatus } from "@prisma/client";
 import SubmitProposalForm from "./SubmitProposalForm";
 import DeleteProposalButton from "./DeleteProposalButton";
+import { RichContent } from "@/components/RichContent";
 import ReviewProposalForm from "./ReviewProposalForm";
 import { DisbandTeamButton } from "./game-jam/DisbandTeamButton";
 import { LeaveTeamButton } from "./game-jam/LeaveTeamButton";
@@ -146,14 +147,17 @@ export default async function ActivityDetailPage({ params }: PageProps) {
         </p>
 
         {activity.summary && (
-          <p className="text-base" style={{ color: "#555" }}>{activity.summary}</p>
+          <p className="text-base" style={{ color: "#555" }}>
+            <RichContent text={activity.summary} />
+          </p>
         )}
       </div>
 
       {/* ── 详细描述 ────────────────────────────────── */}
       {activity.description && (
-        <div className="prose max-w-none mb-4" style={{ color: "#333" }}
-          dangerouslySetInnerHTML={{ __html: activity.description.replace(/\n/g, "<br/>") }} />
+        <div className="prose max-w-none mb-4" style={{ color: "#333" }}>
+          <RichContent text={activity.description} />
+        </div>
       )}
 
       {/* ── 线上链接 ────────────────────────────────── */}

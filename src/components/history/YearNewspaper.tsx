@@ -4,6 +4,7 @@ import {useRef, useCallback, useState} from "react";
 import {toPng} from "html-to-image";
 import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
+import { RichContentClient } from "@/components/RichContentClient";
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
@@ -31,6 +32,7 @@ interface EventItem {
     id: string;
     title: string;
     body: string | null;
+    bodyHtml?: string;  // 预渲染的富文本 HTML
     eventDate: string | null;
     images?: { id: string; url: string; altText?: string | null }[];
 }
@@ -43,6 +45,7 @@ interface Activity {
     startTime: Date | string;
     coverImage: string | null;
     description: string | null;
+    descriptionHtml?: string;  // 预渲染的富文本 HTML
     summary: string | null;
 }
 
@@ -741,6 +744,7 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                         {nonMeeting.map(a => {
                                             const d = new Date(a.startTime);
                                             const desc = narrateActivity(a);
+                                            const descHtml = a.descriptionHtml;
                                             return (
                                                 <div key={a.id} style={Q.activityItem}>
                                                     <div style={Q.activityHeader}>
@@ -754,7 +758,7 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                                         <span
                                                             style={Q.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
                                                     </div>
-                                                    {desc && <div style={Q.activityDesc}>{desc}</div>}
+                                                    {descHtml ? <div style={Q.activityDesc}><RichContentClient html={descHtml} /></div> : desc && <div style={Q.activityDesc}>{desc}</div>}
                                                 </div>
                                             );
                                         })}
@@ -782,7 +786,7 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                                         <span style={Q.tlTitle}>{e.title}</span>
                                                         {d && <span style={Q.tlDate}>{d.getMonth() + 1}月{d.getDate()}日</span>}
                                                     </div>
-                                                    {e.body && <div style={Q.tlBody}>{e.body}</div>}
+                                                    {e.bodyHtml ? <div style={Q.tlBody}><RichContentClient html={e.bodyHtml} /></div> : e.body && <div style={Q.tlBody}>{e.body}</div>}
                                                     {e.images && e.images.length > 0 && (
                                                         <div style={Q.tlImages}>
                                                             {e.images.map((img) => (

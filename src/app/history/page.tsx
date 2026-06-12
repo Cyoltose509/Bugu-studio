@@ -2,6 +2,7 @@
 import YearNewspaper from "@/components/history/YearNewspaper";
 import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
+import {batchRenderRichContent} from "@/lib/renderRichContent";
 import {ProjectStatus, ActivityStatus} from "@prisma/client";
 
 export const metadata: Metadata = {title: "社团历史", description: "记录布谷工作室每一年的成长与创作"};
@@ -104,6 +105,19 @@ export default async function HistoryPage() {
           select: { userId: true, activity: { select: { startTime: true, type: true } } }
         }), 3600),
     ]);
+
+    // ── 预渲染富文本（@mention + URL → HTML），一次 DB 查询解析所有 @mention ──
+    const eventBodies = allEvents.map(e => e.body).filter(Boolean) as string[];
+    const activityTexts = allActivities.flatMap(a => [a.description, a.summary].filter(Boolean) as string[]);
+    const richHtmlMap = await batchRenderRichContent([...eventBodies, ...activityTexts]);
+    // 将预渲染 HTML 附加到对应对象
+    for (const e of allEvents) {
+      if (e.body) (e as any).bodyHtml = richHtmlMap.get(e.body) || "";
+    }
+    for (const a of allActivities) {
+      const raw = (a.description || a.summary || "").replace(/\n{3,}/g, "\n\n").trim();
+      if (raw) (a as any).descriptionHtml = richHtmlMap.get(a.description || a.summary || "") || "";
+    }
 
     // userId → ClubMember 映射（用于活跃度计算）
     const userIdToMember = new Map<string, any>();

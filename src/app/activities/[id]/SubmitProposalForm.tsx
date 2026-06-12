@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { submitProposal } from "@/app/admin/activities/actions";
+import MentionEditor from "@/components/MentionEditor";
 
 const initialState = { error: "", success: false };
 
@@ -75,11 +76,11 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
             className="w-full rounded-lg border px-3 py-2 text-sm"
             style={{ borderColor: "#D0DEE8" }}
           />
-          <textarea
+          <MentionEditor
             name="description"
             placeholder="简介（可选）"
             rows={2}
-            className="w-full rounded-lg border px-3 py-2 text-sm resize-y"
+            className="w-full rounded-lg border px-3 py-2 text-sm"
             style={{ borderColor: "#D0DEE8" }}
           />
           <SubmitButton />

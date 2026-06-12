@@ -33,7 +33,7 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
       Promise.all([
         prisma.project.findMany({
           where,
-          orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+          orderBy: [{ createdAt: "desc" }],
           skip,
           take: pageSize,
           select: {
@@ -43,7 +43,6 @@ export default async function AdminProjectsPage({ searchParams }: PageProps) {
             type: true,
             developYear: true,
             status: true,
-            isFeatured: true,
           },
         }),
         prisma.project.count({ where }),

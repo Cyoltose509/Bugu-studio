@@ -27,7 +27,6 @@ export async function deleteOwnProject(id: string) {
     invalidateCache("works:count:"),
     invalidateCache("works:sidebar:tags"),
     invalidateCache("works:likes:"),
-    invalidateCache("works:featured"),
     invalidateCache("works:latest"),
     invalidateCache("admin:projects:"),
     invalidateCache("admin:projectCount"),

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { compressImage } from "@/lib/utils/imageCrop";
+import MentionEditor from "@/components/MentionEditor";
 
 // ── 作品类型 ──
 const PROJECT_TYPES = [
@@ -387,8 +388,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         </div>
         <div>
           <label className={labelClass} style={labelStyle}>简介 <span style={{ color: "#C62828" }}>*</span></label>
-          <textarea name="description" required minLength={10} maxLength={10000} rows={4}
-            defaultValue={initialData?.description} placeholder="介绍一下这个作品（至少 10 字）"
+          <MentionEditor name="description" defaultValue={initialData?.description || ""}
+            placeholder="介绍一下这个作品（至少 10 字）" rows={4} required minLength={10} maxLength={10000}
             className={inputClass} style={inputStyle} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

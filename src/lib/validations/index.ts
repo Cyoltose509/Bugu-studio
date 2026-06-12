@@ -121,5 +121,4 @@ export const projectQuerySchema = paginationSchema.extend({
     .optional(),
   tag: z.string().optional(),
   year: z.coerce.number().int().optional(),
-  featured: z.coerce.boolean().optional(),
 });

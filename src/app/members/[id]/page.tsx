@@ -13,6 +13,7 @@ import MemberContactInfo from "./MemberContactInfo";
 import MemberSensitiveInfo from "./MemberSensitiveInfo";
 import MemberWorkHistory from "./MemberWorkHistory";
 import AdminMemberEditor from "./AdminMemberEditor";
+import { RichContent } from "@/components/RichContent";
 import { positionLabel, positionColor } from "@/lib/position";
 
 // ISR: 成员信息变化少，5 分钟缓存
@@ -179,14 +180,18 @@ export default async function MemberDetailPage({ params }: PageProps) {
           </div>
 
           {/* 个人简介 — 优先用成员 bio，兜底用户 bio */}
-          {(member.bio || member.user?.bio) && (
-            <div className="mb-10">
-              <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>个人简介</h2>
-              <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>
-                {member.bio || member.user!.bio}
-              </p>
-            </div>
-          )}
+          {(() => {
+            const bioText = member.bio ?? member.user?.bio;
+            if (!bioText) return null;
+            return (
+              <div className="mb-10">
+                <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>个人简介</h2>
+                <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>
+                  <RichContent text={bioText} />
+                </p>
+              </div>
+            );
+          })()}
 
           {/* 参与项目 */}
           {member.projectMembers.length > 0 && (

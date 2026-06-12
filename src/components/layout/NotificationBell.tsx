@@ -108,6 +108,8 @@ export default function NotificationBell() {
           window.location.href = `/activities/${parts[0]}/game-jam/teams/${parts[1]}`;
         }
       }
+    } else if (item.relatedType === "HistoryEvent") {
+      window.location.href = `/history`;
     }
   }
 
@@ -148,6 +150,7 @@ export default function NotificationBell() {
     if (type === "JAM_REJECTED") return "❌";
     if (type === "JAM_INVITATION") return "📩";
     if (type === "JAM_INVITATION_ACCEPTED") return "🤝";
+    if (type === "MENTION") return "💬";
     return "🔔";
   }
 

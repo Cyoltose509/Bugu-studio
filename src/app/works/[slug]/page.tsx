@@ -16,9 +16,9 @@ import { auth } from "@/lib/auth/auth";
 import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
 import DeleteOwnProjectButton from "./DeleteOwnProjectButton";
-import FeaturedToggle from "./FeaturedToggle";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
+import { RichContent } from "@/components/RichContent";
 
 const ImageGallery = nextDynamic(() => import("@/components/ImageGallery"), {
   loading: () => (
@@ -28,7 +28,10 @@ const ImageGallery = nextDynamic(() => import("@/components/ImageGallery"), {
 
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时动态路由连接池耗尽
 
-interface PageProps { params: Promise<{ slug: string }> }
+interface PageProps {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ sort?: string }>;
+}
 
 /* ── 共享查询（React.cache 去重） ── */
 
@@ -75,8 +78,10 @@ export async function generateMetadata(
 
 /* ── 页面主体 ── */
 
-export default async function WorkDetailPage({ params }: PageProps) {
+export default async function WorkDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const sort = sp.sort || "date";
   const project = await getProject(slug);
 
   if (!project) notFound();
@@ -104,6 +109,25 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
   const isPending = project.status !== ProjectStatus.PUBLISHED;
 
+  // ── 上一个 / 下一个作品 ──
+  const navQuery = cachedQuery(`works:nav:${slug}:${sort}`, async () => {
+    const orderBy: any = sort === "name"
+      ? { title: "asc" }
+      : { developYear: "desc" };
+    const allSlugs = await prisma.project.findMany({
+      where: { status: ProjectStatus.PUBLISHED },
+      orderBy,
+      select: { slug: true, title: true },
+    });
+    const idx = allSlugs.findIndex((p) => p.slug === slug);
+    if (idx === -1) return { prev: null, next: null };
+    return {
+      prev: idx < allSlugs.length - 1 ? allSlugs[idx + 1] : null,
+      next: idx > 0 ? allSlugs[idx - 1] : null,
+    };
+  }, 60);
+  const { prev, next } = await navQuery;
+
   const STATUS_BADGE: Record<string, { bg: string; color: string; label: string }> = {
     DRAFT:    { bg: "#F5F5F5", color: "#777",   label: "草稿" },
     PENDING:  { bg: "#FFF3E0", color: "#E65100", label: "待审核" },
@@ -128,6 +152,28 @@ export default async function WorkDetailPage({ params }: PageProps) {
         <span className="mx-2">/</span>
         <span style={{ color: "#555" }}>{project.title}</span>
       </nav>
+
+      {/* ── 上一个 / 下一个导航 ── */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          {prev ? (
+            <Link href={`/works/${prev.slug}${sort !== "date" ? `?sort=${sort}` : ""}`} className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border transition-colors hover:bg-[#F0F5F9]"
+                  style={{ borderColor: "#D0DEE8", color: "#555" }}>
+              <span className="text-xs">◀</span>
+              <span className="max-w-[200px] truncate">{prev.title}</span>
+            </Link>
+          ) : <span className="text-sm px-3 py-2" style={{ color: "#CCC" }}>已是第一个</span>}
+        </div>
+        <div>
+          {next ? (
+            <Link href={`/works/${next.slug}${sort !== "date" ? `?sort=${sort}` : ""}`} className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border transition-colors hover:bg-[#F0F5F9]"
+                  style={{ borderColor: "#D0DEE8", color: "#555" }}>
+              <span className="max-w-[200px] truncate">{next.title}</span>
+              <span className="text-xs">▶</span>
+            </Link>
+          ) : <span className="text-sm px-3 py-2" style={{ color: "#CCC" }}>已是最后一个</span>}
+        </div>
+      </div>
 
       {/* 待审核横幅 */}
       {isPending && (
@@ -157,24 +203,17 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
           <h1 className="text-3xl font-bold mb-2" style={{ color: "#25547A" }}>
             {project.title}
-            {project.isFeatured && (
-              <span className="inline-block ml-3 text-xs px-2 py-0.5 rounded-full align-middle"
-                    style={{ background: "#FFE384", color: "#5C4B00" }}>
-                ★ 精选
-              </span>
-            )}
             {statusBadge && (
               <span className="inline-block ml-3 text-xs px-2 py-0.5 rounded-full align-middle" style={{ background: statusBadge.bg, color: statusBadge.color }}>{statusBadge.label}</span>
             )}
           </h1>
           {project.subtitle && <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>}
 
-          {/* 点赞 + 编辑 + 删除 + 精选 */}
+          {/* 点赞 + 编辑 + 删除 */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={initialLiked} />
             <EditButton slug={project.slug} submitterId={project.submitterId} />
             <DeleteOwnProjectButton projectId={project.id} submitterId={project.submitterId} />
-            <FeaturedToggle projectId={project.id} isFeatured={project.isFeatured} />
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">
@@ -183,10 +222,12 @@ export default async function WorkDetailPage({ params }: PageProps) {
             ))}
           </div>
 
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>作品简介</h2>
-            <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>{project.description}</p>
-          </div>
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>作品简介</h2>
+        <p className="whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>
+          <RichContent text={project.description} />
+        </p>
+      </div>
 
           {/* ── 留言板 ── */}
           <Suspense fallback={<div className="text-xs" style={{ color: "#999" }}>留言加载中…</div>}>

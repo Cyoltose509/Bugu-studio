@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { ProjectStatus } from "@prisma/client";
-import { updateProjectStatus, toggleFeatured } from "./actions";
+import { updateProjectStatus } from "./actions";
 import DeleteProjectButton from "./DeleteProjectButton";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -20,7 +20,6 @@ interface Project {
   type: string;
   developYear: number | null;
   status: ProjectStatus;
-  isFeatured: boolean;
 }
 
 interface Props {
@@ -78,11 +77,6 @@ export default function ProjectsTableClient({
 
   const handleReject = useCallback(
     (id: string) => withLock(() => updateProjectStatus(id, "REJECTED")),
-    [withLock]
-  );
-
-  const handleToggleFeatured = useCallback(
-    (id: string, current: boolean) => withLock(() => toggleFeatured(id, current)),
     [withLock]
   );
 
@@ -161,9 +155,6 @@ export default function ProjectsTableClient({
                   <th className="text-left p-3 font-medium" style={{ color: "#555" }}>
                     状态
                   </th>
-                  <th className="text-center p-3 font-medium" style={{ color: "#555" }}>
-                    精选
-                  </th>
                   <th className="text-right p-3 font-medium" style={{ color: "#555" }}>
                     操作
                   </th>
@@ -194,19 +185,6 @@ export default function ProjectsTableClient({
                     </td>
                     <td className="p-3">
                       <StatusBadge status={p.status} />
-                    </td>
-                    <td className="p-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeatured(p.id, p.isFeatured)}
-                        disabled={isProcessing}
-                        className={`text-sm cursor-pointer hover:scale-125 transition-transform ${
-                          isProcessing ? "opacity-40 cursor-not-allowed" : ""
-                        }`}
-                        style={{ color: p.isFeatured ? "#E38043" : "#CCC" }}
-                      >
-                        {p.isFeatured ? "★" : "☆"}
-                      </button>
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-2 flex-wrap">

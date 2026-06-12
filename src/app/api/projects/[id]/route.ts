@@ -15,7 +15,7 @@ import { getClientIp, checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { apiResponse, apiError, generateSlug } from "@/lib/utils";
 import { invalidateCache } from "@/lib/db/cache";
-import { createNotification, notifyNewProject, notifyProjectEdit } from "@/lib/services/notification";
+import { createNotification, notifyNewProject, notifyProjectEdit, notifyMentions } from "@/lib/services/notification";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 
@@ -277,6 +277,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (isReEdit) {
     const submitterName = session.user.name || "未知用户";
     await notifyProjectEdit(id, updated.title, session.user.id, submitterName);
+  }
+
+  // ── @mention 通知 ──
+  if (projectData.description) {
+    await notifyMentions(projectData.description, session.user.name || "未知用户", session.user.id, {
+      type: "Project",
+      id: updated.slug, // 使用 slug 方便前端跳转
+      title: updated.title,
+    });
   }
 
   // ── 清除缓存（使用更新后的 slug，防止修改 slug 后缓存未命中）──

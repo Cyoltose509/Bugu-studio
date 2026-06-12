@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import MentionEditor from "@/components/MentionEditor";
 
 interface EventImage {
   id?: string;
@@ -148,7 +149,7 @@ export default function AdminHistoryEventsPage() {
               </div>
               <div>
                 <label style={labelStyle}>正文</label>
-                <textarea value={formBody} onChange={(e) => setFormBody(e.target.value)} rows={4} placeholder="详细描述..." className={inputClass} style={inputStyle} />
+                <MentionEditor value={formBody} onChange={setFormBody} rows={4} placeholder="详细描述..." className={inputClass} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>日期 *</label>

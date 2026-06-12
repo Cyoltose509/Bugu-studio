@@ -7,6 +7,7 @@ import {saveProfile, redeemInviteCode} from "./actions";
 import {SubmitButton} from "@/components/ui/SubmitButton";
 import Cropper from "react-easy-crop";
 import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
+import MentionEditor from "@/components/MentionEditor";
 
 type UserSnippet = { id: string; name: string | null; bio: string | null; image: string | null };
 type MemberSnippet = {
@@ -408,15 +409,14 @@ export default function EditForm({
                     <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="bio">
                         个人介绍
                     </label>
-                    <textarea
+                    <MentionEditor
                         id="bio"
                         name="bio"
                         value={bioValue}
-                        onChange={(e) => setBioValue(e.target.value)}
+                        onChange={setBioValue}
                         rows={4}
-                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent resize-y"
-                        style={{borderColor: "#D0DEE8", color: "#333"}}
                         placeholder="介绍一下自己..."
+                        className="w-full rounded-lg bg-white border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                     />
                 </div>
 
@@ -492,14 +492,13 @@ export default function EditForm({
                             <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="memberBio">
                                 成员简介 <span className="text-xs" style={{color: "#999"}}>(社团成员页展示，如留空则使用上方个人介绍)</span>
                             </label>
-                            <textarea
+                            <MentionEditor
                                 id="memberBio"
                                 name="memberBio"
                                 defaultValue={member.bio ?? ""}
                                 rows={4}
-                                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent resize-y"
-                                style={{borderColor: "#D0DEE8", color: "#333"}}
                                 placeholder="在成员页面展示的简介..."
+                                className="w-full rounded-lg bg-white border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                             />
                         </div>
 

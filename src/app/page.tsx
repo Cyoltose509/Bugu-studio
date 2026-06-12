@@ -6,7 +6,6 @@ import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import HomeStats from "./HomeStats";
-import FeaturedProjects from "./FeaturedProjects";
 import LatestProjects from "./LatestProjects";
 import HomeActivities from "./HomeActivities";
 
@@ -37,24 +36,13 @@ export default function HomePage() {
         <HomeStats />
       </Suspense>
 
-      {/* 精选作品 — 流式加载 */}
-      <section className="py-16 container mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold" style={{ color: "#25547A" }}>精选作品</h2>
-          <Link href="/works" className="text-sm hover:underline" style={{ color: "#3388BB" }}>查看全部 →</Link>
-        </div>
-        <Suspense fallback={<ProjectGridSkeleton count={6} />}>
-          <FeaturedProjects />
-        </Suspense>
-      </section>
-
-      {/* 最新作品 — 流式加载 */}
+      {/* 最新作品 — 流式加载（展示 6 个） */}
       <section className="py-16 container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold" style={{ color: "#25547A" }}>最新作品</h2>
           <Link href="/works" className="text-sm hover:underline" style={{ color: "#3388BB" }}>查看全部 →</Link>
         </div>
-        <Suspense fallback={<ProjectGridSkeleton count={4} />}>
+        <Suspense fallback={<ProjectGridSkeleton count={6} />}>
           <LatestProjects />
         </Suspense>
       </section>

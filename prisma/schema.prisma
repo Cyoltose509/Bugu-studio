@@ -302,7 +302,7 @@ model Project {
 
   // 内容
   techStack  String[] @default([])
-  isFeatured Boolean  @default(false) // 精选作品
+
 
   // 提交信息
   submitterId String
@@ -326,12 +326,12 @@ model Project {
   @@index([status])
   @@index([type])
   @@index([developYear])
-  @@index([isFeatured])
+
   @@index([createdAt])
   @@index([slug])
   @@index([publishedAt])
-  @@index([status, isFeatured, publishedAt])
-  @@index([status, type, isFeatured, publishedAt])
+  @@index([status, publishedAt])
+  @@index([status, type, publishedAt])
 }
 
 // 作品截图

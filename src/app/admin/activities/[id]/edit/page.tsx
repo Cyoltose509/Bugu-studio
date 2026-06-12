@@ -9,6 +9,7 @@ import { updateActivity } from "../../actions";
 import { ActivityType, ActivityStatus } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import DescriptionEditor from "./DescriptionEditor";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -87,9 +88,7 @@ export default async function EditActivityPage({ params }: PageProps) {
         {/* 描述 */}
         <div>
           <label className="block text-sm mb-1.5" style={{ color: "#555" }}>详细描述</label>
-          <textarea name="description" defaultValue={activity.description || ""} rows={5}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] resize-y"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+          <DescriptionEditor defaultValue={activity.description || ""} />
         </div>
 
         {/* 封面 */}
