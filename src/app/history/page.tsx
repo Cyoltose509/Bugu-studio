@@ -237,10 +237,12 @@ export default async function HistoryPage() {
         .filter(Boolean)
         .sort((a: any, b: any) => b.score - a.score);
       
-      // ─── 当年社长：grade == year - 2 且 position 为 PRESIDENT / VICE_PRESIDENT ───
+      // ─── 当年社长：grade == year - 2 且 position 为社长/副社长/往届/创始人 ───
       const presidents = allMembers.filter(m =>
         m.grade != null && m.grade === year - 2 &&
-        (m.position === "PRESIDENT" || m.position === "VICE_PRESIDENT")
+        (m.position === "PRESIDENT" || m.position === "VICE_PRESIDENT" ||
+         m.position === "PAST_PRESIDENT" || m.position === "PAST_VICE_PRESIDENT" ||
+         m.position === "FOUNDER")
       );
       
       yearDetails.push({ year, projects, members: newBlood, events, activities, activeMembers, presidents });

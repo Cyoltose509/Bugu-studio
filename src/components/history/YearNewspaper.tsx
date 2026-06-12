@@ -3,9 +3,9 @@
 import {useRef, useCallback, useState, useEffect} from "react";
 import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
-import { RichContentClient } from "@/components/RichContentClient";
-import { saveElementAsPDF, saveElementAsImage } from "@/lib/print-utils";
-import { positionLabel as getPositionLabel } from "@/lib/position";
+import {RichContentClient} from "@/components/RichContentClient";
+import {saveElementAsPDF, saveElementAsImage} from "@/lib/print-utils";
+import {newspaperPositionLabel} from "@/lib/position";
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
@@ -207,7 +207,14 @@ const Q: Record<string, React.CSSProperties> = {
     clubName: {fontSize: 18, fontWeight: 700, color: A, letterSpacing: 5, fontFamily: "system-ui,'Microsoft YaHei',sans-serif"},
     clubSub: {fontSize: 9, color: GOLD, letterSpacing: 3, fontFamily: "Georgia,serif", marginTop: 1},
     mastLabel: {fontSize: 12, color: GOLD, letterSpacing: 10, fontFamily: "system-ui,'Microsoft YaHei',sans-serif", marginBottom: 2},
-    mastYear: {fontSize: 78, fontWeight: 900, lineHeight: 0.95, color: A, fontFamily: "Georgia,'Times New Roman',serif", textRendering: "geometricPrecision" as const},
+    mastYear: {
+        fontSize: 78,
+        fontWeight: 900,
+        lineHeight: 0.95,
+        color: A,
+        fontFamily: "Georgia,'Times New Roman',serif",
+        textRendering: "geometricPrecision" as const
+    },
     mastIssue: {fontSize: 12, color: INK3, fontFamily: "system-ui,sans-serif"},
     mastDate: {fontSize: 10, color: LINE, marginTop: 3},
     // 正文
@@ -498,7 +505,17 @@ function StatBox({num, label}: { num: number; label: string }) {
 // ═══════════════════════════════════════════════════════
 //  主组件
 // ═══════════════════════════════════════════════════════
-export default function YearNewspaper({year, members, projects, events, activities, activeMembers, presidents, startYear, registerRef}: Props) {
+export default function YearNewspaper({
+                                          year,
+                                          members,
+                                          projects,
+                                          events,
+                                          activities,
+                                          activeMembers,
+                                          presidents,
+                                          startYear,
+                                          registerRef
+                                      }: Props) {
     const paperRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
     const [savingPdf, setSavingPdf] = useState(false);
@@ -761,13 +778,20 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                 {/* 当年社长（grade == year - 2 的 PRESIDENT / VICE_PRESIDENT） */}
                                 {presidents.length > 0 && (
                                     <div style={{marginTop: activeMembers.length > 0 ? 16 : 0}}>
-                                        <div style={{fontSize: 12, color: GOLD, fontFamily: "system-ui,sans-serif", textTransform: "uppercase", letterSpacing: 4, marginBottom: 8}}>
+                                        <div style={{
+                                            fontSize: 12,
+                                            color: GOLD,
+                                            fontFamily: "system-ui,sans-serif",
+                                            textTransform: "uppercase",
+                                            letterSpacing: 4,
+                                            marginBottom: 8
+                                        }}>
                                             ◆ 当年社长
                                         </div>
                                         <div style={Q.roster}>
                                             {presidents.map(m => {
                                                 const avatarUrl = m.avatar || m.user?.image;
-                                                const posLabel = getPositionLabel(m.position);
+                                                const posLabel = newspaperPositionLabel(m.position);
                                                 return (
                                                     <div key={m.id} style={Q.rosterItem}>
                                                         <Link href={`/members/${m.id}`} style={{display: "block", flexShrink: 0}}>
@@ -831,7 +855,9 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                                         <span
                                                             style={Q.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
                                                     </div>
-                                                    {descHtml ? <div style={Q.activityDesc}><RichContentClient html={descHtml} /></div> : desc && <div style={Q.activityDesc}>{desc}</div>}
+                                                    {descHtml ?
+                                                        <div style={Q.activityDesc}><RichContentClient html={descHtml}/></div> : desc &&
+                                                        <div style={Q.activityDesc}>{desc}</div>}
                                                 </div>
                                             );
                                         })}
@@ -861,11 +887,13 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                                         <span style={Q.tlTitle}>{e.title}</span>
                                                         {d && <span style={Q.tlDate}>
                                                           {showRange
-                                                            ? `${d.getMonth() + 1}月${d.getDate()}日 至 ${de!.getMonth() + 1}月${de!.getDate()}日`
-                                                            : `${d.getMonth() + 1}月${d.getDate()}日`}
+                                                              ? `${d.getMonth() + 1}月${d.getDate()}日 至 ${de!.getMonth() + 1}月${de!.getDate()}日`
+                                                              : `${d.getMonth() + 1}月${d.getDate()}日`}
                                                         </span>}
                                                     </div>
-                                                    {e.bodyHtml ? <div style={Q.tlBody}><RichContentClient html={e.bodyHtml} /></div> : e.body && <div style={Q.tlBody}>{e.body}</div>}
+                                                    {e.bodyHtml ?
+                                                        <div style={Q.tlBody}><RichContentClient html={e.bodyHtml}/></div> : e.body &&
+                                                        <div style={Q.tlBody}>{e.body}</div>}
                                                     {e.images && e.images.length > 0 && (
                                                         <div style={Q.tlImages}>
                                                             {e.images.map((img) => (
@@ -882,7 +910,12 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                                                         alt={img.altText || e.title}
                                                                         width={120}
                                                                         height={80}
-                                                                        style={{width: "100%", height: "100%", objectFit: "cover", display: "block"}}
+                                                                        style={{
+                                                                            width: "100%",
+                                                                            height: "100%",
+                                                                            objectFit: "cover",
+                                                                            display: "block"
+                                                                        }}
                                                                         loading="lazy"
                                                                     />
                                                                 </button>
@@ -909,7 +942,8 @@ export default function YearNewspaper({year, members, projects, events, activiti
 
                 {/* ─── 保存按钮（报纸下方） ─── */}
                 <div data-save-buttons style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10}}>
-                    <button type="button" onClick={saveImage} disabled={saving} style={saveBtnStyle(saving)} title="页面左侧上暂时出现图片是正常现象">
+                    <button type="button" onClick={saveImage} disabled={saving} style={saveBtnStyle(saving)}
+                            title="页面左侧上暂时出现图片是正常现象">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                         </svg>
