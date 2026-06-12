@@ -11,6 +11,7 @@ interface Member {
   avatar: string | null;
   grade: number | null;
   joinYear: number | null;
+  position: string | null;
   user?: { image: string | null } | null;
 }
 interface Project {
@@ -40,6 +41,7 @@ interface YearDetail {
   events: EventItem[];
   activities: Activity[];
   activeMembers: ActiveMember[];
+  presidents: Member[];
 }
 
 // ─── 样式常量 ────────────────────────────────────────
@@ -197,7 +199,7 @@ export default function HistoryClient({
 
       {/* ═══ 报纸列表 ═══ */}
       <div className="space-y-8">
-        {yearDetails.map(({ year, members, projects, events, activities, activeMembers }) => (
+        {yearDetails.map(({ year, members, projects, events, activities, activeMembers, presidents }) => (
           <div key={year} className="history-scroll-wrapper">
             <YearNewspaper
               year={year}
@@ -206,6 +208,7 @@ export default function HistoryClient({
               events={events}
               activities={activities}
               activeMembers={activeMembers}
+              presidents={presidents}
               startYear={startYear}
               registerRef={(el) => registerPaper(year, el)}
             />

@@ -62,7 +62,7 @@ export default async function HistoryPage() {
     }
 
     // 单次批量查询所有年份数据，在 JS 中分组 — 减少查询次数
-    const yearDetails: { year: number; projects: any[]; members: any[]; events: any[]; activities: any[]; activeMembers: any[] }[] = [];
+    const yearDetails: { year: number; projects: any[]; members: any[]; events: any[]; activities: any[]; activeMembers: any[]; presidents: any[] }[] = [];
     
     const [
       allProjects,
@@ -80,7 +80,7 @@ export default async function HistoryPage() {
         }), 3600),
       cachedQuery('history:allMembers', () =>
         prisma.clubMember.findMany({
-          select: { id: true, userId: true, displayName: true, avatar: true, grade: true, joinYear: true, user: { select: { image: true } }, _count: { select: { projectMembers: true } } }
+          select: { id: true, userId: true, displayName: true, avatar: true, grade: true, joinYear: true, position: true, user: { select: { image: true } }, _count: { select: { projectMembers: true } } }
         }), 3600),
       cachedQuery('history:allEvents', () =>
         prisma.yearEvent.findMany({
@@ -237,7 +237,13 @@ export default async function HistoryPage() {
         .filter(Boolean)
         .sort((a: any, b: any) => b.score - a.score);
       
-      yearDetails.push({ year, projects, members: newBlood, events, activities, activeMembers });
+      // ─── 当年社长：grade == year - 2 且 position 为 PRESIDENT / VICE_PRESIDENT ───
+      const presidents = allMembers.filter(m =>
+        m.grade != null && m.grade === year - 2 &&
+        (m.position === "PRESIDENT" || m.position === "VICE_PRESIDENT")
+      );
+      
+      yearDetails.push({ year, projects, members: newBlood, events, activities, activeMembers, presidents });
     }
 
     return (

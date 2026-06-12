@@ -5,6 +5,7 @@ import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
 import { RichContentClient } from "@/components/RichContentClient";
 import { saveElementAsPDF, saveElementAsImage } from "@/lib/print-utils";
+import { positionLabel as getPositionLabel } from "@/lib/position";
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
@@ -13,6 +14,7 @@ interface Member {
     avatar: string | null;
     grade: number | null;
     joinYear: number | null;
+    position: string | null;
     user?: { image: string | null } | null;
 }
 
@@ -65,6 +67,7 @@ interface Props {
     events: EventItem[];
     activities: Activity[];
     activeMembers: ActiveMember[];
+    presidents: Member[];
     startYear: number;
     registerRef?: (el: HTMLDivElement | null) => void;
 }
@@ -495,7 +498,7 @@ function StatBox({num, label}: { num: number; label: string }) {
 // ═══════════════════════════════════════════════════════
 //  主组件
 // ═══════════════════════════════════════════════════════
-export default function YearNewspaper({year, members, projects, events, activities, activeMembers, startYear, registerRef}: Props) {
+export default function YearNewspaper({year, members, projects, events, activities, activeMembers, presidents, startYear, registerRef}: Props) {
     const paperRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
     const [savingPdf, setSavingPdf] = useState(false);
@@ -729,15 +732,16 @@ export default function YearNewspaper({year, members, projects, events, activiti
                             </>
                         )}
 
-                        {/* ═══ 年度活跃成员（Top3 展示，无排名） ═══ */}
-                        {activeMembers.length > 0 && (
+                        {/* ═══ 年度活跃成员（Top3 展示 + 当年社长） ═══ */}
+                        {(activeMembers.length > 0 || presidents.length > 0) && (
                             <>
                                 <div style={Q.thickRule}/>
                                 <div style={Q.sectionTitle}>年 度 活 跃 成 员</div>
 
-                                <div style={Q.highlightList}>
-                                    {activeMembers.slice(0, 3).map((m, i) => (
-                                        <div key={m.id} style={Q.highlightItem}>
+                                {activeMembers.length > 0 && (
+                                    <div style={Q.highlightList}>
+                                        {activeMembers.slice(0, 3).map((m, i) => (
+                                            <div key={m.id} style={Q.highlightItem}>
                     <span style={highlightDropStyle(i)}>
                       {m.avatar || m.user?.image ? (
                           <SafeImage src={m.avatar || m.user?.image || ""} alt="" className="w-full h-full object-cover"/>
@@ -745,13 +749,54 @@ export default function YearNewspaper({year, members, projects, events, activiti
                           m.displayName?.[0] || "?"
                       )}
                     </span>
-                                            <span>
+                                                <span>
                       <strong style={{color: INK, fontSize: 14}}>{m.displayName}</strong>
                       <span style={{color: INK3, marginLeft: 8}}>{topNarrative[i] || ""}</span>
                     </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* 当年社长（grade == year - 2 的 PRESIDENT / VICE_PRESIDENT） */}
+                                {presidents.length > 0 && (
+                                    <div style={{marginTop: activeMembers.length > 0 ? 16 : 0}}>
+                                        <div style={{fontSize: 12, color: GOLD, fontFamily: "system-ui,sans-serif", textTransform: "uppercase", letterSpacing: 4, marginBottom: 8}}>
+                                            ◆ 当年社长
                                         </div>
-                                    ))}
-                                </div>
+                                        <div style={Q.roster}>
+                                            {presidents.map(m => {
+                                                const avatarUrl = m.avatar || m.user?.image;
+                                                const posLabel = getPositionLabel(m.position);
+                                                return (
+                                                    <div key={m.id} style={Q.rosterItem}>
+                                                        <Link href={`/members/${m.id}`} style={{display: "block", flexShrink: 0}}>
+                                                            <div style={Q.rosterAvatar}>
+                                                                {avatarUrl ? (
+                                                                    <SafeImage src={avatarUrl} alt={m.displayName}
+                                                                               className="w-full h-full object-cover"/>
+                                                                ) : (
+                                                                    <span style={Q.rosterInitial}>{m.displayName[0]}</span>
+                                                                )}
+                                                            </div>
+                                                        </Link>
+                                                        <div>
+                                                            <span style={Q.rosterName}>{m.displayName}</span>
+                                                            {posLabel && (
+                                                                <span style={{
+                                                                    fontSize: 10, color: GOLD, fontFamily: "system-ui,sans-serif",
+                                                                    display: "block", marginTop: 1
+                                                                }}>
+                                                                    {posLabel}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
 

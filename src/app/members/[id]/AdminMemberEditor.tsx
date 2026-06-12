@@ -16,6 +16,7 @@ const POSITION_OPTIONS = [
   { value: "MEMBER", label: "成员" },
   { value: "VICE_PRESIDENT", label: "副社长" },
   { value: "PRESIDENT", label: "社长" },
+  { value: "PAST_PRESIDENT", label: "往届社长" },
 ];
 
 const POSITION_OPTIONS_WITH_FOUNDER = [

@@ -234,7 +234,7 @@ model ClubMember {
   skills            String[] @default([]) // 职能标签
   isActive          Boolean  @default(true) // 是否在读/活跃
   sortOrder         Int      @default(0)
-  position          String   @default("MEMBER") // MEMBER | PRESIDENT | VICE_PRESIDENT | FOUNDER
+  position          String   @default("MEMBER") // MEMBER | PRESIDENT | VICE_PRESIDENT | PAST_PRESIDENT | FOUNDER
   location          String? // 所在地（省份/国家）
   phone             String? // 电话（敏感项，仅成员+可见）
   wechat            String? // 微信（敏感项，仅成员+可见）
