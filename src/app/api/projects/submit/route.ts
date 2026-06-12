@@ -107,6 +107,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // 管理员提交直接发布，成员提交需审核
+  const isAdminUser = session.user.role === "ADMIN";
+  const projectStatus = isAdminUser ? ProjectStatus.PUBLISHED : ProjectStatus.PENDING;
+  const publishedAt = isAdminUser ? new Date() : null;
+
   // 写入
   await prisma.project.create({
     data: {
@@ -117,7 +122,8 @@ export async function POST(request: NextRequest) {
       type: parsed.data.type as any,
       developYear: parsed.data.developYear,
       coverImage: parsed.data.coverImage || null,
-      status: ProjectStatus.PENDING,
+      status: projectStatus,
+      publishedAt,
       submitterId: session.user.id,
       submittedAt: new Date(),
       links: {

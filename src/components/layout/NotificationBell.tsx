@@ -76,6 +76,18 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // 收起时自动标记全部为已读
+  useEffect(() => {
+    if (open || unreadCount === 0) return;
+    fetch("/api/notifications/read", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    }).catch(() => {});
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+  }, [open]);
+
   // ── 标记单条已读并跳转 ──
   async function handleClick(item: NotificationItem) {
     if (!item.read) {
@@ -123,6 +135,35 @@ export default function NotificationBell() {
     });
     setUnreadCount(0);
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+  }
+
+  // ── 删除单条通知 ──
+  async function deleteOne(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    e.preventDefault();
+    await fetch("/api/notifications", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id] }),
+    });
+    setItems((prev) => prev.filter((n) => n.id !== id));
+    // 如果删除的是未读的，减少未读数
+    const deleted = items.find((n) => n.id === id);
+    if (deleted && !deleted.read) {
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+  }
+
+  // ── 全部删除 ──
+  async function deleteAll(e: React.MouseEvent) {
+    e.stopPropagation();
+    await fetch("/api/notifications", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    setItems([]);
+    setUnreadCount(0);
   }
 
   function formatTime(iso: string) {
@@ -179,11 +220,18 @@ export default function NotificationBell() {
           {/* 头部 */}
           <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#D0DEE8" }}>
             <span className="font-semibold text-sm" style={{ color: "#25547A" }}>通知</span>
-            {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs hover:underline" style={{ color: "#3388BB" }}>
-                全部已读
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button onClick={markAllRead} className="text-xs hover:underline" style={{ color: "#3388BB" }}>
+                  全部已读
+                </button>
+              )}
+              {items.length > 0 && (
+                <button onClick={deleteAll} className="text-xs hover:underline" style={{ color: "#C62828" }}>
+                  全部删除
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 列表 */}
@@ -194,26 +242,40 @@ export default function NotificationBell() {
           ) : (
             <div>
               {items.map((n) => (
-                <button
+                <div
                   key={n.id}
-                  onClick={() => handleClick(n)}
-                  className={`w-full text-left px-4 py-3 border-b transition-colors hover:bg-[#F0F5F9] ${n.read ? "" : "bg-[#F0F8FF]"}`}
+                  className={`relative w-full group ${n.read ? "" : "bg-[#F0F8FF]"}`}
                   style={{ borderColor: "#f0f0f0" }}
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm shrink-0 mt-0.5">{getIcon(n.type)}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-sm font-medium truncate ${n.read ? "" : "text-[#25547A]"}`}>
-                        {n.title}
+                  <button
+                    onClick={() => handleClick(n)}
+                    className="w-full text-left px-4 py-3 border-b transition-colors hover:bg-[#F0F5F9]"
+                    style={{ borderColor: "#f0f0f0" }}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-sm shrink-0 mt-0.5">{getIcon(n.type)}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className={`text-sm font-medium truncate ${n.read ? "" : "text-[#25547A]"}`}>
+                          {n.title}
+                        </div>
+                        <div className="text-xs mt-0.5 truncate" style={{ color: "#777" }}>{n.content}</div>
+                        <div className="text-xs mt-1" style={{ color: "#999" }}>{formatTime(n.createdAt)}</div>
                       </div>
-                      <div className="text-xs mt-0.5 truncate" style={{ color: "#777" }}>{n.content}</div>
-                      <div className="text-xs mt-1" style={{ color: "#999" }}>{formatTime(n.createdAt)}</div>
+                      {!n.read && (
+                        <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: "#3388BB" }} />
+                      )}
                     </div>
-                    {!n.read && (
-                      <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: "#3388BB" }} />
-                    )}
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => deleteOne(e, n.id)}
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                    style={{ color: "#999" }}
+                    title="删除此通知"
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
           )}

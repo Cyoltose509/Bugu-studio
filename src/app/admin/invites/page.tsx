@@ -15,7 +15,6 @@ export const dynamic = "force-dynamic";
 
 const ROLE_OPTIONS = [
   { value: "MEMBER", label: "成员", color: "#2E7D32", bg: "#E8F5E9" },
-  { value: "REVIEWER", label: "审核员", color: "#E65100", bg: "#FFF3E0" },
   { value: "ADMIN", label: "管理员", color: "#C62828", bg: "#FDE8E8" },
 ];
 

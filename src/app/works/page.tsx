@@ -57,8 +57,27 @@ export default async function WorksPage({searchParams}: PageProps) {
         return ia - ib;
     });
 
+    const typeOptions = [
+        { value: "OFFICIAL_RELEASE", label: "正式上架" },
+        { value: "TRIAL_DEMO", label: "提供试玩" },
+        { value: "MINI_GAME", label: "小游戏" },
+        { value: "IN_DEVELOPMENT", label: "开发阶段" },
+    ] as const;
+
     const filterContent = (
         <div className="space-y-6">
+            <div>
+                <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>类型</h3>
+                <div className="space-y-1.5">
+                    <FilterLink href={buildUrl(params, {types: void 0, page: 1})} active={!params.types} label="全部类型"/>
+                    {typeOptions.map(t => (
+                        <FilterLink key={t.value}
+                                    href={buildUrl(params, {types: t.value, page: 1})}
+                                    active={params.types === t.value}
+                                    label={t.label}/>
+                    ))}
+                </div>
+            </div>
             {years.length > 0 && (
                 <div>
                     <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>年份</h3>
@@ -199,7 +218,13 @@ async function WorksGrid({params, page, total}: { params: Record<string, any>; p
 function buildWhere(params: Record<string, any>) {
     const where: any = {status: ProjectStatus.PUBLISHED};
     if (params.types) {
-        const typeList = params.types.split(",").filter(Boolean);
+        const typeList = params.types.split(",").filter(Boolean)
+            .map((t: string) => {
+                // 兼容旧类型参数：STEAM→OFFICIAL_RELEASE, DEMO/ITCH→TRIAL_DEMO
+                if (t === "STEAM") return "OFFICIAL_RELEASE";
+                if (t === "DEMO" || t === "ITCH") return "TRIAL_DEMO";
+                return t;
+            });
         if (typeList.length > 0) where.type = { in: typeList };
     }
     if (params.year) where.developYear = parseInt(params.year);

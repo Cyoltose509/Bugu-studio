@@ -43,14 +43,14 @@ export default function SubmitToWorksButton({
     <form action={handleSubmit} className="inline-flex items-center gap-2">
       <select
         name="projectType"
-        defaultValue="DEMO"
+        defaultValue="TRIAL_DEMO"
         className="text-xs rounded border px-2 py-1"
         style={{ borderColor: "#D0DEE8", color: "#333" }}
       >
-        <option value="DEMO">Demo</option>
-        <option value="STEAM">Steam</option>
-        <option value="ITCH">itch.io</option>
-        <option value="OTHER">其他</option>
+        <option value="IN_DEVELOPMENT">开发阶段</option>
+        <option value="TRIAL_DEMO">提供试玩</option>
+        <option value="MINI_GAME">小游戏</option>
+        <option value="OFFICIAL_RELEASE">正式上架</option>
       </select>
       <input
         name="developYear"

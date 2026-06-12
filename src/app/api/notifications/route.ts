@@ -103,3 +103,30 @@ export async function PATCH(request: NextRequest) {
   await invalidateCache(`notifications:${session.user.id}`);
   return apiResponse({ success: true });
 }
+
+/**
+ * DELETE /api/notifications — 删除通知
+ * Body: { ids?: string[] } → 删除指定；若无 ids 则删除全部已读通知
+ */
+export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return apiError("请先登录", 401);
+
+  let body: { ids?: string[] } = {};
+  try { body = await request.json(); } catch { /* ignore */ }
+
+  if (body.ids && body.ids.length > 0) {
+    await prisma.notification.deleteMany({
+      where: { id: { in: body.ids }, userId: session.user.id },
+    });
+  } else {
+    // 删除当前用户的全部通知
+    await prisma.notification.deleteMany({
+      where: { userId: session.user.id },
+    });
+  }
+
+  await invalidateCache(`api:notifications:${session.user.id}`);
+  await invalidateCache(`notifications:${session.user.id}`);
+  return apiResponse({ success: true });
+}

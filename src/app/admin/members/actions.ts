@@ -33,7 +33,7 @@ export async function updateMemberDetails(id: string, formData: FormData) {
   const position = formData.get("position") as string;
   const isActiveStr = formData.get("isActive") as string;
 
-  const isValidPosition = ["MEMBER", "PRESIDENT", "VICE_PRESIDENT", "FOUNDER"].includes(position);
+  const isValidPosition = ["MEMBER", "PRESIDENT", "VICE_PRESIDENT", "PAST_PRESIDENT", "PAST_VICE_PRESIDENT", "FOUNDER"].includes(position);
 
   // 先查当前成员信息，用于通知
   const current = await prisma.clubMember.findUnique({

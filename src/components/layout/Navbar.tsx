@@ -32,7 +32,7 @@ export async function Navbar() {
         <div className="flex items-center gap-3">
           {session?.user ? (
             <div className="flex items-center gap-3">
-              {(session.user.role === "MEMBER" || session.user.role === "REVIEWER" || session.user.role === "ADMIN") && (
+              {(session.user.role === "MEMBER" || session.user.role === "ADMIN") && (
                 <Link href="/submit" className="text-sm btn-primary px-3 py-1.5 rounded-md font-medium nav-link">
                   提交作品
                 </Link>

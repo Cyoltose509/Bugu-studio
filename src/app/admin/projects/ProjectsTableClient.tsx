@@ -7,6 +7,10 @@ import { updateProjectStatus } from "./actions";
 import DeleteProjectButton from "./DeleteProjectButton";
 
 const TYPE_LABELS: Record<string, string> = {
+  IN_DEVELOPMENT: "开发阶段",
+  TRIAL_DEMO: "提供试玩",
+  MINI_GAME: "小游戏",
+  OFFICIAL_RELEASE: "正式上架",
   DEMO: "Demo 演示",
   STEAM: "Steam 发布",
   ITCH: "itch.io 发布",

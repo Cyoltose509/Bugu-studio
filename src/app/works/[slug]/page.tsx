@@ -16,6 +16,7 @@ import { auth } from "@/lib/auth/auth";
 import { ProjectStatus, UserRole } from "@prisma/client";
 import EditButton from "./EditButton";
 import DeleteOwnProjectButton from "./DeleteOwnProjectButton";
+import ApproveButton from "./ApproveButton";
 import CommentSection from "@/components/CommentSection";
 import ProjectLikeButton from "@/components/ProjectLikeButton";
 import { RichContent } from "@/components/RichContent";
@@ -86,14 +87,14 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
 
   if (!project) notFound();
 
-  // 非 PUBLISHED 作品：仅提交者 / ADMIN / REVIEWER 可查看
+  // ── 非 PUBLISHED 作品：仅提交者 / ADMIN 可查看
   const session = project.status !== ProjectStatus.PUBLISHED ? await auth() : null;
   if (!session && project.status !== ProjectStatus.PUBLISHED) notFound();
   if (project.status !== ProjectStatus.PUBLISHED) {
     const role = session!.user?.role as string | undefined;
     const userId = session!.user?.id;
     const isSubmitter = userId === project.submitterId;
-    const isStaff = role === "ADMIN" || role === "REVIEWER";
+    const isStaff = role === "ADMIN";
     if (!isSubmitter && !isStaff) notFound();
   }
 
@@ -209,11 +210,14 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
           </h1>
           {project.subtitle && <p className="text-lg mb-4" style={{ color: "#777" }}>{project.subtitle}</p>}
 
-          {/* 点赞 + 编辑 + 删除 */}
+          {/* 点赞 + 编辑 + 删除 + 审核 */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <ProjectLikeButton projectId={project.id} initialCount={(project as any)._count?.likes ?? 0} initialLiked={initialLiked} />
             <EditButton slug={project.slug} submitterId={project.submitterId} />
             <DeleteOwnProjectButton projectId={project.id} submitterId={project.submitterId} />
+            {session?.user?.role === "ADMIN" && (project.status === "PENDING" || project.status === "REJECTED") && (
+              <ApproveButton projectId={project.id} />
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">
@@ -315,7 +319,13 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
-  const TYPE_LABELS: Record<string, string> = { DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" };
+  const TYPE_LABELS: Record<string, string> = { 
+    IN_DEVELOPMENT: "开发阶段", 
+    TRIAL_DEMO: "提供试玩", 
+    MINI_GAME: "小游戏",
+    OFFICIAL_RELEASE: "正式上架",
+    DEMO: "Demo 演示", STEAM: "Steam 发布", ITCH: "itch.io 发布", OTHER: "其他" // 旧值兼容
+  };
   return (
     <div className="flex justify-between">
       <dt style={{ color: "#777" }}>{label}</dt>

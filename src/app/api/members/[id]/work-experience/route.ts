@@ -44,9 +44,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const body = await request.json().catch(() => null);
   if (!body) return Response.json({ error: "请求体格式错误" }, { status: 400 });
 
-  const { company, position, startDate, endDate } = body;
+  const { company, position, startDate, endDate, type } = body;
   if (!company || !position || !startDate) {
-    return Response.json({ error: "公司、职位、入职时间为必填项" }, { status: 400 });
+    return Response.json({ error: "名称、详情、起始时间为必填项" }, { status: 400 });
   }
 
   const maxSort = await prisma.workExperience.findFirst({
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const exp = await prisma.workExperience.create({
     data: {
       memberId: id,
+      type: type || "工作",
       company,
       position,
       startDate: new Date(startDate),
@@ -88,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const body = await request.json().catch(() => null);
   if (!body) return Response.json({ error: "请求体格式错误" }, { status: 400 });
 
-  const { experienceId, company, position, startDate, endDate } = body;
+  const { experienceId, company, position, startDate, endDate, type } = body;
   if (!experienceId) return Response.json({ error: "缺少 experienceId" }, { status: 400 });
 
   const existing = await prisma.workExperience.findUnique({ where: { id: experienceId } });
@@ -99,6 +100,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const updated = await prisma.workExperience.update({
     where: { id: experienceId },
     data: {
+      ...(type !== undefined && { type }),
       ...(company !== undefined && { company }),
       ...(position !== undefined && { position }),
       ...(startDate !== undefined && { startDate: new Date(startDate) }),

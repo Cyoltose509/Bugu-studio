@@ -133,10 +133,9 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={
                       m.user.role === "ADMIN" ? { background: "#FDE8E8", color: "#C62828" }
-                        : m.user.role === "REVIEWER" ? { background: "#FFF3E0", color: "#E65100" }
                         : { background: "#E8F5E9", color: "#2E7D32" }
                     }>
-                      {m.user.role === "ADMIN" ? "管理员" : m.user.role === "REVIEWER" ? "审核员" : "成员"}
+                      {m.user.role === "ADMIN" ? "管理员" : "成员"}
                     </span>
                   </td>
                   <td className="p-3 text-right">

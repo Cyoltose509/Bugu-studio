@@ -70,7 +70,7 @@ export default async function middleware(req: NextRequest) {
   // 检查 MEMBER 路由
   if (isMember) {
     const role = (user as any)?.role;
-    if (!role || !["MEMBER", "REVIEWER", "ADMIN"].includes(role)) {
+    if (!role || !["MEMBER", "ADMIN"].includes(role)) {
       if (isRscRequest(req)) return new NextResponse("Unauthorized", { status: 401 });
       // 已登录但角色不足 → 跳转到权限提示页；未登录 → 跳转登录页（带 callbackUrl）
       if (user) {

@@ -21,7 +21,7 @@ type MemberSnippet = {
     wechat: string | null;
     qq: string | null;
     socialLinks: { id: string; label: string; url: string; sortOrder: number }[];
-    workExperiences: { id: string; company: string; position: string; startDate: Date; endDate: Date | null; sortOrder: number }[];
+    workExperiences: { id: string; type: string; company: string; position: string; startDate: Date; endDate: Date | null; sortOrder: number }[];
     graduated: boolean;
     realName: string | null;
     joinYear: number | null;
@@ -121,10 +121,11 @@ export default function EditForm({
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [showCustomLabel, setShowCustomLabel] = useState(false);
 
-  // 工作经历
+  // 经历（原工作经历，现已包含学习和工作）
   const [workExperiences, setWorkExperiences] = useState<MemberSnippet["workExperiences"]>(
     member?.workExperiences ?? []
   );
+  const [newExpType, setNewExpType] = useState("工作");
   const [newExpCompany, setNewExpCompany] = useState("");
   const [newExpPosition, setNewExpPosition] = useState("");
   const [newExpStart, setNewExpStart] = useState("");
@@ -181,8 +182,9 @@ export default function EditForm({
     setSocialLinks(socialLinks.filter((_, i) => i !== index));
   }
 
-  // ── 工作经历 CRUD ──
+  // ── 经历 CRUD ──
   async function addWorkExperience() {
+    const type = newExpType;
     const company = newExpCompany.trim();
     const position = newExpPosition.trim();
     const startDate = newExpStart;
@@ -193,7 +195,7 @@ export default function EditForm({
       const res = await fetch(`/api/members/${member.id}/work-experience`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company, position, startDate, endDate: newExpEnd || null }),
+        body: JSON.stringify({ type, company, position, startDate, endDate: newExpEnd || null }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
@@ -331,8 +333,11 @@ export default function EditForm({
                 className="space-y-6 bg-white p-6 rounded-xl border"
                 style={{borderColor: "#D0DEE8"}}
             >
-                {/* ══════════ 头像 ══════════ */}
-                <div className="flex items-center gap-6">
+                {/* ══════════ 基本信息 ══════════ */}
+                <div className="border-b pb-6" style={{borderColor: "#E8F0F8"}}>
+                  <h3 className="text-sm font-semibold mb-4" style={{color: "#25547A"}}>基本信息</h3>
+                  {/* 头像 */}
+                  <div className="flex items-center gap-6 mb-5">
                     <div className="shrink-0">
                         {avatarPreview ? (
                             <img
@@ -419,10 +424,14 @@ export default function EditForm({
                         className="w-full rounded-lg bg-white border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                     />
                 </div>
+                </div>
 
                 {/* 社团成员专属字段 */}
                 {member && (
                     <>
+                        {/* ── 联系方式 ── */}
+                        <div className="border-b pb-6" style={{borderColor: "#E8F0F8"}}>
+                          <h3 className="text-sm font-semibold mb-4" style={{color: "#25547A"}}>联系方式与所在地</h3>
                         {/* 所在地 */}
                         <div>
                             <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="location">
@@ -485,6 +494,7 @@ export default function EditForm({
                                     placeholder="QQ号"
                                 />
                             </div>
+                        </div>
                         </div>
 
                         {/* 成员简介 */}
@@ -825,67 +835,100 @@ export default function EditForm({
                             </div>
                         </div>
 
-                        {/* ══════════ 工作经历（仅已毕业可添加）══════════ */}
-                        {graduatedVal && (
-                          <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}}>
-                              工作经历
-                              <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                    style={{background: "#FDE8E8", color: "#C62828"}}
-                                    title="仅成员可见">敏感</span>
-                            </label>
+                        {/* ══════════ 经历（学习 + 工作）══════════ */}
+                        <div className="border-t pt-5" style={{borderColor: "#E8F0F8"}}>
+                          <label className="block text-sm mb-2" style={{color: "#555"}}>
+                            经历
+                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                  title="仅成员可见">敏感</span>
+                            <span className="text-xs ml-1" style={{color: "#999"}}>(学习经历与工作经历)</span>
+                          </label>
 
-                            {/* 已有工作经历列表 */}
-                            {workExperiences.length > 0 && (
-                              <div className="space-y-2 mb-3">
-                                {workExperiences.map((exp) => {
-                                  const startStr = `${new Date(exp.startDate).getFullYear()}.${String(new Date(exp.startDate).getMonth() + 1).padStart(2, "0")}`;
-                                  const endStr = exp.endDate
-                                    ? `${new Date(exp.endDate).getFullYear()}.${String(new Date(exp.endDate).getMonth() + 1).padStart(2, "0")}`
-                                    : "至今";
-                                  return (
-                                    <div key={exp.id} className="flex items-center gap-3 p-2.5 rounded-lg border text-sm"
-                                         style={{borderColor: "#D0DEE8", background: "#FAFBFC"}}>
-                                      <div className="w-2 h-2 rounded-full shrink-0" style={{background: "#88C232"}} />
-                                      <div className="flex-1 min-w-0">
-                                        <span className="font-medium" style={{color: "#333"}}>{exp.company}</span>
-                                        <span className="mx-1" style={{color: "#999"}}>·</span>
-                                        <span style={{color: "#777"}}>{exp.position}</span>
-                                      </div>
-                                      <span className="text-xs shrink-0" style={{color: "#999"}}>{startStr} ~ {endStr}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => removeWorkExperience(exp.id)}
-                                        disabled={expSaving}
-                                        className="text-xs shrink-0 hover:underline disabled:opacity-50"
-                                        style={{color: "#E38043"}}
-                                      >
-                                        移除
-                                      </button>
+                          {/* 已有经历列表 */}
+                          {workExperiences.length > 0 && (
+                            <div className="space-y-2 mb-3">
+                              {workExperiences.map((exp) => {
+                                const startStr = `${new Date(exp.startDate).getFullYear()}.${String(new Date(exp.startDate).getMonth() + 1).padStart(2, "0")}`;
+                                const endStr = exp.endDate
+                                  ? `${new Date(exp.endDate).getFullYear()}.${String(new Date(exp.endDate).getMonth() + 1).padStart(2, "0")}`
+                                  : "至今";
+                                const isStudy = exp.type === "学习";
+                                return (
+                                  <div key={exp.id} className="flex items-center gap-3 p-3 rounded-lg border text-sm"
+                                       style={{borderColor: "#D0DEE8", background: "#FAFBFC"}}>
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                                          style={{background: isStudy ? "#E6F0F8" : "#FFF3E0", color: isStudy ? "#3388BB" : "#E38043"}}>
+                                      {isStudy ? "学习" : "工作"}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <span className="font-medium" style={{color: "#333"}}>{exp.company}</span>
+                                      <span className="mx-1" style={{color: "#999"}}>·</span>
+                                      <span style={{color: "#777"}}>{exp.position}</span>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            )}
+                                    <span className="text-xs shrink-0" style={{color: "#999"}}>{startStr} ~ {endStr}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeWorkExperience(exp.id)}
+                                      disabled={expSaving}
+                                      className="text-xs shrink-0 hover:underline disabled:opacity-50"
+                                      style={{color: "#E38043"}}
+                                    >
+                                      移除
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
 
-                            {/* 添加新工作经历 */}
+                          {/* 添加新经历 */}
+                          <div className="p-3 rounded-lg border" style={{borderColor: "#D0DEE8", background: "#F8FAFB"}}>
+                            {/* 类型选择 */}
+                            <div className="flex items-center gap-3 mb-3">
+                              <span className="text-xs" style={{color: "#777"}}>类型：</span>
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="expType"
+                                  checked={newExpType === "工作"}
+                                  onChange={() => setNewExpType("工作")}
+                                  className="w-3.5 h-3.5"
+                                  style={{accentColor: "#E38043"}}
+                                />
+                                <span className="text-sm" style={{color: "#333"}}>工作</span>
+                              </label>
+                              <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="expType"
+                                  checked={newExpType === "学习"}
+                                  onChange={() => setNewExpType("学习")}
+                                  className="w-3.5 h-3.5"
+                                  style={{accentColor: "#3388BB"}}
+                                />
+                                <span className="text-sm" style={{color: "#333"}}>学习</span>
+                              </label>
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                               <input
                                 value={newExpCompany}
                                 onChange={(e) => setNewExpCompany(e.target.value)}
-                                placeholder="公司名称"
+                                placeholder={newExpType === "学习" ? "学校/机构名称" : "公司/组织名称"}
                                 className="rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                                 style={{borderColor: "#D0DEE8", color: "#333"}}
                               />
                               <input
                                 value={newExpPosition}
                                 onChange={(e) => setNewExpPosition(e.target.value)}
-                                placeholder="职位"
+                                placeholder={newExpType === "学习" ? "专业/学位" : "职位"}
                                 className="rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
                                 style={{borderColor: "#D0DEE8", color: "#333"}}
                               />
                               <div>
-                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>入职时间</label>
+                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>
+                                  {newExpType === "学习" ? "入学时间" : "入职时间"}
+                                </label>
                                 <input
                                   type="month"
                                   value={newExpStart}
@@ -895,7 +938,9 @@ export default function EditForm({
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>辞职时间（留空=至今）</label>
+                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>
+                                  {newExpType === "学习" ? "毕业时间（留空=在读）" : "离职时间（留空=至今）"}
+                                </label>
                                 <input
                                   type="month"
                                   value={newExpEnd}
@@ -913,16 +958,16 @@ export default function EditForm({
                                 className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
                                 style={{background: "#88C232"}}
                               >
-                                {expSaving ? "保存中..." : "+ 添加工作经历"}
+                                {expSaving ? "保存中..." : "+ 添加经历"}
                               </button>
                               {expMsg && (
-                                <span className="text-xs" style={{color: expMsg === "添加失败" || expMsg === "删除失败" ? "#E38043" : "#88C232"}}>
+                                <span className="text-xs" style={{color: expMsg.includes("失败") ? "#E38043" : "#88C232"}}>
                                   {expMsg}
                                 </span>
                               )}
                             </div>
                           </div>
-                        )}
+                        </div>
                     </>
                 )}
 

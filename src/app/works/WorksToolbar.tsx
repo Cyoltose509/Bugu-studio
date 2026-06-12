@@ -9,12 +9,6 @@ const SORT_OPTIONS = [
   { value: "likes", label: "喜欢" },
 ];
 
-const TYPE_FILTERS = [
-  { value: "STEAM", label: "Steam", color: "#1B2838" },
-  { value: "DEMO", label: "Demo", color: "#E38043" },
-  { value: "ITCH", label: "Itch", color: "#FA5C5C" },
-];
-
 export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
   const router = useRouter();
   const rawParams = useSearchParams();
@@ -23,10 +17,6 @@ export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
   const [searchValue, setSearchValue] = useState(currentQ || "");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 解析当前多选类型
-  const typesStr = rawParams.get("types") || "";
-  const activeTypes = new Set(typesStr ? typesStr.split(",").filter(Boolean) : []);
 
   // 打开搜索时自动聚焦
   useEffect(() => {
@@ -82,27 +72,6 @@ export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
     [rawParams, router]
   );
 
-  // 切换类型筛选（多选）
-  const toggleType = useCallback(
-    (type: string) => {
-      const params = new URLSearchParams(rawParams.toString());
-      const newTypes = new Set(activeTypes);
-      if (newTypes.has(type)) {
-        newTypes.delete(type);
-      } else {
-        newTypes.add(type);
-      }
-      if (newTypes.size > 0) {
-        params.set("types", Array.from(newTypes).join(","));
-      } else {
-        params.delete("types");
-      }
-      params.set("page", "1");
-      router.replace(`/works?${params.toString()}`);
-    },
-    [activeTypes, rawParams, router]
-  );
-
   const currentSort = rawParams.get("sort") || "date";
 
   return (
@@ -149,28 +118,6 @@ export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
             style={{ borderColor: "#D0DEE8", color: "#333", width: "220px" }}
           />
         </div>
-      </div>
-
-      {/* 类型筛选（多选） */}
-      <div className="flex items-center gap-1">
-        {TYPE_FILTERS.map((f) => {
-          const isActive = activeTypes.has(f.value);
-          return (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => toggleType(f.value)}
-              className="px-2 py-1 rounded text-xs transition-colors border"
-              style={{
-                background: isActive ? f.color : "transparent",
-                color: isActive ? "#fff" : "#999",
-                borderColor: isActive ? f.color : "#D0DEE8",
-              }}
-            >
-              {f.label}
-            </button>
-          );
-        })}
       </div>
 
       {/* 排序 */}

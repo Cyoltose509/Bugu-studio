@@ -5,10 +5,10 @@ import { submitJamWork } from "../actions";
 import MentionEditor from "@/components/MentionEditor";
 
 const PROJECT_TYPES = [
-  { value: "DEMO", label: "Demo 演示" },
-  { value: "STEAM", label: "Steam 发布" },
-  { value: "ITCH", label: "itch.io 发布" },
-  { value: "OTHER", label: "其他" },
+  { value: "IN_DEVELOPMENT", label: "开发阶段" },
+  { value: "TRIAL_DEMO", label: "提供试玩" },
+  { value: "MINI_GAME", label: "小游戏" },
+  { value: "OFFICIAL_RELEASE", label: "正式上架" },
 ];
 
 const ROLE_PRESETS = ["程序", "策划", "美术", "音效", "音乐", "测试", "宣发", "全栈"];
@@ -78,7 +78,7 @@ export function JamSubmitForm({
   const [customTags, setCustomTags] = useState<string[]>(existing?.customTags || []);
 
   const [submitToWorks, setSubmitToWorks] = useState(false);
-  const [projectType, setProjectType] = useState("DEMO");
+  const [projectType, setProjectType] = useState("TRIAL_DEMO");
   const [developYear, setDevelopYear] = useState(new Date().getFullYear());
 
   const coverFileRef = useRef<HTMLInputElement>(null);

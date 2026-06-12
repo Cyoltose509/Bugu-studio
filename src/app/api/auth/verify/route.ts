@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/services/notification";
+import { invalidateCache } from "@/lib/db/cache";
 
 export async function POST(request: Request) {
   try {
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
           joinYear: new Date().getFullYear(),
         },
       });
+      await invalidateCache("members:all");
     }
 
     return NextResponse.json({

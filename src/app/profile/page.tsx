@@ -140,7 +140,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-2">
                 <span className="text-xs px-2 py-0.5 rounded-full" style={roleBadge(user?.role)}>
                   {user?.role === "ADMIN" ? "管理员" :
-                   user?.role === "REVIEWER" ? "审核员" :
                    user?.role === "MEMBER" ? "社团成员" : "注册用户"}
                 </span>
                 {user?.emailVerified && (
@@ -443,7 +442,6 @@ function ContactRow({ label, value }: { label: string; value: string }) {
 function roleBadge(role?: string): React.CSSProperties {
   const map: Record<string, { bg: string; color: string }> = {
     ADMIN: { bg: "#FDE8E8", color: "#C62828" },
-    REVIEWER: { bg: "#FFF3E0", color: "#E65100" },
     MEMBER: { bg: "#E8F5E9", color: "#2E7D32" },
     USER: { bg: "#E6F0F8", color: "#25547A" },
   };

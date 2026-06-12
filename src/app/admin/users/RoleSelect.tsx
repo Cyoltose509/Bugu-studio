@@ -7,7 +7,6 @@ import { updateUserRole } from "./actions";
 const ROLE_OPTIONS = [
   { value: "USER", label: "普通用户" },
   { value: "MEMBER", label: "成员" },
-  { value: "REVIEWER", label: "审核员" },
   { value: "ADMIN", label: "管理员" },
 ];
 

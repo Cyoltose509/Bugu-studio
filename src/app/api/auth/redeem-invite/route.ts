@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
+import { invalidateCache } from "@/lib/db/cache";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
           joinYear: new Date().getFullYear(),
         },
       });
+      await invalidateCache("members:all");
     }
   }
 

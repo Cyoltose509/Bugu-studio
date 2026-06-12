@@ -22,7 +22,6 @@ enum UserRole {
   GUEST // 游客（未注册，概念性）
   USER // 注册用户
   MEMBER // 社团成员（需管理员审批）
-  REVIEWER // 审核员
   ADMIN // 管理员
 }
 
@@ -35,10 +34,15 @@ enum ProjectStatus {
 }
 
 enum ProjectType {
-  DEMO // Demo 演示
-  STEAM // Steam 发布
-  ITCH // itch.io 发布
-  OTHER // 其他
+  IN_DEVELOPMENT   // 开发阶段
+  TRIAL_DEMO       // 提供试玩
+  MINI_GAME        // 小游戏
+  OFFICIAL_RELEASE // 正式上架
+  // 以下为旧值，保留向下兼容，不再使用
+  DEMO
+  STEAM
+  ITCH
+  OTHER
 }
 
 enum AuditAction {
@@ -270,10 +274,11 @@ model MemberLink {
 model WorkExperience {
   id        String    @id @default(cuid())
   memberId  String
-  company   String // 公司名称
-  position  String // 职位
-  startDate DateTime // 入职时间
-  endDate   DateTime? // 辞职时间（null=至今）
+  type      String    @default("工作") // "工作" 或 "学习"
+  company   String // 公司/学校 名称
+  position  String // 职位/专业
+  startDate DateTime // 入职/入学时间
+  endDate   DateTime? // 离职/毕业时间（null=至今）
   sortOrder Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

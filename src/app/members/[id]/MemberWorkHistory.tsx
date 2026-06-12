@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 interface WorkExperienceItem {
   id: string;
+  type: string;
   company: string;
   position: string;
   startDate: Date;
@@ -17,7 +18,7 @@ function formatDate(d: Date): string {
   return `${y}.${m}`;
 }
 
-/** 工作经历展示 — 仅登录的社团成员可见 */
+/** 经历展示 — 仅登录的社团成员可见 */
 export default function MemberWorkHistory({ experiences }: { experiences: WorkExperienceItem[] }) {
   return (
     <Suspense fallback={null}>
@@ -39,7 +40,7 @@ function Inner({ experiences }: { experiences: WorkExperienceItem[] }) {
   return (
     <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
       <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#25547A" }}>
-        工作经历
+        经历
         <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#FDE8E8", color: "#C62828" }}>仅成员可见</span>
       </h3>
       <div className="space-y-3">
@@ -47,9 +48,13 @@ function Inner({ experiences }: { experiences: WorkExperienceItem[] }) {
           const period = exp.endDate
             ? `${formatDate(new Date(exp.startDate))} ~ ${formatDate(new Date(exp.endDate))}`
             : `${formatDate(new Date(exp.startDate))} ~ 至今`;
+          const isStudy = exp.type === "学习";
           return (
             <div key={exp.id} className="flex items-start gap-3">
-              <div className="w-2 h-2 mt-1.5 rounded-full shrink-0" style={{ background: "#88C232" }} />
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 mt-0.5"
+                    style={{ background: isStudy ? "#E6F0F8" : "#FFF3E0", color: isStudy ? "#3388BB" : "#E38043" }}>
+                {isStudy ? "学习" : "工作"}
+              </span>
               <div className="text-sm min-w-0">
                 <div className="font-medium" style={{ color: "#333" }}>{exp.company}</div>
                 <div className="text-xs" style={{ color: "#777" }}>

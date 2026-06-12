@@ -7,10 +7,10 @@ import { ProjectStatus } from "@prisma/client";
 
 export default async function HomeStats() {
   const foundedYear = parseInt(process.env.NEXT_PUBLIC_CLUB_FOUNDED_YEAR || "2018");
-  const [memberCount, projectCount, steamCount] = await Promise.all([
+  const [memberCount, projectCount, releasedCount] = await Promise.all([
     cachedQuery('stats:memberCount', () => prisma.clubMember.count(), 300),
     cachedQuery('stats:projectCount', () => prisma.project.count({ where: { status: ProjectStatus.PUBLISHED } }), 300),
-    cachedQuery('stats:steamCount', () => prisma.project.count({ where: { status: ProjectStatus.PUBLISHED, type: "STEAM" } }), 300),
+    cachedQuery('stats:releasedCount', () => prisma.project.count({ where: { status: ProjectStatus.PUBLISHED, type: "OFFICIAL_RELEASE" } }), 300),
   ]);
 
   return (
@@ -20,7 +20,7 @@ export default async function HomeStats() {
           <Stat value={`${new Date().getFullYear() - foundedYear + 1}年`} label="社团历史" />
           <Stat value={`${memberCount}+`} label="历届成员" />
           <Stat value={`${projectCount}+`} label="累计作品" />
-          <Stat value={`${steamCount}`} label="Steam 发布" />
+          <Stat value={`${releasedCount}`} label="正式上架" />
         </div>
       </div>
     </section>

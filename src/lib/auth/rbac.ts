@@ -1,6 +1,6 @@
 /**
  * RBAC 权限控制
- * 权限层级：GUEST < USER < MEMBER < REVIEWER < ADMIN
+ * 权限层级：GUEST < USER < MEMBER < ADMIN
  */
 
 import { UserRole } from "@prisma/client";
@@ -10,7 +10,6 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   GUEST: 0,
   USER: 1,
   MEMBER: 2,
-  REVIEWER: 3,
   ADMIN: 4,
 };
 
@@ -33,13 +32,6 @@ export function isAdmin(role?: UserRole | null): boolean {
 }
 
 /**
- * 检查是否为审核员及以上
- */
-export function isReviewerOrAbove(role?: UserRole | null): boolean {
-  return hasMinimumRole(role, "REVIEWER");
-}
-
-/**
  * 检查是否为社团成员及以上
  */
 export function isMemberOrAbove(role?: UserRole | null): boolean {
@@ -50,7 +42,6 @@ export function isMemberOrAbove(role?: UserRole | null): boolean {
  * 检查是否可以编辑指定作品
  * - ADMIN 可以编辑所有作品
  * - MEMBER 只能编辑自己提交的作品
- * - REVIEWER 可以编辑所有作品（需要审核）
  */
 export function canEditProject(
   userRole: UserRole | undefined | null,
@@ -58,7 +49,7 @@ export function canEditProject(
   projectSubmitterId: string
 ): boolean {
   if (!userRole) return false;
-  if (isAdmin(userRole) || isReviewerOrAbove(userRole)) return true;
+  if (isAdmin(userRole)) return true;
   if (userRole === "MEMBER") return userId === projectSubmitterId;
   return false;
 }

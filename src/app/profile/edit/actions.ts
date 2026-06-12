@@ -238,6 +238,7 @@ export async function redeemInviteCode(inviteCode: string) {
           displayName: session.user.name ?? "新成员",
         },
       });
+      await invalidateCache("members:all");
     }
   }
 

@@ -10,7 +10,7 @@ import {revalidatePath} from "next/cache";
 import {auth} from "@/lib/auth/auth";
 import {prisma} from "@/lib/db/prisma";
 import {projectUpdateSchema, reviewSchema} from "@/lib/validations";
-import {canEditProject, isAdmin, isReviewerOrAbove} from "@/lib/auth/rbac";
+import {canEditProject, isAdmin} from "@/lib/auth/rbac";
 import {createAuditLog, extractRequestInfo} from "@/lib/utils/audit";
 import {apiResponse, apiError, generateSlug} from "@/lib/utils";
 import {invalidateCache} from "@/lib/db/cache";
@@ -91,9 +91,9 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
         return apiError("请求体格式错误", 400);
     }
 
-    // 检查是否是审核操作
+    // 检查是否是审核操作（管理员专用）
     const reviewParsed = reviewSchema.safeParse(body);
-    if (reviewParsed.success && isReviewerOrAbove(session.user.role as any)) {
+    if (reviewParsed.success && isAdmin(session.user.role as any)) {
         const {approved, note} = reviewParsed.data;
         const updated = await prisma.$transaction([
             prisma.project.update({
@@ -183,12 +183,12 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
     // ── REJECTED 项目被提交者编辑 → 自动改为 PENDING（重新提交） ──
     const isResubmit = project.status === ProjectStatus.REJECTED
         && project.submitterId === session.user.id
-        && !isReviewerOrAbove(session.user.role as any); // 管理员/审核员编辑时不触发
+        && !isAdmin(session.user.role as any); // 管理员编辑时不触发
 
     // ── PUBLISHED 项目被提交者编辑 → 自动改为 PENDING（回到待审核） ──
     const isReEdit = project.status === ProjectStatus.PUBLISHED
         && project.submitterId === session.user.id
-        && !isReviewerOrAbove(session.user.role as any); // 管理员/审核员编辑时不触发
+        && !isAdmin(session.user.role as any); // 管理员编辑时不触发
 
     const {tagIds, memberRoles, links, customTags, images, ...projectData} = parsed.data;
 

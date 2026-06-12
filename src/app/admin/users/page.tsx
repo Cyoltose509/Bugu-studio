@@ -17,7 +17,6 @@ export const dynamic = "force-dynamic";
 const ROLES = [
   { value: "", label: "全部" },
   { value: "ADMIN", label: "管理员" },
-  { value: "REVIEWER", label: "审核员" },
   { value: "MEMBER", label: "成员" },
   { value: "USER", label: "普通用户" },
 ];
