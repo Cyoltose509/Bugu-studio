@@ -5,7 +5,7 @@
  * 这确保第二次保存不会因为前次 restore 的残留状态而出错。
  */
 
-import { renderElementToCanvas, prepareImagesForExport } from "./image-export";
+import {renderElementToCanvas, prepareImagesForExport} from "./image-export";
 
 // ═══════════════════════════════════════════════════════
 //  Clone helper（所有 save 路径共享）
@@ -18,22 +18,22 @@ import { renderElementToCanvas, prepareImagesForExport } from "./image-export";
  * 序列化 → 反序列化，切断所有隐式引用，杜绝第二次保存时的图片错乱。
  */
 function mountClone(el: HTMLElement): HTMLElement {
-  const wrapper = document.createElement("div");
-  wrapper.style.cssText =
-    "position:absolute;left:0;top:0;width:880px;z-index:99999;";
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(el.outerHTML, "text/html");
-  const clone = doc.body.firstElementChild as HTMLElement;
-  if (!clone) throw new Error("mountClone: 解析 HTML 失败");
-  clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
-  wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
-  return wrapper;
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText =
+        "position:absolute;left:0;top:0;width:880px;z-index:99999;";
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(el.outerHTML, "text/html");
+    const clone = doc.body.firstElementChild as HTMLElement;
+    if (!clone) throw new Error("mountClone: 解析 HTML 失败");
+    clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+    return wrapper;
 }
 
 /** 移除临时容器 */
 function unmountClone(wrapper: HTMLElement): void {
-  wrapper.remove();
+    wrapper.remove();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -42,21 +42,21 @@ function unmountClone(wrapper: HTMLElement): void {
 
 /** 单个报纸保存为图片（不碰原 DOM） */
 export async function saveElementAsImage(
-  el: HTMLElement,
-  filename: string
+    el: HTMLElement,
+    filename: string
 ): Promise<void> {
-  const wrapper = mountClone(el);
-  try {
-    await prepareImagesForExport(wrapper); // 在克隆上准备图片（restore 无需关心，wrapper 会被移除）
-    const canvas = await renderElementToCanvas(wrapper, { scale: 3, bg: "#faf8f5" });
-    if (canvas.width > 0 && canvas.height > 0) {
-      await downloadCanvas(canvas, filename, "image/png");
-    } else {
-      console.error("保存图片失败: canvas 尺寸为 0");
+    const wrapper = mountClone(el);
+    try {
+        await prepareImagesForExport(wrapper); // 在克隆上准备图片（restore 无需关心，wrapper 会被移除）
+        const canvas = await renderElementToCanvas(wrapper, {scale: 3, bg: "#faf8f5"});
+        if (canvas.width > 0 && canvas.height > 0) {
+            await downloadCanvas(canvas, filename, "image/png");
+        } else {
+            console.error("保存图片失败: canvas 尺寸为 0");
+        }
+    } finally {
+        unmountClone(wrapper);
     }
-  } finally {
-    unmountClone(wrapper);
-  }
 }
 
 /**
@@ -67,50 +67,50 @@ export async function saveElementAsImage(
  * absolute + visible 位置保证浏览器正常渲染（不像 left:-9999px 被跳过）。
  */
 export async function saveAllAsLongImage(
-  els: HTMLElement[],
-  filename: string,
-  gap = 24
+    els: HTMLElement[],
+    filename: string,
+    gap = 24
 ): Promise<void> {
-  if (els.length === 0) return;
+    if (els.length === 0) return;
 
-  // 1. 构建临时容器 — 绝对定位在视口左上角，不参与 body flex 布局
-  const wrapper = document.createElement("div");
-  wrapper.style.cssText =
-    "position:absolute;left:0;top:0;width:880px;background:#faf8f5;padding:32px 0;box-sizing:content-box;z-index:99999;";
+    // 1. 构建临时容器 — 绝对定位在视口左上角，不参与 body flex 布局
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText =
+        "position:absolute;left:0;top:0;width:880px;background:#faf8f5;padding:32px 0;box-sizing:content-box;z-index:99999;";
 
-  const parser = new DOMParser();
-  for (let i = 0; i < els.length; i++) {
-    const doc = parser.parseFromString(els[i].outerHTML, "text/html");
-    const clone = doc.body.firstElementChild as HTMLElement;
-    if (!clone) continue;
-    clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
-    wrapper.appendChild(clone);
-    if (i < els.length - 1) {
-      const spacer = document.createElement("div");
-      spacer.style.height = `${gap}px`;
-      wrapper.appendChild(spacer);
+    const parser = new DOMParser();
+    for (let i = 0; i < els.length; i++) {
+        const doc = parser.parseFromString(els[i].outerHTML, "text/html");
+        const clone = doc.body.firstElementChild as HTMLElement;
+        if (!clone) continue;
+        clone.querySelectorAll("[data-save-buttons]").forEach((b) => b.remove());
+        wrapper.appendChild(clone);
+        if (i < els.length - 1) {
+            const spacer = document.createElement("div");
+            spacer.style.height = `${gap}px`;
+            wrapper.appendChild(spacer);
+        }
     }
-  }
 
-  document.body.appendChild(wrapper);
+    document.body.appendChild(wrapper);
 
-  // 2. 一次图片预处理
-  const restore = await prepareImagesForExport(wrapper);
+    // 2. 一次图片预处理
+    const restore = await prepareImagesForExport(wrapper);
 
-  try {
-    // 3. 一次渲染
-    const canvas = await renderElementToCanvas(wrapper, { scale: 3, bg: "#faf8f5" });
-    if (canvas.width > 0 && canvas.height > 0) {
-      await downloadCanvas(canvas, filename, "image/png");
-    } else {
-      console.error("保存全部长图失败: canvas 尺寸为 0");
+    try {
+        // 3. 一次渲染
+        const canvas = await renderElementToCanvas(wrapper, {scale: 3, bg: "#faf8f5"});
+        if (canvas.width > 0 && canvas.height > 0) {
+            await downloadCanvas(canvas, filename, "image/png");
+        } else {
+            console.error("保存全部长图失败: canvas 尺寸为 0");
+        }
+    } catch (e) {
+        console.error("保存全部长图失败", e);
+    } finally {
+        restore();
+        wrapper.remove();
     }
-  } catch (e) {
-    console.error("保存全部长图失败", e);
-  } finally {
-    restore();
-    wrapper.remove();
-  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -119,43 +119,43 @@ export async function saveAllAsLongImage(
 
 /** 单个报纸 → PDF（不碰原 DOM） */
 export async function saveElementAsPDF(
-  el: HTMLElement,
-  filename: string
+    el: HTMLElement,
+    filename: string
 ): Promise<void> {
-  const wrapper = mountClone(el);
-  try {
-    await prepareImagesForExport(wrapper);
-    const prepared = wrapper.firstElementChild as HTMLElement;
-    const html = prepared.outerHTML;
-    unmountClone(wrapper);
-    printInNewWindow([html], filename, false);
-  } catch (e) {
-    unmountClone(wrapper);
-    throw e;
-  }
+    const wrapper = mountClone(el);
+    try {
+        await prepareImagesForExport(wrapper);
+        const prepared = wrapper.firstElementChild as HTMLElement;
+        const html = prepared.outerHTML;
+        unmountClone(wrapper);
+        printInNewWindow([html], filename, false);
+    } catch (e) {
+        unmountClone(wrapper);
+        throw e;
+    }
 }
 
 /** 全部报纸 → 一份 PDF（不碰原 DOM） */
 export async function saveAllAsPDF(
-  els: HTMLElement[],
-  filename: string,
-  gap = 24
+    els: HTMLElement[],
+    filename: string,
+    gap = 24
 ): Promise<void> {
-  if (els.length === 0) return;
+    if (els.length === 0) return;
 
-  // 逐个克隆 → 准备图片 → 提取 HTML → 清理（串行，保持逻辑简单）
-  const htmls: string[] = [];
-  for (const el of els) {
-    const wrapper = mountClone(el);
-    try {
-      await prepareImagesForExport(wrapper);
-      htmls.push((wrapper.firstElementChild! as HTMLElement).outerHTML);
-    } finally {
-      unmountClone(wrapper);
+    // 逐个克隆 → 准备图片 → 提取 HTML → 清理（串行，保持逻辑简单）
+    const htmls: string[] = [];
+    for (const el of els) {
+        const wrapper = mountClone(el);
+        try {
+            await prepareImagesForExport(wrapper);
+            htmls.push((wrapper.firstElementChild! as HTMLElement).outerHTML);
+        } finally {
+            unmountClone(wrapper);
+        }
     }
-  }
 
-  printInNewWindow(htmls, filename, true, gap);
+    printInNewWindow(htmls, filename, true, gap);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -163,24 +163,24 @@ export async function saveAllAsPDF(
 // ═══════════════════════════════════════════════════════
 
 function printInNewWindow(
-  htmls: string[],
-  filename: string,
-  showGap: boolean,
-  gap = 24
+    htmls: string[],
+    filename: string,
+    showGap: boolean,
+    gap = 24
 ): void {
-  const stylesheets = collectStylesheets();
+    const stylesheets = collectStylesheets();
 
-  // 构建 HTML
-  const bodies = htmls
-    .map((html) => {
-      const margin = showGap ? `padding-bottom:${gap}px;` : "";
-      return `<div class="pw-article" style="max-width:880px;margin:0 auto;${margin}">${html}</div>`;
-    })
-    .join("");
+    // 构建 HTML
+    const bodies = htmls
+        .map((html) => {
+            const margin = showGap ? `padding-bottom:${gap}px;` : "";
+            return `<div class="pw-article" style="max-width:880px;margin:0 auto;${margin}">${html}</div>`;
+        })
+        .join("");
 
-  const title = filename.replace(/\.pdf$/i, "");
+    const title = filename.replace(/\.pdf$/i, "");
 
-  const html = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -208,99 +208,106 @@ ${stylesheets}
 </head>
 <body>
 <div id="pw-wrapper">${bodies}</div>
-<script>
-  // 测量内容高度，动态设置 @page size 为连续单页
-  (function(){
-    var wrapper=document.getElementById("pw-wrapper");
-    var h=wrapper.scrollHeight;
-    // px → mm (96dpi: 1px ≈ 0.264583mm)
-    var hmm=Math.ceil(h*0.264583)+16;
-    var style=document.createElement("style");
-    style.textContent="@media print{@page{size:210mm "+hmm+"mm;margin:8mm}}";
-    document.head.appendChild(style);
-  })();
-</script>
 </body>
 </html>`;
 
-  // 打开新窗口（在点击事件同帧内，不被拦截）
-  const w = window.open("", "_blank");
-  if (!w) {
-    alert("请允许弹出窗口以保存 PDF（浏览器可能拦截了新窗口）");
-    return;
-  }
+    // 打开新窗口（在点击事件同帧内，不被拦截）
+    const w = window.open("", "_blank");
+    if (!w) {
+        alert("请允许弹出窗口以保存 PDF（浏览器可能拦截了新窗口）");
+        return;
+    }
 
-  w.document.write(html);
-  w.document.close();
+    w.document.write(html);
+    w.document.close();
 
-  waitForWindowReady(w).then(() => {
-    // 等待一帧让内联 script 执行完
-    w.requestAnimationFrame(() => {
-      w.print();
+    waitForWindowReady(w).then(() => {
+        // 图片/字体加载完成后重新测量高度，动态 @page 实现连续单页
+        const wrapper = w.document.getElementById("pw-wrapper");
+        if (wrapper) {
+            const hmm = Math.ceil(wrapper.scrollHeight * 0.264583) + 64;
+            const style = w.document.createElement("style");
+            style.textContent = `@media print{@page{size:210mm ${hmm}mm;margin:8mm}}`;
+            w.document.head.appendChild(style);
+        }
+        // 等待一帧让浏览器消化 @page
+        w.requestAnimationFrame(() => {
+            w.print();
+        });
+        const onAfter = () => {
+            w.removeEventListener("afterprint", onAfter);
+            w.close();
+        };
+        w.addEventListener("afterprint", onAfter, {once: true});
+        setTimeout(() => {
+            try {
+                w.close();
+            } catch {
+            }
+        }, 15000);
     });
-    const onAfter = () => {
-      w.removeEventListener("afterprint", onAfter);
-      w.close();
-    };
-    w.addEventListener("afterprint", onAfter, { once: true });
-    setTimeout(() => { try { w.close(); } catch {} }, 15000);
-  });
 }
 
 function collectStylesheets(): string {
-  const parts: string[] = [];
-  document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
-    const href = (link as HTMLLinkElement).href;
-    if (href) parts.push(`<link rel="stylesheet" href="${href}">`);
-  });
-  document.querySelectorAll("style").forEach((s) => {
-    const text = s.textContent || "";
-    if (text.trim()) parts.push(`<style>${text}</style>`);
-  });
-  return parts.join("\n");
+    const parts: string[] = [];
+    document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+        const href = (link as HTMLLinkElement).href;
+        if (href) parts.push(`<link rel="stylesheet" href="${href}">`);
+    });
+    document.querySelectorAll("style").forEach((s) => {
+        const text = s.textContent || "";
+        if (text.trim()) parts.push(`<style>${text}</style>`);
+    });
+    return parts.join("\n");
 }
 
 async function waitForWindowReady(w: Window): Promise<void> {
-  await new Promise<void>((resolve) => {
-    if (w.document.readyState === "complete") resolve();
-    else w.addEventListener("load", () => resolve(), { once: true });
-  });
-  await new Promise<void>((r) => w.requestAnimationFrame(() => r()));
+    await new Promise<void>((resolve) => {
+        if (w.document.readyState === "complete") resolve();
+        else w.addEventListener("load", () => resolve(), {once: true});
+    });
+    await new Promise<void>((r) => w.requestAnimationFrame(() => r()));
 
-  // 等字体
-  if (w.document.fonts?.ready) {
-    try { await Promise.race([w.document.fonts.ready, new Promise((r) => setTimeout(r, 5000))]); } catch {}
-  }
+    // 等字体
+    if (w.document.fonts?.ready) {
+        try {
+            await Promise.race([w.document.fonts.ready, new Promise((r) => setTimeout(r, 5000))]);
+        } catch {
+        }
+    }
 
-  // 等图片
-  const imgs = w.document.querySelectorAll("img");
-  await Promise.race([
-    Promise.all(Array.from(imgs).map((img) => {
-      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-      return new Promise<void>((resolve) => {
-        img.addEventListener("load", () => resolve(), { once: true });
-        img.addEventListener("error", () => resolve(), { once: true });
-      });
-    })),
-    new Promise((r) => setTimeout(r, 10000)),
-  ]);
+    // 等图片
+    const imgs = w.document.querySelectorAll("img");
+    await Promise.race([
+        Promise.all(Array.from(imgs).map((img) => {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+            return new Promise<void>((resolve) => {
+                img.addEventListener("load", () => resolve(), {once: true});
+                img.addEventListener("error", () => resolve(), {once: true});
+            });
+        })),
+        new Promise((r) => setTimeout(r, 10000)),
+    ]);
 
-  await new Promise<void>((r) => w.requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => w.requestAnimationFrame(() => r()));
 }
 
 // ═══════════════════════════════════════════════════════
 
 function downloadCanvas(canvas: HTMLCanvasElement, filename: string, type: string): Promise<void> {
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
-      if (!blob) { resolve(); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.download = filename;
-      a.href = url;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      resolve();
-    }, type, 0.95);
-  });
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                resolve();
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.download = filename;
+            a.href = url;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            resolve();
+        }, type, 0.95);
+    });
 }
