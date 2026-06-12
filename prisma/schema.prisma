@@ -439,7 +439,8 @@ model YearEvent {
   year      Int
   title     String
   body      String?   @db.Text // 正文内容
-  eventDate DateTime? // 事件日期
+  eventDate    DateTime? // 事件起始日期
+  eventEndDate DateTime? // 事件结束日期（为空则仅显示起始日期）
   sortOrder Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

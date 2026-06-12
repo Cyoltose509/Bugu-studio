@@ -15,6 +15,7 @@ interface HistoryEvent {
   title: string;
   body?: string | null;
   eventDate?: string | null;
+  eventEndDate?: string | null;
   sortOrder: number;
   images: EventImage[];
 }
@@ -29,6 +30,7 @@ export default function AdminHistoryEventsPage() {
   const [formTitle, setFormTitle] = useState("");
   const [formBody, setFormBody] = useState("");
   const [formDate, setFormDate] = useState("");
+  const [formEndDate, setFormEndDate] = useState("");
   const [formImages, setFormImages] = useState<EventImage[]>([]);
   const [saving, setSaving] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
@@ -55,12 +57,14 @@ export default function AdminHistoryEventsPage() {
       setFormTitle(ev.title);
       setFormBody(ev.body || "");
       setFormDate(ev.eventDate ? ev.eventDate.slice(0, 10) : "");
+      setFormEndDate(ev.eventEndDate ? ev.eventEndDate.slice(0, 10) : "");
       setFormImages(ev.images || []);
     } else {
       setEditing({});
       setFormTitle("");
       setFormBody("");
       setFormDate("");
+      setFormEndDate("");
       setFormImages([]);
     }
   }
@@ -95,6 +99,7 @@ export default function AdminHistoryEventsPage() {
         body: formBody || undefined,
         year,
         eventDate: formDate,
+        eventEndDate: formEndDate || undefined,
         images: formImages.map((img) => ({ url: img.url, altText: img.altText })),
       };
       const method = editing?.id ? "PATCH" : "POST";
@@ -152,8 +157,12 @@ export default function AdminHistoryEventsPage() {
                 <MentionEditor value={formBody} onChange={setFormBody} rows={4} placeholder="详细描述..." className={inputClass} style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>日期 *</label>
+                <label style={labelStyle}>起始日期 *</label>
                 <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className={inputClass} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>结束日期（可选，不填则仅显示起始日期）</label>
+                <input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} className={inputClass} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>图片 ({formImages.length}/5)</label>
@@ -198,7 +207,13 @@ export default function AdminHistoryEventsPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs px-2 py-0.5 rounded" style={{ background: "#E6F0F8", color: "#25547A" }}>{ev.year}</span>
                   <span className="text-sm font-medium truncate" style={{ color: "#333" }}>{ev.title}</span>
-                  {ev.eventDate && <span className="text-xs" style={{ color: "#999" }}>{new Date(ev.eventDate).toLocaleDateString("zh-CN")}</span>}
+                  {ev.eventDate && (
+                    <span className="text-xs" style={{ color: "#999" }}>
+                      {ev.eventEndDate && ev.eventEndDate !== ev.eventDate.slice(0, 10)
+                        ? `${new Date(ev.eventDate).toLocaleDateString("zh-CN")} 至 ${new Date(ev.eventEndDate).toLocaleDateString("zh-CN")}`
+                        : new Date(ev.eventDate).toLocaleDateString("zh-CN")}
+                    </span>
+                  )}
                 </div>
                 {ev.body && <div className="text-xs mt-1 line-clamp-1" style={{ color: "#777" }}>{ev.body}</div>}
               </div>

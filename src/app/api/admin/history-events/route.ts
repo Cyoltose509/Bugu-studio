@@ -31,11 +31,12 @@ export async function POST(request: NextRequest) {
     return apiError("标题和日期为必填", 400);
   }
 
-  const { title, body: content, eventDate, images } = body as {
+  const { title, body: content, eventDate, eventEndDate, images } = body as {
     title: string;
     body?: string;
     year?: number;
     eventDate: string;
+    eventEndDate?: string;
     images?: { url: string; altText?: string }[];
   };
 
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
         body: content || null,
         year,
         eventDate: eventDate ? new Date(eventDate) : null,
+        eventEndDate: eventEndDate ? new Date(eventEndDate) : null,
         sortOrder: (maxSort?.sortOrder ?? -1) + 1,
         images: validImages.length
           ? { create: validImages.slice(0, 5).map((img, i) => ({ url: img.url, altText: img.altText, sortOrder: i })) }

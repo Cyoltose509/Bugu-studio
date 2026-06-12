@@ -22,7 +22,7 @@ export async function PATCH(
   const body = await request.json().catch(() => null);
   if (!body) return apiError("无效的请求体", 400);
 
-  const { title, body: content, year: bodyYear, eventDate, sortOrder, images } = body as Record<string, any>;
+  const { title, body: content, year: bodyYear, eventDate, eventEndDate, sortOrder, images } = body as Record<string, any>;
 
   const year = bodyYear || (eventDate ? new Date(eventDate).getFullYear() : undefined);
 
@@ -44,6 +44,7 @@ export async function PATCH(
         ...(content !== undefined && { body: content || null }),
         ...(year !== undefined && { year }),
         ...(eventDate !== undefined && { eventDate: eventDate ? new Date(eventDate) : null }),
+        ...(eventEndDate !== undefined && { eventEndDate: eventEndDate ? new Date(eventEndDate) : null }),
         ...(sortOrder !== undefined && { sortOrder }),
         ...(images !== undefined && validImages.length > 0
           ? { images: { create: validImages.slice(0, 5).map((img, i) => ({ url: img.url, altText: img.altText, sortOrder: i })) } }

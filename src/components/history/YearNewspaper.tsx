@@ -34,6 +34,7 @@ interface EventItem {
     body: string | null;
     bodyHtml?: string;  // 预渲染的富文本 HTML
     eventDate: string | null;
+    eventEndDate?: string | null;
     images?: { id: string; url: string; altText?: string | null }[];
 }
 
@@ -775,6 +776,8 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                 <div style={Q.timeline}>
                                     {events.map((e) => {
                                         const d = e.eventDate ? new Date(e.eventDate) : null;
+                                        const de = e.eventEndDate ? new Date(e.eventEndDate) : null;
+                                        const showRange = d && de && de.getTime() !== d.getTime();
                                         return (
                                             <div key={e.id} style={Q.tlItem}>
                                                 <div style={Q.tlMarker}>
@@ -784,7 +787,11 @@ export default function YearNewspaper({year, members, projects, events, activiti
                                                 <div style={Q.tlContent}>
                                                     <div style={Q.tlHeader}>
                                                         <span style={Q.tlTitle}>{e.title}</span>
-                                                        {d && <span style={Q.tlDate}>{d.getMonth() + 1}月{d.getDate()}日</span>}
+                                                        {d && <span style={Q.tlDate}>
+                                                          {showRange
+                                                            ? `${d.getMonth() + 1}月${d.getDate()}日 至 ${de!.getMonth() + 1}月${de!.getDate()}日`
+                                                            : `${d.getMonth() + 1}月${d.getDate()}日`}
+                                                        </span>}
                                                     </div>
                                                     {e.bodyHtml ? <div style={Q.tlBody}><RichContentClient html={e.bodyHtml} /></div> : e.body && <div style={Q.tlBody}>{e.body}</div>}
                                                     {e.images && e.images.length > 0 && (
