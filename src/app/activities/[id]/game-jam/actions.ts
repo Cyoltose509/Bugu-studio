@@ -559,7 +559,7 @@ export async function submitJamWork(activityId: string, formData: FormData) {
   const tagIdsStr = (formData.get("tagIds") as string || "[]").trim();
   const customTagsStr = (formData.get("customTags") as string || "[]").trim();
   const submitToWorks = (formData.get("submitToWorks") as string || "0") === "1";
-  const projectType = (formData.get("projectType") as string || "DEMO").trim();
+  const projectType = (formData.get("projectType") as string || "TRIAL_DEMO").trim();
   const developYearStr = (formData.get("developYear") as string || "").trim();
 
   if (!title) return { error: "请填写作品标题" };
@@ -852,7 +852,7 @@ export async function submitToWorksLibrary(activityId: string, formData: FormDat
   if (!session?.user?.id) return { error: "请先登录" };
 
   const submissionId = (formData.get("submissionId") as string || "").trim();
-  const projectType = (formData.get("projectType") as string || "DEMO").trim();
+  const projectType = (formData.get("projectType") as string || "TRIAL_DEMO").trim();
   const developYearStr = (formData.get("developYear") as string || "").trim();
 
   if (!submissionId) return { error: "缺少提交 ID" };

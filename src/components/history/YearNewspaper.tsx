@@ -72,19 +72,39 @@ interface Props {
     registerRef?: (el: HTMLDivElement | null) => void;
 }
 
-const TYPE_DESC: Record<string, string> = {DEMO: "技术演示", STEAM: "Steam 发布", ITCH: "itch.io 独立发布", OTHER: "创作项目"};
+const TYPE_DESC: Record<string, string> = {
+    IN_DEVELOPMENT: "开发中",
+    TRIAL_DEMO: "提供试玩",
+    MINI_GAME: "小游戏",
+    OFFICIAL_RELEASE: "正式上架",
+};
 const ACT_LABELS: Record<string, string> = {COMPETITION: "比赛", COURSE: "公开课", GENERAL: "普通活动", MEETING: "例会"};
 const ACT_ORDER = ["COMPETITION", "COURSE", "GENERAL", "MEETING"] as const;
 
 // ─── 年度最佳作品选择 ─────────────────────────────────
 function pickFeaturedWork(projects: Project[]): Project | null {
     if (projects.length === 0) return null;
+    // 权重：正式上架 x1.0, 提供试玩 x0.8, 小游戏 x0.6, 开发中 x0.4
+    const getWeight = (type: string) => {
+        switch (type) {
+            case "OFFICIAL_RELEASE": return 1.0;
+            case "TRIAL_DEMO": return 0.8;
+            case "MINI_GAME": return 0.6;
+            case "IN_DEVELOPMENT": return 0.4;
+            default: return 1.0;
+        }
+    };
     const scored = projects.map(p => {
-        const typeWeight = p.type === "STEAM" ? 3 : p.type === "ITCH" ? 2 : 1;
         const likes = p._count?.likes ?? 0;
-        return {p, score: typeWeight * (likes + 1)};
+        const score = getWeight(p.type) * (likes || 0);
+        return {p, score};
     });
     scored.sort((a, b) => b.score - a.score);
+    // 如果所有作品得分相同（都是0），优先正式上架 > 提供试玩 > 小游戏 > 开发中
+    if (scored.every(s => s.score === scored[0].score)) {
+        const order: Record<string, number> = { OFFICIAL_RELEASE: 1, TRIAL_DEMO: 2, MINI_GAME: 3, IN_DEVELOPMENT: 4 };
+        scored.sort((a, b) => (order[a.p.type] || 5) - (order[b.p.type] || 5));
+    }
     return scored[0].p;
 }
 
@@ -106,15 +126,15 @@ function generateLead(year: number, members: Member[], projects: Project[], acti
     }
 
     if (projects.length > 0) {
-        const steamCount = projects.filter(p => p.type === "STEAM").length;
-        const itchCount = projects.filter(p => p.type === "ITCH").length;
-        const demoCount = projects.filter(p => p.type === "DEMO").length;
+        const officialCount = projects.filter(p => p.type === "OFFICIAL_RELEASE").length;
+        const trialCount = projects.filter(p => p.type === "TRIAL_DEMO").length;
+        const miniCount = projects.filter(p => p.type === "MINI_GAME").length;
+        const devCount = projects.filter(p => p.type === "IN_DEVELOPMENT").length;
         const parts: string[] = [];
-        if (steamCount > 0) parts.push(`${steamCount} 款上线 Steam`);
-        if (itchCount > 0) parts.push(`${itchCount} 款发布 itch.io`);
-        if (demoCount > 0) parts.push(`${demoCount} 款技术演示`);
-        const others = projects.filter(p => !["STEAM", "ITCH", "DEMO"].includes(p.type)).length;
-        if (others > 0) parts.push(`${others} 款创作项目`);
+        if (officialCount > 0) parts.push(`${officialCount} 款正式上架`);
+        if (trialCount > 0) parts.push(`${trialCount} 款提供试玩`);
+        if (miniCount > 0) parts.push(`${miniCount} 款小游戏`);
+        if (devCount > 0) parts.push(`${devCount} 款开发中`);
         lines.push(`全年共产出 ${projects.length} 件作品（${parts.join("、")}）。`);
     }
 

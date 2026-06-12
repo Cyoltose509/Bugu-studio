@@ -421,7 +421,8 @@ export default function EditForm({
                         onChange={setBioValue}
                         rows={4}
                         placeholder="介绍一下自己..."
-                        className="w-full rounded-lg bg-white border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                        style={{borderColor: "#D0DEE8", color: "#333"}}
                     />
                 </div>
                 </div>
@@ -508,17 +509,18 @@ export default function EditForm({
                                 defaultValue={member.bio ?? ""}
                                 rows={4}
                                 placeholder="在成员页面展示的简介..."
-                                className="w-full rounded-lg bg-white border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                style={{borderColor: "#D0DEE8", color: "#333"}}
                             />
                         </div>
 
-                        {/* 毕业情况、真名、入社年份 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* 毕业情况、入社年份、年级 — 紧凑三列 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm mb-1.5" style={{color: "#555"}}>
                                     毕业情况
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <label className="flex items-center gap-2 cursor-pointer select-none pt-2">
                                     <input
                                         type="checkbox"
                                         checked={graduatedVal}
@@ -529,6 +531,70 @@ export default function EditForm({
                                     <span className="text-sm" style={{color: "#333"}}>已毕业</span>
                                 </label>
                             </div>
+                            <div>
+                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="joinYear">
+                                    入社年份
+                                </label>
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setJoinYearVal(Math.max(2000, (joinYearVal ?? 2024) - 1))}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    >-</button>
+                                    <input
+                                        id="joinYear"
+                                        type="number"
+                                        value={joinYearVal ?? ""}
+                                        onChange={(e) => setJoinYearVal(e.target.value ? Number(e.target.value) : null)}
+                                        min={2000}
+                                        max={2100}
+                                        className="w-20 text-center rounded-lg bg-white border px-2 py-2 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setJoinYearVal(Math.min(2100, (joinYearVal ?? 2024) + 1))}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    >+</button>
+                                    <span className="text-xs flex-shrink-0" style={{color: "#777"}}>{joinYearVal != null ? `${joinYearVal}年` : "未设置"}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="grade">
+                                    年级
+                                </label>
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setGradeValue(Math.max(2000, (gradeValue ?? 2024) - 1))}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    >-</button>
+                                    <input
+                                        id="grade"
+                                        type="number"
+                                        value={gradeValue ?? ""}
+                                        onChange={(e) => setGradeValue(e.target.value ? Number(e.target.value) : null)}
+                                        min={2000}
+                                        max={2100}
+                                        className="w-20 text-center rounded-lg bg-white border px-2 py-2 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setGradeValue(Math.min(2100, (gradeValue ?? 2024) + 1))}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
+                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    >+</button>
+                                    <span className="text-xs flex-shrink-0" style={{color: "#777"}}>{gradeValue != null ? `${gradeValue}级` : "未设置"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 真名、学院/工作所在地、专业/岗位 — 三列（仿手机号/微信/QQ） */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="realName">
                                     真名
@@ -545,143 +611,77 @@ export default function EditForm({
                                     placeholder="真实姓名"
                                 />
                             </div>
-                        </div>
-
-                        {/* 入社年份 */}
-                        <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="joinYear">
-                                入社年份
-                            </label>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setJoinYearVal(Math.max(2000, (joinYearVal ?? 2024) - 1))}
-                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
-                                >-</button>
-                                <input
-                                    id="joinYear"
-                                    type="number"
-                                    value={joinYearVal ?? ""}
-                                    onChange={(e) => setJoinYearVal(e.target.value ? Number(e.target.value) : null)}
-                                    min={2000}
-                                    max={2100}
-                                    className="w-24 text-center rounded-lg bg-white border px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setJoinYearVal(Math.min(2100, (joinYearVal ?? 2024) + 1))}
-                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
-                                >+</button>
-                                <span className="text-sm" style={{color: "#777"}}>{joinYearVal != null ? `${joinYearVal}年` : "未设置"}</span>
-                            </div>
-                        </div>
-
-                        {/* 条件字段 */}
-                        {!graduatedVal ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="college">
-                                        学院
-                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                              style={{background: "#FDE8E8", color: "#C62828"}}
-                                              title="仅成员可见">敏感</span>
-                                    </label>
-                                    <input
-                                        id="college"
-                                        value={collegeVal}
-                                        onChange={(e) => setCollegeVal(e.target.value)}
-                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
-                                        placeholder="如：计算机学院"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="major">
-                                        专业
-                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                              style={{background: "#FDE8E8", color: "#C62828"}}
-                                              title="仅成员可见">敏感</span>
-                                    </label>
-                                    <input
-                                        id="major"
-                                        value={majorVal}
-                                        onChange={(e) => setMajorVal(e.target.value)}
-                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
-                                        placeholder="如：软件工程"
-                                    />
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workLocation">
-                                        工作所在地
-                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                              style={{background: "#FDE8E8", color: "#C62828"}}
-                                              title="仅成员可见">敏感</span>
-                                    </label>
-                                    <input
-                                        id="workLocation"
-                                        value={workLocationVal}
-                                        onChange={(e) => setWorkLocationVal(e.target.value)}
-                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
-                                        placeholder="如：北京 / 深圳"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workPosition">
-                                        工作岗位
-                                        <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                              style={{background: "#FDE8E8", color: "#C62828"}}
-                                              title="仅成员可见">敏感</span>
-                                    </label>
-                                    <input
-                                        id="workPosition"
-                                        value={workPositionVal}
-                                        onChange={(e) => setWorkPositionVal(e.target.value)}
-                                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
-                                        placeholder="如：前端工程师"
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 年级 */}
-                        <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="grade">
-                                年级（以本科入学为起点）
-                            </label>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setGradeValue(Math.max(2000, (gradeValue ?? 2024) - 1))}
-                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
-                                >-</button>
-                                <input
-                                    id="grade"
-                                    type="number"
-                                    value={gradeValue ?? ""}
-                                    onChange={(e) => setGradeValue(e.target.value ? Number(e.target.value) : null)}
-                                    min={2000}
-                                    max={2100}
-                                    className="w-24 text-center rounded-lg bg-white border px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setGradeValue(Math.min(2100, (gradeValue ?? 2024) + 1))}
-                                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-lg font-medium hover:bg-gray-100 transition-colors"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
-                                >+</button>
-                                <span className="text-sm" style={{color: "#777"}}>{gradeValue != null ? `${gradeValue}级` : "未设置"}</span>
-                            </div>
+                            {!graduatedVal ? (
+                                <>
+                                    <div>
+                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="college">
+                                            学院
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                                  title="仅成员可见">敏感</span>
+                                        </label>
+                                        <input
+                                            id="college"
+                                            value={collegeVal}
+                                            onChange={(e) => setCollegeVal(e.target.value)}
+                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+                                            placeholder="如：计算机学院"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="major">
+                                            专业
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                                  title="仅成员可见">敏感</span>
+                                        </label>
+                                        <input
+                                            id="major"
+                                            value={majorVal}
+                                            onChange={(e) => setMajorVal(e.target.value)}
+                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+                                            placeholder="如：软件工程"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workLocation">
+                                            工作所在地
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                                  title="仅成员可见">敏感</span>
+                                        </label>
+                                        <input
+                                            id="workLocation"
+                                            value={workLocationVal}
+                                            onChange={(e) => setWorkLocationVal(e.target.value)}
+                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+                                            placeholder="如：北京 / 深圳"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workPosition">
+                                            工作岗位
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
+                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                                  title="仅成员可见">敏感</span>
+                                        </label>
+                                        <input
+                                            id="workPosition"
+                                            value={workPositionVal}
+                                            onChange={(e) => setWorkPositionVal(e.target.value)}
+                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
+                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+                                            placeholder="如：前端工程师"
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* 职能标签 */}

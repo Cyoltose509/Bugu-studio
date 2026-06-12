@@ -7,10 +7,6 @@ const TYPE_LABELS: Record<string, string> = {
   TRIAL_DEMO: "提供试玩",
   MINI_GAME: "小游戏",
   OFFICIAL_RELEASE: "正式上架",
-  DEMO: "Demo 演示",
-  STEAM: "Steam 发布",
-  ITCH: "itch.io 发布",
-  OTHER: "其他",
 };
 
 interface Props {
