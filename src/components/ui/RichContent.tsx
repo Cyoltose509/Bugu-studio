@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { parseRichContent, extractMentionName, type TextSegment } from "@/lib/rich-content";
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
 /**
  * 服务端组件：将纯文本渲染为富文本 HTML
@@ -63,9 +63,12 @@ export async function RichContent({ text }: { text: string }) {
     <span
       className="rich-content"
       dangerouslySetInnerHTML={{
-        __html: DOMPurify.sanitize(segmentsToHtml(segments, memberMap), {
-          ALLOWED_TAGS: ["a", "span", "br"],
-          ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
+        __html: sanitizeHtml(segmentsToHtml(segments, memberMap), {
+          allowedTags: ["a", "span", "br"],
+          allowedAttributes: {
+            a: ["href", "target", "rel", "class", "style"],
+            span: ["class", "style"],
+          },
         }),
       }}
     />

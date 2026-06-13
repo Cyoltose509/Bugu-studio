@@ -15,7 +15,7 @@ import {
   extractMentionName,
   type TextSegment,
 } from "@/lib/rich-content";
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
 /** 链接允许的协议白名单 */
 const ALLOWED_PROTOCOLS = ["http:", "https:", "mailto:"];
@@ -27,7 +27,13 @@ export async function renderRichContent(text: string | null): Promise<string> {
   if (!text) return "";
   const segments = parseRichContent(text);
   const html = segmentsToHtml(segments, await buildMemberMap(segments));
-  return DOMPurify.sanitize(html, { ALLOWED_TAGS: ["a", "span", "br"], ALLOWED_ATTR: ["href", "target", "rel", "class", "style"] });
+  return sanitizeHtml(html, {
+    allowedTags: ["a", "span", "br"],
+    allowedAttributes: {
+      a: ["href", "target", "rel", "class", "style"],
+      span: ["class", "style"],
+    },
+  });
 }
 
 /**
@@ -46,7 +52,13 @@ export async function batchRenderRichContent(
   const result = new Map<string, string>();
   for (let i = 0; i < valid.length; i++) {
     const html = segmentsToHtml(allSegments[i], memberMap);
-    result.set(valid[i], DOMPurify.sanitize(html, { ALLOWED_TAGS: ["a", "span", "br"], ALLOWED_ATTR: ["href", "target", "rel", "class", "style"] }));
+    result.set(valid[i], sanitizeHtml(html, {
+      allowedTags: ["a", "span", "br"],
+      allowedAttributes: {
+        a: ["href", "target", "rel", "class", "style"],
+        span: ["class", "style"],
+      },
+    }));
   }
   return result;
 }
