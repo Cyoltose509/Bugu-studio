@@ -32,6 +32,8 @@ export function Footer() {
                         <ul className="space-y-2 text-sm" style={{color: "#777"}}>
                             <li><a href="https://space.bilibili.com/2074896294" target="_blank" rel="noopener noreferrer"
                                    className="hover:text-[#3388BB] transition-colors">Bilibili 账号</a></li>
+                            <li><a href="/join" target="_blank" rel="noopener noreferrer"
+                                   className="hover:text-[#3388BB] transition-colors">招新信息</a></li>
                         </ul>
                     </div>
                 </div>
