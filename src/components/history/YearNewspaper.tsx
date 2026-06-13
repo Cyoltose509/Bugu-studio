@@ -322,6 +322,17 @@ const Q: Record<string, React.CSSProperties> = {
     },
     featuredLikes: {fontSize: 13, color: B, fontWeight: 700, fontFamily: "Georgia,serif"},
     featuredPeople: {fontSize: 12, color: INK3, fontFamily: "system-ui,sans-serif", lineHeight: 1.7},
+    // ─── 奖项标签 ───
+    awardTag: {
+        fontSize: 10,
+        color: "#8B7355",
+        background: "rgba(196,168,106,0.12)",
+        padding: "2px 8px",
+        fontFamily: "system-ui,sans-serif",
+        display: "inline-block",
+        marginRight: 4,
+        marginBottom: 4,
+    },
     // ─── 其余作品网格 ───
     worksSpread: {display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: "20px 14px", marginBottom: 8},
     workItem: {display: "flex", flexDirection: "column" as const},
@@ -693,6 +704,13 @@ export default function YearNewspaper({
                                                 <div style={Q.workTagLine}>
                                                     {featuredWork.tags.slice(0, 4).map((t: any) => (
                                                         <span key={t.tag.name} style={Q.workTag}>{t.tag.name}</span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {featuredWork.awards && featuredWork.awards.length > 0 && (
+                                                <div style={{marginTop: 8}}>
+                                                    {featuredWork.awards.map((award, i) => (
+                                                        <span key={i} style={Q.awardTag}>🏆 {award}</span>
                                                     ))}
                                                 </div>
                                             )}

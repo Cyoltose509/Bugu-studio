@@ -270,6 +270,16 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
                   </dd>
                 </div>
               )}
+              {project.awards && project.awards.length > 0 && (
+                <div>
+                  <dt className="mb-1" style={{ color: "#777" }}>🏆 所获奖项</dt>
+                  <dd className="space-y-1">
+                    {project.awards.map((award, i) => (
+                      <span key={i} className="text-xs px-2 py-0.5 rounded block" style={{ background: "rgba(196,168,106,0.12)", color: "#8B7355" }}>{award}</span>
+                    ))}
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
 

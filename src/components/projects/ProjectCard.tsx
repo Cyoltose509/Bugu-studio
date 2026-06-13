@@ -14,7 +14,6 @@ import Link from "next/link";
 import Image from "next/image";
 import MiniLikeButton from "@/components/MiniLikeButton";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
-import UserAvatar from "@/components/UserAvatar";
 
 const TYPE_LABELS: Record<string, string> = {
   IN_DEVELOPMENT: "开发阶段",
@@ -211,7 +210,7 @@ export default function ProjectCard({
               initialLiked={p.liked ?? false}
             />
             {n > 0 && (
-              <div className="overflow-hidden" style={{ maxWidth: `${maxW}px` }}>
+              <div className="flex items-center overflow-hidden" style={{ maxWidth: `${maxW}px` }}>
                 {p.members!.map((pm, i) => {
                   const name =
                     pm.member?.displayName ||
@@ -235,7 +234,12 @@ export default function ProjectCard({
                       title={name}
                     >
                       {avatarUrl ? (
-                        <UserAvatar src={avatarUrl} name={name} size={20} />
+                        <img
+                          src={avatarUrl}
+                          alt={name}
+                          className="w-full h-full rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
                       ) : (
                         name[0]
                       )}
