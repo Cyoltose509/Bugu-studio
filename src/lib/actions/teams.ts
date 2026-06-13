@@ -243,12 +243,12 @@ export async function inviteMember(teamId: string, activityId: string, formData:
 
   const invitee = await prisma.user.findUnique({
     where: { id: inviteeUserId },
-    include: { member: { select: { isActive: true } } },
+    include: { member: { select: { graduated: true } } },
   });
   if (!invitee) return { error: "找不到该用户" };
   if (invitee.id === session.user.id) return { error: "不能邀请自己" };
   if (invitee.role === "GUEST") return { error: "Guest 用户不能被邀请" };
-  if (invitee.member && !invitee.member.isActive) return { error: "该用户已退役，不能被邀请" };
+  if (invitee.member && invitee.member.graduated) return { error: "该用户已毕业，不能被邀请" };
 
   const alreadyMember = await prisma.jamTeamMember.findFirst({
     where: { teamId, userId: invitee.id },

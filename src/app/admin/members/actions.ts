@@ -7,14 +7,6 @@ import { createNotification } from "@/lib/services/notification";
 import { POSITION_LABEL } from "@/lib/position";
 import { revalidatePath } from "next/cache";
 
-export async function toggleMemberActive(id: string, isActive: boolean) {
-  await requireAdmin();
-  await prisma.clubMember.update({ where: { id }, data: { isActive } });
-  invalidateMemberCaches(id);
-  revalidatePath("/admin/members");
-  revalidatePath("/members");
-}
-
 export async function deleteMember(id: string) {
   await requireAdmin();
   await prisma.clubMember.delete({ where: { id } });
@@ -31,7 +23,6 @@ export async function updateMemberDetails(id: string, formData: FormData) {
   const joinYearRaw = formData.get("joinYear") as string;
   const joinYear = joinYearRaw ? parseInt(joinYearRaw, 10) : null;
   const position = formData.get("position") as string;
-  const isActiveStr = formData.get("isActive") as string;
 
   const isValidPosition = ["MEMBER", "PRESIDENT", "VICE_PRESIDENT", "PAST_PRESIDENT", "PAST_VICE_PRESIDENT", "FOUNDER"].includes(position);
 
@@ -47,7 +38,6 @@ export async function updateMemberDetails(id: string, formData: FormData) {
       ...(grade !== null && { grade }),
       ...(joinYear !== null && { joinYear }),
       ...(isValidPosition && { position }),
-      ...(isActiveStr !== null && { isActive: isActiveStr === "true" }),
     },
   });
 

@@ -161,7 +161,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
                     </span>
                   );
                 })()}
-                {member.isActive ? (
+                {!member.graduated ? (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(136,194,50,0.15)", color: "#88C232" }}>在读</span>
                 ) : (
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(136,194,50,0.08)", color: "#999" }}>已毕业</span>
@@ -225,7 +225,6 @@ export default async function MemberDetailPage({ params }: PageProps) {
             currentGrade={member.grade}
             currentJoinYear={member.joinYear ?? null}
             currentPosition={member.position || "MEMBER"}
-            isActive={member.isActive}
           />
 
           {/* 联系方式 — 敏感项，客户端判断可见性 */}
@@ -277,7 +276,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
             <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>个人信息</h3>
             <dl className="space-y-2.5 text-sm">
               {member.graduated && <InfoRow label="毕业状态" value="已毕业" />}
-              {!member.graduated && member.isActive && <InfoRow label="在读状态" value="在读" />}
+              {!member.graduated && <InfoRow label="在读状态" value="在读" />}
               {member.joinYear && <InfoRow label="入社年份" value={String(member.joinYear)} />}
               {member.grade && <InfoRow label="年级" value={`${member.grade}级`} />}
               <InfoRow label="参与项目数" value={String(member.projectMembers.length)} />

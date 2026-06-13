@@ -20,11 +20,11 @@ export async function addJudge(activityId: string, formData: FormData) {
 
   const judge = await prisma.user.findUnique({
     where: { id: judgeUserId },
-    include: { member: { select: { isActive: true } } },
+    include: { member: { select: { graduated: true } } },
   });
   if (!judge) return { error: "找不到该用户" };
   if (judge.role === "GUEST") return { error: "Guest 用户不能担任评委" };
-  if (judge.member && !judge.member.isActive) return { error: "该用户已退役，不能担任评委" };
+  if (judge.member && judge.member.graduated) return { error: "该用户已毕业，不能担任评委" };
 
   const existing = await prisma.jamJudge.findFirst({
     where: { activityId, userId: judge.id },

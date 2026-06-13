@@ -9,7 +9,6 @@ interface Props {
   currentGrade: number | null;
   currentJoinYear: number | null;
   currentPosition: string;
-  isActive: boolean;
 }
 
 const POSITION_OPTIONS = [
@@ -25,7 +24,7 @@ const POSITION_OPTIONS_WITH_FOUNDER = [
   { value: "FOUNDER", label: "创始人" },
 ];
 
-export default function AdminMemberEditor({ memberId, currentGrade, currentJoinYear, currentPosition, isActive }: Props) {
+export default function AdminMemberEditor({ memberId, currentGrade, currentJoinYear, currentPosition }: Props) {
   const { data: session } = useSession();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -109,20 +108,6 @@ export default function AdminMemberEditor({ memberId, currentGrade, currentJoinY
           {isFounder && (
             <p className="text-xs mt-1" style={{ color: "#999" }}>创始人身份不可修改</p>
           )}
-        </div>
-
-        {/* 退役 / 活跃 */}
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: "#333" }}>
-            <input
-              type="checkbox"
-              name="isActive"
-              defaultChecked={isActive}
-              value="true"
-              className="rounded"
-            />
-            现役活跃
-          </label>
         </div>
 
         <button

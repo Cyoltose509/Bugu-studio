@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   const where: any = {
     ...(year && { joinYear: year }),
     ...(active !== null && active !== undefined && {
-      isActive: active === "true",
+      graduated: active !== "true",
     }),
   };
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             select: { id: true, label: true, url: true },
             orderBy: { sortOrder: "asc" },
           },
-          isActive: true,
+          graduated: true,
           _count: { select: { projectMembers: true } },
         },
       }),

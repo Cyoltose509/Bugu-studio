@@ -10,10 +10,9 @@ export async function createInviteCode(formData: FormData) {
   await requireAdmin();
   const role = (formData.get("role") as string) || "MEMBER";
 
-  // 安全：邀请码最高角色为 MEMBER，禁止直接赋予 ADMIN
-  const SAFE_ROLES = ["USER", "MEMBER"] as const;
-  if (!SAFE_ROLES.includes(role as any)) {
-    throw new Error("邀请码不允许赋予该角色，最高角色为 MEMBER");
+  const VALID_ROLES = ["USER", "MEMBER", "ADMIN"] as const;
+  if (!VALID_ROLES.includes(role as any)) {
+    throw new Error("无效的角色类型");
   }
 
   const maxUses = formData.get("maxUses") as string;
@@ -52,4 +51,37 @@ export async function deleteInviteCode(id: string) {
   await prisma.inviteCode.delete({ where: { id } });
   invalidateCache("admin:invites:");
   revalidatePath("/admin/invites");
+}
+
+/** 删除所有无效邀请码（已过期 / 已禁用 / 已达最大使用次数） */
+export async function deleteInvalidInviteCodes() {
+  await requireAdmin();
+  const now = new Date();
+  // 先查出所有邀请码，在应用层筛选「已达最大使用次数」的（Prisma where 不支持字段间比较）
+  const all = await prisma.inviteCode.findMany({ select: { id: true, isActive: true, expiresAt: true, maxUses: true, usedCount: true } });
+  const invalidIds = all
+    .filter(c =>
+      !c.isActive ||
+      (c.expiresAt && c.expiresAt < now) ||
+      (c.maxUses !== null && c.usedCount >= c.maxUses)
+    )
+    .map(c => c.id);
+
+  let count = 0;
+  if (invalidIds.length > 0) {
+    const result = await prisma.inviteCode.deleteMany({ where: { id: { in: invalidIds } } });
+    count = result.count;
+  }
+  invalidateCache("admin:invites:");
+  revalidatePath("/admin/invites");
+  return count;
+}
+
+/** 删除全部邀请码 */
+export async function deleteAllInviteCodes() {
+  await requireAdmin();
+  const result = await prisma.inviteCode.deleteMany();
+  invalidateCache("admin:invites:");
+  revalidatePath("/admin/invites");
+  return result.count;
 }

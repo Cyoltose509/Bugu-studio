@@ -38,10 +38,10 @@ export async function updateUserRole(id: string, formData: FormData) {
       },
     });
   } else if (wasMember && !isMember) {
-    // 降级为非成员：标记 ClubMember 为退役
+    // 降级为非成员：标记 ClubMember 为已毕业
     await prisma.clubMember.updateMany({
       where: { userId: id },
-      data: { isActive: false },
+      data: { graduated: true },
     });
   }
   // wasMember && isMember：角色在成员类之间切换（MEMBER↔ADMIN），只更新 DB 即可

@@ -59,7 +59,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           college: true, major: true, workLocation: true, workPosition: true,
           skills: true, position: true,
           location: true, phone: true, wechat: true, qq: true,
-          isActive: true,
           socialLinks: { orderBy: { sortOrder: "asc" } },
         },
       })
@@ -261,12 +260,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>入社年份</div>
               <div style={{ color: "#333" }}>{member.joinYear != null ? `${member.joinYear}年` : "—"}</div>
-            </div>
-            <div>
-              <div className="text-xs mb-0.5" style={{ color: "#999" }}>状态</div>
-              <div style={member.isActive ? { color: "#88C232" } : { color: "#777" }}>
-                {member.isActive ? "活跃成员" : member.graduated ? "已毕业" : "已离社"}
-              </div>
             </div>
             <div>
               <div className="text-xs mb-0.5" style={{ color: "#999" }}>毕业状态</div>

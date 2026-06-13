@@ -7,7 +7,6 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
-import { toggleMemberActive } from "./actions";
 import DeleteMemberButton from "@/components/admin/DeleteMemberButton";
 import EditableSelect from "@/components/admin/EditableSelect";
 import EditableNumber from "@/components/admin/EditableNumber";
@@ -91,7 +90,6 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                       preserveValues={{
                         position: m.position || "MEMBER",
                         joinYear: m.joinYear != null ? String(m.joinYear) : "",
-                        isActive: String(m.isActive),
                       }}
                     />
                   </td>
@@ -103,7 +101,6 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                       preserveValues={{
                         position: m.position || "MEMBER",
                         grade: m.grade != null ? String(m.grade) : "",
-                        isActive: String(m.isActive),
                       }}
                     />
                   </td>
@@ -116,18 +113,17 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                       preserveValues={{
                         grade: m.grade != null ? String(m.grade) : "",
                         joinYear: m.joinYear != null ? String(m.joinYear) : "",
-                        isActive: String(m.isActive),
                       }}
                       readOnly={m.position === "FOUNDER"}
                     />
                   </td>
                   <td className="p-3">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={
-                      m.isActive
-                        ? { background: "#E8F5E9", color: "#2E7D32" }
-                        : { background: "#FDE8E8", color: "#C62828" }
+                      m.graduated
+                        ? { background: "#FFF3E0", color: "#E38043" }
+                        : { background: "#E8F5E9", color: "#2E7D32" }
                     }>
-                      {m.isActive ? "活跃" : "已退役"}
+                      {m.graduated ? "已毕业" : "在读"}
                     </span>
                   </td>
                   <td className="p-3">
@@ -141,11 +137,6 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Link href={`/members/${m.id}`} target="_blank" className="text-xs hover:underline cursor-pointer" style={{ color: "#3388BB" }}>查看</Link>
-                      <form action={toggleMemberActive.bind(null, m.id, !m.isActive)} className="inline">
-                        <button type="submit" className="text-xs hover:underline cursor-pointer" style={{ color: m.isActive ? "#C62828" : "#88C232" }}>
-                          {m.isActive ? "退役" : "激活"}
-                        </button>
-                      </form>
                       <DeleteMemberButton memberId={m.id} />
                     </div>
                   </td>

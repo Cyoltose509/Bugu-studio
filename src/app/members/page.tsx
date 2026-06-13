@@ -12,7 +12,7 @@ export default async function MembersPage() {
             orderBy: [{sortOrder: "asc"}],
             select: {
                 id: true, displayName: true, avatar: true, grade: true,
-                joinYear: true, isActive: true, position: true,
+                joinYear: true, graduated: true, position: true,
                 userId: true, skills: true,
                 user: {select: {image: true}},
                 _count: {select: {projectMembers: {where: {project: {status: "PUBLISHED"}}}}},
@@ -51,13 +51,13 @@ export default async function MembersPage() {
         return yB - yA;
     });
 
-    const activeCount = members.filter((m: any) => m.isActive).length;
+    const activeCount = members.filter((m: any) => !m.graduated).length;
 
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-10">
                 <h1 className="text-3xl font-bold" style={{color: "#25547A"}}>成员列表</h1>
-                <p className="mt-2" style={{color: "#777"}}>共 {members.length} 位历届成员，{activeCount} 位现任成员</p>
+                <p className="mt-2" style={{color: "#777"}}>共 {members.length} 位历届成员，{activeCount} 位在读成员</p>
             </div>
             <MembersList
                 members={members as any}

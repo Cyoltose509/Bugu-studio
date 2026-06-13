@@ -231,7 +231,7 @@ async function notifyAdminsOfActivity(params: {
   relatedType: string;
 }) {
   try {
-    const admins = await prisma.user.findMany({ where: { role: "ADMIN", member: { isActive: true } }, select: { id: true } });
+    const admins = await prisma.user.findMany({ where: { role: "ADMIN", member: { graduated: false } }, select: { id: true } });
     for (const admin of admins) {
       await createNotification({
         userId: admin.id,

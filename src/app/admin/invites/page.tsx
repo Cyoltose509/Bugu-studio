@@ -7,8 +7,9 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
-import { createInviteCode, toggleInviteCode } from "./actions";
+import { createInviteCode, toggleInviteCode, deleteInvalidInviteCodes, deleteAllInviteCodes } from "./actions";
 import DeleteInviteCodeButton from "@/components/admin/DeleteInviteCodeButton";
+import BulkDeleteButtons from "./BulkDeleteButtons";
 
 export const metadata: Metadata = { title: "邀请码管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -39,6 +40,11 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
     ]), 15);
 
   const totalPages = Math.ceil(total / pageSize);
+
+  const now = new Date();
+  const invalidCount = codes.filter(c =>
+    !c.isActive || (c.expiresAt && c.expiresAt < now) || (c.maxUses !== null && c.usedCount >= c.maxUses)
+  ).length;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -87,6 +93,12 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
 
       {/* 邀请码列表 */}
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: "#D0DEE8" }}>
+        <BulkDeleteButtons
+          invalidCount={invalidCount}
+          totalCount={codes.length}
+          deleteInvalidAction={deleteInvalidInviteCodes}
+          deleteAllAction={deleteAllInviteCodes}
+        />
         {codes.length === 0 ? (
           <div className="p-8 text-center text-sm" style={{ color: "#777" }}>暂无邀请码</div>
         ) : (

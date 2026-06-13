@@ -11,7 +11,7 @@ async function ensureAdminJudges(activityId: string) {
   const adminUsers = await prisma.user.findMany({
     where: {
       role: "ADMIN",
-      NOT: { member: { isActive: false } },
+      NOT: { member: { graduated: true } },
     },
     select: { id: true },
   });

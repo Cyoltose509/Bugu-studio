@@ -18,13 +18,13 @@ function LightboxLink({ src, children, className }: { src: string; children: Rea
   );
 }
 
-/* ── 自动确保所有非退役管理员加入评委团 ── */
+/* ── 自动确保所有非毕业管理员加入评委团 ── */
 
 async function ensureAdminJudges(activityId: string) {
   const adminUsers = await prisma.user.findMany({
     where: {
       role: "ADMIN",
-      NOT: { member: { isActive: false } },
+      NOT: { member: { graduated: true } },
     },
     select: { id: true },
   });
@@ -51,7 +51,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
   const session = await auth();
   const activityId = (await params).id;
 
-  // 自动将非退役管理员加入评委团
+  // 自动将非毕业管理员加入评委团
   if (session?.user) {
     const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
     if (isAdmin) {

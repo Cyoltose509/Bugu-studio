@@ -15,14 +15,14 @@ export const dynamic = "force-dynamic";
 
 /* ───── 调色板（改这里统一换色）───── */
 const C = {
-    heading:        "#25547A",  // 标题深蓝
-    accent:         "#3388BB",  // 强调蓝
-    orange:         "#E38043",  // 点赞橙
-    textBody:       "#555",     // 正文
-    textSecondary:  "#666",     // 次要正文
-    textMuted:      "#777",     // 辅助说明
-    textLight:      "#999",     // 最淡说明
-    textDark:       "#333",     // 深色字
+    heading: "#25547A",  // 标题深蓝
+    accent: "#3388BB",  // 强调蓝
+    orange: "#E38043",  // 点赞橙
+    textBody: "#555",     // 正文
+    textSecondary: "#666",     // 次要正文
+    textMuted: "#777",     // 辅助说明
+    textLight: "#999",     // 最淡说明
+    textDark: "#333",     // 深色字
     // 渐变背景色（相邻区块用 color1→2, 2→3, … 无缝衔接）
     color1: "#E6F0F8",
     color2: "#D0E4F0",
@@ -34,8 +34,8 @@ const C = {
     // 卡片半透明 — 改这个数字统一调节所有白色卡片透明度
     cardOpacity: 30,
     // 背景装饰
-    blueRadial:     "rgba(51,136,187,0.15)",
-    orangeRadial:   "rgba(227,128,67,0.12)",
+    blueRadial: "rgba(51,136,187,0.15)",
+    orangeRadial: "rgba(227,128,67,0.12)",
 } as const;
 
 /* 全局卡片样式 — 改 C.cardOpacity 调节透明度 */
@@ -83,8 +83,7 @@ export default async function JoinPage() {
                         BUGOO STUDIO · 武汉大学
                     </p>
                     <p className="max-w-2xl mx-auto leading-relaxed" style={{color: C.textSecondary}}>
-                        武汉大学布谷工作室原身是国际软件学院天行工作室，后国软并入计算机学院作为软件工程专业，天行工作室也并入珞珈技术俱乐部作为游戏部，同时正式更名为布谷工作室。
-                        工作室致力于为喜爱游戏设计和制作的同学提供环境和资源用于开发自己理想中的游戏，为游戏行业培养技术和美术等方向的人才。
+                        布谷工作室，致力于为喜爱游戏设计和制作的同学提供环境和资源用于开发自己理想中的游戏，为游戏行业培养技术和美术等方向的人才。
                     </p>
                 </div>
                 {/* 背景装饰 */}

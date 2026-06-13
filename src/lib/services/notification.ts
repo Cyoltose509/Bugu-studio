@@ -68,7 +68,7 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
     const { prisma } = await import("@/lib/db/prisma");
 
     const [admins, notifMembers] = await Promise.all([
-      prisma.user.findMany({ where: { role: "ADMIN", member: { isActive: true } }, select: { id: true } }),
+      prisma.user.findMany({ where: { role: "ADMIN", member: { graduated: false } }, select: { id: true } }),
       prisma.clubMember.findMany({
         where: { notifyNewProjects: true },
         select: { userId: true },
@@ -119,14 +119,14 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
 /**
  * 作品编辑后通知（已发布作品被编辑 → 回到待审核）
  * - 通知提交者：你的作品已更新，等待重新审核
- * - 通知所有在线管理员（排除已退役）
+ * - 通知所有在线管理员（排除已毕业）
  */
 export async function notifyProjectEdit(projectId: string, projectTitle: string, submitterId: string, submitterName: string) {
   try {
     const { prisma } = await import("@/lib/db/prisma");
 
     const admins = await prisma.user.findMany({
-      where: { role: "ADMIN", member: { isActive: true } },
+      where: { role: "ADMIN", member: { graduated: false } },
       select: { id: true },
     });
 
