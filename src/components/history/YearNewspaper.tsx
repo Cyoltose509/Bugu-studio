@@ -28,6 +28,7 @@ interface Project {
     tags?: { tag: { name: string } }[];
     members?: { memberId: string | null; externalName: string | null; roles: string[]; member?: { displayName: string } | null }[];
     _count?: { likes: number };
+    awards?: string[];
 }
 
 interface EventItem {
@@ -85,6 +86,7 @@ const ACT_ORDER = ["COMPETITION", "COURSE", "GENERAL", "MEETING"] as const;
 function pickFeaturedWork(projects: Project[]): Project | null {
     if (projects.length === 0) return null;
     // 权重：正式上架 x1.0, 提供试玩 x0.8, 小游戏 x0.6, 开发中 x0.4
+    // 奖项加权：整体权重 × (1 + 奖项数)
     const getWeight = (type: string) => {
         switch (type) {
             case "OFFICIAL_RELEASE": return 1.0;
@@ -96,7 +98,8 @@ function pickFeaturedWork(projects: Project[]): Project | null {
     };
     const scored = projects.map(p => {
         const likes = p._count?.likes ?? 0;
-        const score = getWeight(p.type) * (likes || 0);
+        const awardCount = (p.awards || []).length;
+        const score = getWeight(p.type) * (likes || 0) * (1 + awardCount);
         return {p, score};
     });
     scored.sort((a, b) => b.score - a.score);

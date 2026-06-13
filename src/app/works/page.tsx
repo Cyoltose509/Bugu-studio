@@ -6,23 +6,23 @@ import {cachedQuery} from "@/lib/db/cache";
 import {ensureDefaultTags} from "@/lib/db/tags";
 import {auth} from "@/lib/auth/auth";
 import {ProjectStatus} from "@prisma/client";
-import WorkCardServer from "@/components/works/WorkCardServer";
-import WorkCardSkeleton from "@/components/works/WorkCardSkeleton";
 import LogoLoading from "@/components/ui/LogoLoading";
 import FilterSidebarClient from "@/components/works/FilterSidebarClient";
 import WorksToolbar from "./WorksToolbar";
+import WorksInfiniteGrid from "@/components/works/WorksInfiniteGrid";
 
 export const metadata: Metadata = {title: "作品库", description: "浏览历届社员创作的所有游戏作品"};
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
+const PAGE_SIZE = 16; // 4x4
+
 interface PageProps {
-    searchParams: Promise<{ q?: string; types?: string; tag?: string; year?: string; page?: string; sort?: string }>;
+    searchParams: Promise<{ q?: string; types?: string; tag?: string; year?: string; sort?: string }>;
 }
 
 export default async function WorksPage({searchParams}: PageProps) {
     await ensureDefaultTags();
     const params = await searchParams;
-    const page = parseInt(params.page || "1", 10);
 
     // 侧栏数据（立即渲染，有长 TTL 缓存）
     const [tags, total, years] = await Promise.all([
@@ -132,7 +132,7 @@ export default async function WorksPage({searchParams}: PageProps) {
                     <WorksToolbar currentQ={params.q}/>
 
                     <Suspense fallback={<LogoLoading text="正在加载作品..."/>}>
-                        <WorksGrid params={params} page={page} total={total}/>
+                        <WorksFirstPage params={params} total={total}/>
                     </Suspense>
                 </div>
             </div>
@@ -140,12 +140,9 @@ export default async function WorksPage({searchParams}: PageProps) {
     );
 }
 
-/** 作品网格 — 渐进式流式加载：先获取 ID 列表，然后每个卡片独立加载独立渲染 */
-async function WorksGrid({params, page, total}: { params: Record<string, any>; page: number; total: number }) {
-    const pageSize = 12;
-    const skip = (page - 1) * pageSize;
+/** 服务端预取首批数据，然后交给客户端无限滚动组件 */
+async function WorksFirstPage({params, total}: { params: Record<string, any>; total: number }) {
     const sort = params.sort || "date";
-
     const orderBy: any = sort === "name"
         ? [{title: "asc"}]
         : sort === "likes"
@@ -154,64 +151,68 @@ async function WorksGrid({params, page, total}: { params: Record<string, any>; p
 
     const where = buildWhere(params);
 
-    // 第一步：只查询 ID 列表（极快，无 include）
-    const projectIds = await cachedQuery(
-        `works:ids:${page}:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
+    // 预取首批 PAGE_SIZE+1 条（用于判断是否有更多）
+    const projects = await cachedQuery(
+        `works:infinite:first:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
         () =>
             prisma.project.findMany({
                 where,
-                skip,
-                take: pageSize,
+                take: PAGE_SIZE + 1,
                 orderBy,
-                select: {id: true},
+                select: {
+                    id: true, slug: true, title: true, subtitle: true,
+                    description: true, coverImage: true, type: true,
+                    developYear: true, publishedAt: true,
+                    tags: {include: {tag: true}},
+                    awards: true,
+                    _count: {select: {likes: true}},
+                    members: {
+                        orderBy: {sortOrder: "asc"},
+                        include: {
+                            member: {
+                                select: {displayName: true, avatar: true, user: {select: {image: true}}},
+                            },
+                            user: {select: {id: true, name: true, image: true}},
+                        },
+                    },
+                },
             }),
-        120,
+        60,
     );
 
-    // 批量查询点赞状态（全局缓存，一次查询）
+    const hasMore = projects.length > PAGE_SIZE;
+    const items = hasMore ? projects.slice(0, PAGE_SIZE) : projects;
+    const nextCursor = hasMore ? items[items.length - 1].id : null;
+
+    // 查点赞
     const session = await auth().catch(() => null);
-    let likedProjectIds = new Set<string>();
-    if (session?.user?.id && projectIds.length > 0) {
-        const ids = projectIds.map(p => p.id);
+    let likedSet = new Set<string>();
+    if (session?.user?.id && items.length > 0) {
         const liked = await cachedQuery(`works:likes:${session.user.id}`, () =>
                 prisma.projectLike.findMany({
                     where: {userId: session.user.id},
                     select: {projectId: true},
                 })
             , 60);
-        const idSet = new Set(ids);
-        likedProjectIds = new Set(liked.filter((l) => idSet.has(l.projectId)).map((l) => l.projectId));
+        likedSet = new Set(liked.map((l) => l.projectId));
     }
 
-    const totalPages = Math.ceil(total / pageSize);
+    const initialItems = items.map((p: any) => ({...p, liked: likedSet.has(p.id)}));
 
     return (
-        <>
-            {projectIds.length === 0 ? (
-                <div className="text-center py-20" style={{color: "#999"}}>
-                    <div className="text-4xl mb-4">🔍</div>
-                    <p>没有找到匹配的作品</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-                    {/* 每张卡片独立 Suspense — 数据到了就渲染，自然形成逐个弹出效果 */}
-                    {projectIds.map(({id}, idx) => (
-                        <Suspense key={id} fallback={<WorkCardSkeleton />}>
-                            <WorkCardServer id={id} idx={idx} liked={likedProjectIds.has(id)} />
-                        </Suspense>
-                    ))}
-                </div>
-            )}
-            {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-10">
-                    {page > 1 && <Link href={buildUrl(params, {page: page - 1})}
-                                       className="btn-secondary px-4 py-2 rounded-lg text-sm">上一页</Link>}
-                    <span className="px-4 py-2 text-sm" style={{color: "#777"}}>{page} / {totalPages}</span>
-                    {page < totalPages && <Link href={buildUrl(params, {page: page + 1})}
-                                                className="btn-secondary px-4 py-2 rounded-lg text-sm">下一页</Link>}
-                </div>
-            )}
-        </>
+        <WorksInfiniteGrid
+            initialItems={initialItems}
+            initialNextCursor={nextCursor}
+            initialHasMore={hasMore}
+            filters={{
+                types: params.types,
+                year: params.year,
+                tag: params.tag,
+                q: params.q,
+                sort: params.sort,
+            }}
+            total={total}
+        />
     );
 }
 

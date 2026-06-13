@@ -6,8 +6,8 @@ export const metadata: Metadata = {
     description: "了解布谷工作室招新信息、入会要求及新学期活动预告。",
 };
 
-// 纯静态页面，无需动态数据
-export const dynamic = "force-static";
+// 页面内容静态，但允许 layout 中的 Navbar 动态读取 session
+export const dynamic = "force-dynamic";
 
 export default function JoinPage() {
     return (

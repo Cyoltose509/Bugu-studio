@@ -14,7 +14,9 @@ function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);       // 注册按钮
+  const [verifyLoading, setVerifyLoading] = useState(false); // 验证按钮
+  const [resendLoading, setResendLoading] = useState(false); // 重新发送按钮
   const [msg, setMsg] = useState("");
 
   // 恢复 sessionStorage 中的注册状态
@@ -59,7 +61,7 @@ function RegisterForm() {
   }
 
   async function handleResend() {
-    setLoading(true); setMsg("");
+    setResendLoading(true); setMsg("");
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -74,11 +76,11 @@ function RegisterForm() {
         setMsg(data.error || "发送失败");
       }
     } catch { setMsg("网络错误，请重试"); }
-    setLoading(false);
+    setResendLoading(false);
   }
 
   async function handleVerify(e: React.FormEvent) {
-    e.preventDefault(); setLoading(true); setMsg("");
+    e.preventDefault(); setVerifyLoading(true); setMsg("");
     try {
       const res = await fetch("/api/auth/verify", {
         method: "POST",
@@ -94,7 +96,7 @@ function RegisterForm() {
         setMsg(data.error || "验证失败");
       }
     } catch { setMsg("网络错误，请重试"); }
-    setLoading(false);
+    setVerifyLoading(false);
   }
 
   // ==== 步骤1: 填写注册信息 ====
@@ -138,7 +140,8 @@ function RegisterForm() {
                 className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent font-mono text-sm"
                 style={{ borderColor: "#D0DEE8", color: "#25547A" }} placeholder="BUGOO-MEMBER-XXXXXX" />
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
               {loading ? "注册中..." : "注册"}
             </button>
           </form>
@@ -167,13 +170,17 @@ function RegisterForm() {
               className="w-full rounded-lg bg-white border px-4 py-3 text-center text-2xl tracking-[0.3em] font-mono placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
               style={{ borderColor: "#D0DEE8", color: "#333" }} placeholder="000000" maxLength={6} />
           </div>
-          <button type="submit" disabled={loading || code.length !== 6} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-            {loading ? "验证中..." : "验证"}
+          <button type="submit" disabled={verifyLoading || code.length !== 6} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            {verifyLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+            {verifyLoading ? "验证中..." : "验证"}
           </button>
         </form>
         <p className="mt-4 text-center text-sm" style={{ color: "#777" }}>
           没收到邮件？检查垃圾箱，或{" "}
-          <Link href="/auth/register" className="hover:underline" style={{ color: "#3388BB" }}>重新发送</Link>
+          <button type="button" onClick={handleResend} disabled={resendLoading} className="hover:underline text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-1" style={{ color: "#3388BB" }}>
+            {resendLoading && <div className="w-3 h-3 border-2 border-[#3388BB] border-t-transparent rounded-full animate-spin" />}
+            重新发送验证码
+          </button>
         </p>
       </div>
     </div>

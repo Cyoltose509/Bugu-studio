@@ -22,6 +22,7 @@ interface LinkEntry { label: string; url: string; }
 
 interface SelectedMember {
   memberId?: string;
+  userId?: string;
   externalName?: string;
   displayName: string;
   roles: string[];
@@ -39,8 +40,9 @@ export interface ProjectFormData {
   tagIds: string[];
   customTags: string[];
   links: LinkEntry[];
-  memberRoles: { memberId?: string; externalName?: string; roles: string[] }[];
+  memberRoles: { memberId?: string; userId?: string; externalName?: string; roles: string[] }[];
   images?: ProjectImage[];
+  awards?: string[];
 }
 
 export interface InitialData {
@@ -55,6 +57,7 @@ export interface InitialData {
   links: LinkEntry[];
   memberRoles: SelectedMember[];
   images: ProjectImage[];
+  awards?: string[];
 }
 
 export interface ProjectFormProps {
@@ -86,6 +89,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const [selectedMembers, setSelectedMembers] = useState<SelectedMember[]>(initialData?.memberRoles ?? []);
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState("");
+  const [awards, setAwards] = useState<string[]>(initialData?.awards ?? []);
+  const [awardInput, setAwardInput] = useState("");
 
   // ── 截图 ──
   const [screenshots, setScreenshots] = useState<ProjectImage[]>(initialData?.images ?? []);
@@ -126,11 +131,28 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   // ── 成员搜索 ──
   const searchMembers = useCallback(async (q: string) => {
     try {
-      const res = await fetch(`/api/members/search?q=${encodeURIComponent(q)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMemberResults(Array.isArray(data) ? data : data.data || []);
+      const [memberRes, userRes] = await Promise.all([
+        fetch(`/api/members/search?q=${encodeURIComponent(q)}`),
+        fetch(`/api/users/search?q=${encodeURIComponent(q)}`),
+      ]);
+      let results: any[] = [];
+      if (memberRes.ok) {
+        const data = await memberRes.json();
+        const members = (Array.isArray(data) ? data : data.data || []).map((m: any) => ({
+          ...m, _type: "member" as const
+        }));
+        results.push(...members);
       }
+      if (userRes.ok) {
+        const data = await userRes.json();
+        const users = (Array.isArray(data) ? data : data.data || []).map((u: any) => ({
+          id: u.id, displayName: u.name, image: u.image, _type: "user" as const
+        }));
+        // 过滤掉已经是社团成员的（避免与上面的结果重复）
+        const memberIds = new Set(results.map((r: any) => r.id));
+        results.push(...users.filter((u: any) => !memberIds.has(u.id)));
+      }
+      setMemberResults(results);
     } catch {}
   }, []);
 
@@ -155,12 +177,17 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   }, []);
 
   function addMemberFromSearch(member: any) {
-    if (selectedMembers.some((m) => m.memberId === member.id)) return;
+    const isUser = member._type === "user";
+    const id = member.id;
+    // 防止重复：memberId 和 userId 都检查
+    if (selectedMembers.some((m) => (isUser ? m.userId === id : m.memberId === id))) return;
     const roles = [...selectedRoles];
     if (customRoleInput.trim()) roles.push(customRoleInput.trim());
     setSelectedMembers((prev) => [
       ...prev,
-      { memberId: member.id, displayName: member.displayName, roles: roles.length > 0 ? roles : ["制作"] },
+      isUser
+        ? { userId: id, displayName: member.displayName, roles: roles.length > 0 ? roles : ["制作"] }
+        : { memberId: id, displayName: member.displayName, roles: roles.length > 0 ? roles : ["制作"] },
     ]);
     setMemberQuery("");
     setSelectedRoles([]);
@@ -276,7 +303,13 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       tagIds: selectedTags,
       customTags,
       links,
-      memberRoles: selectedMembers.map((m) => ({ memberId: m.memberId, externalName: m.externalName, roles: m.roles })),
+      memberRoles: selectedMembers.map((m) => ({
+        memberId: m.memberId || undefined,
+        userId: m.userId || undefined,
+        externalName: m.externalName || undefined,
+        roles: m.roles,
+      })),
+      awards: awards.filter(Boolean),
       images: screenshots.length > 0 ? screenshots : undefined,
     };
 
@@ -365,6 +398,18 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
     );
   }
 
+  // ── 奖项管理 ──
+  function addAward() {
+    const name = awardInput.trim();
+    if (!name) return;
+    if (awards.includes(name)) { setAwardInput(""); return; }
+    setAwards(prev => [...prev, name]);
+    setAwardInput("");
+  }
+  function removeAward(index: number) {
+    setAwards(prev => prev.filter((_, i) => i !== index));
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
       {error && (
@@ -412,6 +457,34 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       </section>
 
       {/* ═══════════════ 封面图 ═══════════════ */}
+
+      {/* ═════════ 所获奖项 ═════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🏆 所获奖项</h2>
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <input type="text" value={awardInput} onChange={(e) => setAwardInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAward(); } }}
+              placeholder="输入奖项名称，如：最佳创意奖"
+              className={inputClass} style={inputStyle} />
+          </div>
+          <button type="button" onClick={addAward} disabled={!awardInput.trim()}
+            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all"
+            style={{ background: "#88C232", color: "#fff" }}>添加</button>
+        </div>
+        {awards.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {awards.map((a, i) => (
+              <span key={i} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full"
+                style={{ background: "rgba(251,191,36,0.15)", color: "#F59E0B" }}>
+                🏆 {a}
+                <button type="button" onClick={() => removeAward(i)} className="hover:text-red-500 ml-0.5">×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🖼️ 封面图</h2>
         <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
@@ -571,19 +644,28 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
         {selectedMembers.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {selectedMembers.map((m, i) => (
+            {selectedMembers.map((m, i) => {
+              const isMember = !!m.memberId;
+              const isUser = !!m.userId;
+              const isExternal = !isMember && !isUser;
+              return (
               <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
-                style={m.memberId
+                style={isMember
                   ? { background: "rgba(37,84,122,0.1)", color: "#25547A" }
+                  : isUser
+                  ? { background: "rgba(51,136,187,0.1)", color: "#3388BB" }
                   : { background: "rgba(227,128,67,0.1)", color: "#E38043" }}>
-                {m.memberId
+                {isMember
                   ? <span className="w-4 h-4 rounded-full bg-[#E38043] text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
+                  : isUser
+                  ? <span className="w-4 h-4 rounded-full bg-[#3388BB] text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
                   : <span className="text-[10px] mr-0.5">👤</span>}
                 {m.displayName}
                 <span className="text-xs opacity-70">{m.roles.join("、")}</span>
                 <button type="button" onClick={() => removeMember(i)} className="ml-0.5 hover:text-red-500" title="移除">×</button>
               </span>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

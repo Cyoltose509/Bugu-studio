@@ -75,7 +75,13 @@ export default async function HistoryPage() {
       cachedQuery('history:allProjects', () =>
         prisma.project.findMany({
           where: { status: ProjectStatus.PUBLISHED },
-          select: { id: true, slug: true, title: true, subtitle: true, coverImage: true, type: true, developYear: true, tags: { select: { tag: { select: { name: true } } } }, members: { select: { memberId: true, externalName: true, roles: true, member: { select: { displayName: true } } } }, _count: { select: { likes: true } } },
+          select: {
+            id: true, slug: true, title: true, subtitle: true, coverImage: true,
+            type: true, developYear: true, awards: true,
+            tags: { select: { tag: { select: { name: true } } } },
+            members: { select: { memberId: true, userId: true, externalName: true, roles: true, member: { select: { displayName: true } }, user: { select: { name: true, image: true } } } },
+            _count: { select: { likes: true } }
+          },
           orderBy: { publishedAt: "desc" }
         }), 3600),
       cachedQuery('history:allMembers', () =>

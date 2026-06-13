@@ -70,6 +70,12 @@ export async function toggleUserActive(id: string, isActive: boolean) {
   revalidatePath("/profile");
 }
 
+export async function toggleConfirmedNotMember(id: string, value: boolean) {
+  await requireAdmin();
+  await prisma.user.update({ where: { id }, data: { confirmedNotMember: value } });
+  revalidatePath("/admin/users");
+}
+
 export async function deleteUser(id: string) {
   await requireAdmin();
   await prisma.clubMember.deleteMany({ where: { userId: id } });

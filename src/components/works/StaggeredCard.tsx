@@ -34,6 +34,54 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
     router.push(`/works/${p.slug}`);
   }
 
+  // 头像动态重叠计算
+  const n = members.length;
+  const avatarSize = 20;
+  const maxW = 155;
+  const normalOverlap = 6;
+  const totalW = avatarSize + (n - 1) * (avatarSize - normalOverlap);
+  const overlap =
+    totalW > maxW
+      ? Math.max(2, Math.min(avatarSize - 2, (n * avatarSize - maxW) / Math.max(1, n - 1)))
+      : normalOverlap;
+
+  function renderAvatarSection() {
+    return (
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <MiniLikeButton
+          projectId={p.id}
+          initialCount={p._count.likes}
+          initialLiked={liked}
+        />
+        <div className="overflow-hidden" style={{ maxWidth: maxW + "px" }}>
+          {members.map((pm: any, i: number) => {
+            const name =
+              pm.member?.displayName || pm.user?.name || pm.externalName || "?";
+            const avatarUrl =
+              pm.member?.user?.image || pm.member?.avatar || pm.user?.image || null;
+            return (
+              <span
+                key={pm.id}
+                className="inline-flex w-5 h-5 rounded-full items-center justify-center text-[10px] text-white border border-white overflow-hidden flex-shrink-0"
+                style={{
+                  background: pm.member ? "#E38043" : pm.userId ? "#3388BB" : "#6B7280",
+                  marginLeft: i === 0 ? 0 : -overlap + "px",
+                }}
+                title={name}
+              >
+                {avatarUrl ? (
+                  <UserAvatar src={avatarUrl} name={name} size={20} />
+                ) : (
+                  name[0]
+                )}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ animation: `cardPopIn 0.45s ${delay} both` }}>
       <a
@@ -55,6 +103,11 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
           </div>
         )}
         <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
+          {p.awards && p.awards.length > 0 && (
+            <div className="absolute top-2 right-2 text-lg z-10" title={p.awards.join("、")}>
+              🏆
+            </div>
+          )}
           <ProjectCoverImage src={p.coverImage} alt={p.title} priority={idx === 0} />
           {!p.coverImage && (
             <div className="w-full h-full flex items-center justify-center" style={{ background: "#E6F0F8" }}>
@@ -67,12 +120,18 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
             </span>
           </div>
         </div>
+
         <div className="p-4">
           <h3
-            className="font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1"
+            className="font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1 flex items-baseline gap-1.5"
             style={{ color: "#333" }}
           >
-            {p.title}
+            <span className="truncate">{p.title}</span>
+            {p.subtitle && (
+              <span className="text-xs font-normal flex-shrink-0" style={{ color: "#999" }}>
+                {p.subtitle}
+              </span>
+            )}
           </h3>
           <p className="text-sm mt-1 line-clamp-2" style={{ color: "#777" }}>
             {p.description}
@@ -88,39 +147,14 @@ export default function StaggeredCard({ project: p, members, idx, liked, typeLab
               </span>
             ))}
           </div>
-          <div className="flex justify-between items-center mt-3">
-            <span className="text-xs" style={{ color: "#999" }}>
-              {p.developYear}
-            </span>
-            <div className="flex items-center gap-2">
-              <MiniLikeButton
-                projectId={p.id}
-                initialCount={p._count.likes}
-                initialLiked={liked}
-              />
-              <div className="flex -space-x-1">
-                {members.slice(0, 3).map((pm: any) => {
-                  const name = pm.member?.displayName || pm.externalName || "?";
-                  const avatarUrl = pm.member
-                    ? pm.member.user?.image || pm.member.avatar
-                    : null;
-                  return (
-                    <div
-                      key={pm.id}
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white border border-white overflow-hidden"
-                      style={{ background: pm.member ? "#E38043" : "#6B7280" }}
-                      title={name}
-                    >
-                      {avatarUrl ? (
-                        <UserAvatar src={avatarUrl} name={name} size={20} />
-                      ) : (
-                        name[0]
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="flex items-center gap-1.5 mt-3">
+            {/* 年份 */}
+            {p.developYear && (
+              <span className="text-xs flex-shrink-0" style={{ color: "#999" }}>{p.developYear}</span>
+            )}
+            <div className="flex-1" />
+            {/* ❤️ + 头像：右对齐，动态重叠 */}
+            {renderAvatarSection()}
           </div>
         </div>
       </a>

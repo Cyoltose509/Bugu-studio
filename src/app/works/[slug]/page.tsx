@@ -53,6 +53,7 @@ const getProject = cache(async (slug: string) => {
                 user: { select: { image: true } },
               },
             },
+            user: { select: { id: true, name: true, image: true } },
           },
         },
         _count: { select: { likes: true } },
@@ -272,19 +273,21 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
             </dl>
           </div>
 
-          {project.members.length > 0 && (
+      {project.members.length > 0 && (
             <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
               <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>开发团队</h3>
               <div className="space-y-3">
                 {project.members.map((pm) => {
-                  const isExternal = !pm.member;
-                  const displayName = pm.member?.displayName || pm.externalName || "未知";
-                  const avatarUrl = pm.member ? (pm.member.user?.image || pm.member.avatar) : null;
+                  const isExternal = !pm.member && !pm.user;
+                  const displayName = pm.member?.displayName || (pm as any).user?.name || pm.externalName || "未知";
+                  const avatarUrl =
+                    pm.member ? (pm.member.user?.image || pm.member.avatar) :
+                    (pm as any).user?.image || null;
 
                   const inner = (
                     <>
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 overflow-hidden`}
-                        style={{ background: isExternal ? "#6B7280" : "linear-gradient(135deg, #E38043, #F09055)" }}>
+                        style={{ background: pm.member ? "linear-gradient(135deg, #E38043, #F09055)" : (pm as any).userId ? "#3388BB" : "#6B7280" }}>
                         {avatarUrl ? (
                           <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : displayName[0]}
@@ -303,10 +306,18 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
                       </div>
                     );
                   }
+                  const href = pm.member ? `/members/${pm.member.id}` : (pm as any).userId ? `/profile?id=${(pm as any).userId}` : undefined;
+                  if (href) {
+                    return (
+                      <Link key={pm.id} href={href} className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5 transition-colors hover:bg-[#E6F0F8]">
+                        {inner}
+                      </Link>
+                    );
+                  }
                   return (
-                    <Link key={pm.id} href={`/members/${pm.member!.id}`} className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5 transition-colors hover:bg-[#E6F0F8]">
+                    <div key={pm.id} className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5">
                       {inner}
-                    </Link>
+                    </div>
                   );
                 })}
               </div>

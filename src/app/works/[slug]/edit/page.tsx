@@ -79,11 +79,13 @@ export default async function ProjectEditPage({ params }: PageProps) {
     links: project.links.map((l) => ({ label: l.label, url: l.url })),
     memberRoles: project.members.map((m) => ({
       memberId: m.memberId || undefined,
+      userId: (m as any).userId || undefined,
       externalName: m.externalName || undefined,
-      displayName: m.member?.displayName || m.externalName || "未知",
+      displayName: m.member?.displayName || (m as any).user?.name || m.externalName || "未知",
       roles: m.roles,
     })),
     images: project.images.map((img) => ({ url: img.url, altText: img.altText || undefined })),
+    awards: project.awards,
   };
 
   return (

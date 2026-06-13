@@ -1,7 +1,3 @@
-/**
- * 成员详情页
- */
-
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +11,7 @@ import MemberWorkHistory from "./MemberWorkHistory";
 import AdminMemberEditor from "./AdminMemberEditor";
 import { RichContent } from "@/components/RichContent";
 import { positionLabel, positionColor } from "@/lib/position";
+import ProjectCard from "@/components/projects/ProjectCard";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -49,17 +46,26 @@ export default async function MemberDetailPage({ params }: PageProps) {
         socialLinks: { orderBy: { sortOrder: "asc" } },
         workExperiences: { orderBy: { sortOrder: "asc" } },
         projectMembers: {
-          orderBy: { sortOrder: "asc" },
+          orderBy: [{ project: { developYear: "desc" } }, { project: { publishedAt: "desc" } }, { sortOrder: "asc" }],
           where: { project: { status: ProjectStatus.PUBLISHED } },
           include: {
             project: {
-              select: {
-                id: true,
-                slug: true,
-                title: true,
-                type: true,
-                coverImage: true,
-                developYear: true,
+              include: {
+                tags: { include: { tag: true } },
+                members: {
+                  orderBy: { sortOrder: "asc" },
+                  include: {
+                    member: {
+                      select: {
+                        displayName: true,
+                        avatar: true,
+                        user: { select: { image: true } },
+                      },
+                    },
+                    user: { select: { name: true, image: true } },
+                  },
+                },
+                _count: { select: { likes: true } },
               },
             },
           },
@@ -200,28 +206,11 @@ export default async function MemberDetailPage({ params }: PageProps) {
                 参与项目 <span className="text-sm font-normal" style={{ color: "#999" }}>共 {member.projectMembers.length} 个</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {member.projectMembers.map(({ project, roles }, idx) => (
-                  <div key={project.id}>
-                    <Link
-                      href={`/works/${project.slug}`}
-                      className="game-card group bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md block"
-                      style={{ borderColor: "#D0DEE8" }}
-                    >
-                      <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
-                        {project.coverImage ? (
-                          <Image src={project.coverImage} alt={project.title} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Image src="/images/logo.png" alt="" width={40} height={40} className="opacity-30" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>{project.title}</h3>
-                        <p className="text-xs mt-1" style={{ color: "#777" }}>{roles?.join("、") || "参与"} · {project.developYear}</p>
-                      </div>
-                    </Link>
-                  </div>
+                {member.projectMembers.map(({ project }) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project as any}
+                  />
                 ))}
               </div>
             </div>

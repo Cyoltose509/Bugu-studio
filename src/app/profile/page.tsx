@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import MiniLikeButton from "@/components/MiniLikeButton";
+import ProjectCard from "@/components/projects/ProjectCard";
 import { RichContent } from "@/components/RichContent";
 import ProjectCoverImage from "@/components/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
@@ -66,10 +67,22 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     cachedQuery(`profile:projects:${userId}`, () =>
       prisma.project.findMany({
         where: { submitterId: userId },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true, slug: true, title: true, status: true,
-          type: true, developYear: true, coverImage: true, createdAt: true,
+        orderBy: [{ developYear: "desc" }, { createdAt: "desc" }],
+        include: {
+          tags: { include: { tag: true } },
+          members: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              member: {
+                select: {
+                  displayName: true,
+                  avatar: true,
+                  user: { select: { image: true } },
+                },
+              },
+              user: { select: { name: true, image: true } },
+            },
+          },
           _count: { select: { likes: true } },
         },
         take: 12,
@@ -81,10 +94,22 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           likes: { some: { userId } },
           status: "PUBLISHED",
         },
-        orderBy: { publishedAt: "desc" },
-        select: {
-          id: true, slug: true, title: true, coverImage: true,
-          type: true, developYear: true,
+        orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }],
+        include: {
+          tags: { include: { tag: true } },
+          members: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              member: {
+                select: {
+                  displayName: true,
+                  avatar: true,
+                  user: { select: { image: true } },
+                },
+              },
+              user: { select: { name: true, image: true } },
+            },
+          },
           _count: { select: { likes: true } },
         },
         take: 8,
@@ -348,43 +373,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {userProjects.map(p => (
-              <Link key={p.id} href={`/works/${p.slug}`}
-                className="group block rounded-xl border overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5"
-                style={{ borderColor: "#E8EEF4" }}>
-                {/* 封面 */}
-                <div className="relative aspect-video bg-gray-100 overflow-hidden">
-                  <ProjectCoverImage
-                    src={p.coverImage}
-                    alt={p.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    fillParent={true}
-                  />
-                  {/* 状态角标 */}
-                  <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm shadow-sm"
-                    style={{
-                      background: p.status === "PUBLISHED" ? "rgba(46,125,50,0.85)" : "rgba(230,81,0,0.85)",
-                      color: "#fff",
-                    }}>
-                    {p.status === "PUBLISHED" ? "已发布" : p.status === "PENDING" ? "待审核" : p.status}
-                  </span>
-                </div>
-                {/* 信息 */}
-                <div className="p-3">
-                  <div className="font-medium text-sm truncate group-hover:text-[#3388BB]" style={{ color: "#333" }}>
-                    {p.title}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#E6F0F8", color: "#25547A" }}>
-                      {p.type.replace("_", " ")}
-                    </span>
-                  </div>
-                  <div className="mt-1">
-                    <MiniLikeButton projectId={p.id} initialCount={p._count.likes} />
-                  </div>
-                </div>
-              </Link>
+            {userProjects.map((p, i) => (
+              <ProjectCard
+                key={p.id}
+                project={p as any}
+                showStatusBadge
+                idx={i}
+              />
             ))}
           </div>
         )}
@@ -395,33 +390,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
           <h2 className="font-semibold mb-4" style={{ color: "#E38043" }}>❤️ 我喜欢的作品</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {likedProjects.map(p => (
-              <Link key={p.id} href={`/works/${p.slug}`}
-                className="group block rounded-xl border overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5"
-                style={{ borderColor: "#E8EEF4" }}>
-                <div className="relative aspect-video bg-gray-100 overflow-hidden">
-                  <ProjectCoverImage
-                    src={p.coverImage}
-                    alt={p.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    fillParent={true}
-                  />
-                </div>
-                <div className="p-3">
-                  <div className="font-medium text-sm truncate group-hover:text-[#3388BB]" style={{ color: "#333" }}>
-                    {p.title}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-xs" style={{ color: "#999" }}>{p.developYear}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#E6F0F8", color: "#25547A" }}>
-                      {p.type.replace("_", " ")}
-                    </span>
-                  </div>
-                  <div className="mt-1">
-                    <MiniLikeButton projectId={p.id} initialCount={p._count.likes} />
-                  </div>
-                </div>
-              </Link>
+            {likedProjects.map((p, i) => (
+              <ProjectCard
+                key={p.id}
+                project={p as any}
+                idx={i}
+              />
             ))}
           </div>
         </div>

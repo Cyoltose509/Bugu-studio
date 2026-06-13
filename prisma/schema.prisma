@@ -107,12 +107,14 @@ model User {
   role            UserRole  @default(USER)
   isActive        Boolean   @default(true)
   lastLoginAt     DateTime?
+  confirmedNotMember Boolean @default(false) // 管理员标记：确认为非社团成员
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // Relations
   member                 ClubMember?
   submittedProjects      Project[]               @relation("ProjectSubmitter")
+  projectMembers         ProjectMember[]         // 作为非社团成员参与的作品
   reviewedProjects       Review[]
   auditLogs              AuditLog[]              @relation("AuditUser")
   loginAttempts          LoginAttempt[]
@@ -307,6 +309,7 @@ model Project {
 
   // 内容
   techStack  String[] @default([])
+  awards     String[] @default([]) // 所获奖项
 
 
   // 提交信息
@@ -358,16 +361,19 @@ model ProjectMember {
   id           String   @id @default(cuid())
   projectId    String
   memberId     String? // 社团成员 ID（可选，外部成员为 null）
-  externalName String? // 非社团成员姓名
+  userId       String? // 非社团成员的注册用户 ID
+  externalName String? // 非社团成员/非注册用户姓名
   roles        String[] // 如 ["程序", "美术", "策划"]
   sortOrder    Int      @default(0)
 
   project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   member  ClubMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  user    User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([projectId, memberId])
   @@index([projectId])
   @@index([memberId])
+  @@index([userId])
 }
 
 // 作品外部链接（动态添加，如 Steam、itch.io、官网、网盘等）

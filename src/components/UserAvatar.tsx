@@ -39,7 +39,7 @@ export default function UserAvatar({
       alt={name || ""}
       width={size}
       height={size}
-      className={`rounded-full object-cover shrink-0 ${className}`}
+      className={`rounded-full object-cover block shrink-0 ${className}`}
       referrerPolicy="no-referrer"
       onError={() => setError(true)}
       sizes={`${size}px`}

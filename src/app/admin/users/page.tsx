@@ -10,6 +10,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import RoleSelect from "./RoleSelect";
 import ToggleActiveButton from "./ToggleActiveButton";
 import DeleteButton from "./DeleteButton";
+import ConfirmedNotMemberCheckbox from "./ConfirmedNotMemberCheckbox";
 
 export const metadata: Metadata = { title: "用户管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -47,6 +48,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
           id: true, name: true, email: true, role: true,
           isActive: true, emailVerified: true,
           lastLoginAt: true, createdAt: true,
+          confirmedNotMember: true,
         },
         skip,
         take: pageSize,
@@ -102,6 +104,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>用户</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>角色</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>状态</th>
+                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>非成员</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>作品数</th>
                 <th className="text-left p-3 font-medium" style={{ color: "#555" }}>注册时间</th>
                 <th className="text-right p-3 font-medium" style={{ color: "#555" }}>操作</th>
@@ -121,13 +124,20 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                     <RoleSelect userId={u.id} currentRole={u.role} />
                   </td>
                   <td className="p-3">
-                    <span className="text-xs px-2 py-0.5 rounded-full" style={
-                      u.isActive
-                        ? { background: "#E8F5E9", color: "#2E7D32" }
-                        : { background: "#FDE8E8", color: "#C62828" }
-                    }>
-                      {u.isActive ? "正常" : "已停用"}
-                    </span>
+                    {u.isActive ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#E8F5E9", color: "#2E7D32" }}>
+                        正常
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#FDE8E8", color: "#C62828" }}>
+                        已停用
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-3 text-center">
+                    {u.role === "USER" && (
+                      <ConfirmedNotMemberCheckbox userId={u.id} value={u.confirmedNotMember} />
+                    )}
                   </td>
                   <td className="p-3 text-xs" style={{ color: "#777" }}>{u.projectCount}</td>
                   <td className="p-3 text-xs" style={{ color: "#999" }}>
