@@ -16,8 +16,8 @@ export const POSITION_COLOR: Record<string, { bg: string; text: string }> = {
   MEMBER:              { bg: "#25547A",  text: "#fff" },
   VICE_PRESIDENT:      { bg: "#25547A",  text: "#fff" },
   PRESIDENT:           { bg: "#25547A",  text: "#fff" },
-  PAST_PRESIDENT:      { bg: "#25547A",  text: "#fff" },
-  PAST_VICE_PRESIDENT: { bg: "#25547A",  text: "#fff" },
+  PAST_PRESIDENT:      { bg: "#999999",  text: "#fff" },
+  PAST_VICE_PRESIDENT: { bg: "#999999",  text: "#fff" },
   FOUNDER:             { bg: "#FFE384",  text: "#5C4B00" },
 };
 

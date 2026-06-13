@@ -12,7 +12,7 @@ export async function Navbar() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-50 shadow-md" style={{ background: "#25547A" }}>
+    <header className="sticky top-0 z-50 shadow-md" style={{ background: "rgba(37,84,122,0.9)" }}>
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white hover:opacity-85 transition-opacity nav-link">
@@ -21,7 +21,7 @@ export async function Navbar() {
         </Link>
 
         {/* 主导航 - 添加点击反馈的 CSS 类 */}
-        <nav className="hidden md:flex items-center gap-6 text-sm">
+        <nav className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-6">
           <NavLink href="/works">作品库</NavLink>
           <NavLink href="/members">成员</NavLink>
           <NavLink href="/activities">活动</NavLink>
