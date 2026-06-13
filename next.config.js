@@ -47,8 +47,15 @@ const nextConfig = {
       ],
     },
   },
-  // jose 在 Edge Runtime 会引用 Node.js API，标为外部包避免打包进 Edge bundle
-  serverExternalPackages: ["jose"],
+  // jose / isomorphic-dompurify 及其依赖链 (jsdom → html-encoding-sniffer → @exodus/bytes)
+  // 包含 ESM-only 子依赖，必须标为外部包避免 webpack 打包时报 ERR_REQUIRE_ESM
+  serverExternalPackages: [
+    "jose",
+    "isomorphic-dompurify",
+    "jsdom",
+    "html-encoding-sniffer",
+    "@exodus/bytes",
+  ],
   // 旧路由重定向
   async redirects() {
     return [
