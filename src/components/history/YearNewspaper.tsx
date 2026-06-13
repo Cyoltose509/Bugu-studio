@@ -1,6 +1,6 @@
 "use client";
 
-import {useRef, useCallback, useState, useEffect} from "react";
+import {useRef, useCallback, useState, useEffect, memo} from "react";
 import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
 import {RichContentClient} from "@/components/RichContentClient";
@@ -539,7 +539,7 @@ function StatBox({num, label}: { num: number; label: string }) {
 // ═══════════════════════════════════════════════════════
 //  主组件
 // ═══════════════════════════════════════════════════════
-export default function YearNewspaper({
+function YearNewspaper({
                                           year,
                                           members,
                                           projects,
@@ -1019,3 +1019,5 @@ export default function YearNewspaper({
         </>
     );
 }
+
+export default memo(YearNewspaper);

@@ -218,11 +218,5 @@ export function extractMentionName(raw: string): string {
   return raw.replace(/^@/, "").replace(/[,，。.!！?？;；:：、)]+$/, "").trim();
 }
 
-/**
- * 解析 @mention 获取 memberId（仅新版格式）
- * 返回 memberId 或 undefined
- */
-export function extractMentionMemberId(raw: string): string | undefined {
-  const m = raw.match(/@[^(]+\(([^)]+)\)$/);
-  return m ? m[1] : undefined;
-}
+/** 导出 TLD 常量，供 MentionEditor 复用 */
+export { COMMON_TLDS };

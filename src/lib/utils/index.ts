@@ -27,7 +27,7 @@ export function generateSlug(title: string): string {
 }
 
 /**
- * 格式化日期
+ * 格式化日期（仅日期，如：2026年6月13日）
  */
 export function formatDate(date: Date | string | null): string {
   if (!date) return "未知";
@@ -37,6 +37,31 @@ export function formatDate(date: Date | string | null): string {
     month: "long",
     day: "numeric",
   });
+}
+
+/**
+ * 格式化日期+时间（如：2026/06/13 15:35）
+ */
+export function formatDateTime(date: Date | string | null): string {
+  if (!date) return "—";
+  const d = new Date(date);
+  return d.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * 格式化为年月（如：2026.06）
+ */
+export function formatYearMonth(date: Date | string): string {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}.${m}`;
 }
 
 /**

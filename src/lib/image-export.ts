@@ -14,21 +14,6 @@ const PROXY_PATH = "/api/image-proxy?url=";
 // ═══════════════════════════════════════════════════════
 
 /**
- * 渲染单个元素到 Canvas（含图片预处理）
- */
-export async function elementToCanvas(
-  el: HTMLElement,
-  options?: { scale?: number; bg?: string }
-): Promise<HTMLCanvasElement> {
-  const restore = await prepareImagesForExport(el);
-  try {
-    return await renderElementToCanvas(el, options);
-  } finally {
-    restore();
-  }
-}
-
-/**
  * 渲染单个元素到 Canvas（不含图片预处理——调用方需自己 prepareImagesForExport）
  */
 export async function renderElementToCanvas(
@@ -60,13 +45,6 @@ export async function renderElementToCanvas(
       logging: false,
     });
   }
-}
-
-/**
- * 获取元素内容高度
- */
-export function getContentHeight(el: HTMLElement): number {
-  return el.scrollHeight;
 }
 
 // ═══════════════════════════════════════════════════════

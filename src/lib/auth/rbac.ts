@@ -16,7 +16,7 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 /**
  * 检查角色是否满足最低要求
  */
-export function hasMinimumRole(
+function hasMinimumRole(
   userRole: UserRole | undefined | null,
   requiredRole: UserRole
 ): boolean {
@@ -52,21 +52,4 @@ export function canEditProject(
   if (isAdmin(userRole)) return true;
   if (userRole === "MEMBER") return userId === projectSubmitterId;
   return false;
-}
-
-/**
- * 权限检查装饰器（用于 API Route）
- */
-export class PermissionDeniedError extends Error {
-  constructor(message = "权限不足") {
-    super(message);
-    this.name = "PermissionDeniedError";
-  }
-}
-
-export class UnauthenticatedError extends Error {
-  constructor(message = "请先登录") {
-    super(message);
-    this.name = "UnauthenticatedError";
-  }
 }

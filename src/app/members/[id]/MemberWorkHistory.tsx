@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { Suspense } from "react";
+import { formatYearMonth } from "@/lib/utils";
 
 interface WorkExperienceItem {
   id: string;
@@ -10,12 +11,6 @@ interface WorkExperienceItem {
   position: string;
   startDate: Date;
   endDate: Date | null;
-}
-
-function formatDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${y}.${m}`;
 }
 
 /** 经历展示 — 仅登录的社团成员可见 */
@@ -46,8 +41,8 @@ function Inner({ experiences }: { experiences: WorkExperienceItem[] }) {
       <div className="space-y-3">
         {experiences.map((exp) => {
           const period = exp.endDate
-            ? `${formatDate(new Date(exp.startDate))} ~ ${formatDate(new Date(exp.endDate))}`
-            : `${formatDate(new Date(exp.startDate))} ~ 至今`;
+            ? `${formatYearMonth(new Date(exp.startDate))} ~ ${formatYearMonth(new Date(exp.endDate))}`
+            : `${formatYearMonth(new Date(exp.startDate))} ~ 至今`;
           const isStudy = exp.type === "学习";
           return (
             <div key={exp.id} className="flex items-start gap-3">

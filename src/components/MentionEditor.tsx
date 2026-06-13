@@ -25,11 +25,7 @@ interface MentionEditorProps {
   richPreview?: boolean;
 }
 
-/** 常见 TLD 列表 */
-const COMMON_TLDS = new Set([
-  "com","org","net","io","dev","app","co","info","xyz","me","cc","tv","fm","be","to","nl","de","fr","uk","eu","ai","sh","ac","tw","hk","jp","kr","sg","in","au","nz","br","mx","ru","pl","it","es","pt","se","no","fi","dk","cz","ro","bg","hr","si","sk","lt","lv","ee","hu","gr","cy","mt","lu","at","ch","li","mc","ad","sm","va","tk","ws","am","az","ge","kg","kz","md","mn","th","tr","uz","vn","ph","id","my","pk","bd","lk","np","mm","kh","la","bn","tl","pg","fj","nc","pf","wf","yt","pm","bl","mf","gl","bq","cw","sx","aw","je","gg","im","tc","vi","pr","as","gu","mp","um","is","fo","sj","bv","hm","gs","tf","aq",
-  "com.cn","net.cn","org.cn","gov.cn","edu.cn","co.uk","co.jp","co.kr","co.nz","ac.uk","ac.cn","ac.jp",
-]);
+import { COMMON_TLDS } from "@/lib/rich-content";
 
 /** URL 正则 — 匹配 http(s):// 或 www. 开头的完整 URL */
 const URL_RE = /(?:https?:\/\/|www\.)[^\s<>"'，。！？、；：（）【】《》\u2018\u2019\u201c\u201d]+(?:\/[^\s<>"'，。！？、；：（）【】《》\u2018\u2019\u201c\u201d]*)?/gi;

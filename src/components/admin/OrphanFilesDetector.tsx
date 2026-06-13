@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDateTime } from "@/lib/utils";
 
 interface OrphanFile {
   key: string;
@@ -205,11 +206,6 @@ export default function OrphanFilesDetector() {
       else next.add(key);
       return next;
     });
-  }
-
-  function formatDate(iso: string | null) {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleString("zh-CN");
   }
 
   return (
@@ -454,7 +450,7 @@ export default function OrphanFilesDetector() {
                     </td>
                     <td className="px-3 py-2 font-mono text-xs truncate max-w-xs" style={{ color: "#333" }} title={o.key}>{o.key}</td>
                     <td className="px-3 py-2 text-right text-xs font-mono" style={{ color: "#555" }}>{o.sizeFormatted}</td>
-                    <td className="px-3 py-2 text-xs" style={{ color: "#777" }}>{formatDate(o.lastModified)}</td>
+                    <td className="px-3 py-2 text-xs" style={{ color: "#777" }}>{formatDateTime(o.lastModified)}</td>
                   </tr>
                 ))}
               </tbody>

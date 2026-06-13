@@ -38,7 +38,7 @@ export default function ProjectCoverImage({
     );
   }
 
-  // R2 远程图片用原生 <img>（避免 next/image 优化代理失败）
+  // R2 远程图片用原生 <img>（避免 next/image 优化代理失败），同时保持宽高比防 CLS
   const isRemote = src.startsWith("http");
 
   if (isRemote) {
@@ -48,6 +48,7 @@ export default function ProjectCoverImage({
         alt={alt}
         className={imgClass}
         loading={priority ? "eager" : "lazy"}
+        style={{ aspectRatio: "16/9" }}
         onError={(e) => {
           (e.target as HTMLImageElement).style.display = "none";
         }}

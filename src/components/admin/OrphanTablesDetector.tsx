@@ -31,17 +31,6 @@ export default function OrphanTablesDetector() {
     }
   }
 
-  function formatDate(d: string | null): string {
-    if (!d) return "—";
-    return new Date(d).toLocaleString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
   return (
     <div
       className="rounded-2xl border p-6 shadow-sm"

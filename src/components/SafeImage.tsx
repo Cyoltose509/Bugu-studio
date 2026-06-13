@@ -29,10 +29,13 @@ export default function SafeImage({
   const [error, setError] = useState(false);
 
   if (error) {
+    const arStyle = width && height
+      ? { aspectRatio: `${width}/${height}` }
+      : {};
     return (
       <div
         className={`flex items-center justify-center bg-gray-100 text-gray-400 text-xs ${className}`}
-        style={style}
+        style={{ ...style, ...arStyle }}
       >
         🖼
       </div>

@@ -8,7 +8,6 @@
 import {
   S3Client,
   PutObjectCommand,
-  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 import { extname } from "path";
@@ -106,54 +105,4 @@ export async function uploadToR2(
 
   const url = `${process.env.R2_PUBLIC_URL}/${key}`;
   return { url, key };
-}
-
-/**
- * 从 R2 删除文件
- */
-export async function deleteFromR2(key: string): Promise<void> {
-  const client = getR2Client();
-  const res = await client.send(
-    new DeleteObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME!,
-      Key: key,
-    })
-  );
-  const status = res.$metadata.httpStatusCode ?? -1;
-  if (status < 200 || status >= 300) {
-    throw new Error(`R2 删除失败: HTTP ${status}`);
-  }
-}
-
-/**
- * 验证上传的 Buffer 实际上是图片（Magic Bytes 检查）
- */
-export function validateImageMagicBytes(buffer: Buffer): boolean {
-  // JPEG: FF D8 FF
-  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-    return true;
-  }
-  // PNG: 89 50 4E 47
-  if (
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4e &&
-    buffer[3] === 0x47
-  ) {
-    return true;
-  }
-  // WebP: 52 49 46 46 ... 57 45 42 50
-  if (
-    buffer[0] === 0x52 &&
-    buffer[1] === 0x49 &&
-    buffer[2] === 0x46 &&
-    buffer[3] === 0x46 &&
-    buffer[8] === 0x57 &&
-    buffer[9] === 0x45 &&
-    buffer[10] === 0x42 &&
-    buffer[11] === 0x50
-  ) {
-    return true;
-  }
-  return false;
 }
