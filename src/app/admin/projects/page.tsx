@@ -6,7 +6,7 @@ import { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
-import ProjectsTableClient from "./ProjectsTableClient";
+import ProjectsTableClient from "@/components/admin/ProjectsTableClient";
 
 export const metadata: Metadata = { title: "作品管理 - 管理后台" };
 export const dynamic = "force-dynamic";

@@ -7,10 +7,10 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
-import MiniLikeButton from "@/components/MiniLikeButton";
+import MiniLikeButton from "@/components/projects/MiniLikeButton";
 import ProjectCard from "@/components/projects/ProjectCard";
-import { RichContent } from "@/components/RichContent";
-import ProjectCoverImage from "@/components/ProjectCoverImage";
+import { RichContent } from "@/components/ui/RichContent";
+import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
 
 export const dynamic = "force-dynamic";

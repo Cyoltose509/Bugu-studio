@@ -2,8 +2,8 @@
 
 import {useRef, useCallback, useState, useEffect, memo} from "react";
 import Link from "next/link";
-import SafeImage from "@/components/SafeImage";
-import {RichContentClient} from "@/components/RichContentClient";
+import SafeImage from "@/components/ui/SafeImage";
+import {RichContentClient} from "@/components/ui/RichContentClient";
 import {saveElementAsPDF, saveElementAsImage} from "@/lib/print-utils";
 import {newspaperPositionLabel} from "@/lib/position";
 

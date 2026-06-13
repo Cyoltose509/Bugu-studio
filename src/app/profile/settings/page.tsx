@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
-import SettingsForm from "./SettingsForm";
+import SettingsForm from "@/components/forms/SettingsForm";
 import { Metadata } from "next";
 
 export const metadata: Metadata = { title: "通知设置 | 布谷工作室" };

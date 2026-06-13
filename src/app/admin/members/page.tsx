@@ -8,9 +8,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { toggleMemberActive } from "./actions";
-import DeleteMemberButton from "./DeleteMemberButton";
-import EditableSelect from "./EditableSelect";
-import EditableNumber from "./EditableNumber";
+import DeleteMemberButton from "@/components/admin/DeleteMemberButton";
+import EditableSelect from "@/components/admin/EditableSelect";
+import EditableNumber from "@/components/admin/EditableNumber";
 
 export const metadata: Metadata = { title: "成员管理 - 管理后台" };
 export const dynamic = "force-dynamic";

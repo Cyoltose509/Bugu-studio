@@ -133,6 +133,7 @@ model User {
   receivedInvitations   JamTeamInvitation[]  @relation("JamTeamInvitee")
   jamJudges             JamJudge[]
   jamScores             JamScore[]
+  courseScores          CourseScore[]   @relation("CourseScoreJudge")
 
   @@index([email])
   @@index([role])
@@ -621,6 +622,7 @@ model Activity {
   jamTeams       JamTeam[]
   jamJudges      JamJudge[]
   jamSubmissions JamSubmission[]
+  courseScores   CourseScore[] @relation("CourseScoreActivity")
 
   @@index([status])
   @@index([type])
@@ -671,6 +673,7 @@ model JamTeam {
   applications JamTeamApplication[]
   invitations  JamTeamInvitation[]
   submission   JamSubmission?
+  courseScores CourseScore[] @relation("CourseScoreTeam")
 
   @@unique([activityId, name])
   @@index([activityId])
@@ -783,4 +786,26 @@ model JamScore {
   @@unique([submissionId, judgeId])
   @@index([submissionId])
   @@index([judgeId])
+}
+
+// 公开课讲题评分 (COURSE 类型活动)
+model CourseScore {
+  id         String   @id @default(cuid())
+  teamId     String
+  judgeId    String
+  activityId String
+  // 评分维度: { "content": 85, "delivery": 80, "preparation": 90 }
+  criteria   Json     @default("{}")
+  totalScore Int
+  comment    String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  team     JamTeam  @relation("CourseScoreTeam", fields: [teamId], references: [id], onDelete: Cascade)
+  judge    User     @relation("CourseScoreJudge", fields: [judgeId], references: [id], onDelete: Cascade)
+  activity Activity @relation("CourseScoreActivity", fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, judgeId])
+  @@index([teamId])
+  @@index([judgeId])
+  @@index([activityId])
 }

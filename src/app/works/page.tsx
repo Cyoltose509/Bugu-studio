@@ -8,7 +8,7 @@ import {auth} from "@/lib/auth/auth";
 import {ProjectStatus} from "@prisma/client";
 import LogoLoading from "@/components/ui/LogoLoading";
 import FilterSidebarClient from "@/components/works/FilterSidebarClient";
-import WorksToolbar from "./WorksToolbar";
+import WorksToolbar from "@/components/works/WorksToolbar";
 import WorksInfiniteGrid from "@/components/works/WorksInfiniteGrid";
 
 export const metadata: Metadata = {title: "作品库", description: "浏览历届社员创作的所有游戏作品"};

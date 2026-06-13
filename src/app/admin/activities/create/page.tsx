@@ -11,7 +11,7 @@ import { createActivity } from "../actions";
 import { ActivityType } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import MentionEditor from "@/components/MentionEditor";
+import MentionEditor from "@/components/ui/MentionEditor";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",    label: "例会" },

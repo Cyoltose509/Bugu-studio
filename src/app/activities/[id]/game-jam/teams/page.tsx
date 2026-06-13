@@ -1,18 +1,7 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
-
-function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
-  const initial = (user.name || "?")[0];
-  if (user.image) {
-    return <img src={user.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />;
-  }
-  return (
-    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: "#E38043" }}>
-      {initial}
-    </div>
-  );
-}
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default async function JamTeamsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -77,7 +66,7 @@ export default async function JamTeamsPage({ params }: { params: Promise<{ id: s
                 </div>
                 <div className="flex mt-2 gap-1.5">
                   {team.members.slice(0, 4).map(m => (
-                    <AvatarImg key={m.id} user={m.user} />
+                    <UserAvatar key={m.id} src={m.user.image} name={m.user.name} size={24} />
                   ))}
                   {team._count.members > 4 && (
                     <span className="text-xs" style={{ color: "#999" }}>+{team._count.members - 4}</span>

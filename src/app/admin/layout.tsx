@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { auth } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
 
-const AdminSidebar = dynamic(() => import("./AdminSidebar"), {
+const AdminSidebar = dynamic(() => import("@/components/admin/AdminSidebar"), {
   loading: () => (
     <div className="w-14 lg:w-56 shrink-0 animate-pulse" style={{ background: "#1A3A54" }} />
   ),

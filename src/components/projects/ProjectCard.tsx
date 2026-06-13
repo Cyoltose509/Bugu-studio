@@ -12,8 +12,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import MiniLikeButton from "@/components/MiniLikeButton";
-import ProjectCoverImage from "@/components/ProjectCoverImage";
+import MiniLikeButton from "./MiniLikeButton";
+import ProjectCoverImage from "./ProjectCoverImage";
 
 const TYPE_LABELS: Record<string, string> = {
   IN_DEVELOPMENT: "开发阶段",

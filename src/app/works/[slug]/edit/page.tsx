@@ -12,7 +12,7 @@ import { canEditProject } from "@/lib/auth/rbac";
 import { ensureDefaultTags } from "@/lib/db/tags";
 
 // 懒加载编辑表单，避免 react-easy-crop (~54KB gzip) 打包进主客户端 bundle
-const ProjectEditForm = nextDynamic(() => import("./ProjectEditForm"), {
+const ProjectEditForm = nextDynamic(() => import("@/components/forms/ProjectEditForm"), {
   loading: () => (
     <div className="animate-pulse space-y-4">
       <div className="h-10 w-full bg-gray-100 rounded-lg" />

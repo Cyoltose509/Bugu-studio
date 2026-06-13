@@ -1,7 +1,7 @@
 ﻿import {Metadata} from "next";
 import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
-import MembersList from "./MembersList";
+import MembersList from "@/components/members/MembersList";
 
 export const metadata: Metadata = {title: "成员", description: "认识历届布谷工作室成员"};
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽

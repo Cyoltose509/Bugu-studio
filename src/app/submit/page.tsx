@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/db/prisma";
 import { ensureDefaultTags } from "@/lib/db/tags";
-import SubmitForm from "./SubmitForm";
+import SubmitForm from "@/components/forms/SubmitForm";
 
 export const metadata: Metadata = {
   title: "提交作品",

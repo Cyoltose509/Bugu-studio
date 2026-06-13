@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import MentionEditor from "@/components/MentionEditor";
+import MentionEditor from "@/components/ui/MentionEditor";
 
 interface EventImage {
   id?: string;

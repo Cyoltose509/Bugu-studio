@@ -2,27 +2,12 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PublishResultsButton } from "./PublishResultsButton";
-import { AddJudgeForm } from "./AddJudgeForm";
-import { RemoveJudgeButton } from "./RemoveJudgeButton";
-import { SubmitScoreForm } from "./SubmitScoreForm";
+import { PublishResultsButton } from "@/components/activities/judging/PublishResultsButton";
+import { AddJudgeForm } from "@/components/activities/judging/AddJudgeForm";
+import { RemoveJudgeButton } from "@/components/activities/judging/RemoveJudgeButton";
+import { SubmitScoreForm } from "@/components/activities/judging/SubmitScoreForm";
 import { Suspense } from "react";
-
-/* ── 工具函数 ── */
-
-function AvatarImg({ user, size }: { user: { name?: string | null; image?: string | null }; size?: number }) {
-  const s = size || 6;
-  const initial = (user.name || "?")[0];
-  if (user.image) {
-    return <img src={user.image} alt="" className={`w-${s} h-${s} rounded-full object-cover shrink-0`} referrerPolicy="no-referrer" />;
-  }
-  return (
-    <div className={`w-${s} h-${s} rounded-full flex items-center justify-center text-white shrink-0`}
-      style={{ background: "#E38043", fontSize: s > 6 ? "0.8rem" : "0.65rem" }}>
-      {initial}
-    </div>
-  );
-}
+import UserAvatar from "@/components/ui/UserAvatar";
 
 /* ── 图片灯箱 (客户端) ── */
 function LightboxLink({ src, children, className }: { src: string; children: React.ReactNode; className?: string }) {
@@ -125,7 +110,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
           <div className="flex flex-wrap gap-2 mb-4">
             {activity.jamJudges.map(j => (
               <span key={j.id} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0F6FA" }}>
-                <AvatarImg user={j.user} />
+                <UserAvatar src={j.user.image} name={j.user.name} size={24} />
                 <span style={{ color: "#25547A" }}>{j.user.name}</span>
                 <RemoveJudgeButton activityId={activityId} judgeId={j.id} />
               </span>
@@ -319,7 +304,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                             {sub.team.members.map(m => (
                               <span key={m.user.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full"
                                 style={{ background: "#fff", color: "#555" }}>
-                                <AvatarImg user={m.user} />
+                                <UserAvatar src={m.user.image} name={m.user.name} size={24} />
                                 {m.user.name}
                               </span>
                             ))}

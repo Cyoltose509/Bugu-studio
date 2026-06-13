@@ -5,7 +5,7 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
-import EditForm from "./EditForm";
+import EditForm from "@/components/forms/EditForm";
 
 export const dynamic = "force-dynamic";
 

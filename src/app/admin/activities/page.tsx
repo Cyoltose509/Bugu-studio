@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityStatus, ActivityType } from "@prisma/client";
 import { deleteActivity, updateActivityStatus } from "./actions";
-import DeleteButton from "./DeleteButton";
+import DeleteButton from "@/components/admin/ActivityDeleteButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 
 export const metadata: Metadata = { title: "活动管理 - 管理后台" };

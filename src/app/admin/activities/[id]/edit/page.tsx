@@ -9,7 +9,7 @@ import { updateActivity } from "../../actions";
 import { ActivityType, ActivityStatus } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import DescriptionEditor from "./DescriptionEditor";
+import DescriptionEditor from "@/components/admin/DescriptionEditor";
 
 interface PageProps {
   params: Promise<{ id: string }>;

@@ -2,9 +2,9 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { JamSubmitForm } from "./JamSubmitForm";
-import DeleteSubmissionButton from "./DeleteSubmissionButton";
-import SubmitToWorksButton from "./SubmitToWorksButton";
+import { JamSubmitForm } from "@/components/activities/submit/JamSubmitForm";
+import DeleteSubmissionButton from "@/components/activities/submit/DeleteSubmissionButton";
+import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksButton";
 
 export default async function JamSubmitPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();

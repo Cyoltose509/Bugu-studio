@@ -5,9 +5,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import HomeStats from "./HomeStats";
-import LatestProjects from "./LatestProjects";
-import HomeActivities from "./HomeActivities";
+import HomeStats from "@/components/home/HomeStats";
+import LatestProjects from "@/components/home/LatestProjects";
+import HomeActivities from "@/components/home/HomeActivities";
 
 export const metadata = { title: "布谷工作室" };
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽

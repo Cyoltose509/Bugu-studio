@@ -1,18 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
-function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
-  const initial = (user.name || "?")[0];
-  if (user.image) {
-    return <img src={user.image} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />;
-  }
-  return (
-    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#E38043" }}>
-      {initial}
-    </div>
-  );
-}
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default async function JamResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const activityId = (await params).id;
@@ -88,7 +77,7 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
                 </div>
                 <div className="flex justify-center gap-1 mt-3">
                   {sub.team.members.map(m => (
-                    <AvatarImg key={m.user.id} user={m.user} />
+                    <UserAvatar key={m.user.id} src={m.user.image} name={m.user.name} size={32} />
                   ))}
                 </div>
               </div>
@@ -118,7 +107,7 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
                       <div className="flex flex-wrap items-center gap-1 mt-1">
                         {sub.team.members.map(m => (
                           <span key={m.user.id} className="text-xs" style={{ color: "#777" }}>
-                            <AvatarImg user={m.user} />
+                            <UserAvatar src={m.user.image} name={m.user.name} size={32} />
                           </span>
                         ))}
                       </div>
@@ -163,7 +152,7 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
               <div className="flex flex-wrap gap-3">
                 {activity.jamJudges.map(j => (
                   <div key={j.id} className="flex items-center gap-2">
-                    <AvatarImg user={j.user} />
+                    <UserAvatar src={j.user.image} name={j.user.name} size={32} />
                     <span className="text-sm" style={{ color: "#555" }}>{j.user.name}</span>
                   </div>
                 ))}

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { createInviteCode, toggleInviteCode } from "./actions";
-import DeleteInviteCodeButton from "./DeleteInviteCodeButton";
+import DeleteInviteCodeButton from "@/components/admin/DeleteInviteCodeButton";
 
 export const metadata: Metadata = { title: "邀请码管理 - 管理后台" };
 export const dynamic = "force-dynamic";

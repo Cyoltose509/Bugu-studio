@@ -7,10 +7,10 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
-import RoleSelect from "./RoleSelect";
-import ToggleActiveButton from "./ToggleActiveButton";
-import DeleteButton from "./DeleteButton";
-import ConfirmedNotMemberCheckbox from "./ConfirmedNotMemberCheckbox";
+import RoleSelect from "@/components/admin/RoleSelect";
+import ToggleActiveButton from "@/components/admin/ToggleActiveButton";
+import DeleteButton from "@/components/admin/UserDeleteButton";
+import ConfirmedNotMemberCheckbox from "@/components/admin/ConfirmedNotMemberCheckbox";
 
 export const metadata: Metadata = { title: "用户管理 - 管理后台" };
 export const dynamic = "force-dynamic";

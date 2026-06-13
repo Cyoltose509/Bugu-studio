@@ -2,26 +2,15 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateTeam, applyToTeam, handleApplication } from "../../actions";
-import { InviteMemberForm } from "./InviteMemberForm";
-import { RemoveMemberButton } from "./RemoveMemberButton";
-import { EditTeamNameForm } from "./EditTeamNameForm";
-import { ApplyToTeamForm } from "./ApplyToTeamForm";
-import { ApplicationButtons } from "./ApplicationButtons";
-import { DisbandTeamButton } from "../../DisbandTeamButton";
-import { LeaveTeamButton } from "../../LeaveTeamButton";
-
-function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
-  const initial = (user.name || "?")[0];
-  if (user.image) {
-    return <img src={user.image} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />;
-  }
-  return (
-    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "#E38043" }}>
-      {initial}
-    </div>
-  );
-}
+import { updateTeam, applyToTeam, handleApplication } from "@/lib/actions/teams";
+import { InviteMemberForm } from "@/components/activities/teams/InviteMemberForm";
+import { RemoveMemberButton } from "@/components/activities/teams/RemoveMemberButton";
+import { EditTeamNameForm } from "@/components/activities/teams/EditTeamNameForm";
+import { ApplyToTeamForm } from "@/components/activities/teams/ApplyToTeamForm";
+import { ApplicationButtons } from "@/components/activities/teams/ApplicationButtons";
+import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
+import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default async function JamTeamDetailPage({
   params,
@@ -109,7 +98,7 @@ export default async function JamTeamDetailPage({
           {team.members.map(m => (
             <div key={m.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "#F8FAFB" }}>
               <div className="flex items-center gap-3">
-                <AvatarImg user={m.user} />
+                <UserAvatar src={m.user.image} name={m.user.name} size={32} />
                 <div>
                   <span className="text-sm font-medium" style={{ color: "#333" }}>{m.user.name}</span>
                   <span className="text-xs ml-2 px-1.5 py-0.5 rounded-full" style={{ background: m.role === "LEADER" ? "#FFF3E0" : "#F0F6FA", color: m.role === "LEADER" ? "#E38043" : "#999" }}>
@@ -163,7 +152,7 @@ export default async function JamTeamDetailPage({
             {team.applications.map(app => (
               <div key={app.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "#F8FAFB" }}>
                 <div className="flex items-center gap-3">
-                  <AvatarImg user={app.user} />
+                  <UserAvatar src={app.user.image} name={app.user.name} size={32} />
                   <div>
                     <span className="text-sm font-medium" style={{ color: "#333" }}>{app.user.name}</span>
                     {app.message && <p className="text-xs mt-0.5" style={{ color: "#999" }}>{app.message}</p>}

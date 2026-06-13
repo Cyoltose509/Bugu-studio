@@ -11,17 +11,18 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { ActivityStatus, ProposalType, ProposalStatus } from "@prisma/client";
-import SubmitProposalForm from "./SubmitProposalForm";
-import DeleteProposalButton from "./DeleteProposalButton";
-import { RichContent } from "@/components/RichContent";
-import ReviewProposalForm from "./ReviewProposalForm";
-import { DisbandTeamButton } from "./game-jam/DisbandTeamButton";
-import { LeaveTeamButton } from "./game-jam/LeaveTeamButton";
-import { InvitationButtons } from "./game-jam/InvitationButtons";
-import { CreateTeamForm } from "./game-jam/CreateTeamForm";
-import EditTopicForm from "./game-jam/EditTopicForm";
-import SubmitToWorksButton from "./game-jam/submit/SubmitToWorksButton";
+import SubmitProposalForm from "@/components/activities/meeting/SubmitProposalForm";
+import DeleteProposalButton from "@/components/activities/meeting/DeleteProposalButton";
+import { RichContent } from "@/components/ui/RichContent";
+import ReviewProposalForm from "@/components/activities/meeting/ReviewProposalForm";
+import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
+import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
+import { InvitationButtons } from "@/components/activities/teams/InvitationButtons";
+import { CreateTeamForm } from "@/components/activities/teams/CreateTeamForm";
+import EditTopicForm from "@/components/activities/course/EditTopicForm";
+import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksButton";
 import { cachedQuery } from "@/lib/db/cache";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",
@@ -177,19 +178,6 @@ export default async function ActivityDetailPage({ params }: PageProps) {
   );
 }
 
-// ── 头像 ────────────────────────────────────────────────
-function AvatarImg({ user }: { user: { name?: string | null; image?: string | null } }) {
-  const initial = (user.name || "?")[0];
-  if (user.image) {
-    return <img src={user.image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />;
-  }
-  return (
-    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: "#E38043" }}>
-      {initial}
-    </div>
-  );
-}
-
 // ── 例会 ───────────────────────────────────────────────────
 async function MeetingSection({
   activity, session, isOngoing, isUpcoming, userProposal,
@@ -331,7 +319,7 @@ async function CourseSection({
           </div>
           {isAdmin && (
             <Link
-              href={`/activities/${activityId}/game-jam/judging`}
+              href={`/activities/${activityId}/course/judging`}
               className="text-xs px-3 py-1.5 rounded-lg border"
               style={{ borderColor: "#D0DEE8", color: "#555" }}
             >管理评审</Link>
@@ -360,7 +348,7 @@ async function CourseSection({
           <div className="flex flex-wrap gap-1.5 mb-3">
             {myTeam.members.map((m: any) => (
               <span key={m.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
-                <AvatarImg user={m.user} />
+                <UserAvatar src={m.user.image} name={m.user.name} size={24} />
                 {m.user.name}
                 {m.role === "LEADER" && <span style={{ color: "#E38043" }}>👑</span>}
               </span>
@@ -459,7 +447,7 @@ async function CourseSection({
                 </div>
                 <div className="flex mt-2 gap-1">
                   {team.members.slice(0, 5).map((m: any) => (
-                    <AvatarImg key={m.id} user={m.user} />
+                    <UserAvatar key={m.id} src={m.user.image} name={m.user.name} size={24} />
                   ))}
                   {team._count.members > 5 && (
                     <span className="text-xs self-center" style={{ color: "#999" }}>+{team._count.members - 5}</span>
@@ -478,7 +466,7 @@ async function CourseSection({
           <div className="flex flex-wrap gap-2">
             {jamJudges.map((j: any) => (
               <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
-                <AvatarImg user={j.user} /> {j.user.name}
+                <UserAvatar src={j.user.image} name={j.user.name} size={24} /> {j.user.name}
               </span>
             ))}
           </div>
@@ -489,7 +477,7 @@ async function CourseSection({
       {isJudge && isPast && (
         <div className="text-center">
           <Link
-            href={`/activities/${activityId}/game-jam/judging`}
+            href={`/activities/${activityId}/course/judging`}
             className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold"
             style={{ background: "linear-gradient(135deg, #3388BB, #55AADD)" }}
           >🎯 进入评审面板</Link>
@@ -592,7 +580,7 @@ async function CompetitionSection({
           <div className="flex flex-wrap gap-1.5">
             {myTeam.members.map((m: any) => (
               <span key={m.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
-                <AvatarImg user={m.user} />
+                <UserAvatar src={m.user.image} name={m.user.name} size={24} />
                 {m.user.name}
                 {m.role === "LEADER" && <span style={{ color: "#E38043" }}>👑</span>}
               </span>
@@ -694,7 +682,7 @@ async function CompetitionSection({
                 </div>
                 <div className="flex mt-2 gap-1">
                   {team.members.slice(0, 5).map((m: any) => (
-                    <AvatarImg key={m.id} user={m.user} />
+                    <UserAvatar key={m.id} src={m.user.image} name={m.user.name} size={24} />
                   ))}
                   {team._count.members > 5 && (
                     <span className="text-xs self-center" style={{ color: "#999" }}>+{team._count.members - 5}</span>
@@ -713,7 +701,7 @@ async function CompetitionSection({
           <div className="flex flex-wrap gap-2">
             {jamJudges.map((j: any) => (
               <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
-                <AvatarImg user={j.user} /> {j.user.name}
+                <UserAvatar src={j.user.image} name={j.user.name} size={24} /> {j.user.name}
               </span>
             ))}
           </div>

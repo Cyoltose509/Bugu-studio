@@ -5,11 +5,11 @@ import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
-import MemberContactInfo from "./MemberContactInfo";
-import MemberSensitiveInfo from "./MemberSensitiveInfo";
-import MemberWorkHistory from "./MemberWorkHistory";
-import AdminMemberEditor from "./AdminMemberEditor";
-import { RichContent } from "@/components/RichContent";
+import MemberContactInfo from "@/components/members/MemberContactInfo";
+import MemberSensitiveInfo from "@/components/members/MemberSensitiveInfo";
+import MemberWorkHistory from "@/components/members/MemberWorkHistory";
+import AdminMemberEditor from "@/components/members/AdminMemberEditor";
+import { RichContent } from "@/components/ui/RichContent";
 import { positionLabel, positionColor } from "@/lib/position";
 import ProjectCard from "@/components/projects/ProjectCard";
 

@@ -14,14 +14,14 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { auth } from "@/lib/auth/auth";
 import { ProjectStatus, UserRole } from "@prisma/client";
-import EditButton from "./EditButton";
-import DeleteOwnProjectButton from "./DeleteOwnProjectButton";
-import ApproveButton from "./ApproveButton";
-import CommentSection from "@/components/CommentSection";
-import ProjectLikeButton from "@/components/ProjectLikeButton";
-import { RichContent } from "@/components/RichContent";
+import EditButton from "@/components/works/EditButton";
+import DeleteOwnProjectButton from "@/components/works/DeleteOwnProjectButton";
+import ApproveButton from "@/components/works/ApproveButton";
+import CommentSection from "@/components/projects/CommentSection";
+import ProjectLikeButton from "@/components/projects/ProjectLikeButton";
+import { RichContent } from "@/components/ui/RichContent";
 
-const ImageGallery = nextDynamic(() => import("@/components/ImageGallery"), {
+const ImageGallery = nextDynamic(() => import("@/components/projects/ImageGallery"), {
   loading: () => (
     <div className="aspect-video rounded-xl animate-pulse" style={{ background: "#E6F0F8" }} />
   ),
