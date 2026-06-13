@@ -128,18 +128,8 @@ export async function submitProject(formData: FormData) {
     ...customTagRecords.map((t) => t.id),
   ];
 
-  // ── 成员-角色关联 + 自动添加提交者本人 ──
-  const finalMemberRoles = [...parsed.data.memberRoles];
-  // 自动将提交者关联的 ClubMember 加入成员列表（如果还未包含）
-  if (session.user.id) {
-    const submitterMember = await prisma.clubMember.findFirst({
-      where: { userId: session.user.id },
-      select: { id: true },
-    });
-    if (submitterMember && !finalMemberRoles.some((m) => m.memberId === submitterMember.id)) {
-      finalMemberRoles.push({ memberId: submitterMember.id, roles: ["制作"] });
-    }
-  }
+  // ── 成员-角色：前端已默认填入当前用户，不再强制追加 ──
+  const finalMemberRoles = parsed.data.memberRoles;
 
   // ── 写入数据库 ──
   await prisma.project.create({

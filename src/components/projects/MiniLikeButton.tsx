@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 
 interface Props {
   projectId: string;
@@ -9,17 +10,23 @@ interface Props {
 }
 
 export default function MiniLikeButton({ projectId, initialCount, initialLiked = false }: Props) {
+  const { data: session } = useSession();
   const [count, setCount] = useState(initialCount);
   const [liked, setLiked] = useState(initialLiked);
   const [loading, setLoading] = useState(false);
-
-  // 服务端已提供 like 状态，无需客户端再请求 GET
 
   const toggle = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (loading) return;
+
+    // 未登录：提示并跳转登录页
+    if (!session?.user) {
+      window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+
     setLoading(true);
 
     try {

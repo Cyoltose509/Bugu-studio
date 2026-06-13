@@ -192,19 +192,43 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
 
     const {tagIds, memberRoles, links, customTags, images, ...projectData} = parsed.data;
 
+    // 解析 userId → memberId
+    if (parsed.data.memberRoles) {
+      const rolesWithUserId = parsed.data.memberRoles.filter((r: any) => r.userId && !r.memberId);
+      if (rolesWithUserId.length > 0) {
+        const userIds = [...new Set(rolesWithUserId.map((r: any) => r.userId as string))];
+        const members = await prisma.clubMember.findMany({
+          where: { userId: { in: userIds } },
+          select: { id: true, userId: true },
+        });
+        const userToMember = new Map<string, string>(members.map((m: any) => [m.userId, m.id]));
+        for (const r of parsed.data.memberRoles) {
+          if (r.userId && !r.memberId) {
+            const mid = userToMember.get(r.userId as string);
+            if (!mid) return apiError(`用户 ${r.userId} 不是社团成员，请以外部成员方式添加`, 400);
+            r.memberId = mid;
+          }
+        }
+      }
+    }
+
     // 处理自定义标签：upsert 新标签并合并到 tagIds
     let finalTagIds = tagIds;
     if (customTags !== undefined) {
         const customTagIds: string[] = [];
         for (const name of customTags) {
-            const tagSlug = generateSlug(name);
-            const tag = await prisma.tag.upsert({
-                where: {name},
-                update: {},
-                create: {name, slug: tagSlug, color: "#88C232"},
-                select: {id: true},
-            });
-            customTagIds.push(tag.id);
+            try {
+                const tagSlug = generateSlug(name + "-" + Math.random().toString(36).slice(2, 8));
+                const tag = await prisma.tag.upsert({
+                    where: {name},
+                    update: {},
+                    create: {name, slug: tagSlug, color: "#88C232"},
+                    select: {id: true},
+                });
+                customTagIds.push(tag.id);
+            } catch (e: any) {
+                return apiError(`自定义标签「${name}」处理失败：${e.message || "未知错误"}`, 422);
+            }
         }
         // 合并已有标签和自定义标签（去重）
         finalTagIds = [...(tagIds || []), ...customTagIds.filter((id) => !(tagIds || []).includes(id))];
@@ -226,7 +250,7 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
                     deleteMany: {},
                     create: memberRoles.map(({memberId, externalName, roles}, idx) => ({
                         memberId: memberId || null,
-                        externalName: externalName || null,
+                        externalName: memberId ? null : (externalName || null),
                         roles,
                         sortOrder: idx,
                     })),

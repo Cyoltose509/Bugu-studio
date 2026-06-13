@@ -37,9 +37,9 @@ export async function POST(request: NextRequest) {
     developYear: developYear || new Date().getFullYear(),
     coverImage: coverImage || undefined,
     links: (links || []).filter((l: any) => l.label && l.url),
-    tagIds: (tagIds || []).slice(0, 10),
-    customTags: (customTags || []).filter(Boolean).slice(0, 10),
-    memberRoles: (memberRoles || members || []).filter((m: any) => m.memberId || m.externalName).slice(0, 50),
+    tagIds: (tagIds || []),
+    customTags: (customTags || []).filter(Boolean),
+    memberRoles: (memberRoles || members || []).filter((m: any) => m.memberId || m.userId || m.externalName).slice(0, 50),
     images: (images || []).slice(0, 3),
   };
 
@@ -48,6 +48,24 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     const msg = parsed.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ");
     return apiError(msg, 422);
+  }
+
+  // 解析 userId → memberId
+  const rolesWithUserId = parsed.data.memberRoles.filter((r: any) => r.userId && !r.memberId);
+  if (rolesWithUserId.length > 0) {
+    const userIds = [...new Set(rolesWithUserId.map((r: any) => r.userId as string))];
+    const members = await prisma.clubMember.findMany({
+      where: { userId: { in: userIds } },
+      select: { id: true, userId: true },
+    });
+    const userToMember = new Map<string, string>(members.map((m: any) => [m.userId, m.id]));
+    for (const r of parsed.data.memberRoles) {
+      if (r.userId && !r.memberId) {
+        const mid = userToMember.get(r.userId as string);
+        if (!mid) return apiError(`用户 ${r.userId} 不是社团成员，请以外部成员方式添加`, 400);
+        r.memberId = mid;
+      }
+    }
   }
 
   // 成员校验
@@ -83,29 +101,24 @@ export async function POST(request: NextRequest) {
   // 自定义标签
   const customTagRecords: { id: string }[] = [];
   for (const name of parsed.data.customTags) {
-    const tagSlug = generateSlug(name);
-    const tag = await prisma.tag.upsert({
-      where: { name },
-      update: {},
-      create: { name, slug: tagSlug, color: "#88C232" },
-      select: { id: true },
-    });
-    customTagRecords.push(tag);
+    try {
+      const tagSlug = generateSlug(name + "-" + Math.random().toString(36).slice(2, 8));
+      const tag = await prisma.tag.upsert({
+        where: { name },
+        update: {},
+        create: { name, slug: tagSlug, color: "#88C232" },
+        select: { id: true },
+      });
+      customTagRecords.push(tag);
+    } catch (e: any) {
+      return apiError(`自定义标签「${name}」处理失败：${e.message || "未知错误"}`, 422);
+    }
   }
 
   const allTagIds = [...(tagIds || []), ...customTagRecords.map((t) => t.id)];
 
-  // 自动添加提交者本人
+  // 不再强制添加提交者本人——前端已默认填入，若用户主动删除则说明是代投
   const finalMemberRoles = [...parsed.data.memberRoles];
-  if (session.user.id) {
-    const submitterMember = await prisma.clubMember.findFirst({
-      where: { userId: session.user.id },
-      select: { id: true },
-    });
-    if (submitterMember && !finalMemberRoles.some((m) => m.memberId === submitterMember.id)) {
-      finalMemberRoles.push({ memberId: submitterMember.id, roles: ["制作"] });
-    }
-  }
 
   // 管理员提交直接发布，成员提交需审核
   const isAdminUser = session.user.role === "ADMIN";

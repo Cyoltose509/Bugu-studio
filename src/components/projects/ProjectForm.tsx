@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { compressImage } from "@/lib/utils/imageCrop";
 import MentionEditor from "@/components/ui/MentionEditor";
 
@@ -72,7 +73,7 @@ export interface ProjectFormProps {
 
 // ── 通用样式 ──
 const inputClass =
-  "w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent transition-shadow border-brand-border-subtle text-brand-text-heading";
+  "w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-shadow border-brand-border-subtle text-brand-text-heading";
 const labelClass = "block text-sm font-medium mb-1.5 text-brand-text-body";
 
 export default function ProjectForm({ mode, tags, initialData, projectStatus, onSubmit }: ProjectFormProps) {
@@ -125,6 +126,23 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const isEdit = mode === "edit";
   const isResubmit = isEdit && projectStatus === "REJECTED";
   const isReEdit = isEdit && projectStatus === "PUBLISHED";
+
+  // ── 创建模式：默认填入当前登录用户（代投时用户可自行删除）──
+  const autoAddedRef = useRef(false);
+  const { data: sessionData } = useSession();
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (autoAddedRef.current) return;
+    if (!sessionData?.user?.id) return;
+    // 避免和 initialData 冲突（编辑模式不会走到这里）
+    if (selectedMembers.length > 0) return;
+    autoAddedRef.current = true;
+    setSelectedMembers([{
+      userId: sessionData.user.id,
+      displayName: sessionData.user.name || sessionData.user.email || "我",
+      roles: [],
+    }]);
+  }, [mode, sessionData?.user?.id]);
 
   // ── 成员搜索 ──
   const searchMembers = useCallback(async (q: string) => {
@@ -265,9 +283,10 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
   // ── 标签 ──
   function toggleTag(tagId: string) {
-    setSelectedTags((prev) =>
-      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
-    );
+    setSelectedTags((prev) => {
+      if (prev.includes(tagId)) return prev.filter((t) => t !== tagId);
+      return [...prev, tagId];
+    });
   }
 
   function addCustomTag() {
@@ -471,7 +490,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         {awards.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {awards.map((a, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full text-[#F59E0B] bg-[rgba(251,191,36,0.15)]">
+              <span key={i} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full text-amber-500 bg-amber-500/15">
                 🏆 {a}
                 <button type="button" onClick={() => removeAward(i)} className="hover:text-red-500 ml-0.5">×</button>
               </span>
@@ -583,8 +602,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     (memberDropdownRef.current as any).__selectedMember = m;
                     setShowMemberDropdown(false);
                   }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-[#F0F5F9] flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-[#E38043] text-white text-xs flex items-center justify-center flex-shrink-0">
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--ui-surface-alt2)] flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-brand-orange text-white text-xs flex items-center justify-center flex-shrink-0">
                       {m.displayName.charAt(0)}
                     </span>
                     <span className="text-brand-text-heading">{m.displayName}</span>
@@ -606,8 +625,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     setSelectedRoles((prev) => active ? prev.filter((x) => x !== r) : [...prev, r]);
                   }}
                     className={`text-xs px-2 py-1 rounded-full border transition-all cursor-pointer ${active
-                      ? "border-[#88C232] text-white bg-brand-green"
-                      : "border-[#D0DEE8] text-gray-500 bg-card hover:border-[#88C232]"}`}
+                      ? "border-brand-green text-white bg-brand-green"
+                      : "border-brand-border-subtle text-brand-text-muted bg-card hover:border-brand-green"}`}
                     >
                     {r}
                   </button>
@@ -619,7 +638,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                   placeholder="自定义职位"                   className="text-xs px-2 py-1 rounded-full border w-28 focus:outline-none border-brand-green text-brand-text-heading" autoFocus />
               ) : (
                 <button type="button" onClick={() => setShowCustomRole(true)}
-                  className="text-xs px-2 py-1 rounded-full border border-dashed bg-card hover:border-[#88C232] transition-colors cursor-pointer border-brand-border-subtle text-brand-text-muted">+ 自定义</button>
+                  className="text-xs px-2 py-1 rounded-full border border-dashed bg-card hover:border-brand-green transition-colors cursor-pointer border-brand-border-subtle text-brand-text-muted">+ 自定义</button>
               )}
             </div>
             <button type="button" onClick={() => {
@@ -646,9 +665,9 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                   : "bg-brand-orange/10 text-brand-orange"
               }`}>
                 {isMember
-                  ? <span className="w-4 h-4 rounded-full bg-[#E38043] text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
+                  ? <span className="w-4 h-4 rounded-full bg-brand-orange text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
                   : isUser
-                  ? <span className="w-4 h-4 rounded-full bg-[#3388BB] text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
+                  ? <span className="w-4 h-4 rounded-full bg-brand-blue text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
                   : <span className="text-[10px] mr-0.5">👤</span>}
                 {m.displayName}
                 <span className="text-xs opacity-70">{m.roles.join("、")}</span>
@@ -667,7 +686,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         {links.length > 0 && (
           <div className="space-y-1.5">
             {links.map((link, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-2 bg-[#F0F5F9] rounded-lg text-sm">
+              <div key={i} className="flex items-center gap-2 px-3 py-2 bg-[var(--ui-surface-alt2)] rounded-lg text-sm">
                 <span className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 bg-brand-navy text-white">{link.label}</span>
                 <span className="truncate flex-1 text-brand-blue">{link.url}</span>
                 <button type="button" onClick={() => removeLink(i)} className="text-xs flex-shrink-0 hover:text-red-500 text-brand-text-muted">移除</button>
@@ -692,7 +711,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
                 placeholder="链接标签" className={`${inputClass} w-36`} />
               <button type="button" onClick={() => { setShowCustomLabel(false); setNewLinkLabel(""); }}
-                className="text-xs px-2 py-1.5 rounded hover:bg-gray-100 whitespace-nowrap text-brand-blue">← 预设</button>
+                className="text-xs px-2 py-1.5 rounded hover:bg-muted whitespace-nowrap text-brand-blue">← 预设</button>
             </div>
           )}
           <input type="url" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)}
@@ -728,7 +747,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     const active = selectedTags.includes(tag.id);
                     return (
                       <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                        className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"} bg-brand-green/15 text-brand-green`}
+                        className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-brand-green" : "opacity-60 hover:opacity-100"} bg-brand-green/15 text-brand-green`}
                         >
                         {tag.name}
                       </button>
@@ -747,7 +766,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                         const active = selectedTags.includes(tag.id);
                         return (
                           <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                            className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"} text-brand-green ${active ? "bg-brand-green/15" : "bg-brand-green/10"}`}
+                            className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-brand-green" : "opacity-60 hover:opacity-100"} text-brand-green ${active ? "bg-brand-green/15" : "bg-brand-green/10"}`}
                           >
                             {tag.name}
                           </button>

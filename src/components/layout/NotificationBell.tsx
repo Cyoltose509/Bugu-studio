@@ -110,6 +110,9 @@ export default function NotificationBell() {
       const target = item.relatedId;
       if (target) window.location.href = `/activities/${target}`;
       else window.location.href = `/activities`;
+    } else if (item.type === "ROLE_CHANGE") {
+      // "社团身份已变更"通知无需跳转
+      setOpen(false);
     } else if (item.relatedType === "User") {
       window.location.href = `/admin/users`;
     } else if (item.relatedType === "JamTeam") {

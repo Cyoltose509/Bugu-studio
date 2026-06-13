@@ -65,18 +65,19 @@ export const projectCreateSchema = z.object({
   links: z.array(linkEntrySchema).max(20).default([]),
   coverImage: z.string().max(2048).optional(),
   techStack: z.array(z.string().max(50)).max(20).default([]),
-  tagIds: z.array(z.string()).max(10).default([]),
-  customTags: z.array(z.string().min(1).max(30)).max(10).default([]),
+  tagIds: z.array(z.string()).default([]),
+  customTags: z.array(z.string().min(1).max(30)).default([]),
   memberRoles: z
     .array(
       z
         .object({
           memberId: z.string().optional(),
+          userId: z.string().optional(),
           externalName: z.string().max(100).optional(),
           roles: z.array(z.string().max(30)).min(1).default(["制作"]),
         })
-        .refine((d) => d.memberId || d.externalName, {
-          message: "必须提供 memberId（社团成员）或 externalName（外部成员）",
+        .refine((d) => d.memberId || d.userId || d.externalName, {
+          message: "必须提供 memberId（社团成员）、userId（登录用户）或 externalName（外部成员）",
         })
     )
     .max(50)

@@ -35,6 +35,8 @@
     --ui-text-yellow: #F57F17;
     --ui-text-green: #2E7D32;
     --ui-border-highlight: #E8F0F8;
+    --color-brand-blue: #3388BB;
+    --color-brand-orange: #E38043;
   }
 
   .dark {
@@ -68,6 +70,8 @@
     --ui-text-yellow: #ffca28;
     --ui-text-green: #66bb6a;
     --ui-border-highlight: #1e2840;
+    --color-brand-blue: #5ba8d8;
+    --color-brand-orange: #f09055;
   }
 }
 

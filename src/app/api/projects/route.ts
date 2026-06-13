@@ -149,18 +149,25 @@ export async function POST(request: NextRequest) {
     slug = `${slug}-${Date.now()}`;
   }
 
-  // ── 自动将提交者本人加入成员列表 ──
-  const finalMemberRoles = [...memberRoles] as Array<{
-    memberId?: string;
-    externalName?: string;
-    roles: string[];
-  }>;
-  const submitterMember = await prisma.clubMember.findFirst({
-    where: { userId: session.user.id },
-    select: { id: true },
-  });
-  if (submitterMember && !finalMemberRoles.some((m) => m.memberId === submitterMember.id)) {
-    finalMemberRoles.push({ memberId: submitterMember.id, roles: ["制作"] });
+  // 不再强制添加提交者本人——前端已默认填入，若用户主动删除则说明是代投
+  const finalMemberRoles = [...memberRoles];
+
+  // 解析 userId → memberId
+  const rolesWithUserId = finalMemberRoles.filter((r: any) => r.userId && !r.memberId);
+  if (rolesWithUserId.length > 0) {
+    const userIds = [...new Set(rolesWithUserId.map((r: any) => r.userId as string))];
+    const members = await prisma.clubMember.findMany({
+      where: { userId: { in: userIds } },
+      select: { id: true, userId: true },
+    });
+    const userToMember = new Map<string, string>(members.map((m: any) => [m.userId, m.id]));
+    for (const r of finalMemberRoles) {
+      if (r.userId && !r.memberId) {
+        const mid = userToMember.get(r.userId as string);
+        if (!mid) return apiError(`用户 ${r.userId} 不是社团成员，请以外部成员方式添加`, 400);
+        r.memberId = mid;
+      }
+    }
   }
 
   const project = await prisma.project.create({

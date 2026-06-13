@@ -302,30 +302,30 @@ export default function MentionEditor({
   // 新版 @mention：显示 @displayName 橙色，(memberId) 灰色淡化
   // 旧版 @mention：显示 @displayName 橙色
   // URL：蓝色带下划线
-  // 普通文本：深灰色
+  // 构建高亮 HTML（backdrop 层）。颜色使用 CSS 变量适配暗色模式
   const highlightHtml = useMemo(() => {
     if (!richPreview || !value) return "";
     const tokens = tokenize(value);
     return tokens.map((t) => {
       if (t.type === "url") {
-        return `<span style="color:#3388BB;text-decoration:underline">${escHtml(t.text)}</span>`;
+        return `<span style="color:var(--color-brand-blue,#3388BB);text-decoration:underline">${escHtml(t.text)}</span>`;
       }
       if (t.type === "mention") {
         const text = t.text;
         // 解析 @displayName(memberId) 格式
         const rm = text.match(/^@([^(]+)\(([^)]+)\)$/);
         if (rm) {
-          // 新版格式：名字橙色，ID 淡灰
-          return `<span style="color:#E38043;font-weight:500">@${escHtml(rm[1])}</span><span style="color:#ccc;font-size:0.85em">(${escHtml(rm[2])})</span>`;
+          // 新版格式：名字橙色，ID 半透明
+          return `<span style="color:var(--color-brand-orange,#E38043);font-weight:500">@${escHtml(rm[1])}</span><span style="opacity:0.55;font-size:0.85em">(${escHtml(rm[2])})</span>`;
         }
         // 旧版格式
-        return `<span style="color:#E38043;font-weight:500">${escHtml(text)}</span>`;
+        return `<span style="color:var(--color-brand-orange,#E38043);font-weight:500">${escHtml(text)}</span>`;
       }
-      return `<span style="color:#333">${escHtml(t.text).replace(/\n/g, "<br>")}</span>`;
+      return `<span>${escHtml(t.text).replace(/\n/g, "<br>")}</span>`;
     }).join("");
   }, [value, richPreview]);
 
-  const sharedClassName = "font-[inherit] text-[inherit] leading-[inherit] tracking-[inherit] [word-spacing:inherit] px-3 py-2.5 border border-transparent whitespace-pre-wrap break-words box-border w-full";
+  const sharedClassName = "font-[inherit] text-sm leading-[inherit] tracking-[inherit] [word-spacing:inherit] px-3 py-2 whitespace-pre-wrap break-words box-border w-full";
 
   return (
     <div className="relative isolate">
@@ -333,7 +333,7 @@ export default function MentionEditor({
         <div
           ref={backdropRef}
           aria-hidden
-          className={`absolute inset-0 pointer-events-none overflow-auto ${sharedClassName} text-transparent min-h-[var(--min-h)] z-[1]`}
+          className={`absolute inset-0 pointer-events-none overflow-auto ${sharedClassName} min-h-[var(--min-h)] z-[1]`}
           style={{"--min-h": `${rows * 1.5 + 1.5}em`} as React.CSSProperties}
         >
           <div dangerouslySetInnerHTML={{ __html: highlightHtml + " " }} />
