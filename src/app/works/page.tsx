@@ -144,10 +144,10 @@ export default async function WorksPage({searchParams}: PageProps) {
 async function WorksFirstPage({params, total}: { params: Record<string, any>; total: number }) {
     const sort = params.sort || "date";
     const orderBy: any = sort === "name"
-        ? [{title: "asc"}]
+        ? [{title: "asc"}, {id: "desc"}]
         : sort === "likes"
-            ? [{likes: {_count: "desc"}}, {publishedAt: "desc"}]
-            : [{developYear: "desc"}, {publishedAt: "desc"}];
+            ? [{likes: {_count: "desc"}}, {publishedAt: "desc"}, {id: "desc"}]
+            : [{developYear: "desc"}, {publishedAt: "desc"}, {id: "desc"}];
 
     const where = buildWhere(params);
 

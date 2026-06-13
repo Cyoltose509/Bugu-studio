@@ -36,19 +36,18 @@ export async function GET(request: NextRequest) {
     ];
     if (tag) where.tags = { some: { tag: { slug: tag } } };
 
-    // 排序
+    // 排序（id 作为 tiebreaker 确保确定性分页）
     const orderBy: any = sort === "name"
-        ? [{ title: "asc" }]
+        ? [{ title: "asc" }, { id: "desc" }]
         : sort === "likes"
-            ? [{ likes: { _count: "desc" } }, { publishedAt: "desc" }]
-            : [{ developYear: "desc" }, { publishedAt: "desc" }];
+            ? [{ likes: { _count: "desc" } }, { publishedAt: "desc" }, { id: "desc" }]
+            : [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
 
-    // cursor-based 分页：找出 cursor 项的排序值，然后取之后的项
+    // cursor-based 分页：skip:1 跳过 cursor 本身，取之后的 PAGE_SIZE+1 条
     const projects = await prisma.project.findMany({
-        where: cursor ? { ...where, id: { not: undefined } } : where,
+        where,
         orderBy,
         take: PAGE_SIZE + 1,
-        // 用 skip+cursor 实现：先找到 cursor 位置，跳过已加载
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         select: {
             id: true,

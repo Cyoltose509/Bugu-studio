@@ -157,8 +157,15 @@ export default function WorksInfiniteGrid({
                     </div>
                 )}
                 {!hasMore && items.length > 0 && (
-                    <div className="text-center py-8 text-sm" style={{ color: "#bbb" }}>
-                        — 已到底部，共 {total} 件作品 —
+                    <div className="text-center py-8 text-sm flex flex-col items-center gap-3" style={{ color: "#bbb" }}>
+                        <span>— 已到底部，共 {total} 件作品 —</span>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="text-xs px-4 py-1.5 rounded border transition-colors hover:bg-gray-50"
+                            style={{ color: "#777", borderColor: "#D0DEE8" }}
+                        >
+                            🔄 刷新列表
+                        </button>
                     </div>
                 )}
             </div>
