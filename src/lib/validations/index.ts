@@ -37,6 +37,12 @@ export const changePasswordSchema = z
     path: ["confirmPassword"],
   });
 
+/** 邮箱验证码校验 */
+export const verifyCodeSchema = z.object({
+  email: z.string().email("邮箱格式不正确").max(255),
+  code: z.string().length(6, "验证码为 6 位数字").regex(/^\d{6}$/, "验证码格式不正确"),
+});
+
 // ============================================================
 // 作品相关
 // ============================================================

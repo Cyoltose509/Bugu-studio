@@ -5,16 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 function getLoginErrorMsg(error: string | undefined): string {
-  if (!error) return "登录失败，请核对邮箱和密码";
+  if (!error) return "邮箱或密码错误，请重试";
+  // 安全：所有认证失败统一返回不区分具体原因，防止账户枚举
+  if (error === "auth_failed" || error === "CredentialsSignin") {
+    return "邮箱或密码错误，请重试";
+  }
+  // 非认证类错误（OAuth / 会话等）
   const map: Record<string, string> = {
-    // 细分错误（auth.ts authorize 抛出的具体类型）
-    user_not_found:     "该邮箱未注册，请先注册账号",
-    email_not_verified: "邮箱未验证，请联系管理员",
-    account_disabled:   "账号已被停用，请联系管理员",
-    wrong_password:     "密码错误，请重试",
-    no_password_login:  "该账号未设置密码，请使用第三方登录",
-    // NextAuth 内置错误类型
-    CredentialsSignin:  "邮箱或密码错误",
     OAuthSignin:        "第三方登录失败",
     OAuthCallback:      "第三方登录回调失败",
     OAuthCreateAccount: "第三方账号创建失败",
@@ -29,7 +26,9 @@ function getLoginErrorMsg(error: string | undefined): string {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const rawCallbackUrl = searchParams.get("callbackUrl") || "/";
+  // 安全：只允许站内相对路径，防止开放重定向攻击
+  const callbackUrl = rawCallbackUrl.startsWith("/") ? rawCallbackUrl : "/";
   const error = searchParams.get("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

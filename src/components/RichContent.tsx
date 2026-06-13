@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { parseRichContent, extractMentionName, type TextSegment } from "@/lib/rich-content";
+import DOMPurify from "isomorphic-dompurify";
 
 /**
  * 服务端组件：将纯文本渲染为富文本 HTML
@@ -62,7 +63,10 @@ export async function RichContent({ text }: { text: string }) {
     <span
       className="rich-content"
       dangerouslySetInnerHTML={{
-        __html: segmentsToHtml(segments, memberMap),
+        __html: DOMPurify.sanitize(segmentsToHtml(segments, memberMap), {
+          ALLOWED_TAGS: ["a", "span", "br"],
+          ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
+        }),
       }}
     />
   );
@@ -84,11 +88,18 @@ function segmentsToHtml(
   segments: TextSegment[],
   memberMap: Map<string, string>
 ): string {
+  const SAFE_PROTOCOLS = ["http:", "https:", "mailto:"];
   return segments
     .map((seg) => {
       switch (seg.type) {
         case "link": {
-          const href = escAttr(seg.href || seg.content);
+          const rawHref = seg.href || seg.content;
+          const safeHref = SAFE_PROTOCOLS.some((p) =>
+            rawHref.toLowerCase().startsWith(p)
+          )
+            ? rawHref
+            : "#blocked";
+          const href = escAttr(safeHref);
           const text = esc(seg.content);
           return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="rich-link" style="color:#3388BB;text-decoration:underline;">${text}</a>`;
         }

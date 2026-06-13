@@ -17,7 +17,7 @@ export async function sendVerificationEmail(
 ): Promise<boolean> {
   const resend = getResend();
   if (!resend) {
-    console.warn("[email] RESEND_API_KEY not configured, skipping verification email to", to);
+    console.warn("[email] RESEND_API_KEY not configured, skipping verification email");
     return false;
   }
 
@@ -50,7 +50,7 @@ export async function sendPasswordResetEmail(
 ): Promise<boolean> {
   const resend = getResend();
   if (!resend) {
-    console.warn("[email] RESEND_API_KEY not configured, skipping reset email to", to);
+    console.warn("[email] RESEND_API_KEY not configured, skipping reset email");
     return false;
   }
 

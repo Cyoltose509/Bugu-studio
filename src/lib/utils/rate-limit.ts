@@ -116,8 +116,19 @@ export const RATE_LIMITS = {
 /* ── Prisma-based 用户级限流（用于邮箱验证码、头像更换等） ── */
 
 /**
- * 检查是否超出速率限制（基于数据库，无状态部署友好）
- * @returns true = 被限流，false = 允许
+ * 纯检查：是否已被限流（不修改计数）
+ */
+export async function checkBlocked(key: string, windowSeconds: number, maxCount = 1): Promise<boolean> {
+  const now = new Date();
+  const record = await prisma.rateLimit.findUnique({ where: { key } }).catch(() => null);
+  if (!record || record.expiresAt < now) return false;
+  return record.count >= maxCount;
+}
+
+/**
+ * 递增计数并检查是否超出速率限制（基于数据库，无状态部署友好）
+ * 每次调用都会增加计数。
+ * @returns true = 被限流（本次调用后超出），false = 允许
  */
 export async function isRateLimited(key: string, windowSeconds: number, maxCount = 1): Promise<boolean> {
   const now = new Date();

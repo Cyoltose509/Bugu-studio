@@ -9,19 +9,36 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/services/notification";
 import { invalidateCache } from "@/lib/db/cache";
+import { checkBlocked, isRateLimited, resetRateLimit } from "@/lib/utils/rate-limit";
+import { verifyCodeSchema } from "@/lib/validations";
+
+const VERIFY_RATE_WINDOW = 15 * 60; // 15 分钟
+const VERIFY_RATE_MAX = 5; // 最多 5 次失败
 
 export async function POST(request: Request) {
   try {
-    const { email, code } = await request.json();
-
-    if (!email || !code) {
+    const body = await request.json();
+    const parsed = verifyCodeSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "邮箱和验证码不能为空" },
+        { error: parsed.error.issues[0]?.message || "输入数据无效" },
         { status: 400 }
       );
     }
 
+    const { email, code } = parsed.data;
+
     const normalizedEmail = email.toLowerCase();
+    const rateKey = `verify:fail:${normalizedEmail}`;
+
+    // ── 暴力破解保护：检查是否已被锁定 ──
+    const isLocked = await checkBlocked(rateKey, VERIFY_RATE_WINDOW, VERIFY_RATE_MAX);
+    if (isLocked) {
+      return NextResponse.json(
+        { error: "验证码尝试次数过多，请 15 分钟后再试" },
+        { status: 429 }
+      );
+    }
 
     // 1. 查找验证 token（含待验证注册数据）
     const token = await prisma.verificationToken.findUnique({
@@ -34,6 +51,8 @@ export async function POST(request: Request) {
     });
 
     if (!token || token.expires < new Date()) {
+      // 计入失败次数
+      await isRateLimited(rateKey, VERIFY_RATE_WINDOW, VERIFY_RATE_MAX).catch(() => {});
       return NextResponse.json(
         { error: "验证码无效或已过期" },
         { status: 400 }
@@ -41,7 +60,9 @@ export async function POST(request: Request) {
     }
 
     // 2. 创建用户 + 清理 token（事务）
-    const targetRole = token.role || "USER";
+    // 安全：邀请码角色最高到 MEMBER，禁止直接赋予 ADMIN
+    const rawRole = (token.role || "USER") as string;
+    const targetRole = rawRole === "ADMIN" ? "MEMBER" : rawRole;
     const [user] = await prisma.$transaction([
       prisma.user.create({
         data: {
@@ -85,6 +106,9 @@ export async function POST(request: Request) {
       await invalidateCache("members:all");
     }
 
+    // 验证成功 → 清除失败计数
+    await resetRateLimit(rateKey).catch(() => {});
+
     return NextResponse.json({
       success: true,
       user: {
@@ -95,7 +119,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Verify error:", error);
+    console.error("Verify error:", (error as Error)?.message ?? error);
     return NextResponse.json(
       { error: "验证失败，请稍后重试" },
       { status: 500 }

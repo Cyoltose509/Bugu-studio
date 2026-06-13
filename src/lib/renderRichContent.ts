@@ -6,6 +6,8 @@
  *   1. 有 memberId → 按 ID 精确查找（不受改名影响），查找当前 displayName
  *   2. 无 memberId → 按 displayName 查找（旧版兼容）
  *   3. 找不到 → 显示存储时的 displayName，无链接
+ *
+ * 安全：所有用户内容经 HTML 实体转义；链接仅允许 http/https/mailto 协议
  */
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -13,6 +15,10 @@ import {
   extractMentionName,
   type TextSegment,
 } from "@/lib/rich-content";
+import DOMPurify from "isomorphic-dompurify";
+
+/** 链接允许的协议白名单 */
+const ALLOWED_PROTOCOLS = ["http:", "https:", "mailto:"];
 
 /**
  * 单条文本渲染为 HTML（自动查询数据库解析 @mention）
@@ -20,7 +26,8 @@ import {
 export async function renderRichContent(text: string | null): Promise<string> {
   if (!text) return "";
   const segments = parseRichContent(text);
-  return segmentsToHtml(segments, await buildMemberMap(segments));
+  const html = segmentsToHtml(segments, await buildMemberMap(segments));
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS: ["a", "span", "br"], ALLOWED_ATTR: ["href", "target", "rel", "class", "style"] });
 }
 
 /**
@@ -38,7 +45,8 @@ export async function batchRenderRichContent(
 
   const result = new Map<string, string>();
   for (let i = 0; i < valid.length; i++) {
-    result.set(valid[i], segmentsToHtml(allSegments[i], memberMap));
+    const html = segmentsToHtml(allSegments[i], memberMap);
+    result.set(valid[i], DOMPurify.sanitize(html, { ALLOWED_TAGS: ["a", "span", "br"], ALLOWED_ATTR: ["href", "target", "rel", "class", "style"] }));
   }
   return result;
 }
@@ -141,7 +149,14 @@ function segmentsToHtml(
     .map((seg) => {
       switch (seg.type) {
         case "link": {
-          const href = escAttr(seg.href || seg.content);
+          const rawHref = seg.href || seg.content;
+          // 安全检查：仅允许安全协议
+          const safeHref = ALLOWED_PROTOCOLS.some((p) =>
+            rawHref.toLowerCase().startsWith(p)
+          )
+            ? rawHref
+            : "#blocked";
+          const href = escAttr(safeHref);
           const text = esc(seg.content);
           return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="rich-link" style="color:#3388BB;text-decoration:none;border-bottom:1px solid #3388BB;padding-bottom:1px;">${text}</a>`;
         }

@@ -60,6 +60,7 @@ async function writeAuditLog(
   model: string,
   targetId: string | undefined,
   userId: string | undefined,
+  ipAddress: string | undefined,
   beforeData?: any,
   afterData?: any,
   metadata?: any
@@ -75,7 +76,7 @@ async function writeAuditLog(
         beforeData: beforeData ? sanitize(beforeData) : undefined,
         afterData: afterData ? sanitize(afterData) : undefined,
         metadata: metadata ?? undefined,
-        ipAddress: "system",
+        ipAddress: ipAddress || "unknown",
       },
     });
   } catch (e) {
@@ -144,6 +145,7 @@ function createPrismaClient(): PrismaClient {
         model!,
         targetId,
         ctx.userId,
+        ctx.ipAddress,
         action.startsWith("delete") ? beforeData : undefined,  // DELETE: 记录删除前数据
         action.startsWith("create") ? sanitize(result) : action === "update" || action === "upsert" ? sanitize(result) : undefined,  // CREATE: 新数据, UPDATE: 更新后数据
         metadata

@@ -10,12 +10,13 @@ import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { loginSchema } from "@/lib/validations/auth";
 
-// ── 细分错误类型（前端据此显示不同提示） ──
-class UserNotFound extends CredentialsSignin { code = "user_not_found"; }
-class EmailNotVerified extends CredentialsSignin { code = "email_not_verified"; }
-class AccountDisabled extends CredentialsSignin { code = "account_disabled"; }
-class WrongPassword extends CredentialsSignin { code = "wrong_password"; }
-class NoPasswordLogin extends CredentialsSignin { code = "no_password_login"; }
+// ── 安全：所有错误统一返回 generic code，防止账户枚举 ──
+class AuthFailed extends CredentialsSignin { code = "auth_failed"; }
+class RateLimited extends CredentialsSignin { code = "auth_failed"; }
+
+/** 登录失败限制：每邮箱 15 分钟内最多 5 次失败 */
+const LOGIN_RATE_WINDOW = 15 * 60; // 15 分钟（秒）
+const LOGIN_RATE_MAX = 5;
 
 /**
  * 注意：不再使用进程内存缓存。
@@ -45,23 +46,55 @@ export const authConfig = {
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) throw new CredentialsSignin();
+        if (!parsed.success) throw new AuthFailed();
 
         const { email, password } = parsed.data;
+        const normalizedEmail = email.toLowerCase();
         const { prisma } = await import("@/lib/db/prisma");
 
+        // ── 登录速率限制：检查是否已被锁定 ──
+        const { checkBlocked, isRateLimited, resetRateLimit } = await import("@/lib/utils/rate-limit");
+        const rateKey = `login:fail:${normalizedEmail}`;
+        const isLocked = await checkBlocked(rateKey, LOGIN_RATE_WINDOW, LOGIN_RATE_MAX);
+        if (isLocked) {
+          console.warn(`[auth] rate limited: ${normalizedEmail}`);
+          throw new RateLimited();
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: email.toLowerCase() },
+          where: { email: normalizedEmail },
+          select: { id: true, email: true, passwordHash: true, isActive: true, emailVerified: true, name: true, image: true, role: true },
         });
 
-        if (!user) throw new UserNotFound();
-        if (!user.passwordHash) throw new NoPasswordLogin();
-        if (!user.isActive) throw new AccountDisabled();
-        if (!user.emailVerified) throw new EmailNotVerified();
+        // 记录失败并递增限流计数（失败原因仅存服务端日志，不返回客户端）
+        const fail = async (reason: string) => {
+          console.warn(`[auth] login failed: ${normalizedEmail} - ${reason}`);
+          await isRateLimited(rateKey, LOGIN_RATE_WINDOW, LOGIN_RATE_MAX).catch(() => {});
+          // 记录登录失败审计
+          try {
+            await prisma.loginAttempt.create({
+              data: { email: normalizedEmail, ipAddress: "unknown", success: false },
+            });
+          } catch { /* 非关键 */ }
+          throw new AuthFailed();
+        };
+
+        if (!user) return await fail("user_not_found");
+        if (!user.passwordHash) return await fail("no_password");
+        if (!user.isActive) return await fail("account_disabled");
+        if (!user.emailVerified) return await fail("email_not_verified");
 
         const { verifyPassword } = await import("@/lib/auth/password");
         const isValid = await verifyPassword(password, user.passwordHash);
-        if (!isValid) throw new WrongPassword();
+        if (!isValid) return await fail("wrong_password");
+
+        // 登录成功 → 清除失败计数 + 记录成功
+        await resetRateLimit(rateKey).catch(() => {});
+        try {
+          await prisma.loginAttempt.create({
+            data: { email: normalizedEmail, ipAddress: "unknown", success: true },
+          });
+        } catch { /* 非关键 */ }
 
         return {
           id: user.id,

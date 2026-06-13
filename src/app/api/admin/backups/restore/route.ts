@@ -14,6 +14,12 @@ import { apiResponse, apiError } from "@/lib/utils";
 import fs from "fs";
 import path from "path";
 
+/** 写文件前脱敏敏感字段 */
+function sanitizeRecords(table: string, records: any[]): any[] {
+  if (table !== "user") return records;
+  return records.map(({ passwordHash: _, ...rest }) => rest);
+}
+
 // 表名列表（依赖顺序：先恢复被依赖的表）
 const TABLES = [
   "siteSetting", "tag", "user", "account", "session",
@@ -74,10 +80,11 @@ export async function POST(req: Request) {
     for (const table of TABLES) {
       try {
         const records = await (prisma as any)[table].findMany();
-        totalBefore += records.length;
+        const sanitized = sanitizeRecords(table, records);
+        totalBefore += sanitized.length;
         fs.writeFileSync(
           path.join(preRestoreDir, `${table}_${timestamp}.json`),
-          JSON.stringify(records, null, 2),
+          JSON.stringify(sanitized, null, 2),
           "utf-8"
         );
       } catch (e) {

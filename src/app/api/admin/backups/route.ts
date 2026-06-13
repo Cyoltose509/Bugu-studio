@@ -14,6 +14,12 @@ const TABLES = [
   "loginAttempt", "rateLimit", "verificationToken",
 ] as const;
 
+/** 写文件前脱敏敏感字段 */
+function sanitizeRecords(table: string, records: any[]): any[] {
+  if (table !== "user") return records;
+  return records.map(({ passwordHash: _, ...rest }) => rest);
+}
+
 async function backupAllTables(): Promise<{ count: number; dir: string }> {
   const dateStr = new Date().toISOString().slice(0, 10);
   const dir = path.join(process.cwd(), "backups", dateStr);
@@ -22,8 +28,9 @@ async function backupAllTables(): Promise<{ count: number; dir: string }> {
   let total = 0;
   for (const table of TABLES) {
     const records = await (prisma as any)[table].findMany();
-    total += records.length;
-    fs.writeFileSync(path.join(dir, `${table}.json`), JSON.stringify(records, null, 2), "utf-8");
+    const sanitized = sanitizeRecords(table, records);
+    total += sanitized.length;
+    fs.writeFileSync(path.join(dir, `${table}.json`), JSON.stringify(sanitized, null, 2), "utf-8");
   }
   return { count: total, dir };
 }

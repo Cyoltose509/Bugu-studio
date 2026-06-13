@@ -53,7 +53,11 @@ async function backup() {
     try {
       const model = (p as any)[modelName];
       if (!model) { console.log(`  ⚠️ 跳过 ${modelName}: 模型不存在`); continue; }
-      const rows = await model.findMany();
+      let rows = await model.findMany();
+      // 安全：备份中排除密码哈希
+      if (modelName === "user") {
+        rows = rows.map(({ passwordHash: _, ...rest }: any) => rest);
+      }
       const file = path.join(backupPath, `${modelName}.json`);
       fs.writeFileSync(file, JSON.stringify(rows, null, 2));
       console.log(`  ✅ ${modelName}: ${rows.length} 条`);

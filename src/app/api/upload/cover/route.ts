@@ -7,11 +7,21 @@
 import { auth } from "@/lib/auth/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToR2 } from "@/lib/utils/upload";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "未登录" }, { status: 401 });
+  }
+
+  // 上传速率限制
+  const rl = checkRateLimit(`upload:${session.user.id}`, RATE_LIMITS.UPLOAD);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `上传过于频繁，请稍后再试` },
+      { status: 429 }
+    );
   }
 
   const formData = await req.formData();
@@ -44,8 +54,9 @@ export async function POST(req: NextRequest) {
   if (!process.env.R2_PUBLIC_URL) missing.push("R2_PUBLIC_URL");
 
   if (missing.length > 0) {
+    console.error("[cover upload] R2 not configured, missing:", missing.join(", "));
     return NextResponse.json(
-      { error: `缺少 R2 环境变量: ${missing.join(", ")}` },
+      { error: "上传服务暂不可用" },
       { status: 500 }
     );
   }
@@ -54,9 +65,9 @@ export async function POST(req: NextRequest) {
     const result = await uploadToR2(buffer, file.name, file.type, "cover");
     return NextResponse.json({ url: result.url });
   } catch (err: any) {
-    console.error("[cover upload] R2 error:", err);
+    console.error("[cover upload] R2 error:", err.message ?? err);
     return NextResponse.json(
-      { error: `R2 上传失败: ${err.message}` },
+      { error: "上传失败，请稍后重试" },
       { status: 500 }
     );
   }

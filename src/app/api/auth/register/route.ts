@@ -112,14 +112,16 @@ export async function POST(request: Request) {
       {
         verification: {
           sent: emailSent,
-          // 开发模式：未配置 Resend 时返回验证码方便调试
-          ...(emailSent ? {} : { code, expiresAt: expiresAt.toISOString() }),
+          // 仅开发环境：邮件发送失败时返回验证码方便调试
+          ...(process.env.NODE_ENV !== "production" && !emailSent
+            ? { code, expiresAt: expiresAt.toISOString() }
+            : {}),
         },
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Register error:", error);
+    console.error("Register error:", (error as Error)?.message ?? error);
     return NextResponse.json(
       { error: "服务器错误，请稍后重试" },
       { status: 500 }
