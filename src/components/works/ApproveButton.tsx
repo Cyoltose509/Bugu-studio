@@ -25,8 +25,7 @@ export default function ApproveButton({ projectId }: { projectId: string }) {
       type="button"
       onClick={handleApprove}
       disabled={loading}
-      className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
-      style={{ background: "#88C232", color: "#fff" }}
+      className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 bg-brand-green text-white"
     >
       {loading ? "处理中..." : "✅ 通过审核"}
     </button>

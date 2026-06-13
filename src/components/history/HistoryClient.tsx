@@ -44,18 +44,9 @@ interface YearDetail {
   presidents: Member[];
 }
 
-// ─── 样式常量 ────────────────────────────────────────
-const A = "#25547A";
-const GREEN = "#88C232";
-
-function topBtn(loading: boolean): React.CSSProperties {
-  return {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    padding: "10px 22px", borderRadius: 8, border: `1.5px solid ${A}`,
-    background: loading ? A : "transparent", color: loading ? "#fff" : A,
-    fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer",
-    fontFamily: "system-ui,sans-serif", transition: "all 0.2s",
-  };
+// ─── 样式工具 ────────────────────────────────────────
+function topBtnClass(loading: boolean): string {
+  return `inline-flex items-center gap-1.5 px-[22px] py-2.5 rounded-lg border-[1.5px] border-brand-navy text-sm font-semibold transition-all duration-200 ${loading ? "bg-brand-navy text-white cursor-default" : "bg-transparent text-brand-navy cursor-pointer"}`;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -174,10 +165,10 @@ export default function HistoryClient({
       {/* ═══ 顶部工具栏 ═══ */}
       {mounted && (
         <div data-toolbar className="flex flex-wrap items-center justify-center gap-4 mb-6">
-          <span className="text-sm mr-2" style={{ color: "#777" }}>
+          <span className="text-sm mr-2 text-brand-text-secondary">
             共 {yearCount} 年年报（{startYear}年至今）
           </span>
-          <button type="button" onClick={saveAllPDF} disabled={savingAllPdf} style={topBtn(savingAllPdf)} title="可能需要关闭浏览器的窗口拦截">
+          <button type="button" onClick={saveAllPDF} disabled={savingAllPdf} className={topBtnClass(savingAllPdf)} title="可能需要关闭浏览器的窗口拦截">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -186,7 +177,7 @@ export default function HistoryClient({
             </svg>
             {savingAllPdf ? "生成中…" : "保存全部为PDF"}
           </button>
-          <button type="button" onClick={saveAllAsImage} disabled={savingAllImg} style={topBtn(savingAllImg)} title="页面左侧上暂时出现图片是正常现象">
+          <button type="button" onClick={saveAllAsImage} disabled={savingAllImg} className={topBtnClass(savingAllImg)} title="页面左侧上暂时出现图片是正常现象">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>

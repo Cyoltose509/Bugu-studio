@@ -17,11 +17,11 @@ export default async function SettingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-2xl animate-fade-in">
-      <h1 className="text-2xl font-bold mb-8" style={{ color: "#25547A" }}>通知设置</h1>
+      <h1 className="text-2xl font-bold mb-8 text-brand-navy">通知设置</h1>
 
-      <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-        <h2 className="font-semibold mb-1" style={{ color: "#333" }}>作品上新通知</h2>
-        <p className="text-xs mb-4" style={{ color: "#777" }}>
+      <div className="bg-card rounded-xl border p-6 shadow-sm border-brand-border-subtle">
+        <h2 className="font-semibold mb-1 text-brand-text-heading">作品上新通知</h2>
+        <p className="text-xs mb-4 text-brand-text-secondary">
           开启后，社团有新作品发布时将收到通知
         </p>
         <SettingsForm

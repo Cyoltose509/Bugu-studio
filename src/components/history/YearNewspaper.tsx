@@ -199,340 +199,200 @@ const LINEL = "#e8ddd0";
 const GOLD = "#c4a86a";
 
 // ═══════════════════════════════════════════════════════
-//  静态样式
+//  字体样式（无法用 Tailwind 表达的多 fallback 字体栈）
 // ═══════════════════════════════════════════════════════
-const Q: Record<string, React.CSSProperties> = {
-    outer: {maxWidth: 880, margin: "0 auto 48px"},
-    saveRow: {display: "flex", justifyContent: "flex-end", marginBottom: 8},
-    paper: {
-        background: PAPER,
-        border: `1px solid ${LINE}`,
-        boxShadow: "0 2px 20px rgba(100,80,60,0.07)",
-        fontFamily: "'Noto Serif SC','STSong','SimSun',Georgia,serif",
-        color: INK
-    },
+const F_SERIF: React.CSSProperties = {fontFamily: "'Noto Serif SC','STSong','SimSun',Georgia,serif"};
+const F_SANS: React.CSSProperties = {fontFamily: "system-ui,'Microsoft YaHei',sans-serif"};
+const F_SANS_SM: React.CSSProperties = {fontFamily: "system-ui,sans-serif"};
+const F_GEORGIA: React.CSSProperties = {fontFamily: "Georgia,serif"};
+const F_GEORGIA_TNR: React.CSSProperties = {fontFamily: "Georgia,'Times New Roman',serif"};
+
+// ═══════════════════════════════════════════════════════
+//  静态样式 (Tailwind className)
+// ═══════════════════════════════════════════════════════
+const Q: Record<string, string> = {
+    outer: "max-w-[880px] mx-auto mb-12",
+    saveRow: "flex justify-end mb-2",
+    paper: "bg-[#faf8f5] border border-[#d4c5b2] shadow-[0_2px_20px_rgba(100,80,60,0.07)] text-[#2c1810]",
     // 报头
-    masthead: {textAlign: "center" as const, padding: "22px 40px 14px"},
-    mastTop: {
-        height: 3,
-        background: `linear-gradient(90deg,transparent 8%,${GOLD} 20%,${A} 35%,${A} 65%,${GOLD} 80%,transparent 92%)`,
-        marginBottom: 16
-    },
-    mastBot: {
-        height: 3,
-        background: `linear-gradient(90deg,transparent 8%,${GOLD} 20%,${A} 35%,${A} 65%,${GOLD} 80%,transparent 92%)`,
-        marginTop: 16
-    },
-    mastContent: {display: "flex", alignItems: "flex-end", justifyContent: "space-between"},
-    mastLeft: {textAlign: "left" as const, flex: "0 0 120px"},
-    mastRight: {textAlign: "right" as const, flex: "0 0 120px"},
-    mastCenter: {textAlign: "center" as const, flex: 1},
-    clubName: {fontSize: 18, fontWeight: 700, color: A, letterSpacing: 5, fontFamily: "system-ui,'Microsoft YaHei',sans-serif"},
-    clubSub: {fontSize: 9, color: GOLD, letterSpacing: 3, fontFamily: "Georgia,serif", marginTop: 1},
-    mastLabel: {fontSize: 12, color: GOLD, letterSpacing: 10, fontFamily: "system-ui,'Microsoft YaHei',sans-serif", marginBottom: 2},
-    mastYear: {
-        fontSize: 78,
-        fontWeight: 900,
-        lineHeight: 0.95,
-        color: A,
-        fontFamily: "Georgia,'Times New Roman',serif",
-        textRendering: "geometricPrecision" as const
-    },
-    mastIssue: {fontSize: 12, color: INK3, fontFamily: "system-ui,sans-serif"},
-    mastDate: {fontSize: 10, color: LINE, marginTop: 3},
+    masthead: "text-center px-10 pt-[22px] pb-[14px]",
+    mastTop: "h-[3px] mb-4",
+    mastBot: "h-[3px] mt-4",
+    mastContent: "flex items-end justify-between",
+    mastLeft: "text-left flex-[0_0_120px]",
+    mastRight: "text-right flex-[0_0_120px]",
+    mastCenter: "text-center flex-1",
+    clubName: "text-lg font-bold text-[#25547A] tracking-[5px]",
+    clubSub: "text-[9px] text-[#c4a86a] tracking-[3px] mt-[1px]",
+    mastLabel: "text-xs text-[#c4a86a] tracking-[10px] mb-[2px]",
+    mastYear: "text-[78px] font-black leading-[0.95] text-[#25547A]",
+    mastIssue: "text-xs text-[#6b5d4f]",
+    mastDate: "text-[10px] text-[#d4c5b2] mt-[3px]",
     // 正文
-    body: {padding: "24px 44px 32px"},
+    body: "px-[44px] pt-6 pb-8",
     // 卷首语
-    lead: {display: "flex", gap: 0, marginBottom: 20, lineHeight: 2},
-    dropCap: {
-        fontSize: 42,
-        fontWeight: 900,
-        color: A,
-        lineHeight: 0.8,
-        marginRight: 6,
-        fontFamily: "Georgia,serif",
-        flexShrink: 0,
-        marginTop: -2
-    },
-    leadText: {fontSize: 14, color: INK2, textAlign: "justify" as const, letterSpacing: 0.3},
+    lead: "flex gap-0 mb-5 leading-loose",
+    dropCap: "text-[42px] font-black text-[#25547A] leading-[0.8] mr-[6px] shrink-0 -mt-[2px]",
+    leadText: "text-sm text-[#4a3728] text-justify tracking-[0.3px]",
     // 分隔线
-    rule: {
-        height: 1,
-        margin: "14px 0 18px",
-        background: `linear-gradient(90deg,transparent 15%,${LINEL} 35%,${GOLD} 50%,${LINEL} 65%,transparent 85%)`
-    },
-    thickRule: {
-        height: 2,
-        margin: "20px 0",
-        background: `linear-gradient(90deg,transparent 10%,${LINE} 30%,${GOLD} 50%,${LINE} 70%,transparent 90%)`
-    },
+    rule: "h-px mt-[14px] mb-[18px]",
+    thickRule: "h-[2px] my-5",
     // 双栏数字面板
-    twoCol: {display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 6},
-    statPanel: {
-        padding: "14px 20px",
-        background: "linear-gradient(135deg,rgba(255,255,255,0.5),rgba(232,221,208,0.2))",
-        border: `1px solid ${LINEL}`
-    },
-    panelLabel: {
-        fontSize: 11,
-        color: GOLD,
-        letterSpacing: 6,
-        marginBottom: 12,
-        textAlign: "center" as const,
-        fontFamily: "system-ui,'Microsoft YaHei',sans-serif"
-    },
-    statGrid: {display: "flex", justifyContent: "center", gap: 32},
-    actStatList: {display: "flex", flexDirection: "column", gap: 8},
-    actStatRow: {display: "flex", alignItems: "center", gap: 10},
-    actStatName: {fontSize: 13, color: INK2, flex: 1},
-    actStatNum: {fontSize: 15, fontWeight: 700, color: A, fontFamily: "Georgia,serif"},
+    twoCol: "grid grid-cols-2 gap-6 mb-[6px]",
+    statPanel: "px-5 py-[14px] border border-[#e8ddd0]",
+    panelLabel: "text-[11px] text-[#c4a86a] tracking-[6px] mb-3 text-center",
+    statGrid: "flex justify-center gap-8",
+    actStatList: "flex flex-col gap-2",
+    actStatRow: "flex items-center gap-[10px]",
+    actStatName: "text-[13px] text-[#4a3728] flex-1",
+    actStatNum: "text-[15px] font-bold text-[#25547A]",
     // 章节标题
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: 700,
-        color: GOLD,
-        letterSpacing: 8,
-        textAlign: "center" as const,
-        fontFamily: "system-ui,'Microsoft YaHei',sans-serif",
-        marginBottom: 16
-    },
+    sectionTitle: "text-[15px] font-bold text-[#c4a86a] tracking-[8px] text-center mb-4",
     // ─── 作品巡礼：代表作 ───
-    featuredWrap: {display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 24},
-    featuredImgArea: {width: "100%", aspectRatio: "16/10", overflow: "hidden", border: `1px solid ${LINE}`},
-    featuredImgPH: {
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: `linear-gradient(135deg,${A},#4488aa)`
-    },
-    featuredInfo: {display: "flex", flexDirection: "column" as const, gap: 10, paddingTop: 4},
-    featuredTitle: {fontSize: 24, fontWeight: 800, color: INK, fontFamily: "system-ui,'Microsoft YaHei',sans-serif", lineHeight: 1.3},
-    featuredSubtitle: {fontSize: 14, color: INK3, lineHeight: 1.6, fontStyle: "italic"},
-    featuredMeta: {display: "flex", alignItems: "center", gap: 14},
-    featuredTypeTag: {
-        fontSize: 11,
-        color: "#fff",
-        background: GOLD,
-        padding: "3px 10px",
-        fontFamily: "system-ui,sans-serif",
-        fontWeight: 600,
-        letterSpacing: 2
-    },
-    featuredLikes: {fontSize: 13, color: B, fontWeight: 700, fontFamily: "Georgia,serif"},
-    featuredPeople: {fontSize: 12, color: INK3, fontFamily: "system-ui,sans-serif", lineHeight: 1.7},
+    featuredWrap: "grid grid-cols-2 gap-7 mb-6",
+    featuredImgArea: "w-full aspect-[16/10] overflow-hidden border border-[#d4c5b2]",
+    featuredImgPH: "w-full h-full flex items-center justify-center",
+    featuredInfo: "flex flex-col gap-[10px] pt-1",
+    featuredTitle: "text-2xl font-extrabold text-[#2c1810] leading-[1.3]",
+    featuredSubtitle: "text-sm text-[#6b5d4f] leading-[1.6] italic",
+    featuredMeta: "flex items-center gap-[14px]",
+    featuredTypeTag: "text-[11px] text-white bg-[#c4a86a] px-[10px] py-[3px] font-semibold tracking-[2px]",
+    featuredLikes: "text-[13px] text-[#E38043] font-bold",
+    featuredPeople: "text-xs text-[#6b5d4f] leading-[1.7]",
     // ─── 奖项标签 ───
-    awardTag: {
-        fontSize: 10,
-        color: "#8B7355",
-        background: "rgba(196,168,106,0.12)",
-        padding: "2px 8px",
-        fontFamily: "system-ui,sans-serif",
-        display: "inline-block",
-        marginRight: 4,
-        marginBottom: 4,
-    },
+    awardTag: "text-[10px] text-[#8B7355] bg-[rgba(196,168,106,0.12)] px-2 py-[2px] inline-block mr-1 mb-1",
     // ─── 其余作品网格 ───
-    worksSpread: {display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: "20px 14px", marginBottom: 8},
-    workItem: {display: "flex", flexDirection: "column" as const},
-    workImgWrapSm: {width: "100%", aspectRatio: "16/10", overflow: "hidden", marginBottom: 6, border: `1px solid ${LINEL}`},
-    workImgPH: {
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: `linear-gradient(135deg,${A},#4488aa)`
-    },
-    workPHIcon: {fontSize: 24, opacity: 0.4},
-    workCaption: {display: "flex", flexDirection: "column" as const, gap: 2},
-    workName: {
-        fontSize: 13,
-        fontWeight: 700,
-        color: INK,
-        fontFamily: "system-ui,'Microsoft YaHei',sans-serif",
-        display: "flex",
-        alignItems: "baseline",
-        gap: 6
-    },
-    workType: {fontSize: 9, fontWeight: 400, color: GOLD, fontFamily: "Georgia,serif", fontStyle: "italic"},
-    workTagLine: {display: "flex", flexWrap: "wrap" as const, gap: 4, marginTop: 2},
-    workTag: {fontSize: 9, padding: "1px 6px", color: C, background: "rgba(136,194,50,0.08)", fontFamily: "system-ui,sans-serif"},
-    workCredit: {fontSize: 10, color: INK3, fontFamily: "system-ui,sans-serif", marginTop: 1},
+    worksSpread: "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-y-5 gap-x-[14px] mb-2",
+    workItem: "flex flex-col",
+    workImgWrapSm: "w-full aspect-[16/10] overflow-hidden mb-[6px] border border-[#e8ddd0]",
+    workImgPH: "w-full h-full flex items-center justify-center",
+    workPHIcon: "text-2xl opacity-40",
+    workCaption: "flex flex-col gap-[2px]",
+    workName: "text-[13px] font-bold text-[#2c1810] flex items-baseline gap-[6px]",
+    workType: "text-[9px] font-normal text-[#c4a86a] italic",
+    workTagLine: "flex flex-wrap gap-1 mt-[2px]",
+    workTag: "text-[9px] px-[6px] py-[1px] text-[#88C232] bg-[rgba(136,194,50,0.08)]",
+    workCredit: "text-[10px] text-[#6b5d4f] mt-[1px]",
     // ─── 这一年的新血液 ───
-    roster: {display: "flex", flexWrap: "wrap" as const, gap: 14},
-    rosterItem: {display: "flex", alignItems: "center", gap: 7},
-    rosterAvatar: {
-        width: 34,
-        height: 34,
-        borderRadius: "50%",
-        overflow: "hidden",
-        background: `linear-gradient(135deg,${A},#4477aa)`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0
-    },
-    rosterInitial: {color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "system-ui,sans-serif"},
-    rosterName: {fontSize: 13, color: INK2, fontFamily: "system-ui,'Microsoft YaHei',sans-serif"},
+    roster: "flex flex-wrap gap-[14px]",
+    rosterItem: "flex items-center gap-[7px]",
+    rosterAvatar: "w-[34px] h-[34px] rounded-full overflow-hidden flex items-center justify-center shrink-0",
+    rosterInitial: "text-white text-sm font-bold",
+    rosterName: "text-[13px] text-[#4a3728]",
     // ─── 代表人物（Top3 叙事） ───
-    highlightList: {display: "flex", flexDirection: "column" as const, gap: 14, marginBottom: 24},
-    highlightItem: {
-        fontSize: 13,
-        lineHeight: 1.9,
-        color: INK2,
-        margin: 0,
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 12,
-        textAlign: "justify" as const
-    },
+    highlightList: "flex flex-col gap-[14px] mb-6",
+    highlightItem: "text-[13px] leading-[1.9] text-[#4a3728] m-0 flex items-start gap-3 text-justify",
     // ─── 活动回顾 ───
-    activityList: {display: "flex", flexDirection: "column" as const, gap: 14, marginTop: 4},
-    activityItem: {},
-    activityHeader: {display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" as const, marginBottom: 4},
-    activityTitle: {fontSize: 14, fontWeight: 700, color: INK, fontFamily: "system-ui,'Microsoft YaHei',sans-serif"},
-    activityDate: {fontSize: 11, color: GOLD, fontFamily: "Georgia,serif", fontStyle: "italic", marginLeft: 10},
-    activityDesc: {fontSize: 13, color: INK3, lineHeight: 2, whiteSpace: "pre-wrap" as const, textAlign: "justify" as const},
+    activityList: "flex flex-col gap-[14px] mt-1",
+    activityItem: "",
+    activityHeader: "flex items-baseline gap-[10px] flex-wrap mb-1",
+    activityTitle: "text-sm font-bold text-[#2c1810]",
+    activityDate: "text-[11px] text-[#c4a86a] italic ml-[10px]",
+    activityDesc: "text-[13px] text-[#6b5d4f] leading-loose whitespace-pre-wrap text-justify",
     // ─── 大事记 ───
-    timeline: {display: "flex", flexDirection: "column" as const, gap: 0},
-    tlItem: {display: "flex", gap: 16, position: "relative" as const},
-    tlMarker: {
-        display: "flex",
-        flexDirection: "column" as const,
-        alignItems: "center",
-        width: 14,
-        flexShrink: 0,
-        position: "relative" as const
-    },
-    tlDot: {
-        width: 10,
-        height: 10,
-        borderRadius: "50%",
-        background: C,
-        marginTop: 8,
-        flexShrink: 0,
-        position: "relative" as const,
-        zIndex: 1
-    },
-    tlStem: {position: "absolute" as const, top: 18, bottom: -4, left: "6.5px", width: 1, background: LINEL},
-    tlContent: {flex: 1, padding: "8px 0 16px"},
-    tlHeader: {display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" as const},
-    tlTitle: {fontSize: 14, fontWeight: 700, color: INK, fontFamily: "system-ui,'Microsoft YaHei',sans-serif"},
-    tlDate: {fontSize: 11, color: GOLD, fontFamily: "Georgia,serif", fontStyle: "italic"},
-    tlBody: {fontSize: 12, color: INK3, lineHeight: 1.8, marginTop: 4, whiteSpace: "pre-wrap" as const},
-    tlImages: {display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" as const},
-    tlImgWrap: {
-        position: "relative" as const,
-        width: 120,
-        height: 80,
-        borderRadius: 2,
-        overflow: "hidden",
-        border: `1px solid ${LINEL}`,
-        cursor: "zoom-in",
-        flexShrink: 0
-    },
+    timeline: "flex flex-col gap-0",
+    tlItem: "flex gap-4 relative",
+    tlMarker: "flex flex-col items-center w-[14px] shrink-0 relative",
+    tlDot: "w-[10px] h-[10px] rounded-full bg-[#88C232] mt-2 shrink-0 relative z-[1]",
+    tlStem: "absolute top-[18px] bottom-[-4px] left-[6.5px] w-px bg-[#e8ddd0]",
+    tlContent: "flex-1 pt-2 pb-4",
+    tlHeader: "flex items-baseline gap-[10px] flex-wrap",
+    tlTitle: "text-sm font-bold text-[#2c1810]",
+    tlDate: "text-[11px] text-[#c4a86a] italic",
+    tlBody: "text-xs text-[#6b5d4f] leading-[1.8] mt-1 whitespace-pre-wrap",
+    tlImages: "flex gap-2 mt-2 flex-wrap",
+    tlImgWrap: "relative w-[120px] h-[80px] rounded-[2px] overflow-hidden border border-[#e8ddd0] cursor-zoom-in shrink-0",
     // 底栏
-    colophon: {
-        textAlign: "center" as const,
-        fontSize: 11,
-        color: LINE,
-        lineHeight: 1.8,
-        fontFamily: "system-ui,'Microsoft YaHei',sans-serif",
-        letterSpacing: 3
-    },
-    colophonUrl: {fontSize: 9, letterSpacing: 1, color: LINEL, fontFamily: "Georgia,serif"},
+    colophon: "text-center text-[11px] text-[#d4c5b2] leading-[1.8] tracking-[3px]",
+    colophonUrl: "text-[9px] tracking-[1px] text-[#e8ddd0]",
+};
+
+// ─── Q 条目中仍需 inline style 的属性（渐变背景、字体栈等） ───
+const QS: Record<string, React.CSSProperties> = {
+    mastTop: {background: `linear-gradient(90deg,transparent 8%,${GOLD} 20%,${A} 35%,${A} 65%,${GOLD} 80%,transparent 92%)`},
+    mastBot: {background: `linear-gradient(90deg,transparent 8%,${GOLD} 20%,${A} 35%,${A} 65%,${GOLD} 80%,transparent 92%)`},
+    rule: {background: `linear-gradient(90deg,transparent 15%,${LINEL} 35%,${GOLD} 50%,${LINEL} 65%,transparent 85%)`},
+    thickRule: {background: `linear-gradient(90deg,transparent 10%,${LINE} 30%,${GOLD} 50%,${LINE} 70%,transparent 90%)`},
+    statPanel: {background: "linear-gradient(135deg,rgba(255,255,255,0.5),rgba(232,221,208,0.2))"},
+    featuredImgPH: {background: `linear-gradient(135deg,${A},#4488aa)`},
+    workImgPH: {background: `linear-gradient(135deg,${A},#4488aa)`},
+    rosterAvatar: {background: `linear-gradient(135deg,${A},#4477aa)`},
+    mastYear: {textRendering: "geometricPrecision"},
+    // fontFamily 条目
+    clubName: F_SANS,
+    clubSub: F_GEORGIA,
+    mastLabel: F_SANS,
+    mastIssue: F_SANS_SM,
+    dropCap: F_GEORGIA,
+    panelLabel: F_SANS,
+    actStatNum: F_GEORGIA,
+    sectionTitle: F_SANS,
+    featuredTitle: F_SANS,
+    featuredTypeTag: F_SANS_SM,
+    featuredLikes: F_GEORGIA,
+    featuredPeople: F_SANS,
+    awardTag: F_SANS,
+    workName: F_SANS,
+    workType: F_GEORGIA,
+    workTag: F_SANS,
+    workCredit: F_SANS,
+    rosterInitial: F_SANS_SM,
+    rosterName: F_SANS,
+    activityTitle: F_SANS,
+    activityDate: F_GEORGIA,
+    tlTitle: F_SANS,
+    tlDate: F_GEORGIA,
+    colophon: F_SANS,
+    colophonUrl: F_GEORGIA,
 };
 
 // ═══════════════════════════════════════════════════════
 //  动态样式函数
 // ═══════════════════════════════════════════════════════
-function saveBtnStyle(loading: boolean): React.CSSProperties {
-    return {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "8px 18px",
-        borderRadius: 8,
-        border: `1.5px solid ${A}`,
-        background: loading ? A : "transparent",
-        color: loading ? "#fff" : A,
-        fontSize: 13,
-        fontWeight: 600,
-        cursor: loading ? "default" : "pointer",
-        fontFamily: "system-ui,sans-serif",
-        transition: "all 0.2s"
-    };
+function saveBtnClass(loading: boolean): string {
+    return `inline-flex items-center gap-1.5 px-[18px] py-2 rounded-lg border-[1.5px] border-brand-navy text-[13px] font-semibold transition-all duration-200 ${loading ? "bg-brand-navy text-white cursor-default" : "bg-transparent text-brand-navy cursor-pointer"}`;
 }
 
-const pdfBtnStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "8px 18px",
-    borderRadius: 8,
-    border: `1.5px solid ${C}`,
-    background: "transparent",
-    color: C,
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-    fontFamily: "system-ui,sans-serif",
-    transition: "all 0.2s",
-};
+const pdfBtnClass = "inline-flex items-center gap-1.5 px-[18px] py-2 rounded-lg border-[1.5px] border-brand-green bg-transparent text-brand-green text-[13px] font-semibold cursor-pointer transition-all duration-200";
 
-function actDotStyle(t: string): React.CSSProperties {
-    const colors: Record<string, string> = {COMPETITION: B, COURSE: A, GENERAL: C, MEETING: LINE};
-    return {width: 8, height: 8, borderRadius: "50%", background: colors[t] || LINE, flexShrink: 0};
+function actDotClass(t: string): string {
+    const bgMap: Record<string, string> = {COMPETITION: "bg-[#E38043]", COURSE: "bg-[#25547A]", GENERAL: "bg-[#88C232]", MEETING: "bg-[#d4c5b2]"};
+    return `w-2 h-2 rounded-full shrink-0 ${bgMap[t] || "bg-[#d4c5b2]"}`;
 }
 
+function highlightDropClass(i: number): string {
+    return "w-[var(--drop-size)] h-[var(--drop-size)] rounded-full shrink-0 flex items-center justify-center text-white text-[15px] font-bold overflow-hidden";
+}
 function highlightDropStyle(i: number): React.CSSProperties {
     const colors = [GOLD, "#a0a0a0", "#c4885a"];
     const sizes = [38, 34, 34];
     return {
-        width: sizes[i] || 34,
-        height: sizes[i] || 34,
-        borderRadius: "50%",
-        flexShrink: 0,
+        "--drop-size": `${sizes[i] || 34}px`,
         background: `linear-gradient(135deg,${colors[i] || "#a0a0a0"},${i === 0 ? "#d4b87a" : i === 1 ? "#c0c0c0" : "#d4a57a"})`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontSize: 15,
-        fontWeight: 700,
-        fontFamily: "system-ui,sans-serif",
-        overflow: "hidden"
-    };
+    } as React.CSSProperties;
 }
 
-function activityTypeTagStyle(t: string): React.CSSProperties {
-    const colors: Record<string, string> = {COMPETITION: B, COURSE: A, GENERAL: C, MEETING: LINE};
-    return {
-        fontSize: 10,
-        fontWeight: 600,
-        color: "#fff",
-        background: colors[t] || LINE,
-        padding: "2px 8px",
-        fontFamily: "system-ui,sans-serif",
-        letterSpacing: 1,
-        flexShrink: 0
-    };
+function activityTypeTagClass(t: string): string {
+    const bgMap: Record<string, string> = {COMPETITION: "bg-[#E38043]", COURSE: "bg-[#25547A]", GENERAL: "bg-[#88C232]", MEETING: "bg-[#d4c5b2]"};
+    return `text-[10px] font-semibold text-white ${bgMap[t] || "bg-[#d4c5b2]"} px-2 py-[2px] tracking-[1px] shrink-0`;
 }
 
 // StatBox 样式
-const STAT_Q: Record<string, React.CSSProperties> = {
-    statBox: {display: "flex", flexDirection: "column", alignItems: "center", gap: 4},
-    statNum: {fontSize: 36, fontWeight: 900, color: A, fontFamily: "Georgia,serif", lineHeight: 1},
-    statLabel: {fontSize: 12, color: INK3, fontFamily: "system-ui,'Microsoft YaHei',sans-serif", letterSpacing: 1},
+const STAT_Q: Record<string, string> = {
+    statBox: "flex flex-col items-center gap-1",
+    statNum: "text-[36px] font-black text-[#25547A] leading-none",
+    statLabel: "text-xs text-[#6b5d4f] tracking-[1px]",
+};
+const STAT_S: Record<string, React.CSSProperties> = {
+    statNum: F_GEORGIA,
+    statLabel: F_SANS,
 };
 
 // ─── 小组件 ──────────────────────────────────────────
 function StatBox({num, label}: { num: number; label: string }) {
-    return <div style={STAT_Q.statBox}>
-        <div style={STAT_Q.statNum}>{num}</div>
-        <div style={STAT_Q.statLabel}>{label}</div>
+    return <div className={STAT_Q.statBox}>
+        <div className={STAT_Q.statNum}>{num}</div>
+        <div className={STAT_Q.statLabel}>{label}</div>
     </div>;
 }
 
@@ -608,58 +468,58 @@ function YearNewspaper({
 
     return (
         <>
-            <article style={Q.outer}>
+            <article className={Q.outer}>
 
-                <div ref={paperRef} className="newspaper-paper" style={Q.paper}>
+                <div ref={paperRef} className={`newspaper-paper ${Q.paper}`} style={F_SERIF}>
                     {/* ═══ 报头 ═══ */}
-                    <header style={Q.masthead}>
-                        <div style={Q.mastTop}/>
-                        <div style={Q.mastContent}>
-                            <div style={Q.mastLeft}>
-                                <div style={Q.clubName}>布谷工作室</div>
-                                <div style={Q.clubSub}>BUGOO STUDIO</div>
+                    <header className={Q.masthead}>
+                        <div className={Q.mastTop} style={QS.mastTop}/>
+                        <div className={Q.mastContent}>
+                            <div className={Q.mastLeft}>
+                                <div className={Q.clubName} style={F_SANS}>布谷工作室</div>
+                                <div className={Q.clubSub} style={F_GEORGIA}>BUGOO STUDIO</div>
                             </div>
-                            <div style={Q.mastCenter}>
-                                <div style={Q.mastLabel}>年 度 回 顾</div>
-                                <div style={Q.mastYear}>{year}</div>
+                            <div className={Q.mastCenter}>
+                                <div className={Q.mastLabel} style={F_SANS}>年 度 回 顾</div>
+                                <div className={Q.mastYear} style={{...F_GEORGIA_TNR, ...QS.mastYear}}>{year}</div>
                             </div>
-                            <div style={Q.mastRight}>
-                                <div style={Q.mastIssue}>第 {yearIndex} 期</div>
-                                <div style={Q.mastDate}>{year}年刊</div>
+                            <div className={Q.mastRight}>
+                                <div className={Q.mastIssue} style={F_SANS_SM}>{yearIndex} 期</div>
+                                <div className={Q.mastDate}>{year}年刊</div>
                             </div>
                         </div>
-                        <div style={Q.mastBot}/>
+                        <div className={Q.mastBot} style={QS.mastBot}/>
                     </header>
 
-                    <div style={Q.body}>
+                    <div className={Q.body}>
 
                         {/* ─── 卷首语 ─── */}
-                        <div style={Q.lead}>
-                            <span style={Q.leadText}>{leadText}</span>
+                        <div className={Q.lead}>
+                            <span className={Q.leadText}>{leadText}</span>
                         </div>
 
-                        <div style={Q.rule}/>
+                        <div className={Q.rule} style={QS.rule}/>
 
                         {/* ─── 数字面板 ─── */}
-                        <div style={Q.twoCol}>
-                            <div style={Q.statPanel}>
-                                <div style={Q.panelLabel}>年 度 数 字</div>
-                                <div style={Q.statGrid}>
+                        <div className={Q.twoCol}>
+                            <div className={Q.statPanel} style={QS.statPanel}>
+                                <div className={Q.panelLabel} style={F_SANS}>{yearIndex <= 1 ? "创社元年" : `第 ${yearIndex} 年`} 数字</div>
+                                <div className={Q.statGrid}>
                                     {members.length > 0 && <StatBox num={members.length} label="新成员"/>}
                                     {activeMembers.length > 0 && <StatBox num={activeMembers.length} label="活跃成员"/>}
                                     {projects.length > 0 && <StatBox num={projects.length} label="件作品"/>}
                                     {events.length > 0 && <StatBox num={events.length} label="条大事记"/>}
                                 </div>
                             </div>
-                            <div style={Q.statPanel}>
-                                <div style={Q.panelLabel}>活 动 概 览</div>
+                            <div className={Q.statPanel}>
+                                <div className={Q.panelLabel}>活 动 概 览</div>
                                 {activities.length > 0 ? (
-                                    <div style={Q.actStatList}>
+                                    <div className={Q.actStatList}>
                                         {ACT_ORDER.filter(t => actCounts[t]).map(t => (
-                                            <div key={t} style={Q.actStatRow}>
-                                                <span style={actDotStyle(t)}/>
-                                                <span style={Q.actStatName}>{ACT_LABELS[t]}</span>
-                                                <span style={Q.actStatNum}>{actCounts[t]} 场</span>
+                                            <div key={t} className={Q.actStatRow}>
+                                                <span className={actDotClass(t)}/>
+                                                <span className={Q.actStatName}>{ACT_LABELS[t]}</span>
+                                                <span className={Q.actStatNum}>{actCounts[t]} 场</span>
                                             </div>
                                         ))}
                                     </div>
@@ -672,50 +532,50 @@ function YearNewspaper({
                         {/* ═══ 作品巡礼（代表作 + 其余作品） ═══ */}
                         {projects.length > 0 && (
                             <>
-                                <div style={Q.thickRule}/>
-                                <div style={Q.sectionTitle}>作 品 巡 礼</div>
+                                <div className={Q.thickRule}/>
+                                <div className={Q.sectionTitle}>作 品 巡 礼</div>
 
                                 {/* 年度代表作（大头） */}
                                 {featuredWork && (
-                                    <div style={Q.featuredWrap}>
-                                        <Link href={`/works/${featuredWork.slug}`} style={{display: "block"}}>
-                                            <div style={Q.featuredImgArea}>
+                                    <div className={Q.featuredWrap}>
+                                        <Link href={`/works/${featuredWork.slug}`} className="block">
+                                            <div className={Q.featuredImgArea}>
                                                 {featuredWork.coverImage ? (
                                                     <SafeImage src={featuredWork.coverImage} alt={featuredWork.title}
                                                                className="w-full h-full object-cover"/>
                                                 ) : (
-                                                    <div style={Q.featuredImgPH}><span style={{fontSize: 48, opacity: 0.4}}>🎮</span></div>
+                                                    <div className={Q.featuredImgPH} style={QS.featuredImgPH}><span className="text-4xl opacity-40">🎮</span></div>
                                                 )}
                                             </div>
                                         </Link>
-                                        <div style={Q.featuredInfo}>
-                                            <div style={Q.featuredTitle}>
+                                        <div className={Q.featuredInfo}>
+                                            <div className={Q.featuredTitle} style={F_SANS}>
                                                 <Link href={`/works/${featuredWork.slug}`}
-                                                      style={{color: "inherit", textDecoration: "none"}}>
+                                                      className="text-inherit no-underline">
                                                     {featuredWork.title}
                                                 </Link>
                                             </div>
-                                            {featuredWork.subtitle && <div style={Q.featuredSubtitle}>{featuredWork.subtitle}</div>}
-                                            <div style={Q.featuredMeta}>
-                                                <span style={Q.featuredTypeTag}>{TYPE_DESC[featuredWork.type] || featuredWork.type}</span>
-                                                <span style={Q.featuredLikes}>♥ {(featuredWork._count?.likes ?? 0)}</span>
+                                            {featuredWork.subtitle && <div className={Q.featuredSubtitle}>{featuredWork.subtitle}</div>}
+                                            <div className={Q.featuredMeta}>
+                                                <span className={Q.featuredTypeTag} style={F_SANS_SM}>{TYPE_DESC[featuredWork.type] || featuredWork.type}</span>
+                                                <span className={Q.featuredLikes} style={F_GEORGIA}>♥ {(featuredWork._count?.likes ?? 0)}</span>
                                             </div>
                                             {featuredWork.tags && featuredWork.tags.length > 0 && (
-                                                <div style={Q.workTagLine}>
+                                                <div className={Q.workTagLine}>
                                                     {featuredWork.tags.slice(0, 4).map((t: any) => (
-                                                        <span key={t.tag.name} style={Q.workTag}>{t.tag.name}</span>
+                                                        <span key={t.tag.name} className={Q.workTag}>{t.tag.name}</span>
                                                     ))}
                                                 </div>
                                             )}
                                             {featuredWork.awards && featuredWork.awards.length > 0 && (
-                                                <div style={{marginTop: 8}}>
+                                                <div className="mt-2">
                                                     {featuredWork.awards.map((award, i) => (
-                                                        <span key={i} style={Q.awardTag}>🏆 {award}</span>
+                                                        <span key={i} className={Q.awardTag}>🏆 {award}</span>
                                                     ))}
                                                 </div>
                                             )}
                                             {featuredWork.members && featuredWork.members.length > 0 && (
-                                                <div style={Q.featuredPeople}>制作：{formatCredits(featuredWork.members)}</div>
+                                                <div className={Q.featuredPeople}>{formatCredits(featuredWork.members)}</div>
                                             )}
                                         </div>
                                     </div>
@@ -723,35 +583,35 @@ function YearNewspaper({
 
                                 {/* 其余作品网格（不含 hero） */}
                                 {otherWorks.length > 0 && (
-                                    <div style={Q.worksSpread}>
+                                    <div className={Q.worksSpread}>
                                         {otherWorks.map((p) => (
-                                            <div key={p.id} style={Q.workItem}>
-                                                <Link href={`/works/${p.slug}`} style={{display: "block"}}>
-                                                    <div style={Q.workImgWrapSm}>
+                                            <div key={p.id} className={Q.workItem}>
+                                                <Link href={`/works/${p.slug}`} className="block">
+                                                    <div className={Q.workImgWrapSm}>
                                                         {p.coverImage ? (
                                                             <SafeImage src={p.coverImage} alt={p.title}
                                                                        className="w-full h-full object-cover"/>
                                                         ) : (
-                                                            <div style={Q.workImgPH}><span style={Q.workPHIcon}>🎮</span></div>
+                                                            <div className={Q.workImgPH} style={QS.workImgPH}><span className={Q.workPHIcon}>🎮</span></div>
                                                         )}
                                                     </div>
                                                 </Link>
-                                                <div style={Q.workCaption}>
-                                                    <div style={Q.workName}>
-                                                        <Link href={`/works/${p.slug}`} style={{color: "inherit", textDecoration: "none"}}>
+                                                <div className={Q.workCaption}>
+                                                    <div className={Q.workName}>
+                                                        <Link href={`/works/${p.slug}`} className="text-inherit no-underline">
                                                             {p.title}
                                                         </Link>
-                                                        <span style={Q.workType}>{TYPE_DESC[p.type] || p.type}</span>
+                                                        <span className={Q.workType} style={F_GEORGIA}>{TYPE_DESC[p.type] || p.type}</span>
                                                     </div>
                                                     {p.tags && p.tags.length > 0 && (
-                                                        <div style={Q.workTagLine}>
+                                                        <div className={Q.workTagLine}>
                                                             {p.tags.slice(0, 3).map((t: any) => (
-                                                                <span key={t.tag.name} style={Q.workTag}>{t.tag.name}</span>
+                                                                <span key={t.tag.name} className={Q.workTag}>{t.tag.name}</span>
                                                             ))}
                                                         </div>
                                                     )}
                                                     {p.members && p.members.length > 0 && (
-                                                        <div style={Q.workCredit}>{formatCredits(p.members)}</div>
+                                                        <div className={Q.workCredit}>{formatCredits(p.members)}</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -764,28 +624,28 @@ function YearNewspaper({
                         {/* ═══ 这一年的新血液（当年加入的成员） ═══ */}
                         {members.length > 0 && (
                             <>
-                                <div style={Q.thickRule}/>
-                                <div style={Q.sectionTitle}>这 一 年 的 新 血 液</div>
+                                <div className={Q.thickRule} style={QS.thickRule}/>
+                                <div className={Q.sectionTitle} style={QS.sectionTitle}>这 一 年 的 新 血 液</div>
 
-                                <div style={Q.roster}>
-                                    {members.map(m => {
-                                        const avatarUrl = m.avatar || m.user?.image;
-                                        return (
-                                            <div key={m.id} style={Q.rosterItem}>
-                                                <Link href={`/members/${m.id}`} style={{display: "block", flexShrink: 0}}>
-                                                    <div style={Q.rosterAvatar}>
-                                                        {avatarUrl ? (
-                                                            <SafeImage src={avatarUrl} alt={m.displayName}
-                                                                       className="w-full h-full object-cover"/>
-                                                        ) : (
-                                                            <span style={Q.rosterInitial}>{m.displayName[0]}</span>
-                                                        )}
+                                        <div className={Q.roster}>
+                                            {members.map(m => {
+                                                const avatarUrl = m.avatar || m.user?.image;
+                                                return (
+                                                    <div key={m.id} className={Q.rosterItem}>
+                                                        <Link href={`/members/${m.id}`} className="block shrink-0">
+                                                            <div className={Q.rosterAvatar} style={QS.rosterAvatar}>
+                                                                {avatarUrl ? (
+                                                                    <SafeImage src={avatarUrl} alt={m.displayName}
+                                                                               className="w-full h-full object-cover"/>
+                                                                ) : (
+                                                                    <span className={Q.rosterInitial} style={F_SANS_SM}>{m.displayName[0]}</span>
+                                                                )}
+                                                            </div>
+                                                        </Link>
+                                                        <span className={Q.rosterName} style={F_SANS}>{m.displayName}</span>
                                                     </div>
-                                                </Link>
-                                                <span style={Q.rosterName}>{m.displayName}</span>
-                                            </div>
-                                        );
-                                    })}
+                                                );
+                                            })}
                                 </div>
                             </>
                         )}
@@ -793,14 +653,14 @@ function YearNewspaper({
                         {/* ═══ 年度活跃成员（Top3 展示 + 当年社长） ═══ */}
                         {(activeMembers.length > 0 || presidents.length > 0) && (
                             <>
-                                <div style={Q.thickRule}/>
-                                <div style={Q.sectionTitle}>年 度 活 跃 成 员</div>
+                                    <div className={Q.thickRule} style={QS.thickRule}/>
+                                <div className={Q.sectionTitle} style={F_SANS}>年 度 活 跃 成 员</div>
 
                                 {activeMembers.length > 0 && (
-                                    <div style={Q.highlightList}>
+                                    <div className={Q.highlightList}>
                                         {activeMembers.slice(0, 3).map((m, i) => (
-                                            <div key={m.id} style={Q.highlightItem}>
-                    <span style={highlightDropStyle(i)}>
+                                            <div key={m.id} className={Q.highlightItem}>
+                    <span className={highlightDropClass(i)} style={{...highlightDropStyle(i), ...F_SANS_SM}}>
                       {m.avatar || m.user?.image ? (
                           <SafeImage src={m.avatar || m.user?.image || ""} alt="" className="w-full h-full object-cover"/>
                       ) : (
@@ -808,8 +668,8 @@ function YearNewspaper({
                       )}
                     </span>
                                                 <span>
-                      <strong style={{color: INK, fontSize: 14}}>{m.displayName}</strong>
-                      <span style={{color: INK3, marginLeft: 8}}>{topNarrative[i] || ""}</span>
+                      <strong className="text-[#2c1810] text-[14px]">{m.displayName}</strong>
+                      <span className="text-[#6b5d4f] ml-2">{topNarrative[i] || ""}</span>
                     </span>
                                             </div>
                                         ))}
@@ -818,40 +678,30 @@ function YearNewspaper({
 
                                 {/* 当年社长（grade == year - 2 的 PRESIDENT / VICE_PRESIDENT） */}
                                 {presidents.length > 0 && (
-                                    <div style={{marginTop: activeMembers.length > 0 ? 16 : 0}}>
-                                        <div style={{
-                                            fontSize: 12,
-                                            color: GOLD,
-                                            fontFamily: "system-ui,sans-serif",
-                                            textTransform: "uppercase",
-                                            letterSpacing: 4,
-                                            marginBottom: 8
-                                        }}>
+                                    <div className={activeMembers.length > 0 ? "mt-4" : ""}>
+                                        <div className="text-[12px] text-[#c4a86a] uppercase tracking-[4px] mb-2" style={F_SANS}>
                                             ◆ 当年社长
                                         </div>
-                                        <div style={Q.roster}>
+                                        <div className={Q.roster}>
                                             {presidents.map(m => {
                                                 const avatarUrl = m.avatar || m.user?.image;
                                                 const posLabel = newspaperPositionLabel(m.position);
                                                 return (
-                                                    <div key={m.id} style={Q.rosterItem}>
-                                                        <Link href={`/members/${m.id}`} style={{display: "block", flexShrink: 0}}>
-                                                            <div style={Q.rosterAvatar}>
+                                                    <div key={m.id} className={Q.rosterItem}>
+                                                        <Link href={`/members/${m.id}`} className="block shrink-0">
+                                                            <div className={Q.rosterAvatar} style={QS.rosterAvatar}>
                                                                 {avatarUrl ? (
                                                                     <SafeImage src={avatarUrl} alt={m.displayName}
                                                                                className="w-full h-full object-cover"/>
                                                                 ) : (
-                                                                    <span style={Q.rosterInitial}>{m.displayName[0]}</span>
+                                                                    <span className={Q.rosterInitial} style={F_SANS_SM}>{m.displayName[0]}</span>
                                                                 )}
                                                             </div>
                                                         </Link>
                                                         <div>
-                                                            <span style={Q.rosterName}>{m.displayName}</span>
+                                                            <span className={Q.rosterName} style={F_SANS}>{m.displayName}</span>
                                                             {posLabel && (
-                                                                <span style={{
-                                                                    fontSize: 10, color: GOLD, fontFamily: "system-ui,sans-serif",
-                                                                    display: "block", marginTop: 1
-                                                                }}>
+                                                                <span className="text-[10px] text-[#c4a86a] block mt-[1px]" style={F_SANS_SM}>
                                                                     {posLabel}
                                                                 </span>
                                                             )}
@@ -868,37 +718,37 @@ function YearNewspaper({
                         {/* ═══ 活动回顾 ═══ */}
                         {(nonMeeting.length > 0 || meetingCount > 0) && (
                             <>
-                                <div style={Q.thickRule}/>
-                                <div style={Q.sectionTitle}>活 动 回 顾</div>
+                                <div className={Q.thickRule} style={QS.thickRule}/>
+                                <div className={Q.sectionTitle} style={QS.sectionTitle}>活 动 回 顾</div>
 
                                 {meetingCount > 0 && (
-                                    <p style={{fontSize: 13, color: INK3, lineHeight: 2, textAlign: "justify" as const, marginBottom: 16}}>
+                                    <p className="text-[13px] text-[#4a3728] leading-loose text-justify mb-4">
                                         全年共举办了 {meetingCount} 场例会。
                                     </p>
                                 )}
 
                                 {nonMeeting.length > 0 && (
-                                    <div style={Q.activityList}>
+                                    <div className={Q.activityList}>
                                         {nonMeeting.map(a => {
                                             const d = new Date(a.startTime);
                                             const desc = narrateActivity(a);
                                             const descHtml = a.descriptionHtml;
                                             return (
-                                                <div key={a.id} style={Q.activityItem}>
-                                                    <div style={Q.activityHeader}>
-                                                        <span style={activityTypeTagStyle(a.type)}>{ACT_LABELS[a.type] || a.type}</span>
+                                                <div key={a.id} className={Q.activityItem}>
+                                                    <div className={Q.activityHeader}>
+                                                        <span className={activityTypeTagClass(a.type)}>{ACT_LABELS[a.type] || a.type}</span>
                                                         <Link href={`/activities/${a.id}`}
-                                                              style={{color: "inherit", textDecoration: "none"}}>
-                                                            <span style={Q.activityTitle}>{a.title}</span>
+                                                              className="text-inherit no-underline">
+                                                            <span className={Q.activityTitle} style={QS.activityTitle}>{a.title}</span>
                                                         </Link>
                                                         {a.status === "ARCHIVED" &&
-                                                            <span style={{fontSize: 10, color: INK3, fontStyle: "italic"}}>(已归档)</span>}
+                                                            <span className="text-[10px] text-[#6b5d4f] italic">(已归档)</span>}
                                                         <span
-                                                            style={Q.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
+                                                            className={Q.activityDate} style={QS.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
                                                     </div>
                                                     {descHtml ?
-                                                        <div style={Q.activityDesc}><RichContentClient html={descHtml}/></div> : desc &&
-                                                        <div style={Q.activityDesc}>{desc}</div>}
+                                                        <div className={Q.activityDesc} style={QS.activityDesc}><RichContentClient html={descHtml}/></div> : desc &&
+                                                        <div className={Q.activityDesc} style={QS.activityDesc}>{desc}</div>}
                                                 </div>
                                             );
                                         })}
@@ -910,53 +760,48 @@ function YearNewspaper({
                         {/* ═══ 大事记 ═══ */}
                         {events.length > 0 && (
                             <>
-                                <div style={Q.thickRule}/>
-                                <div style={Q.sectionTitle}>大 事 记</div>
-                                <div style={Q.timeline}>
+                                <div className={Q.thickRule} style={QS.thickRule}/>
+                                <div className={Q.sectionTitle} style={QS.sectionTitle}>大 事 记</div>
+                                <div className={Q.timeline}>
                                     {events.map((e) => {
                                         const d = e.eventDate ? new Date(e.eventDate) : null;
                                         const de = e.eventEndDate ? new Date(e.eventEndDate) : null;
                                         const showRange = d && de && de.getTime() !== d.getTime();
                                         return (
-                                            <div key={e.id} style={Q.tlItem}>
-                                                <div style={Q.tlMarker}>
-                                                    <span style={Q.tlDot}/>
-                                                    <span style={Q.tlStem}/>
+                                            <div key={e.id} className={Q.tlItem}>
+                                                <div className={Q.tlMarker}>
+                                                    <span className={Q.tlDot}/>
+                                                    <span className={Q.tlStem}/>
                                                 </div>
-                                                <div style={Q.tlContent}>
-                                                    <div style={Q.tlHeader}>
-                                                        <span style={Q.tlTitle}>{e.title}</span>
-                                                        {d && <span style={Q.tlDate}>
+                                                <div className={Q.tlContent}>
+                                                    <div className={Q.tlHeader}>
+                                                        <span className={Q.tlTitle} style={QS.tlTitle}>{e.title}</span>
+                                                        {d && <span className={Q.tlDate} style={QS.tlDate}>
                                                           {showRange
                                                               ? `${d.getMonth() + 1}月${d.getDate()}日 至 ${de!.getMonth() + 1}月${de!.getDate()}日`
                                                               : `${d.getMonth() + 1}月${d.getDate()}日`}
                                                         </span>}
                                                     </div>
                                                     {e.bodyHtml ?
-                                                        <div style={Q.tlBody}><RichContentClient html={e.bodyHtml}/></div> : e.body &&
-                                                        <div style={Q.tlBody}>{e.body}</div>}
+                                                        <div className={Q.tlBody} style={QS.tlBody}><RichContentClient html={e.bodyHtml}/></div> : e.body &&
+                                                        <div className={Q.tlBody} style={QS.tlBody}>{e.body}</div>}
                                                     {e.images && e.images.length > 0 && (
-                                                        <div style={Q.tlImages}>
+                                                        <div className={Q.tlImages}>
                                                             {e.images.map((img) => (
                                                                 <button
                                                                     key={img.id}
                                                                     type="button"
-                                                                    style={Q.tlImgWrap}
+                                                                    className={Q.tlImgWrap}
                                                                     onClick={() => setLightboxSrc(img.url)}
                                                                     aria-label="查看大图"
                                                                 >
-                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                                                     <img
                                                                         src={img.url}
                                                                         alt={img.altText || e.title}
                                                                         width={120}
                                                                         height={80}
-                                                                        style={{
-                                                                            width: "100%",
-                                                                            height: "100%",
-                                                                            objectFit: "cover",
-                                                                            display: "block"
-                                                                        }}
+                                                                        className="w-full h-full object-cover block"
                                                                         loading="lazy"
                                                                     />
                                                                 </button>
@@ -972,25 +817,25 @@ function YearNewspaper({
                         )}
 
                         {/* ─── 底栏 ─── */}
-                        <div style={Q.rule}/>
-                        <div style={Q.colophon}>
+                        <div className={Q.rule} style={QS.rule}/>
+                        <div className={Q.colophon} style={QS.colophon}>
                             布谷工作室 · 保持热爱 · 持续创造
                             <br/>
-                            <span style={Q.colophonUrl}>bugu.studio</span>
+                            <span className={Q.colophonUrl} style={QS.colophonUrl}>bugu.studio</span>
                         </div>
                     </div>
                 </div>
 
                 {/* ─── 保存按钮（报纸下方） ─── */}
-                <div data-save-buttons style={{display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10}}>
-                    <button type="button" onClick={saveImage} disabled={saving} style={saveBtnStyle(saving)}
+                <div data-save-buttons className="flex justify-end gap-[10px] mt-[10px]">
+                    <button type="button" onClick={saveImage} disabled={saving} className={saveBtnClass(saving)}
                             title="页面左侧上暂时出现图片是正常现象">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                         </svg>
                         {saving ? "生成中…" : "保存图片"}
                     </button>
-                    <button type="button" onClick={savePDF} disabled={savingPdf} style={pdfBtnStyle} title="可能需要关闭浏览器的窗口拦截">
+                    <button type="button" onClick={savePDF} disabled={savingPdf} className={pdfBtnClass} title="可能需要关闭浏览器的窗口拦截">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                             <polyline points="14 2 14 8 20 8"/>
@@ -1002,18 +847,9 @@ function YearNewspaper({
                 </div>
             </article>
             {lightboxSrc && (
-                <div data-lightbox onClick={() => setLightboxSrc(null)} style={{
-                    position: "fixed",
-                    inset: 0,
-                    background: "rgba(0,0,0,0.85)",
-                    zIndex: 9999,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "zoom-out"
-                }}>
+                <div data-lightbox onClick={() => setLightboxSrc(null)} className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center cursor-zoom-out">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={lightboxSrc} style={{maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain"}} alt=""/>
+                    <img src={lightboxSrc} className="max-w-[90vw] max-h-[90vh] object-contain" alt=""/>
                 </div>
             )}
         </>

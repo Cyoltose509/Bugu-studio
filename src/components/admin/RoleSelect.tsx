@@ -46,8 +46,7 @@ export default function RoleSelect({ userId, currentRole }: { userId: string; cu
         value={localRole}
         onChange={handleChange}
         disabled={pending}
-        className="text-xs rounded border px-1 py-0.5 disabled:opacity-60"
-        style={{ borderColor: "#D0DEE8", color: "#333", background: "#fff" }}
+        className="text-xs rounded border px-1 py-0.5 disabled:opacity-60 border-brand-border-subtle text-brand-text-heading bg-card"
       >
         {ROLE_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -56,12 +55,12 @@ export default function RoleSelect({ userId, currentRole }: { userId: string; cu
         ))}
       </select>
       {pending && (
-        <span className="text-xs" style={{ color: "#E38043" }}>
+        <span className="text-xs text-brand-orange">
           保存中…
         </span>
       )}
       {saved && !pending && (
-        <span className="text-xs" style={{ color: "#88C232" }}>
+        <span className="text-xs text-brand-green">
           ✓ 已保存
         </span>
       )}

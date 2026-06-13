@@ -51,25 +51,23 @@ export default function EditableNumber({ memberId, field, currentValue, preserve
     : "未设置";
 
   return (
-    <div className="flex items-center gap-1" style={{ opacity: isPending ? 0.6 : 1 }}>
+    <div className={`flex items-center gap-1 ${isPending ? "opacity-60" : ""}`}>
       <button
         type="button"
         onClick={() => step(false)}
         disabled={isPending}
-        className="w-6 h-6 rounded border flex items-center justify-center text-sm font-bold cursor-pointer hover:bg-gray-100 flex-shrink-0"
-        style={{ borderColor: "#D0DEE8", color: "#555", lineHeight: 1 }}
+        className="w-6 h-6 rounded border flex items-center justify-center text-sm font-bold cursor-pointer hover:bg-gray-100 flex-shrink-0 border-brand-border-subtle text-brand-text-body leading-none"
       >
         −
       </button>
-      <span className="text-xs whitespace-nowrap px-1 min-w-[48px] text-center" style={{ color: "#333" }}>
+      <span className="text-xs whitespace-nowrap px-1 min-w-[48px] text-center text-brand-text-heading">
         {display}
       </span>
       <button
         type="button"
         onClick={() => step(true)}
         disabled={isPending}
-        className="w-6 h-6 rounded border flex items-center justify-center text-sm font-bold cursor-pointer hover:bg-gray-100 flex-shrink-0"
-        style={{ borderColor: "#D0DEE8", color: "#555", lineHeight: 1 }}
+        className="w-6 h-6 rounded border flex items-center justify-center text-sm font-bold cursor-pointer hover:bg-gray-100 flex-shrink-0 border-brand-border-subtle text-brand-text-body leading-none"
       >
         +
       </button>
@@ -77,17 +75,16 @@ export default function EditableNumber({ memberId, field, currentValue, preserve
         <button
           type="button"
           onClick={handleSave}
-          className="text-xs px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
-          style={{ background: "#E38043", color: "#fff" }}
+          className="text-xs px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0 bg-brand-orange text-white"
         >
           保存
         </button>
       )}
       {isPending && (
-        <span className="text-xs whitespace-nowrap" style={{ color: "#E38043" }}>保存中…</span>
+        <span className="text-xs whitespace-nowrap text-brand-orange">保存中…</span>
       )}
       {saved && !isPending && (
-        <span className="text-xs whitespace-nowrap" style={{ color: "#88C232" }}>✓</span>
+        <span className="text-xs whitespace-nowrap text-brand-green">✓</span>
       )}
     </div>
   );

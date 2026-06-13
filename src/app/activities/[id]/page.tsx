@@ -111,7 +111,7 @@ export default async function ActivityDetailPage({ params }: PageProps) {
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in">
       {/* ── 封面图 ──────────────────────────────────── */}
-      <div className="mb-6 rounded-xl overflow-hidden relative aspect-video" style={{ background: "#E6F0F8" }}>
+      <div className="mb-6 rounded-xl overflow-hidden relative aspect-video bg-brand-surface">
         <Image
           src={activity.coverImage || DEFAULT_COVER}
           alt={activity.title}
@@ -125,7 +125,7 @@ export default async function ActivityDetailPage({ params }: PageProps) {
       {/* ── 标题区 ──────────────────────────────────── */}
       <div className="space-y-3 mb-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#E6F0F8", color: "#3388BB" }}>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-brand-surface text-brand-blue">
             {TYPE_LABELS[activity.type] || activity.type}
           </span>
           <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -134,13 +134,13 @@ export default async function ActivityDetailPage({ params }: PageProps) {
                                                        "bg-yellow-100 text-yellow-700"
           }`}>{STATUS_LABELS[activity.status] || activity.status}</span>
           {isOngoing && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">进行中</span>}
-          {isUpcoming && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#FFF3E0", color: "#E38043" }}>即将开始</span>}
+          {isUpcoming && <span className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E0] text-brand-orange">即将开始</span>}
           {isPast    && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">已结束</span>}
         </div>
 
-        <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>{activity.title}</h1>
+        <h1 className="text-3xl font-bold text-brand-navy">{activity.title}</h1>
 
-        <p className="text-sm" style={{ color: "#777" }}>
+        <p className="text-sm text-brand-text-secondary">
           📅 {activity.startTime.toLocaleString("zh-CN")} ~ {activity.endTime.toLocaleString("zh-CN")}
           {activity.location ? ` · 📍 ${activity.location}` : ""}
           {activity.meetingUrl ? ` · 🔗 线上` : ""}
@@ -148,24 +148,24 @@ export default async function ActivityDetailPage({ params }: PageProps) {
         </p>
 
         {activity.summary && (
-          <p className="text-base" style={{ color: "#555" }}>
-            <RichContent text={activity.summary} />
-          </p>
+            <p className="text-base text-brand-text-body">
+              <RichContent text={activity.summary} />
+            </p>
         )}
       </div>
 
       {/* ── 详细描述 ────────────────────────────────── */}
       {activity.description && (
-        <div className="prose max-w-none mb-4" style={{ color: "#333" }}>
+        <div className="prose max-w-none mb-4 text-brand-text-heading">
           <RichContent text={activity.description} />
         </div>
       )}
 
       {/* ── 线上链接 ────────────────────────────────── */}
       {activity.meetingUrl && (
-        <div className="mb-6 p-4 rounded-xl border" style={{ borderColor: "#D0DEE8", background: "#F0F8FF" }}>
-          <span className="text-sm font-medium" style={{ color: "#25547A" }}>🔗 线上链接：</span>
-          <a href={activity.meetingUrl} target="_blank" rel="noreferrer" className="text-sm ml-1 hover:underline" style={{ color: "#3388BB" }}>{activity.meetingUrl}</a>
+        <div className="mb-6 p-4 rounded-xl border bg-[#F0F8FF] border-brand-border-subtle">
+          <span className="text-sm font-medium text-brand-navy">🔗 线上链接：</span>
+          <a href={activity.meetingUrl} target="_blank" rel="noreferrer" className="text-sm ml-1 hover:underline text-brand-blue">{activity.meetingUrl}</a>
         </div>
       )}
 
@@ -200,7 +200,7 @@ async function MeetingSection({
       {/* ── 管理员审核待处理的申请 ──────────────── */}
       {isAdmin && pendingProposals.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-3" style={{ color: "#E38043" }}>⏳ 待审核分享申请</h2>
+          <h2 className="text-xl font-semibold mb-3 text-brand-orange">⏳ 待审核分享申请</h2>
           <div className="space-y-3">
             {pendingProposals.map((p: any) => (
               <ReviewProposalForm
@@ -218,20 +218,20 @@ async function MeetingSection({
 
       {proposals.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-3" style={{ color: "#25547A" }}>📋 议程</h2>
+          <h2 className="text-xl font-semibold mb-3 text-brand-navy">📋 议程</h2>
           <div className="space-y-3">
             {proposals.map((p: any) => (
-              <div key={p.id} className="bg-white rounded-xl border p-4" style={{ borderColor: "#D0DEE8" }}>
+              <div key={p.id} className="bg-card rounded-xl border p-4 border-brand-border-subtle">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold" style={{ color: "#333" }}>{p.title}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: "#E6F0F8", color: "#3388BB" }}>
+                      <span className="font-semibold text-brand-text-heading">{p.title}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full shrink-0 bg-brand-surface text-brand-blue">
                         {p.proposalType === "SHARE" ? "分享" : "展示"}
                       </span>
                     </div>
-                    <p className="text-xs mt-1" style={{ color: "#777" }}>by {p.user.name}</p>
-                    {p.description && <p className="text-sm mt-1" style={{ color: "#555" }}>{p.description}</p>}
+                    <p className="text-xs mt-1 text-brand-text-secondary">by {p.user.name}</p>
+                    {p.description && <p className="text-sm mt-1 text-brand-text-body">{p.description}</p>}
                   </div>
                   {isAdmin && (
                     <DeleteProposalButton proposalId={p.id} />
@@ -244,32 +244,30 @@ async function MeetingSection({
       )}
 
       {(isOngoing || isUpcoming) && (
-        <section className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>📢 报名分享</h3>
+        <section className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+          <h3 className="font-semibold mb-3 text-brand-navy">📢 报名分享</h3>
           {userProposal ? (
             /* 已提交申请 — 显示状态 */
-            <div className="rounded-lg p-4" style={{ background: "#F0F6FA" }}>
+            <div className="rounded-lg p-4 bg-[#F0F6FA]">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-sm" style={{ color: "#333" }}>{userProposal.title}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={
-                  userProposal.status === "APPROVED"
-                    ? { background: "#E6F0F8", color: "#2E7D32" }
-                    : userProposal.status === "REJECTED"
-                    ? { background: "#FFEBEE", color: "#C62828" }
-                    : { background: "#FFF8E1", color: "#F57F17" }
-                }>
+                <span className="font-medium text-sm text-brand-text-heading">{userProposal.title}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  userProposal.status === "APPROVED" ? "bg-brand-surface text-green-800" :
+                  userProposal.status === "REJECTED" ? "bg-red-50 text-red-700" :
+                  "bg-[#FFF8E1] text-[#F57F17]"
+                }`}>
                   {userProposal.status === "APPROVED" ? "已通过" : userProposal.status === "REJECTED" ? "已拒绝" : "审核中"}
                 </span>
               </div>
-              {userProposal.description && <p className="text-xs" style={{ color: "#777" }}>{userProposal.description}</p>}
+              {userProposal.description && <p className="text-xs text-brand-text-secondary">{userProposal.description}</p>}
               {userProposal.status === "REJECTED" && userProposal.adminNote && (
-                <p className="text-xs mt-1" style={{ color: "#C62828" }}>审核意见：{userProposal.adminNote}</p>
+                <p className="text-xs mt-1 text-red-700">审核意见：{userProposal.adminNote}</p>
               )}
             </div>
           ) : (
             /* 未提交 — 显示表单 */
             <>
-              <p className="text-xs mb-3" style={{ color: "#777" }}>报名分享你的主题，经管理员审核后将列入议程。每人限提交一份。</p>
+              <p className="text-xs mb-3 text-brand-text-secondary">报名分享你的主题，经管理员审核后将列入议程。每人限提交一份。</p>
               <SubmitProposalForm activityId={activity.id} />
             </>
           )}
@@ -307,11 +305,11 @@ async function CourseSection({
   return (
     <div className="space-y-6" id="jam">
       {/* ── 阶段状态 & 课题 ──────────────────── */}
-      <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-lg font-bold" style={{ color: "#25547A" }}>📚 公开课</h2>
-            <p className="text-sm mt-1" style={{ color: "#777" }}>
+            <h2 className="text-lg font-bold text-brand-navy">📚 公开课</h2>
+            <p className="text-sm mt-1 text-brand-text-secondary">
               {isUpcoming && "报名组队中 · 课程尚未开始"}
               {isOngoing && "课程进行中 · 组队报名 · 提交讲题"}
               {isPast && "课程已结束 · 评审阶段"}
@@ -320,51 +318,50 @@ async function CourseSection({
           {isAdmin && (
             <Link
               href={`/activities/${activityId}/course/judging`}
-              className="text-xs px-3 py-1.5 rounded-lg border"
-              style={{ borderColor: "#D0DEE8", color: "#555" }}
+              className="text-xs px-3 py-1.5 rounded-lg border border-brand-border-subtle text-brand-text-body"
             >管理评审</Link>
           )}
         </div>
 
         {activity.theme && (
-          <div className="mt-4 p-4 rounded-lg" style={{ background: "#FFFDF7", border: "1px solid #FFF3E0" }}>
-            <p className="text-sm font-semibold" style={{ color: "#E38043" }}>📋 课题</p>
-            <p className="text-sm mt-1 whitespace-pre-wrap" style={{ color: "#555" }}>{activity.theme}</p>
+          <div className="mt-4 p-4 rounded-lg bg-[#FFFDF7] border border-[#FFF3E0]">
+            <p className="text-sm font-semibold text-brand-orange">📋 课题</p>
+            <p className="text-sm mt-1 whitespace-pre-wrap text-brand-text-body">{activity.theme}</p>
           </div>
         )}
       </div>
 
       {/* ── 我的队伍 ──────────────────────────── */}
+      {/* ── 我的队伍 ──────────────────────────── */}
       {myTeam ? (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold" style={{ color: "#25547A" }}>我的队伍：{myTeam.name}</h3>
+            <h3 className="font-semibold text-brand-navy">我的队伍：{myTeam.name}</h3>
             <Link
               href={`/activities/${activityId}/game-jam/teams/${myTeam.id}`}
-              className="text-xs px-3 py-1.5 rounded-lg text-white"
-              style={{ background: "#3388BB" }}
-            >管理队伍</Link>
+                className="text-xs px-3 py-1.5 rounded-lg text-white bg-brand-blue"
+              >管理队伍</Link>
           </div>
           <div className="flex flex-wrap gap-1.5 mb-3">
             {myTeam.members.map((m: any) => (
-              <span key={m.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
+              <span key={m.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-[#F0F6FA] text-brand-navy">
                 <UserAvatar src={m.user.image} name={m.user.name} size={24} />
                 {m.user.name}
-                {m.role === "LEADER" && <span style={{ color: "#E38043" }}>👑</span>}
+                {m.role === "LEADER" && <span className="text-brand-orange">👑</span>}
               </span>
             ))}
           </div>
 
           {/* 讲题设置（队长+进行中/未开始） */}
           {(isUpcoming || isOngoing) && myTeam.members.some((m: any) => m.role === "LEADER" && m.userId === userId) && (
-            <div className="p-3 rounded-lg mb-3" style={{ background: "#F0F6FA" }}>
-              <p className="text-xs font-medium mb-2" style={{ color: "#25547A" }}>📝 队伍讲题</p>
+            <div className="p-3 rounded-lg mb-3 bg-[#F0F6FA]">
+              <p className="text-xs font-medium mb-2 text-brand-navy">📝 队伍讲题</p>
               <EditTopicForm teamId={myTeam.id} activityId={activityId} currentTopic={myTeam.topic} />
             </div>
           )}
           {myTeam.topic && !myTeam.members.some((m: any) => m.role === "LEADER" && m.userId === userId) && (
-            <div className="p-3 rounded-lg mb-3" style={{ background: "#F0F6FA" }}>
-              <p className="text-xs" style={{ color: "#25547A" }}>📝 讲题：<span className="font-medium">{myTeam.topic}</span></p>
+            <div className="p-3 rounded-lg mb-3 bg-[#F0F6FA]">
+              <p className="text-xs text-brand-navy">📝 讲题：<span className="font-medium">{myTeam.topic}</span></p>
             </div>
           )}
 
@@ -380,17 +377,17 @@ async function CourseSection({
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>👥 组队报名</h3>
-
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+          <h3 className="font-semibold mb-3 text-brand-navy">👥 组队报名</h3>
+          
           {myInvitations.length > 0 && (
             <div className="mb-4 space-y-2">
-              <p className="text-xs font-medium" style={{ color: "#E38043" }}>你收到的队伍邀请：</p>
+              <p className="text-xs font-medium text-brand-orange">你收到的队伍邀请：</p>
               {myInvitations.map((inv: any) => (
-                <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "#F0F6FA" }}>
+                <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F0F6FA]">
                   <div>
-                    <span className="text-sm font-medium" style={{ color: "#25547A" }}>{inv.team.name}</span>
-                    <span className="text-xs ml-2" style={{ color: "#999" }}>来自 {inv.inviter.name}</span>
+                    <span className="text-sm font-medium text-brand-navy">{inv.team.name}</span>
+                    <span className="text-xs ml-2 text-brand-text-muted">来自 {inv.inviter.name}</span>
                   </div>
                   <InvitationButtons invitationId={inv.id} activityId={activityId} />
                 </div>
@@ -402,8 +399,7 @@ async function CourseSection({
             <div className="flex gap-3 flex-wrap">
               <Link
                 href={`/activities/${activityId}/game-jam/teams`}
-                className="text-sm px-4 py-2 rounded-lg text-white"
-                style={{ background: "#3388BB" }}
+                className="text-sm px-4 py-2 rounded-lg text-white bg-brand-blue"
               >查看队伍</Link>
               <CreateTeamForm activityId={activityId} />
             </div>
@@ -413,15 +409,14 @@ async function CourseSection({
 
       {/* ── 所有队伍 ───────────────────────────── */}
       {jamTeams.length > 0 && (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold" style={{ color: "#25547A" }}>
+            <h3 className="font-semibold text-brand-navy">
               👥 参赛队伍（{jamTeams.length}）
             </h3>
             <Link
               href={`/activities/${activityId}/game-jam/teams`}
-              className="text-xs hover:underline"
-              style={{ color: "#3388BB" }}
+              className="text-xs hover:underline text-brand-blue"
             >查看全部 →</Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -429,19 +424,20 @@ async function CourseSection({
               <Link
                 key={team.id}
                 href={`/activities/${activityId}/game-jam/teams/${team.id}`}
-                className="p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                style={{ border: `2px solid ${myTeam?.id === team.id ? "#3388BB" : "#D0DEE8"}` }}
+                className={`p-3 rounded-lg hover:bg-gray-50 transition-colors border-2 ${
+                  myTeam?.id === team.id ? "border-brand-blue" : "border-brand-border-subtle"
+                }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-medium text-sm truncate" style={{ color: "#25547A" }}>{team.name}</span>
+                  <span className="font-medium text-sm truncate text-brand-navy">{team.name}</span>
                   {myTeam?.id === team.id && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full text-white shrink-0 ml-1" style={{ background: "#3388BB", fontSize: "10px" }}>我的</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full text-white shrink-0 ml-1 bg-brand-blue text-[10px]">我的</span>
                   )}
                 </div>
                 {team.topic && (
-                  <p className="text-xs truncate mb-1" style={{ color: "#E38043" }}>📝 {team.topic}</p>
+                  <p className="text-xs truncate mb-1 text-brand-orange">📝 {team.topic}</p>
                 )}
-                <div className="flex items-center gap-2 text-xs" style={{ color: "#999" }}>
+                <div className="flex items-center gap-2 text-xs text-brand-text-muted">
                   <span>👑 {team.members.find((m: any) => m.role === "LEADER")?.user?.name || "?"}</span>
                   <span>· {team._count.members} 人</span>
                 </div>
@@ -450,7 +446,7 @@ async function CourseSection({
                     <UserAvatar key={m.id} src={m.user.image} name={m.user.name} size={24} />
                   ))}
                   {team._count.members > 5 && (
-                    <span className="text-xs self-center" style={{ color: "#999" }}>+{team._count.members - 5}</span>
+                    <span className="text-xs self-center text-brand-text-muted">+{team._count.members - 5}</span>
                   )}
                 </div>
               </Link>
@@ -459,13 +455,13 @@ async function CourseSection({
         </div>
       )}
 
-      {/* ── 评委列表 ───────────────────────────── */}
+      {/* ── 评委列表 ─────────────────────────── */}
       {jamJudges.length > 0 && (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>🎯 评委</h3>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+          <h3 className="font-semibold mb-3 text-brand-navy">🎯 评委</h3>
           <div className="flex flex-wrap gap-2">
             {jamJudges.map((j: any) => (
-              <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
+              <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA] text-brand-navy">
                 <UserAvatar src={j.user.image} name={j.user.name} size={24} /> {j.user.name}
               </span>
             ))}
@@ -478,8 +474,7 @@ async function CourseSection({
         <div className="text-center">
           <Link
             href={`/activities/${activityId}/course/judging`}
-            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold"
-            style={{ background: "linear-gradient(135deg, #3388BB, #55AADD)" }}
+            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold bg-gradient-to-br from-brand-blue to-[#55AADD]"
           >🎯 进入评审面板</Link>
         </div>
       )}
@@ -489,8 +484,7 @@ async function CourseSection({
         <div className="text-center">
           <Link
             href={`/activities/${activityId}/game-jam/results`}
-            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold"
-            style={{ background: "linear-gradient(135deg, #E38043, #FFB347)" }}
+            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold bg-gradient-to-br from-brand-orange to-[#FFB347]"
           >🏆 查看评分结果</Link>
         </div>
       )}
@@ -532,11 +526,11 @@ async function CompetitionSection({
   return (
     <div className="space-y-6" id="jam">
       {/* ── 阶段状态 & 题目 ──────────────────── */}
-      <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-lg font-bold" style={{ color: "#25547A" }}>🏆 Game Jam</h2>
-            <p className="text-sm mt-1" style={{ color: "#777" }}>
+            <h2 className="text-lg font-bold text-brand-navy">🏆 Game Jam</h2>
+            <p className="text-sm mt-1 text-brand-text-secondary">
               {isUpcoming && "报名组队中 · 比赛尚未开始"}
               {isOngoing && "比赛进行中 · 组队参赛 · 提交作品"}
               {isPast && "比赛已结束 · 评审阶段"}
@@ -546,8 +540,7 @@ async function CompetitionSection({
             {isAdmin && (
               <Link
                 href={`/activities/${activityId}/game-jam/judging`}
-                className="text-xs px-3 py-1.5 rounded-lg border"
-                style={{ borderColor: "#D0DEE8", color: "#555" }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-brand-border-subtle text-brand-text-body"
               >
                 管理评审
               </Link>
@@ -557,36 +550,36 @@ async function CompetitionSection({
 
         {/* 题目 */}
         {activity.theme && themeRevealed && (
-          <div className="mt-4 p-4 rounded-lg" style={{ background: "#FFFDF7", border: "1px solid #FFF3E0" }}>
-            <p className="text-sm font-semibold" style={{ color: "#E38043" }}>📋 比赛题目</p>
-            <p className="text-sm mt-1 whitespace-pre-wrap" style={{ color: "#555" }}>{activity.theme}</p>
+          <div className="mt-4 p-4 rounded-lg bg-[#FFFDF7] border border-[#FFF3E0]">
+            <p className="text-sm font-semibold text-brand-orange">📋 比赛题目</p>
+            <p className="text-sm mt-1 whitespace-pre-wrap text-brand-text-body">{activity.theme}</p>
           </div>
         )}
       </div>
 
       {/* ── 我的队伍 ──────────────────────────── */}
+      {/* ── 我的队伍 ──────────────────────────── */}
       {myTeam ? (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold" style={{ color: "#25547A" }}>我的队伍：{myTeam.name}</h3>
+            <h3 className="font-semibold text-brand-navy">我的队伍：{myTeam.name}</h3>
             <Link
               href={`/activities/${activityId}/game-jam/teams/${myTeam.id}`}
-              className="text-xs px-3 py-1.5 rounded-lg text-white"
-              style={{ background: "#3388BB" }}
+              className="text-xs px-3 py-1.5 rounded-lg text-white bg-brand-blue"
             >
               管理队伍
             </Link>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {myTeam.members.map((m: any) => (
-              <span key={m.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
+              <span key={m.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-[#F0F6FA] text-brand-navy">
                 <UserAvatar src={m.user.image} name={m.user.name} size={24} />
                 {m.user.name}
-                {m.role === "LEADER" && <span style={{ color: "#E38043" }}>👑</span>}
+                {m.role === "LEADER" && <span className="text-brand-orange">👑</span>}
               </span>
             ))}
             {myTeam._count.members < 5 && (
-              <span className="text-xs px-2 py-1 rounded-full" style={{ color: "#999", border: "1px dashed #D0DEE8" }}>
+              <span className="text-xs px-2 py-1 rounded-full text-brand-text-muted border border-dashed border-brand-border-subtle">
                 + 空位
               </span>
             )}
@@ -603,8 +596,7 @@ async function CompetitionSection({
               {isOngoing && (
                 <Link
                   href={`/activities/${activityId}/game-jam/submit`}
-                  className="text-xs px-3 py-1.5 rounded-lg text-white"
-                  style={{ background: "#25547A" }}
+                  className="text-xs px-3 py-1.5 rounded-lg text-white bg-brand-navy"
                 >
                   {jamSubmissions.some((s: any) => s.teamId === myTeam.id) ? "修改作品" : "提交作品"}
                 </Link>
@@ -613,18 +605,18 @@ async function CompetitionSection({
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>👥 组队参赛</h3>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+          <h3 className="font-semibold mb-3 text-brand-navy">👥 组队参赛</h3>
 
           {/* 待处理邀请 */}
           {myInvitations.length > 0 && (
             <div className="mb-4 space-y-2">
-              <p className="text-xs font-medium" style={{ color: "#E38043" }}>你收到的队伍邀请：</p>
+              <p className="text-xs font-medium text-brand-orange">你收到的队伍邀请：</p>
               {myInvitations.map((inv: any) => (
-                <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "#F0F6FA" }}>
+                <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F0F6FA]">
                   <div>
-                    <span className="text-sm font-medium" style={{ color: "#25547A" }}>{inv.team.name}</span>
-                    <span className="text-xs ml-2" style={{ color: "#999" }}>来自 {inv.inviter.name}</span>
+                    <span className="text-sm font-medium text-brand-navy">{inv.team.name}</span>
+                    <span className="text-xs ml-2 text-brand-text-muted">来自 {inv.inviter.name}</span>
                   </div>
                   <InvitationButtons invitationId={inv.id} activityId={activityId} />
                 </div>
@@ -636,8 +628,7 @@ async function CompetitionSection({
             <div className="flex gap-3 flex-wrap">
               <Link
                 href={`/activities/${activityId}/game-jam/teams`}
-                className="text-sm px-4 py-2 rounded-lg text-white"
-                style={{ background: "#3388BB" }}
+                className="text-sm px-4 py-2 rounded-lg text-white bg-brand-blue"
               >
                 查看队伍
               </Link>
@@ -649,15 +640,14 @@ async function CompetitionSection({
 
       {/* ── 所有参赛队伍 ───────────────────────── */}
       {jamTeams.length > 0 && (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold" style={{ color: "#25547A" }}>
+            <h3 className="font-semibold text-brand-navy">
               👥 参赛队伍（{jamTeams.length}）
             </h3>
             <Link
               href={`/activities/${activityId}/game-jam/teams`}
-              className="text-xs hover:underline"
-              style={{ color: "#3388BB" }}
+              className="text-xs hover:underline text-brand-blue"
             >
               查看全部 →
             </Link>
@@ -667,16 +657,17 @@ async function CompetitionSection({
               <Link
                 key={team.id}
                 href={`/activities/${activityId}/game-jam/teams/${team.id}`}
-                className="p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                style={{ border: `2px solid ${myTeam?.id === team.id ? "#3388BB" : "#D0DEE8"}` }}
+                className={`p-3 rounded-lg hover:bg-gray-50 transition-colors border-2 ${
+                  myTeam?.id === team.id ? "border-brand-blue" : "border-brand-border-subtle"
+                }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-medium text-sm truncate" style={{ color: "#25547A" }}>{team.name}</span>
+                  <span className="font-medium text-sm truncate text-brand-navy">{team.name}</span>
                   {myTeam?.id === team.id && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full text-white shrink-0 ml-1" style={{ background: "#3388BB", fontSize: "10px" }}>我的</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full text-white shrink-0 ml-1 bg-brand-blue">我的</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs" style={{ color: "#999" }}>
+                <div className="flex items-center gap-2 text-xs text-brand-text-muted">
                   <span>👑 {team.members.find((m: any) => m.role === "LEADER")?.user?.name || "?"}</span>
                   <span>· {team._count.members} 人</span>
                 </div>
@@ -685,7 +676,7 @@ async function CompetitionSection({
                     <UserAvatar key={m.id} src={m.user.image} name={m.user.name} size={24} />
                   ))}
                   {team._count.members > 5 && (
-                    <span className="text-xs self-center" style={{ color: "#999" }}>+{team._count.members - 5}</span>
+                    <span className="text-xs self-center text-brand-text-muted">+{team._count.members - 5}</span>
                   )}
                 </div>
               </Link>
@@ -694,13 +685,13 @@ async function CompetitionSection({
         </div>
       )}
 
-      {/* ── 评委列表 ───────────────────────────── */}
+      {/* ── 评委列表 ─────────────────────────── */}
       {jamJudges.length > 0 && (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>🎯 评委</h3>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+          <h3 className="font-semibold mb-3 text-brand-navy">🎯 评委</h3>
           <div className="flex flex-wrap gap-2">
             {jamJudges.map((j: any) => (
-              <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0F6FA", color: "#25547A" }}>
+              <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA] text-brand-navy">
                 <UserAvatar src={j.user.image} name={j.user.name} size={24} /> {j.user.name}
               </span>
             ))}
@@ -710,29 +701,27 @@ async function CompetitionSection({
 
       {/* ── 参赛作品 ───────────────────────────── */}
       {(isPast || isAdmin || isJudge) && jamSubmissions.length > 0 && (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>🎮 参赛作品（{jamSubmissions.length}）</h3>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+          <h3 className="font-semibold mb-3 text-brand-navy">🎮 参赛作品（{jamSubmissions.length}）</h3>
           <div className="grid gap-3">
             {jamSubmissions.map((sub: any) => (
               <div
                 key={sub.id}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                style={{ border: "1px solid #D0DEE8" }}
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors border border-brand-border-subtle"
               >
                 <Link
                   href={`/activities/${activityId}/game-jam/judging`}
                   className="flex-1 min-w-0"
                 >
-                  <span className="text-sm font-medium" style={{ color: "#25547A" }}>{sub.title}</span>
-                  <span className="text-xs ml-2" style={{ color: "#999" }}>— {sub.team?.name || "未知队伍"}</span>
+                  <span className="text-sm font-medium text-brand-navy">{sub.title}</span>
+                  <span className="text-xs ml-2 text-brand-text-muted">— {sub.team?.name || "未知队伍"}</span>
                 </Link>
                 <div className="flex items-center gap-3 shrink-0 ml-3">
                   {sub.projectId ? (
                     <Link
                       href={`/works/${sub.projectId}`}
                       target="_blank"
-                      className="text-xs hover:underline"
-                      style={{ color: "#3388BB" }}
+                      className="text-xs hover:underline text-brand-blue"
                     >
                       📚 作品页 →
                     </Link>
@@ -745,11 +734,11 @@ async function CompetitionSection({
                   )}
                   <div className="text-right min-w-[60px]">
                     {sub.scores.length > 0 ? (
-                      <span className="text-sm font-semibold" style={{ color: "#E38043" }}>
+                      <span className="text-sm font-semibold text-brand-orange">
                         {Math.round(sub.scores.reduce((a: number, b: any) => a + b.totalScore, 0) / sub.scores.length)} 分
                       </span>
                     ) : (
-                      <span className="text-xs" style={{ color: "#999" }}>待评分</span>
+                      <span className="text-xs text-brand-text-muted">待评分</span>
                     )}
                   </div>
                 </div>
@@ -764,8 +753,7 @@ async function CompetitionSection({
         <div className="text-center">
           <Link
             href={`/activities/${activityId}/game-jam/results`}
-            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold"
-            style={{ background: "linear-gradient(135deg, #E38043, #FFB347)" }}
+            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold bg-gradient-to-br from-brand-orange to-[#FFB347]"
           >🏆 查看比赛结果</Link>
         </div>
       )}
@@ -775,8 +763,7 @@ async function CompetitionSection({
         <div className="text-center">
           <Link
             href={`/activities/${activityId}/game-jam/judging`}
-            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold"
-            style={{ background: "linear-gradient(135deg, #3388BB, #55AADD)" }}
+            className="inline-block text-sm px-6 py-3 rounded-lg text-white font-semibold bg-gradient-to-br from-brand-blue to-[#55AADD]"
           >🎯 进入评审面板</Link>
         </div>
       )}
@@ -787,9 +774,9 @@ async function CompetitionSection({
 // ── 普通活动 ─────────────────────────────────────────────
 function GeneralSection({ activity }: { activity: any }) {
   return (
-    <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-      <h3 className="font-semibold mb-3" style={{ color: "#25547A" }}>活动说明</h3>
-      <p className="text-sm" style={{ color: "#555" }}>
+    <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+      <h3 className="font-semibold mb-3 text-brand-navy">活动说明</h3>
+      <p className="text-sm text-brand-text-body">
         请按时参加活动，如有疑问请联系管理员。
       </p>
     </div>

@@ -74,18 +74,17 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
   return (
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>用户管理</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">用户管理</h1>
         <Link href="/admin" className="btn-secondary px-4 py-2 rounded-lg text-sm">← 返回仪表盘</Link>
       </div>
 
       {/* 角色筛选 */}
-      <div className="bg-white rounded-xl border p-4 shadow-sm flex flex-wrap gap-2" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border p-4 shadow-sm flex flex-wrap gap-2 border-brand-border-subtle">
         {ROLES.map(r => {
           const active = role === r.value;
           return (
             <Link key={r.value} href={`/admin/users?role=${r.value}&page=1`}
-              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${active ? "font-medium" : ""}`}
-              style={active ? { background: "#25547A", color: "#fff" } : { color: "#555", background: "#F0F5F9" }}>
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${active ? "font-medium bg-brand-navy text-white" : "text-brand-text-body bg-brand-surface-page"}`}>
               {r.label}
             </Link>
           );
@@ -93,31 +92,31 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
       </div>
 
       {/* 用户列表 */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border shadow-sm overflow-hidden border-brand-border-subtle">
         {userWithCounts.length === 0 ? (
-          <div className="p-8 text-center text-sm" style={{ color: "#777" }}>暂无用户</div>
+          <div className="p-8 text-center text-sm text-brand-text-secondary">暂无用户</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
             <thead>
-              <tr className="border-b" style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
-                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>用户</th>
-                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>角色</th>
-                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>状态</th>
-                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>非成员</th>
-                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>作品数</th>
-                <th className="text-left p-3 font-medium" style={{ color: "#555" }}>注册时间</th>
-                <th className="text-right p-3 font-medium" style={{ color: "#555" }}>操作</th>
+              <tr className="border-b border-brand-border-subtle bg-brand-surface-page">
+                <th className="text-left p-3 font-medium text-brand-text-body">用户</th>
+                <th className="text-left p-3 font-medium text-brand-text-body">角色</th>
+                <th className="text-left p-3 font-medium text-brand-text-body">状态</th>
+                <th className="text-left p-3 font-medium text-brand-text-body">非成员</th>
+                <th className="text-left p-3 font-medium text-brand-text-body">作品数</th>
+                <th className="text-left p-3 font-medium text-brand-text-body">注册时间</th>
+                <th className="text-right p-3 font-medium text-brand-text-body">操作</th>
               </tr>
             </thead>
             <tbody>
               {userWithCounts.map(u => (
-                <tr key={u.id} className="border-b hover:bg-[#F0F5F9] transition-colors" style={{ borderColor: "#EEE" }}>
+                <tr key={u.id} className="border-b hover:bg-brand-surface-page transition-colors border-[#EEE]">
                   <td className="p-3">
-                    <div className="font-medium" style={{ color: "#333" }}>{u.name || "未命名"}</div>
-                    <div className="text-xs" style={{ color: "#777" }}>{u.email}</div>
+                    <div className="font-medium text-brand-text-heading">{u.name || "未命名"}</div>
+                    <div className="text-xs text-brand-text-secondary">{u.email}</div>
                     {u.emailVerified && (
-                      <span className="text-xs" style={{ color: "#88C232" }}>已验证</span>
+                      <span className="text-xs text-brand-green">已验证</span>
                     )}
                   </td>
                   <td className="p-3">
@@ -125,11 +124,11 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                   </td>
                   <td className="p-3">
                     {u.isActive ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#E8F5E9", color: "#2E7D32" }}>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--ui-bg-green-light)] text-[var(--ui-text-green)]">
                         正常
                       </span>
                     ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#FDE8E8", color: "#C62828" }}>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">
                         已停用
                       </span>
                     )}
@@ -139,13 +138,13 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                       <ConfirmedNotMemberCheckbox userId={u.id} value={u.confirmedNotMember} />
                     )}
                   </td>
-                  <td className="p-3 text-xs" style={{ color: "#777" }}>{u.projectCount}</td>
-                  <td className="p-3 text-xs" style={{ color: "#999" }}>
+                  <td className="p-3 text-xs text-brand-text-secondary">{u.projectCount}</td>
+                  <td className="p-3 text-xs text-brand-text-muted">
                     {new Date(u.createdAt).toLocaleDateString("zh-CN")}
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <Link href={`/profile?id=${u.id}`} className="text-xs hover:underline" style={{ color: "#3388BB" }}>查看</Link>
+                      <Link href={`/profile?id=${u.id}`} className="text-xs hover:underline text-brand-blue">查看</Link>
                       <ToggleActiveButton userId={u.id} isActive={u.isActive} />
                       <DeleteButton userId={u.id} userName={u.name || u.email} />
                     </div>
@@ -161,7 +160,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
       {totalPages > 1 && (
         <div className="flex justify-center gap-2">
           {page > 1 && <Link href={`/admin/users?role=${role}&page=${page - 1}`} className="btn-secondary px-3 py-1.5 rounded-lg text-sm">上一页</Link>}
-          <span className="px-3 py-1.5 text-sm" style={{ color: "#777" }}>{page} / {totalPages}</span>
+          <span className="px-3 py-1.5 text-sm text-brand-text-secondary">{page} / {totalPages}</span>
           {page < totalPages && <Link href={`/admin/users?role=${role}&page=${page + 1}`} className="btn-secondary px-3 py-1.5 rounded-lg text-sm">下一页</Link>}
         </div>
       )}

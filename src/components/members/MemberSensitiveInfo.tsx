@@ -44,16 +44,16 @@ function Inner({ data }: { data: SensitiveData }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
-      <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#25547A" }}>
+    <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
+      <h3 className="font-semibold mb-3 flex items-center gap-2 text-brand-navy">
         详细信息
-        <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#FDE8E8", color: "#C62828" }}>仅成员可见</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">仅成员可见</span>
       </h3>
       <dl className="space-y-2.5 text-sm">
         {items.map((item) => (
           <div key={item.label} className="flex justify-between">
-            <dt style={{ color: "#777" }}>{item.label}</dt>
-            <dd style={{ color: "#333" }}>{item.value}</dd>
+            <dt className="text-brand-text-secondary">{item.label}</dt>
+            <dd className="text-brand-text-heading">{item.value}</dd>
           </div>
         ))}
       </dl>

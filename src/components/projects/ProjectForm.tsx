@@ -72,10 +72,8 @@ export interface ProjectFormProps {
 
 // ── 通用样式 ──
 const inputClass =
-  "w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent transition-shadow";
-const inputStyle = { borderColor: "#D0DEE8", color: "#333" };
-const labelClass = "block text-sm font-medium mb-1.5";
-const labelStyle = { color: "#555" };
+  "w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent transition-shadow border-brand-border-subtle text-brand-text-heading";
+const labelClass = "block text-sm font-medium mb-1.5 text-brand-text-body";
 
 export default function ProjectForm({ mode, tags, initialData, projectStatus, onSubmit }: ProjectFormProps) {
   const [error, setError] = useState("");
@@ -371,10 +369,10 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
     return (
       <div className="animate-fade-in text-center py-16">
         <div className="text-5xl mb-4">{isReEdit ? "📝" : isResubmit ? "📤" : isEdit ? "✅" : "🎉"}</div>
-        <h2 className="text-2xl font-bold mb-2" style={{ color: "#25547A" }}>
+        <h2 className="text-2xl font-bold mb-2 text-brand-navy">
           {isReEdit ? "已提交重新审核" : isResubmit ? "重新提交成功！" : isEdit ? "保存成功！" : "提交成功！"}
         </h2>
-        <p className="mb-6" style={{ color: "#777" }}>
+        <p className="mb-6 text-brand-text-secondary">
           {isReEdit
             ? "你的作品已回到待审核状态，非成员将暂时无法查看。管理员审核通过后会重新公开。"
             : isResubmit
@@ -384,13 +382,12 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
             : "你的作品已提交审核，管理员会尽快处理。"}
         </p>
         {isEdit && initialData ? (
-          <a href={`/works/${initialData.slug || initialData.title}`} className="btn-primary px-6 py-2 rounded-lg text-sm inline-block"
-            style={{ background: "#3388BB", color: "#fff", padding: "0.5rem 1.5rem", borderRadius: "0.5rem" }}>
+          <a href={`/works/${initialData.slug || initialData.title}`} className="btn-primary bg-brand-blue text-white px-6 py-2 rounded-lg text-sm inline-block">
             返回作品页
           </a>
         ) : (
           <button onClick={() => setSuccess(false)}
-            className="px-6 py-2 rounded-lg text-sm text-white" style={{ background: "#3388BB" }}>
+            className="px-6 py-2 rounded-lg text-sm text-white bg-brand-blue">
             继续提交
           </button>
         )}
@@ -413,34 +410,34 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   return (
     <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
       {error && (
-        <div className="p-3 rounded-lg text-sm whitespace-pre-line" style={{ background: "#FDE8E8", color: "#C62828" }}>
+        <div className="p-3 rounded-lg text-sm whitespace-pre-line bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">
           {error}
         </div>
       )}
 
       {/* ═══════════════ 基本信息 ═══════════════ */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>📋 基本信息</h2>
+        <h2 className="text-lg font-semibold text-brand-navy">📋 基本信息</h2>
         <div>
-          <label className={labelClass} style={labelStyle}>作品名称 <span style={{ color: "#C62828" }}>*</span></label>
+          <label className={labelClass}>作品名称 <span className="text-[var(--ui-text-red)]">*</span></label>
           <input name="title" type="text" required maxLength={200} defaultValue={initialData?.title}
-            placeholder="给作品起个名字" className={inputClass} style={inputStyle} />
+            placeholder="给作品起个名字" className={inputClass} />
         </div>
         <div>
-          <label className={labelClass} style={labelStyle}>副标题</label>
+          <label className={labelClass}>副标题</label>
           <input name="subtitle" type="text" maxLength={300} defaultValue={initialData?.subtitle}
-            placeholder="可选副标题" className={inputClass} style={inputStyle} />
+            placeholder="可选副标题" className={inputClass} />
         </div>
         <div>
-          <label className={labelClass} style={labelStyle}>简介 <span style={{ color: "#C62828" }}>*</span></label>
+          <label className={labelClass}>简介 <span className="text-[var(--ui-text-red)]">*</span></label>
           <MentionEditor name="description" defaultValue={initialData?.description || ""}
             placeholder="介绍一下这个作品（至少 10 字）" rows={4} required minLength={10} maxLength={10000}
-            className={inputClass} style={inputStyle} />
+            className={inputClass} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass} style={labelStyle}>作品类型 <span style={{ color: "#C62828" }}>*</span></label>
-            <select name="type" required defaultValue={initialData?.type} className={inputClass} style={inputStyle}>
+            <label className={labelClass}>作品类型 <span className="text-[var(--ui-text-red)]">*</span></label>
+            <select name="type" required defaultValue={initialData?.type} className={inputClass}>
               <option value="">请选择类型</option>
               {PROJECT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
@@ -448,10 +445,10 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
             </select>
           </div>
           <div>
-            <label className={labelClass} style={labelStyle}>开发年份 <span style={{ color: "#C62828" }}>*</span></label>
+            <label className={labelClass}>开发年份 <span className="text-[var(--ui-text-red)]">*</span></label>
             <input name="developYear" type="number" required min={2000} max={new Date().getFullYear() + 1}
               defaultValue={initialData?.developYear ?? new Date().getFullYear()}
-              className={inputClass} style={inputStyle} />
+              className={inputClass} />
           </div>
         </div>
       </section>
@@ -460,23 +457,21 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
       {/* ═════════ 所获奖项 ═════════ */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🏆 所获奖项</h2>
+        <h2 className="text-lg font-semibold text-brand-navy">🏆 所获奖项</h2>
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <input type="text" value={awardInput} onChange={(e) => setAwardInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAward(); } }}
               placeholder="输入奖项名称，如：最佳创意奖"
-              className={inputClass} style={inputStyle} />
+              className={inputClass} />
           </div>
           <button type="button" onClick={addAward} disabled={!awardInput.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all"
-            style={{ background: "#88C232", color: "#fff" }}>添加</button>
+            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all bg-brand-green text-white">添加</button>
         </div>
         {awards.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {awards.map((a, i) => (
-              <span key={i} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full"
-                style={{ background: "rgba(251,191,36,0.15)", color: "#F59E0B" }}>
+              <span key={i} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full text-[#F59E0B] bg-[rgba(251,191,36,0.15)]">
                 🏆 {a}
                 <button type="button" onClick={() => removeAward(i)} className="hover:text-red-500 ml-0.5">×</button>
               </span>
@@ -486,7 +481,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🖼️ 封面图</h2>
+        <h2 className="text-lg font-semibold text-brand-navy">🖼️ 封面图</h2>
         <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
           onChange={async (e) => {
             const file = e.target.files?.[0];
@@ -518,34 +513,33 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         <div className="flex items-start gap-4">
           <div className="shrink-0">
             {coverPreview ? (
-              <img src={coverPreview} alt="封面预览" className="w-40 h-24 object-cover rounded-lg border" style={{ borderColor: "#D0DEE8" }} />
+              <img src={coverPreview} alt="封面预览" className="w-40 h-24 object-cover rounded-lg border border-brand-border-subtle" />
             ) : (
-              <div className="w-40 h-24 flex items-center justify-center rounded-lg border border-dashed"
-                style={{ borderColor: "#D0DEE8", background: "#F0F5F9" }}>
-                <span className="text-xs" style={{ color: "#999" }}>暂无封面</span>
+              <div className="w-40 h-24 flex items-center justify-center rounded-lg border border-dashed border-brand-border-subtle bg-brand-surface-page">
+                <span className="text-xs text-brand-text-muted">暂无封面</span>
               </div>
             )}
           </div>
           <div className="flex-1 space-y-1">
             <button type="button" onClick={() => coverFileRef.current?.click()} disabled={coverUploading}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "#3388BB" }}>
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 bg-brand-blue">
               {coverUploading ? "上传中..." : coverPreview ? "更换封面" : "选择封面图"}
             </button>
-            {coverPreview && <span className="text-xs ml-2" style={{ color: "#88C232" }}>✓ 已上传</span>}
-            {coverError && <p className="text-xs" style={{ color: "#E38043" }}>{coverError}</p>}
+            {coverPreview && <span className="text-xs ml-2 text-brand-green">✓ 已上传</span>}
+            {coverError && <p className="text-xs text-brand-orange">{coverError}</p>}
           </div>
         </div>
       </section>
 
       {/* ═══════════════ 作品截图 ═══════════════ */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>📸 作品截图 ({screenshots.length}/3)</h2>
+        <h2 className="text-lg font-semibold text-brand-navy">📸 作品截图 ({screenshots.length}/3)</h2>
         <input ref={screenshotFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
           onChange={handleScreenshotUpload} />
         {screenshots.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {screenshots.map((img, i) => (
-              <div key={i} className="relative group rounded-lg overflow-hidden border" style={{ borderColor: "#D0DEE8" }}>
+              <div key={i} className="relative group rounded-lg overflow-hidden border border-brand-border-subtle">
                 <img src={img.url} alt={img.altText || `截图 ${i + 1}`} className="w-full aspect-video object-cover" />
                 <button type="button" onClick={() => removeScreenshot(i)}
                   className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
@@ -557,18 +551,17 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         <div>
           <button type="button" onClick={() => screenshotFileRef.current?.click()}
             disabled={screenshotUploading || screenshots.length >= 3}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-all"
-            style={{ background: "#3388BB", color: "#fff" }}>
+            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-all bg-brand-blue text-white">
             {screenshotUploading ? "上传中..." : screenshots.length >= 3 ? "已达到上限" : "+ 添加截图"}
           </button>
-          {screenshotError && <p className="text-xs mt-1" style={{ color: "#E38043" }}>{screenshotError}</p>}
-          <p className="text-xs mt-1" style={{ color: "#999" }}>最多 3 张，支持 JPG/PNG/WebP 格式</p>
+          {screenshotError && <p className="text-xs mt-1 text-brand-orange">{screenshotError}</p>}
+          <p className="text-xs mt-1 text-brand-text-muted">最多 3 张，支持 JPG/PNG/WebP 格式</p>
         </div>
       </section>
 
       {/* ═══════════════ 制作成员 ═══════════════ */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>👥 制作成员</h2>
+        <h2 className="text-lg font-semibold text-brand-navy">👥 制作成员</h2>
 
         {/* 统一添加行：姓名搜索 → 职位多选 → 添加按钮 */}
         <div className="flex flex-col gap-2" ref={memberDropdownRef}>
@@ -580,10 +573,9 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                 if (e.key === "Enter") { e.preventDefault(); addExternalMember(); }
               }}
               placeholder="搜索社团成员或输入外部成员姓名…"
-              className={inputClass} style={inputStyle} />
+              className={inputClass} />
             {showMemberDropdown && memberResults.length > 0 && (
-              <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto"
-                style={{ borderColor: "#D0DEE8" }}>
+              <div className="absolute z-20 mt-1 w-full bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto border-brand-border-subtle">
                 {memberResults.map((m: any) => (
                   <button key={m.id} type="button" onClick={() => {
                     setMemberQuery(m.displayName);
@@ -595,8 +587,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     <span className="w-6 h-6 rounded-full bg-[#E38043] text-white text-xs flex items-center justify-center flex-shrink-0">
                       {m.displayName.charAt(0)}
                     </span>
-                    <span style={{ color: "#333" }}>{m.displayName}</span>
-                    <span className="text-xs ml-auto" style={{ color: "#999" }}>
+                    <span className="text-brand-text-heading">{m.displayName}</span>
+                    <span className="text-xs ml-auto text-brand-text-muted">
                       {m.grade && `${m.grade}`}
                       {Array.isArray(m.skills) && m.skills.length > 0 && ` · ${m.skills.slice(0, 3).join("、")}`}
                     </span>
@@ -614,9 +606,9 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     setSelectedRoles((prev) => active ? prev.filter((x) => x !== r) : [...prev, r]);
                   }}
                     className={`text-xs px-2 py-1 rounded-full border transition-all cursor-pointer ${active
-                      ? "border-[#88C232] text-white"
-                      : "border-[#D0DEE8] text-gray-500 bg-white hover:border-[#88C232]"}`}
-                    style={active ? { background: "#88C232" } : undefined}>
+                      ? "border-[#88C232] text-white bg-brand-green"
+                      : "border-[#D0DEE8] text-gray-500 bg-card hover:border-[#88C232]"}`}
+                    >
                     {r}
                   </button>
                 );
@@ -624,23 +616,20 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
               {showCustomRole ? (
                 <input type="text" value={customRoleInput} onChange={(e) => setCustomRoleInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addExternalMember(); } }}
-                  placeholder="自定义职位" className="text-xs px-2 py-1 rounded-full border w-28 focus:outline-none"
-                  style={{ borderColor: "#88C232", color: "#333" }} autoFocus />
+                  placeholder="自定义职位"                   className="text-xs px-2 py-1 rounded-full border w-28 focus:outline-none border-brand-green text-brand-text-heading" autoFocus />
               ) : (
                 <button type="button" onClick={() => setShowCustomRole(true)}
-                  className="text-xs px-2 py-1 rounded-full border border-dashed bg-white hover:border-[#88C232] transition-colors cursor-pointer"
-                  style={{ borderColor: "#D0DEE8", color: "#999" }}>+ 自定义</button>
+                  className="text-xs px-2 py-1 rounded-full border border-dashed bg-card hover:border-[#88C232] transition-colors cursor-pointer border-brand-border-subtle text-brand-text-muted">+ 自定义</button>
               )}
             </div>
             <button type="button" onClick={() => {
               const m = (memberDropdownRef.current as any).__selectedMember;
               if (m) { addMemberFromSearch(m); } else { addExternalMember(); }
             }} disabled={!memberQuery.trim()}
-              className="px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 transition-all whitespace-nowrap"
-              style={{ background: "#88C232", color: "#fff" }}>+ 添加</button>
+              className="px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 transition-all whitespace-nowrap bg-brand-green text-white">+ 添加</button>
           </div>
         </div>
-        <p className="text-xs" style={{ color: "#999" }}>输入姓名搜索社团成员并选择，或直接输入外部成员姓名后点击添加</p>
+        <p className="text-xs text-brand-text-muted">输入姓名搜索社团成员并选择，或直接输入外部成员姓名后点击添加</p>
 
         {selectedMembers.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -649,12 +638,13 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
               const isUser = !!m.userId;
               const isExternal = !isMember && !isUser;
               return (
-              <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
-                style={isMember
-                  ? { background: "rgba(37,84,122,0.1)", color: "#25547A" }
+              <span key={i} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${
+                isMember
+                  ? "bg-brand-navy/10 text-brand-navy"
                   : isUser
-                  ? { background: "rgba(51,136,187,0.1)", color: "#3388BB" }
-                  : { background: "rgba(227,128,67,0.1)", color: "#E38043" }}>
+                  ? "bg-brand-blue/10 text-brand-blue"
+                  : "bg-brand-orange/10 text-brand-orange"
+              }`}>
                 {isMember
                   ? <span className="w-4 h-4 rounded-full bg-[#E38043] text-white text-[10px] flex items-center justify-center">{m.displayName.charAt(0)}</span>
                   : isUser
@@ -672,15 +662,15 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
       {/* ═══════════════ 外部链接 ═══════════════ */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🔗 外部链接</h2>
-        <p className="text-xs" style={{ color: "#999" }}>添加作品相关链接（Steam、itch.io、官网、网盘等），可自由组合</p>
+        <h2 className="text-lg font-semibold text-brand-navy">🔗 外部链接</h2>
+        <p className="text-xs text-brand-text-muted">添加作品相关链接（Steam、itch.io、官网、网盘等），可自由组合</p>
         {links.length > 0 && (
           <div className="space-y-1.5">
             {links.map((link, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2 bg-[#F0F5F9] rounded-lg text-sm">
-                <span className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0" style={{ background: "#25547A", color: "#fff" }}>{link.label}</span>
-                <span className="truncate flex-1" style={{ color: "#3388BB" }}>{link.url}</span>
-                <button type="button" onClick={() => removeLink(i)} className="text-xs flex-shrink-0 hover:text-red-500" style={{ color: "#999" }}>移除</button>
+                <span className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 bg-brand-navy text-white">{link.label}</span>
+                <span className="truncate flex-1 text-brand-blue">{link.url}</span>
+                <button type="button" onClick={() => removeLink(i)} className="text-xs flex-shrink-0 hover:text-red-500 text-brand-text-muted">移除</button>
               </div>
             ))}
           </div>
@@ -691,7 +681,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
               const v = e.target.value;
               if (v === "__custom__") { setShowCustomLabel(true); setNewLinkLabel(""); }
               else setNewLinkLabel(v);
-            }} className={`${inputClass} w-36`} style={inputStyle}>
+            }} className={`${inputClass} w-36`}>
               <option value="">选择类型</option>
               {LINK_LABEL_PRESETS.map((l) => <option key={l} value={l}>{l}</option>)}
               <option value="__custom__">自定义...</option>
@@ -700,23 +690,22 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
             <div className="flex items-center gap-1">
               <input type="text" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
-                placeholder="链接标签" className={`${inputClass} w-36`} style={inputStyle} />
+                placeholder="链接标签" className={`${inputClass} w-36`} />
               <button type="button" onClick={() => { setShowCustomLabel(false); setNewLinkLabel(""); }}
-                className="text-xs px-2 py-1.5 rounded hover:bg-gray-100 whitespace-nowrap" style={{ color: "#3388BB" }}>← 预设</button>
+                className="text-xs px-2 py-1.5 rounded hover:bg-gray-100 whitespace-nowrap text-brand-blue">← 预设</button>
             </div>
           )}
           <input type="url" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
-            placeholder="https://..." className={`${inputClass} flex-1 min-w-[200px]`} style={inputStyle} />
+            placeholder="https://..." className={`${inputClass} flex-1 min-w-[200px]`} />
           <button type="button" onClick={addLink} disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all"
-            style={{ background: "#88C232", color: "#fff" }}>添加</button>
+            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all bg-brand-green text-white">添加</button>
         </div>
       </section>
 
       {/* ═══════════════ 标签 ═══════════════ */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>🏷️ 标签</h2>
+        <h2 className="text-lg font-semibold text-brand-navy">🏷️ 标签</h2>
         {tags.length > 0 && (
           (() => {
             const grouped = tags.reduce<Record<string, Tag[]>>((acc, tag) => {
@@ -739,8 +728,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     const active = selectedTags.includes(tag.id);
                     return (
                       <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                        className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"}`}
-                        style={{ backgroundColor: active ? "rgba(136,194,50,0.15)" : "rgba(136,194,50,0.08)", color: "#88C232" }}>
+                        className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"} bg-brand-green/15 text-brand-green`}
+                        >
                         {tag.name}
                       </button>
                     );
@@ -752,14 +741,14 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
               <div className="space-y-3">
                 {sortedKeys.map((group) => (
                   <div key={group}>
-                    <h3 className="text-xs font-medium mb-1.5" style={{ color: "#999" }}>{group}</h3>
+                    <h3 className="text-xs font-medium mb-1.5 text-brand-text-muted">{group}</h3>
                     <div className="flex flex-wrap gap-2">
                       {grouped[group].map((tag) => {
                         const active = selectedTags.includes(tag.id);
                         return (
                           <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                            className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"}`}
-                            style={{ backgroundColor: active ? "rgba(136,194,50,0.15)" : "rgba(136,194,50,0.08)", color: "#88C232" }}>
+                            className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-[#88C232]" : "opacity-60 hover:opacity-100"} text-brand-green ${active ? "bg-brand-green/15" : "bg-brand-green/10"}`}
+                          >
                             {tag.name}
                           </button>
                         );
@@ -774,8 +763,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         {customTags.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {customTags.map((name) => (
-              <span key={name} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full"
-                style={{ background: "rgba(227,128,67,0.15)", color: "#E38043" }}>
+              <span key={name} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full bg-brand-orange/15 text-brand-orange">
                 {name}
                 <button type="button" onClick={() => removeCustomTag(name)} className="hover:text-red-500">×</button>
               </span>
@@ -785,26 +773,24 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         <div className="flex gap-2">
           <input type="text" value={customTagInput} onChange={(e) => setCustomTagInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
-            placeholder="输入自定义标签，回车添加" className={`${inputClass} max-w-xs`} style={inputStyle} />
+            placeholder="输入自定义标签，回车添加" className={`${inputClass} max-w-xs`} />
           <button type="button" onClick={addCustomTag} disabled={!customTagInput.trim()}
-            className="px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-40"
-            style={{ background: "#E38043", color: "#fff" }}>添加</button>
+            className="px-3 py-2 rounded-lg text-xs font-medium disabled:opacity-40 bg-brand-orange text-white">添加</button>
         </div>
       </section>
 
       {/* ═══════════════ 提交 ═══════════════ */}
       <div className="flex items-center gap-3 pt-2">
         <button type="submit" disabled={loading}
-          className="px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white"
-          style={{ background: "#3388BB" }}>
+          className="px-6 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white bg-brand-blue">
           {loading
             ? (isResubmit ? "重新提交中..." : isEdit ? "保存中..." : "提交中...")
             : (isResubmit ? "重新提交" : isEdit ? "保存修改" : "提交作品")}
         </button>
         {isEdit && initialData ? (
-          <a href={`/works/${initialData.slug || initialData.title}`} className="text-sm" style={{ color: "#999" }}>取消</a>
+          <a href={`/works/${initialData.slug || initialData.title}`} className="text-sm text-brand-text-muted">取消</a>
         ) : (
-          <span className="text-xs" style={{ color: "#999" }}>{isResubmit ? "重新提交审核，管理员将通过或驳回" : "提交后状态为\"待审核\"，管理员通过后即可公开展示"}</span>
+          <span className="text-xs text-brand-text-muted">{isResubmit ? "重新提交审核，管理员将通过或驳回" : "提交后状态为\"待审核\"，管理员通过后即可公开展示"}</span>
         )}
       </div>
     </form>

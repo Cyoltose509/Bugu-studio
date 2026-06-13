@@ -91,18 +91,15 @@ export default async function ProjectEditPage({ params }: PageProps) {
   return (
     <div className="container mx-auto px-4 py-10 max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>
+        <h1 className="text-3xl font-bold text-brand-navy">
           编辑作品
         </h1>
-        <p className="mt-2" style={{ color: "#777" }}>
+        <p className="mt-2 text-brand-text-secondary">
           编辑「{project.title}」的信息
         </p>
       </div>
 
-      <div
-        className="bg-white rounded-xl border shadow-sm p-6"
-        style={{ borderColor: "#D0DEE8" }}
-      >
+      <div className="bg-card rounded-xl border shadow-sm p-6 border-brand-border-subtle">
         <ProjectEditForm
           projectId={project.id}
           projectStatus={project.status}

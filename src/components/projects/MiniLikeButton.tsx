@@ -45,11 +45,7 @@ export default function MiniLikeButton({ projectId, initialCount, initialLiked =
     <button
       onClick={toggle}
       disabled={loading}
-      className="inline-flex items-center gap-1 text-xs rounded-full px-1.5 py-0.5 transition-colors cursor-pointer"
-      style={{
-        background: liked ? "rgba(227,128,67,0.12)" : "transparent",
-        color: loading ? "#ccc" : (liked ? "#E38043" : "#bbb"),
-      }}
+      className={`inline-flex items-center gap-1 text-xs rounded-full px-1.5 py-0.5 transition-colors cursor-pointer ${liked ? "bg-brand-orange/10" : "bg-transparent"} ${loading ? "text-[#ccc]" : liked ? "text-brand-orange" : "text-[#bbb]"}`}
       title={loading ? (liked ? "取消点赞中…" : "点赞中…") : (liked ? "取消点赞" : "点赞")}
       type="button"
     >

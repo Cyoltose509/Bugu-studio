@@ -33,10 +33,10 @@ function Inner({ experiences }: { experiences: WorkExperienceItem[] }) {
   if (experiences.length === 0) return null;
 
   return (
-    <div className="rounded-xl p-5 border" style={{ background: "#F0F5F9", borderColor: "#D0DEE8" }}>
-      <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "#25547A" }}>
+    <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
+      <h3 className="font-semibold mb-3 flex items-center gap-2 text-brand-navy">
         经历
-        <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "#FDE8E8", color: "#C62828" }}>仅成员可见</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">仅成员可见</span>
       </h3>
       <div className="space-y-3">
         {experiences.map((exp) => {
@@ -46,13 +46,12 @@ function Inner({ experiences }: { experiences: WorkExperienceItem[] }) {
           const isStudy = exp.type === "学习";
           return (
             <div key={exp.id} className="flex items-start gap-3">
-              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 mt-0.5"
-                    style={{ background: isStudy ? "#E6F0F8" : "#FFF3E0", color: isStudy ? "#3388BB" : "#E38043" }}>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 mt-0.5 ${isStudy ? "bg-brand-surface text-brand-blue" : "bg-[#FFF3E0] text-brand-orange"}`}>
                 {isStudy ? "学习" : "工作"}
               </span>
               <div className="text-sm min-w-0">
-                <div className="font-medium" style={{ color: "#333" }}>{exp.company}</div>
-                <div className="text-xs" style={{ color: "#777" }}>
+                <div className="font-medium text-brand-text-heading">{exp.company}</div>
+                <div className="text-xs text-brand-text-secondary">
                   {exp.position} · {period}
                 </div>
               </div>

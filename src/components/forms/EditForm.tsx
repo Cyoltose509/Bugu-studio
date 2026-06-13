@@ -330,12 +330,11 @@ export default function EditForm({
                     }
                     formAction(fd);
                 }}
-                className="space-y-6 bg-white p-6 rounded-xl border"
-                style={{borderColor: "#D0DEE8"}}
+                className="space-y-6 bg-card p-6 rounded-xl border border-brand-border-subtle"
             >
                 {/* ══════════ 基本信息 ══════════ */}
-                <div className="border-b pb-6" style={{borderColor: "#E8F0F8"}}>
-                  <h3 className="text-sm font-semibold mb-4" style={{color: "#25547A"}}>基本信息</h3>
+                <div className="border-b pb-6 border-brand-border-subtle">
+                  <h3 className="text-sm font-semibold mb-4 text-brand-navy">基本信息</h3>
                   {/* 头像 */}
                   <div className="flex items-center gap-6 mb-5">
                     <div className="shrink-0">
@@ -343,25 +342,23 @@ export default function EditForm({
                             <img
                                 src={avatarPreview}
                                 alt="头像预览"
-                                className="w-20 h-20 rounded-full object-cover border-2"
-                                style={{borderColor: "#3388BB"}}
+                                className="w-20 h-20 rounded-full object-cover border-2 border-brand-blue"
                             />
                         ) : (
                             <div
-                                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold"
-                                style={{background: "#25547A"}}
+                                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold bg-brand-navy"
                             >
                                 {(user.name ?? "用")[0]}
                             </div>
                         )}
                     </div>
                     <div className="flex-1 space-y-1">
-                        <p className="text-sm" style={{color: "#555"}}>
+                        <p className="text-sm text-brand-text-body">
                             头像{" "}
                             {avatarCooldown.canEdit ? (
-                                <span className="text-xs" style={{color: "#999"}}>(7天内只能更换一次)</span>
+                                <span className="text-xs text-brand-text-muted">(7天内只能更换一次)</span>
                             ) : (
-                                <span className="text-xs font-medium" style={{color: "#E38043"}}>
+                                <span className="text-xs font-medium text-brand-orange">
                   冷却中 — {avatarCooldown.remainingDays} 天后可更换
                 </span>
                             )}
@@ -378,24 +375,23 @@ export default function EditForm({
                                 type="button"
                                 onClick={() => fileRef.current?.click()}
                                 disabled={avatarUploading || !avatarCooldown.canEdit}
-                                className="px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50"
-                                style={{background: avatarCooldown.canEdit ? "#3388BB" : "#999"}}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 ${avatarCooldown.canEdit ? "bg-brand-blue" : "bg-muted"}`}
                             >
                                 {avatarUploading ? "处理中..." : "更换头像"}
                             </button>
                             {avatarSuccess && (
-                                <span className="text-xs" style={{color: "#88C232"}}>✓ {avatarSuccess}</span>
+                                <span className="text-xs text-brand-green">✓ {avatarSuccess}</span>
                             )}
                         </div>
                         {avatarError && (
-                            <p className="text-xs" style={{color: "#E38043"}}>{avatarError}</p>
+                            <p className="text-xs text-brand-orange">{avatarError}</p>
                         )}
                     </div>
                 </div>
 
                 {/* 姓名 */}
                 <div>
-                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="name">
+                    <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="name">
                         显示名称
                     </label>
                     <input
@@ -404,14 +400,13 @@ export default function EditForm({
                         value={nameValue}
                         onChange={(e) => setNameValue(e.target.value)}
                         required
-                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                        className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                     />
                 </div>
 
                 {/* 个人介绍 — 所有用户可编辑 */}
                 <div>
-                    <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="bio">
+                    <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="bio">
                         个人介绍
                     </label>
                     <MentionEditor
@@ -421,8 +416,7 @@ export default function EditForm({
                         onChange={setBioValue}
                         rows={4}
                         placeholder="介绍一下自己..."
-                        className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                        className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                     />
                 </div>
                 </div>
@@ -431,19 +425,18 @@ export default function EditForm({
                 {member && (
                     <>
                         {/* ── 联系方式 ── */}
-                        <div className="border-b pb-6" style={{borderColor: "#E8F0F8"}}>
-                          <h3 className="text-sm font-semibold mb-4" style={{color: "#25547A"}}>联系方式与所在地</h3>
+                        <div className="border-b pb-6 border-brand-border-subtle">
+                          <h3 className="text-sm font-semibold mb-4 text-brand-navy">联系方式与所在地</h3>
                         {/* 所在地 */}
                         <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="location">
-                                所在地 <span className="text-xs" style={{color: "#999"}}>(省份或国家)</span>
+                            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="location">
+                                所在地 <span className="text-xs text-brand-text-muted">(省份或国家)</span>
                             </label>
                             <input
                                 id="location"
                                 value={locationValue}
                                 onChange={(e) => setLocationValue(e.target.value)}
-                                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                                className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                 placeholder="如：广东 / 北京 / 日本"
                             />
                         </div>
@@ -451,47 +444,41 @@ export default function EditForm({
                         {/* 联系方式 — 三列 */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="phone">
+                                <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="phone">
                                     电话
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                          style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">敏感</span>
                                 </label>
                                 <input
                                     id="phone"
                                     value={phoneValue}
                                     onChange={(e) => setPhoneValue(e.target.value)}
-                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                     placeholder="手机号"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="wechat">
+                                <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="wechat">
                                     微信
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                          style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">敏感</span>
                                 </label>
                                 <input
                                     id="wechat"
                                     value={wechatValue}
                                     onChange={(e) => setWechatValue(e.target.value)}
-                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                     placeholder="微信号"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="qq">
+                                <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="qq">
                                     QQ
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                          style={{background: "#FDE8E8", color: "#C62828"}}>敏感</span>
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">敏感</span>
                                 </label>
                                 <input
                                     id="qq"
                                     value={qqValue}
                                     onChange={(e) => setQqValue(e.target.value)}
-                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                     placeholder="QQ号"
                                 />
                             </div>
@@ -500,8 +487,8 @@ export default function EditForm({
 
                         {/* 成员简介 */}
                         <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="memberBio">
-                                成员简介 <span className="text-xs" style={{color: "#999"}}>(社团成员页展示，如留空则使用上方个人介绍)</span>
+                            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="memberBio">
+                                成员简介 <span className="text-xs text-brand-text-muted">(社团成员页展示，如留空则使用上方个人介绍)</span>
                             </label>
                             <MentionEditor
                                 id="memberBio"
@@ -509,15 +496,14 @@ export default function EditForm({
                                 defaultValue={member.bio ?? ""}
                                 rows={4}
                                 placeholder="在成员页面展示的简介..."
-                                className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                                className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                             />
                         </div>
 
                         {/* 毕业情况、入社年份、年级 — 紧凑三列 */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm mb-1.5" style={{color: "#555"}}>
+                                <label className="block text-sm mb-1.5 text-brand-text-body">
                                     毕业情况
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer select-none pt-2">
@@ -525,22 +511,20 @@ export default function EditForm({
                                         type="checkbox"
                                         checked={graduatedVal}
                                         onChange={(e) => setGraduatedVal(e.target.checked)}
-                                        className="w-4 h-4 rounded"
-                                        style={{accentColor: "#3388BB"}}
+                                        className="w-4 h-4 rounded accent-brand-blue"
                                     />
-                                    <span className="text-sm" style={{color: "#333"}}>已毕业</span>
+                                    <span className="text-sm text-brand-text-heading">已毕业</span>
                                 </label>
                             </div>
                             <div>
-                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="joinYear">
+                                <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="joinYear">
                                     入社年份
                                 </label>
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
                                         onClick={() => setJoinYearVal(Math.max(2000, (joinYearVal ?? 2024) - 1))}
-                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
                                     >-</button>
                                     <input
                                         id="joinYear"
@@ -549,28 +533,25 @@ export default function EditForm({
                                         onChange={(e) => setJoinYearVal(e.target.value ? Number(e.target.value) : null)}
                                         min={2000}
                                         max={2100}
-                                        className="w-20 text-center rounded-lg bg-white border px-2 py-2 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        className="w-20 text-center rounded-lg bg-card border px-2 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent text-sm border-brand-border-subtle text-brand-text-heading"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setJoinYearVal(Math.min(2100, (joinYearVal ?? 2024) + 1))}
-                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
                                     >+</button>
-                                    <span className="text-xs flex-shrink-0" style={{color: "#777"}}>{joinYearVal != null ? `${joinYearVal}年` : "未设置"}</span>
+                                    <span className="text-xs flex-shrink-0 text-brand-text-secondary">{joinYearVal != null ? `${joinYearVal}年` : "未设置"}</span>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="grade">
+                                <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="grade">
                                     年级
                                 </label>
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
                                         onClick={() => setGradeValue(Math.max(2000, (gradeValue ?? 2024) - 1))}
-                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
                                     >-</button>
                                     <input
                                         id="grade"
@@ -579,16 +560,14 @@ export default function EditForm({
                                         onChange={(e) => setGradeValue(e.target.value ? Number(e.target.value) : null)}
                                         min={2000}
                                         max={2100}
-                                        className="w-20 text-center rounded-lg bg-white border px-2 py-2 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        className="w-20 text-center rounded-lg bg-card border px-2 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent text-sm border-brand-border-subtle text-brand-text-heading"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setGradeValue(Math.min(2100, (gradeValue ?? 2024) + 1))}
-                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0"
-                                        style={{borderColor: "#D0DEE8", color: "#333"}}
+                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
                                     >+</button>
-                                    <span className="text-xs flex-shrink-0" style={{color: "#777"}}>{gradeValue != null ? `${gradeValue}级` : "未设置"}</span>
+                                    <span className="text-xs flex-shrink-0 text-brand-text-secondary">{gradeValue != null ? `${gradeValue}级` : "未设置"}</span>
                                 </div>
                             </div>
                         </div>
@@ -596,52 +575,46 @@ export default function EditForm({
                         {/* 真名、学院/工作所在地、专业/岗位 — 三列（仿手机号/微信/QQ） */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="realName">
+                                <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="realName">
                                     真名
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                          style={{background: "#FDE8E8", color: "#C62828"}}
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
                                           title="仅成员可见">敏感</span>
                                 </label>
                                 <input
                                     id="realName"
                                     value={realNameVal}
                                     onChange={(e) => setRealNameVal(e.target.value)}
-                                    className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                     placeholder="真实姓名"
                                 />
                             </div>
                             {!graduatedVal ? (
                                 <>
                                     <div>
-                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="college">
+                                        <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="college">
                                             学院
-                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
                                                   title="仅成员可见">敏感</span>
                                         </label>
                                         <input
                                             id="college"
                                             value={collegeVal}
                                             onChange={(e) => setCollegeVal(e.target.value)}
-                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                             placeholder="如：计算机学院"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="major">
+                                        <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="major">
                                             专业
-                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
                                                   title="仅成员可见">敏感</span>
                                         </label>
                                         <input
                                             id="major"
                                             value={majorVal}
                                             onChange={(e) => setMajorVal(e.target.value)}
-                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                             placeholder="如：软件工程"
                                         />
                                     </div>
@@ -649,34 +622,30 @@ export default function EditForm({
                             ) : (
                                 <>
                                     <div>
-                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workLocation">
+                                        <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="workLocation">
                                             工作所在地
-                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
                                                   title="仅成员可见">敏感</span>
                                         </label>
                                         <input
                                             id="workLocation"
                                             value={workLocationVal}
                                             onChange={(e) => setWorkLocationVal(e.target.value)}
-                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                             placeholder="如：北京 / 深圳"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm mb-1.5" style={{color: "#555"}} htmlFor="workPosition">
+                                        <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="workPosition">
                                             工作岗位
-                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
                                                   title="仅成员可见">敏感</span>
                                         </label>
                                         <input
                                             id="workPosition"
                                             value={workPositionVal}
                                             onChange={(e) => setWorkPositionVal(e.target.value)}
-                                            className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                             placeholder="如：前端工程师"
                                         />
                                     </div>
@@ -686,7 +655,7 @@ export default function EditForm({
 
                         {/* 职能标签 */}
                         <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}}>职能标签</label>
+                            <label className="block text-sm mb-1.5 text-brand-text-body">职能标签</label>
                             {/* 快捷预设 */}
                             <div className="flex flex-wrap gap-1.5 mb-2">
                                 {["程序", "策划", "美术", "音效", "音乐", "测试", "宣发", "全栈"].filter(t => !skills.includes(t)).map((tag) => (
@@ -694,8 +663,7 @@ export default function EditForm({
                                         key={tag}
                                         type="button"
                                         onClick={() => setSkills([...skills, tag])}
-                                        className="text-xs px-2 py-0.5 rounded border transition-colors hover:bg-[#E6F0F8] hover:border-[#3388BB] hover:text-[#3388BB]"
-                                        style={{borderColor: "#D0DEE8", color: "#888"}}
+                                        className="text-xs px-2 py-0.5 rounded border transition-colors hover:bg-brand-surface hover:border-brand-blue hover:text-brand-blue border-brand-border-subtle text-brand-text-muted"
                                     >
                                         + {tag}
                                     </button>
@@ -706,8 +674,7 @@ export default function EditForm({
                                 {skills.map((s) => (
                                     <span
                                         key={s}
-                                        className="text-xs px-2 py-0.5 rounded cursor-pointer select-none"
-                                        style={{background: "#E6F0F8", color: "#3388BB"}}
+                                        className="text-xs px-2 py-0.5 rounded cursor-pointer select-none bg-brand-surface text-brand-blue"
                                         onClick={() => removeSkill(s)}
                                     >
                     {s} ×
@@ -724,15 +691,13 @@ export default function EditForm({
                                             addSkill();
                                         }
                                     }}
-                                    className="flex-1 rounded-lg bg-white border px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent text-sm"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    className="flex-1 rounded-lg bg-card border px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent text-sm border-brand-border-subtle text-brand-text-heading"
                                     placeholder="输入自定义职能后回车添加"
                                 />
                                 <button
                                     type="button"
                                     onClick={addSkill}
-                                    className="px-3 py-2 rounded-lg text-sm font-medium text-white"
-                                    style={{background: "#E38043"}}
+                                    className="px-3 py-2 rounded-lg text-sm font-medium text-white bg-brand-orange"
                                 >
                                     添加
                                 </button>
@@ -741,25 +706,23 @@ export default function EditForm({
 
                         {/* ══════════ 自定义链接 ══════════ */}
                         <div>
-                            <label className="block text-sm mb-1.5" style={{color: "#555"}}>
-                                个人链接 <span className="text-xs" style={{color: "#999"}}>(可添加多个，如 GitHub、B站、个人网站等)</span>
+                            <label className="block text-sm mb-1.5 text-brand-text-body">
+                                个人链接 <span className="text-xs text-brand-text-muted">(可添加多个，如 GitHub、B站、个人网站等)</span>
                             </label>
 
                             {/* 已添加的链接 */}
                             {socialLinks.length > 0 && (
                                 <div className="space-y-2 mb-3">
                                     {socialLinks.map((link, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border text-sm"
-                                             style={{borderColor: "#D0DEE8", background: "#FAFBFC"}}>
-                      <span className="text-xs px-2 py-0.5 rounded font-medium shrink-0" style={{background: "#25547A", color: "#fff"}}>
+                                        <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border border-brand-border-subtle bg-muted text-sm">
+                      <span className="text-xs px-2 py-0.5 rounded font-medium shrink-0 bg-brand-navy text-white">
                         {link.label}
                       </span>
-                                            <span className="flex-1 truncate" style={{color: "#777"}}>{link.url}</span>
+                                            <span className="flex-1 truncate text-brand-text-secondary">{link.url}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => removeLink(i)}
-                                                className="text-xs shrink-0 hover:underline"
-                                                style={{color: "#E38043"}}
+                                                className="text-xs shrink-0 hover:underline text-brand-orange"
                                             >
                                                 移除
                                             </button>
@@ -777,8 +740,7 @@ export default function EditForm({
                                             value={newLinkLabel}
                                             onChange={(e) => setNewLinkLabel(e.target.value)}
                                             placeholder="自定义标签"
-                                            className="w-full rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+                                            className="w-full rounded-lg bg-card border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter") {
                                                     e.preventDefault();
@@ -796,8 +758,7 @@ export default function EditForm({
                                                     setNewLinkLabel("");
                                                 } else setNewLinkLabel(v);
                                             }}
-                                            className="w-full rounded-lg bg-white border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                            style={{borderColor: "#D0DEE8", color: "#333"}}
+                                            className="w-full rounded-lg bg-card border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                         >
                                             <option value="">选择标签</option>
                                             {LINK_LABEL_PRESETS.map((l) => (
@@ -813,8 +774,7 @@ export default function EditForm({
                                     onChange={(e) => setNewLinkUrl(e.target.value)}
                                     type="url"
                                     placeholder="https://..."
-                                    className="flex-1 rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                    style={{borderColor: "#D0DEE8", color: "#333"}}
+                                    className="flex-1 rounded-lg bg-card border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
                                             e.preventDefault();
@@ -827,8 +787,7 @@ export default function EditForm({
                                     type="button"
                                     onClick={addLink}
                                     disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}
-                                    className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 shrink-0"
-                                    style={{background: "#3388BB"}}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 shrink-0 bg-brand-blue"
                                 >
                                     添加
                                 </button>
@@ -836,13 +795,12 @@ export default function EditForm({
                         </div>
 
                         {/* ══════════ 经历（学习 + 工作）══════════ */}
-                        <div className="border-t pt-5" style={{borderColor: "#E8F0F8"}}>
-                          <label className="block text-sm mb-2" style={{color: "#555"}}>
+                        <div className="border-t pt-5 border-[#E8F0F8]">
+                          <label className="block text-sm mb-2 text-brand-text-body">
                             经历
-                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded"
-                                  style={{background: "#FDE8E8", color: "#C62828"}}
+                            <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
                                   title="仅成员可见">敏感</span>
-                            <span className="text-xs ml-1" style={{color: "#999"}}>(学习经历与工作经历)</span>
+                            <span className="text-xs ml-1 text-brand-text-muted">(学习经历与工作经历)</span>
                           </label>
 
                           {/* 已有经历列表 */}
@@ -855,24 +813,21 @@ export default function EditForm({
                                   : "至今";
                                 const isStudy = exp.type === "学习";
                                 return (
-                                  <div key={exp.id} className="flex items-center gap-3 p-3 rounded-lg border text-sm"
-                                       style={{borderColor: "#D0DEE8", background: "#FAFBFC"}}>
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
-                                          style={{background: isStudy ? "#E6F0F8" : "#FFF3E0", color: isStudy ? "#3388BB" : "#E38043"}}>
+                                  <div key={exp.id} className="flex items-center gap-3 p-3 rounded-lg border border-brand-border-subtle bg-muted text-sm">
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${isStudy ? "bg-brand-surface text-brand-blue" : "bg-[#FFF3E0] text-brand-orange"}`}>
                                       {isStudy ? "学习" : "工作"}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                      <span className="font-medium" style={{color: "#333"}}>{exp.company}</span>
-                                      <span className="mx-1" style={{color: "#999"}}>·</span>
-                                      <span style={{color: "#777"}}>{exp.position}</span>
+                                      <span className="font-medium text-brand-text-heading">{exp.company}</span>
+                                      <span className="mx-1 text-brand-text-muted">·</span>
+                                      <span className="text-brand-text-secondary">{exp.position}</span>
                                     </div>
-                                    <span className="text-xs shrink-0" style={{color: "#999"}}>{startStr} ~ {endStr}</span>
+                                    <span className="text-xs shrink-0 text-brand-text-muted">{startStr} ~ {endStr}</span>
                                     <button
                                       type="button"
                                       onClick={() => removeWorkExperience(exp.id)}
                                       disabled={expSaving}
-                                      className="text-xs shrink-0 hover:underline disabled:opacity-50"
-                                      style={{color: "#E38043"}}
+                                      className="text-xs shrink-0 hover:underline disabled:opacity-50 text-brand-orange"
                                     >
                                       移除
                                     </button>
@@ -883,20 +838,19 @@ export default function EditForm({
                           )}
 
                           {/* 添加新经历 */}
-                          <div className="p-3 rounded-lg border" style={{borderColor: "#D0DEE8", background: "#F8FAFB"}}>
+                          <div className="p-3 rounded-lg border border-brand-border-subtle bg-muted">
                             {/* 类型选择 */}
                             <div className="flex items-center gap-3 mb-3">
-                              <span className="text-xs" style={{color: "#777"}}>类型：</span>
+                              <span className="text-xs text-brand-text-secondary">类型：</span>
                               <label className="flex items-center gap-1.5 cursor-pointer">
                                 <input
                                   type="radio"
                                   name="expType"
                                   checked={newExpType === "工作"}
                                   onChange={() => setNewExpType("工作")}
-                                  className="w-3.5 h-3.5"
-                                  style={{accentColor: "#E38043"}}
+                                  className="w-3.5 h-3.5 accent-brand-orange"
                                 />
-                                <span className="text-sm" style={{color: "#333"}}>工作</span>
+                                <span className="text-sm text-brand-text-heading">工作</span>
                               </label>
                               <label className="flex items-center gap-1.5 cursor-pointer">
                                 <input
@@ -904,10 +858,9 @@ export default function EditForm({
                                   name="expType"
                                   checked={newExpType === "学习"}
                                   onChange={() => setNewExpType("学习")}
-                                  className="w-3.5 h-3.5"
-                                  style={{accentColor: "#3388BB"}}
+                                  className="w-3.5 h-3.5 accent-brand-blue"
                                 />
-                                <span className="text-sm" style={{color: "#333"}}>学习</span>
+                                <span className="text-sm text-brand-text-heading">学习</span>
                               </label>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
@@ -915,38 +868,34 @@ export default function EditForm({
                                 value={newExpCompany}
                                 onChange={(e) => setNewExpCompany(e.target.value)}
                                 placeholder={newExpType === "学习" ? "学校/机构名称" : "公司/组织名称"}
-                                className="rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                                className="rounded-lg bg-card border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                               />
                               <input
                                 value={newExpPosition}
                                 onChange={(e) => setNewExpPosition(e.target.value)}
                                 placeholder={newExpType === "学习" ? "专业/学位" : "职位"}
-                                className="rounded-lg bg-white border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                                className="rounded-lg bg-card border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                               />
                               <div>
-                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>
+                                <label className="block text-xs mb-0.5 text-brand-text-muted">
                                   {newExpType === "学习" ? "入学时间" : "入职时间"}
                                 </label>
                                 <input
                                   type="month"
                                   value={newExpStart}
                                   onChange={(e) => setNewExpStart(e.target.value)}
-                                  className="w-full rounded-lg bg-white border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                  style={{borderColor: "#D0DEE8", color: "#333"}}
+                                  className="w-full rounded-lg bg-card border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs mb-0.5" style={{color: "#999"}}>
+                                <label className="block text-xs mb-0.5 text-brand-text-muted">
                                   {newExpType === "学习" ? "毕业时间（留空=在读）" : "离职时间（留空=至今）"}
                                 </label>
                                 <input
                                   type="month"
                                   value={newExpEnd}
                                   onChange={(e) => setNewExpEnd(e.target.value)}
-                                  className="w-full rounded-lg bg-white border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                  style={{borderColor: "#D0DEE8", color: "#333"}}
+                                  className="w-full rounded-lg bg-card border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                 />
                               </div>
                             </div>
@@ -955,13 +904,12 @@ export default function EditForm({
                                 type="button"
                                 onClick={addWorkExperience}
                                 disabled={expSaving || !newExpCompany.trim() || !newExpPosition.trim() || !newExpStart}
-                                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
-                                style={{background: "#88C232"}}
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 bg-brand-green"
                               >
                                 {expSaving ? "保存中..." : "+ 添加经历"}
                               </button>
                               {expMsg && (
-                                <span className="text-xs" style={{color: expMsg.includes("失败") ? "#E38043" : "#88C232"}}>
+                                <span className={`text-xs ${expMsg.includes("失败") ? "text-brand-orange" : "text-brand-green"}`}>
                                   {expMsg}
                                 </span>
                               )}
@@ -973,17 +921,16 @@ export default function EditForm({
 
                 {/* ══════════ 邀请码兑换（仅非管理员/非成员显示）══════════ */}
                 {!isAdmin && !member && (
-                    <div className="border-t pt-4" style={{borderColor: "#E8F0F8"}}>
-                        <label className="block text-sm mb-1.5" style={{color: "#555"}}>
-                            邀请码兑换 <span className="text-xs" style={{color: "#999"}}>(升级为社团成员或管理员)</span>
+                    <div className="border-t pt-4 border-[#E8F0F8]">
+                        <label className="block text-sm mb-1.5 text-brand-text-body">
+                            邀请码兑换 <span className="text-xs text-brand-text-muted">(升级为社团成员或管理员)</span>
                         </label>
                         <div className="flex gap-2">
                             <input
                                 value={inviteInput}
                                 onChange={(e) => setInviteInput(e.target.value)}
                                 placeholder="输入邀请码"
-                                className="flex-1 rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-                                style={{borderColor: "#D0DEE8", color: "#333"}}
+                                className="flex-1 rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter") {
                                         e.preventDefault();
@@ -995,20 +942,19 @@ export default function EditForm({
                                 type="button"
                                 onClick={handleRedeemInvite}
                                 disabled={invitePending || !inviteInput.trim()}
-                                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 whitespace-nowrap"
-                                style={{background: "#E38043"}}
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 whitespace-nowrap bg-brand-orange"
                             >
                                 {invitePending ? "兑换中..." : "兑换"}
                             </button>
                         </div>
-                        {inviteMsg && <p className="text-xs mt-1" style={{color: "#88C232"}}>{inviteMsg}</p>}
-                        {inviteError && <p className="text-xs mt-1" style={{color: "#E38043"}}>{inviteError}</p>}
+                        {inviteMsg && <p className="text-xs mt-1 text-brand-green">{inviteMsg}</p>}
+                        {inviteError && <p className="text-xs mt-1 text-brand-orange">{inviteError}</p>}
                     </div>
                 )}
 
                 {/* 错误提示 */}
                 {state?.error && (
-                    <div className="text-sm px-4 py-2.5 rounded-lg" style={{background: "#FDE8E8", color: "#C62828"}}>
+                    <div className="text-sm px-4 py-2.5 rounded-lg bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">
                         {state.error}
                     </div>
                 )}
@@ -1028,7 +974,7 @@ export default function EditForm({
             {showCrop && cropSrc && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={handleCropCancel}>
                     <div
-                        className="bg-white rounded-2xl w-[420px] max-w-[95vw] overflow-hidden"
+                        className="bg-card rounded-2xl w-[420px] max-w-[95vw] overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="relative w-full h-80 bg-gray-900">
@@ -1059,8 +1005,7 @@ export default function EditForm({
                                 </button>
                                 <button
                                     type="button" onClick={handleCropConfirm}
-                                    className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                                    style={{background: "#3388BB"}}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-blue"
                                 >
                                     确认裁剪
                                 </button>

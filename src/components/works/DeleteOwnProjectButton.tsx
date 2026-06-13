@@ -40,8 +40,7 @@ export default function DeleteOwnProjectButton({
     <button
       onClick={handleDelete}
       disabled={deleting}
-      className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{ background: "#C62828", color: "#fff" }}
+      className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--ui-text-red)] text-white"
     >
       {deleting ? "删除中..." : "🗑️ 删除作品"}
     </button>

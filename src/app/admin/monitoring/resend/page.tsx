@@ -54,30 +54,27 @@ export default async function ResendMonitorPage() {
             <div className="flex items-center gap-3 mb-6">
                 <Link
                     href="/admin/monitoring"
-                    className="text-sm hover:underline"
-                    style={{color: "#3388BB"}}
+                    className="text-sm hover:underline text-brand-blue"
                 >
                     ← 监控总览
                 </Link>
-                <h1 className="text-2xl font-bold" style={{color: "#25547A"}}>
+                <h1 className="text-2xl font-bold text-brand-navy">
                     📧 Resend 邮件服务
                 </h1>
                 {/* 子页面快捷入口 */}
                 <div className="ml-auto flex gap-2">
                     <Link href="/admin/monitoring/supabase"
-                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                          style={{borderColor: "#D0DEE8", color: "#555"}}>
+                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 border-brand-border-subtle text-brand-text-body">
                         🗄️ 数据库管理
                     </Link>
-                    <Link href="/admin/monitoring/r2" className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                          style={{borderColor: "#D0DEE8", color: "#555"}}>
+                    <Link href="/admin/monitoring/r2" className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 border-brand-border-subtle text-brand-text-body">
                         📦 R2 存储
                     </Link>
                 </div>
             </div>
 
             {/* API 配置状态 */}
-            <h2 className="text-lg font-semibold mb-3" style={{color: "#25547A"}}>
+            <h2 className="text-lg font-semibold mb-3 text-brand-navy">
                 API 配置
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -108,22 +105,21 @@ export default async function ResendMonitorPage() {
             </div>
 
             {/* 用户邮箱统计 */}
-            <h2 className="text-lg font-semibold mb-3" style={{color: "#25547A"}}>
+            <h2 className="text-lg font-semibold mb-3 text-brand-navy">
                 用户邮箱统计
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <StatCard label="总用户数" value={String(totalUsers)} icon="👥" color="#3388BB"/>
-                <StatCard label="已验证" value={String(verifiedUsers)} icon="✅" color="#88C232"/>
-                <StatCard label="未验证" value={String(unverifiedUsers)} icon="⚠️" color="#E8A040"/>
-                <StatCard label="待处理令牌" value={String(pendingTokens)} icon="🎫" color="#7C3AED"/>
+                <StatCard label="总用户数" value={String(totalUsers)} icon="👥" colorClass="text-brand-blue"/>
+                <StatCard label="已验证" value={String(verifiedUsers)} icon="✅" colorClass="text-brand-green"/>
+                <StatCard label="未验证" value={String(unverifiedUsers)} icon="⚠️" colorClass="text-[#E8A040]"/>
+                <StatCard label="待处理令牌" value={String(pendingTokens)} icon="🎫" colorClass="text-[#7C3AED]"/>
             </div>
 
             {/* 说明 */}
             <div
-                className="bg-white border rounded-lg p-5 text-sm space-y-2"
-                style={{borderColor: "#D0DEE8", color: "#555"}}
+                className="bg-card border rounded-lg p-5 text-sm space-y-2 border-brand-border-subtle text-brand-text-body"
             >
-                <h3 className="font-semibold mb-2" style={{color: "#25547A"}}>
+                <h3 className="font-semibold mb-2 text-brand-navy">
                     ℹ️ 关于 Resend
                 </h3>
                 <p>
@@ -136,8 +132,7 @@ export default async function ResendMonitorPage() {
                         href="https://resend.com/domains"
                         target="_blank"
                         rel="noopener"
-                        className="ml-1 hover:underline"
-                        style={{color: "#3388BB"}}
+                        className="ml-1 hover:underline text-brand-blue"
                     >
                         resend.com/domains →
                     </a>
@@ -146,7 +141,7 @@ export default async function ResendMonitorPage() {
                     本系统使用 Resend 发送：邮箱验证码、密码重置邮件。
                 </p>
                 {!status.configured && (
-                    <p style={{color: "#C62828"}}>
+                    <p className="text-red-700">
                         ⚠️ RESEND_API_KEY 未配置，邮件功能不可用。请在 .env 中设置。
                     </p>
                 )}
@@ -168,19 +163,17 @@ function ConfigRow({
 }) {
     return (
         <div
-            className="bg-white border rounded-xl p-4 shadow-sm"
-            style={{borderColor: ok ? "#C8E6C9" : "#FFCDD2"}}
+            className={`bg-card border rounded-xl p-4 shadow-sm ${ok ? "border-[#C8E6C9]" : "border-[#FFCDD2]"}`}
         >
-            <div className="text-xs mb-1" style={{color: "#777"}}>
+            <div className="text-xs mb-1 text-brand-text-secondary">
                 {label}
             </div>
             <div
-                className="text-sm font-semibold mb-1"
-                style={{color: ok ? "#2E7D32" : "#C62828"}}
+                className={`text-sm font-semibold mb-1 ${ok ? "text-green-800" : "text-red-700"}`}
             >
                 {value}
             </div>
-            <div className="text-xs font-mono" style={{color: "#999"}}>
+            <div className="text-xs font-mono text-brand-text-muted">
                 {detail}
             </div>
         </div>
@@ -191,25 +184,24 @@ function StatCard({
                       label,
                       value,
                       icon,
-                      color,
+                      colorClass,
                   }: {
     label: string;
     value: string;
     icon: string;
-    color: string;
+    colorClass: string;
 }) {
     return (
         <div
-            className="bg-white border rounded-xl p-4 shadow-sm"
-            style={{borderColor: "#D0DEE8"}}
+            className="bg-card border rounded-xl p-4 shadow-sm border-brand-border-subtle"
         >
             <div className="flex items-center gap-2 mb-2">
                 <span className="text-xl">{icon}</span>
-                <span className="text-xs" style={{color: "#777"}}>
+                <span className="text-xs text-brand-text-secondary">
           {label}
         </span>
             </div>
-            <div className="text-2xl font-bold" style={{color}}>
+            <div className={`text-2xl font-bold ${colorClass}`}>
                 {value}
             </div>
         </div>

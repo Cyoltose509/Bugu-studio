@@ -112,67 +112,63 @@ export default async function R2MonitorPage() {
     return (
         <div className="animate-fade-in">
             <div className="flex items-center gap-3 mb-6">
-                <Link href="/admin/monitoring" className="text-sm hover:underline" style={{color: "#3388BB"}}>
+                <Link href="/admin/monitoring" className="text-sm hover:underline text-brand-blue">
                     ← 监控总览
                 </Link>
-                <h1 className="text-2xl font-bold" style={{color: "#25547A"}}>☁️ R2 对象存储</h1>
+                <h1 className="text-2xl font-bold text-brand-navy">☁️ R2 对象存储</h1>
                 {/* 子页面快捷入口 */}
                 <div className="ml-auto flex gap-2">
                     <Link href="/admin/monitoring/supabase"
-                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                          style={{borderColor: "#D0DEE8", color: "#555"}}>
+                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 border-brand-border-subtle text-brand-text-body">
                         🗄️ 数据库管理
                     </Link>
                     <Link href="/admin/monitoring/resend"
-                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                          style={{borderColor: "#D0DEE8", color: "#555"}}>
+                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 border-brand-border-subtle text-brand-text-body">
                         ✉️ 邮件监控
                     </Link>
                 </div>
             </div>
 
             {error && !stats ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm" style={{color: "#C62828"}}>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
                     {error}
                 </div>
             ) : stats ? (
                 <>
                     {/* 概览卡片 */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                        <StatCard label="总文件数" value={stats.totalObjects.toLocaleString()} icon="📁" color="#F6821F"/>
-                        <StatCard label="总存储量" value={stats.totalSizeFormatted} icon="💿" color="#3388BB"/>
-                        <StatCard label="目录数" value={String(stats.byFolder.length)} icon="📂" color="#88C232"/>
-                        <StatCard label="DB 头像记录" value={String(userAvatarCount)} icon="👤" color="#E8A040"/>
+                        <StatCard label="总文件数" value={stats.totalObjects.toLocaleString()} icon="📁" colorClass="text-[#F6821F]"/>
+                        <StatCard label="总存储量" value={stats.totalSizeFormatted} icon="💿" colorClass="text-brand-blue"/>
+                        <StatCard label="目录数" value={String(stats.byFolder.length)} icon="📂" colorClass="text-brand-green"/>
+                        <StatCard label="DB 头像记录" value={String(userAvatarCount)} icon="👤" colorClass="text-[#E8A040]"/>
                     </div>
 
                     {/* 配置信息 */}
-                    <div className="bg-white border rounded-lg p-3 mb-6 text-xs space-y-1" style={{borderColor: "#D0DEE8", color: "#777"}}>
-                        <div>Bucket: <code style={{color: "#333"}}>{bucketName}</code></div>
-                        <div>Public URL: <code style={{color: "#333"}}>{publicUrl}</code></div>
-                        <div>Account ID: <code style={{color: "#333"}}>{accountId?.slice(0, 12)}…</code></div>
+                    <div className="bg-card border rounded-lg p-3 mb-6 text-xs space-y-1 border-brand-border-subtle text-brand-text-secondary">
+                        <div>Bucket: <code className="text-brand-text-heading">{bucketName}</code></div>
+                        <div>Public URL: <code className="text-brand-text-heading">{publicUrl}</code></div>
+                        <div>Account ID: <code className="text-brand-text-heading">{accountId?.slice(0, 12)}…</code></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* 按目录 */}
                         <div>
-                            <h2 className="text-lg font-semibold mb-3" style={{color: "#25547A"}}>按目录</h2>
-                            <div className="bg-white border rounded-lg overflow-hidden" style={{borderColor: "#D0DEE8"}}>
+                            <h2 className="text-lg font-semibold mb-3 text-brand-navy">按目录</h2>
+                            <div className="bg-card border rounded-lg overflow-hidden border-brand-border-subtle">
                                 <table className="w-full text-sm">
-                                    <thead style={{background: "#F0F5FA"}}>
+                                    <thead className="bg-[#F0F5FA]">
                                     <tr>
-                                        <th className="text-left px-4 py-2 font-medium" style={{color: "#555"}}>目录</th>
-                                        <th className="text-right px-4 py-2 font-medium" style={{color: "#555"}}>文件数</th>
-                                        <th className="text-right px-4 py-2 font-medium" style={{color: "#555"}}>大小</th>
+                                        <th className="text-left px-4 py-2 font-medium text-brand-text-body">目录</th>
+                                        <th className="text-right px-4 py-2 font-medium text-brand-text-body">文件数</th>
+                                        <th className="text-right px-4 py-2 font-medium text-brand-text-body">大小</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {stats.byFolder.map((f) => (
-                                        <tr key={f.folder} className="border-t" style={{borderColor: "#E6F0F8"}}>
-                                            <td className="px-4 py-2 font-mono text-xs" style={{color: "#333"}}>{f.folder}/</td>
-                                            <td className="px-4 py-2 text-right text-xs"
-                                                style={{color: "#555"}}>{f.count.toLocaleString()}</td>
-                                            <td className="px-4 py-2 text-right text-xs font-mono"
-                                                style={{color: "#555"}}>{f.sizeFormatted}</td>
+                                        <tr key={f.folder} className="border-t border-brand-surface">
+                                            <td className="px-4 py-2 font-mono text-xs text-brand-text-heading">{f.folder}/</td>
+                                            <td className="px-4 py-2 text-right text-xs text-brand-text-body">{f.count.toLocaleString()}</td>
+                                            <td className="px-4 py-2 text-right text-xs font-mono text-brand-text-body">{f.sizeFormatted}</td>
                                         </tr>
                                     ))}
                                     </tbody>
@@ -182,24 +178,22 @@ export default async function R2MonitorPage() {
 
                         {/* 按文件类型 */}
                         <div>
-                            <h2 className="text-lg font-semibold mb-3" style={{color: "#25547A"}}>按文件类型</h2>
-                            <div className="bg-white border rounded-lg overflow-hidden" style={{borderColor: "#D0DEE8"}}>
+                            <h2 className="text-lg font-semibold mb-3 text-brand-navy">按文件类型</h2>
+                            <div className="bg-card border rounded-lg overflow-hidden border-brand-border-subtle">
                                 <table className="w-full text-sm">
-                                    <thead style={{background: "#F0F5FA"}}>
+                                    <thead className="bg-[#F0F5FA]">
                                     <tr>
-                                        <th className="text-left px-4 py-2 font-medium" style={{color: "#555"}}>类型</th>
-                                        <th className="text-right px-4 py-2 font-medium" style={{color: "#555"}}>文件数</th>
-                                        <th className="text-right px-4 py-2 font-medium" style={{color: "#555"}}>大小</th>
+                                        <th className="text-left px-4 py-2 font-medium text-brand-text-body">类型</th>
+                                        <th className="text-right px-4 py-2 font-medium text-brand-text-body">文件数</th>
+                                        <th className="text-right px-4 py-2 font-medium text-brand-text-body">大小</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {stats.byType.map((t) => (
-                                        <tr key={t.type} className="border-t" style={{borderColor: "#E6F0F8"}}>
-                                            <td className="px-4 py-2 text-xs" style={{color: "#333"}}>.{t.type}</td>
-                                            <td className="px-4 py-2 text-right text-xs"
-                                                style={{color: "#555"}}>{t.count.toLocaleString()}</td>
-                                            <td className="px-4 py-2 text-right text-xs font-mono"
-                                                style={{color: "#555"}}>{t.sizeFormatted}</td>
+                                        <tr key={t.type} className="border-t border-brand-surface">
+                                            <td className="px-4 py-2 text-xs text-brand-text-heading">.{t.type}</td>
+                                            <td className="px-4 py-2 text-right text-xs text-brand-text-body">{t.count.toLocaleString()}</td>
+                                            <td className="px-4 py-2 text-right text-xs font-mono text-brand-text-body">{t.sizeFormatted}</td>
                                         </tr>
                                     ))}
                                     </tbody>
@@ -216,14 +210,14 @@ export default async function R2MonitorPage() {
     );
 }
 
-function StatCard({label, value, icon, color}: { label: string; value: string; icon: string; color: string }) {
+function StatCard({label, value, icon, colorClass}: { label: string; value: string; icon: string; colorClass: string }) {
     return (
-        <div className="bg-white border rounded-xl p-4 shadow-sm" style={{borderColor: "#D0DEE8"}}>
+        <div className="bg-card border rounded-xl p-4 shadow-sm border-brand-border-subtle">
             <div className="flex items-center gap-2 mb-2">
                 <span className="text-xl">{icon}</span>
-                <span className="text-xs" style={{color: "#777"}}>{label}</span>
+                <span className="text-xs text-brand-text-secondary">{label}</span>
             </div>
-            <div className="text-2xl font-bold" style={{color}}>{value}</div>
+            <div className={`text-2xl font-bold ${colorClass}`}>{value}</div>
         </div>
     );
 }

@@ -30,8 +30,7 @@ export default function DeleteProjectButton({
       disabled={isDisabled}
       className={`text-xs hover:underline cursor-pointer ${
         isDisabled ? "opacity-40 cursor-not-allowed" : ""
-      }`}
-      style={{ color: "#C62828" }}
+      } text-[var(--ui-text-red)]`}
     >
       {deleting ? "删除中..." : "删除"}
     </button>

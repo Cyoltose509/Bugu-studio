@@ -56,8 +56,8 @@ export default async function MembersPage() {
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-10">
-                <h1 className="text-3xl font-bold" style={{color: "#25547A"}}>成员列表</h1>
-                <p className="mt-2" style={{color: "#777"}}>共 {members.length} 位历届成员，{activeCount} 位在读成员</p>
+                <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
+                <p className="mt-2 text-brand-text-secondary">共 {members.length} 位历届成员，{activeCount} 位在读成员</p>
             </div>
             <MembersList
                 members={members as any}

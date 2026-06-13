@@ -74,15 +74,9 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
     <button
       onClick={toggle}
       disabled={isDisabled}
-      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all select-none ${
+      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all select-none border-2 ${
         isDisabled ? "opacity-50 cursor-not-allowed" : "hover:shadow-sm hover:brightness-95 active:brightness-90"
-      }`}
-      style={{
-        background: liked ? "rgba(227,128,67,0.12)" : "#F0F5F9",
-        border: `1.5px solid ${liked ? "#E38043" : "#D0DEE8"}`,
-        transform: animating ? "scale(1.15)" : "scale(1)",
-        color: liked ? "#E38043" : "#555",
-      }}
+      } ${liked ? "bg-brand-orange/10 border-brand-orange text-brand-orange" : "bg-brand-surface-page border-brand-border-subtle text-brand-text-body"} ${animating ? "scale-[1.15]" : "scale-100"}`}
       title={loading ? (liked ? "取消点赞中…" : "点赞中…") : !canLike ? "登录后方可点赞" : liked ? "取消点赞" : "点赞"}
       type="button"
     >
@@ -96,8 +90,7 @@ export default function ProjectLikeButton({ projectId, initialCount, initialLike
           fill={liked ? "#E38043" : "none"}
           stroke={liked ? "#E38043" : "currentColor"}
           strokeWidth="2"
-          className="transition-transform"
-          style={{ transform: animating ? "scale(1.3)" : "scale(1)" }}
+          className={`transition-transform ${animating ? "scale-[1.3]" : "scale-100"}`}
         >
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
         </svg>

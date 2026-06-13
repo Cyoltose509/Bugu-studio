@@ -28,7 +28,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-lg mb-4" style={{ color: "#777" }}>请先登录</p>
+          <p className="text-lg mb-4 text-brand-text-secondary">请先登录</p>
           <Link href="/auth/login" className="btn-primary px-6 py-2 rounded-lg text-sm font-medium">前往登录</Link>
         </div>
       </div>
@@ -120,59 +120,59 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in space-y-8">
       {/* 管理员视图横幅 */}
       {isAdminView && (
-        <div className="rounded-xl border p-4 flex items-center justify-between shadow-sm" style={{ borderColor: "#FDE8E8", background: "#FFF5F5" }}>
+        <div className="rounded-xl border p-4 flex items-center justify-between shadow-sm border-red-100 bg-red-50">
           <div className="flex items-center gap-3">
             <span className="text-lg">🛡️</span>
             <div>
-              <p className="text-sm font-medium" style={{ color: "#C62828" }}>管理员视图 — 正在查看 {user?.name || user?.email || "未知用户"} 的资料</p>
-              <p className="text-xs" style={{ color: "#E53935" }}>你无法编辑此用户的资料，仅可查看</p>
+              <p className="text-sm font-medium text-red-700">管理员视图 — 正在查看 {user?.name || user?.email || "未知用户"} 的资料</p>
+              <p className="text-xs text-red-600">你无法编辑此用户的资料，仅可查看</p>
             </div>
           </div>
-          <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border hover:bg-white transition-colors" style={{ borderColor: "#FDE8E8", color: "#C62828" }}>← 返回用户管理</Link>
+          <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">← 返回用户管理</Link>
         </div>
       )}
 
       {/* 头部 */}
-      <div className="bg-white rounded-xl border p-8 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border border-brand-border-subtle p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* 头像 */}
           {user?.image ? (
             <img
               src={user.image}
               alt={user.name || ""}
-              className="w-20 h-20 rounded-full object-cover border-2 shrink-0"
-              style={{ borderColor: "#25547A" }}
+              className="w-20 h-20 rounded-full object-cover border-2 border-brand-navy shrink-0"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0"
-              style={{
-                background: user?.role === "ADMIN"
-                  ? "linear-gradient(135deg, #25547A, #3A7099)"
-                  : "linear-gradient(135deg, #E38043, #F09055)",
-              }}>
+            <div
+              className={
+                user?.role === "ADMIN"
+                  ? "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0 bg-gradient-to-br from-brand-navy to-[#3A7099]"
+                  : "w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0 bg-gradient-to-br from-brand-orange to-brand-orange-light"
+              }
+            >
               {(user?.name || user?.email || "?")[0].toUpperCase()}
             </div>
           )}
 
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>
+            <h1 className="text-2xl font-bold text-brand-navy">
               {member?.displayName || user?.name || "未设置昵称"}
             </h1>
             <div className="mt-1 space-y-1">
-              <p className="text-sm" style={{ color: "#777" }}>{user?.email}</p>
+              <p className="text-sm text-brand-text-secondary">{user?.email}</p>
               <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-2">
-                <span className="text-xs px-2 py-0.5 rounded-full" style={roleBadge(user?.role)}>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${roleBadge(user?.role)}`}>
                   {user?.role === "ADMIN" ? "管理员" :
                    user?.role === "MEMBER" ? "社团成员" : "注册用户"}
                 </span>
                 {user?.emailVerified && (
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#E8F5E9", color: "#2E7D32" }}>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-800">
                     已验证
                   </span>
                 )}
                 {user?.isActive === false && (
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#FDE8E8", color: "#C62828" }}>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
                     已禁用
                   </span>
                 )}
@@ -199,33 +199,33 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       </div>
 
       {/* 账号信息 */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-        <h2 className="font-semibold mb-4" style={{ color: "#25547A" }}>账号信息</h2>
+      <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
+        <h2 className="font-semibold mb-4 text-brand-navy">账号信息</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="text-xs mb-0.5" style={{ color: "#999" }}>邮箱</div>
-            <div style={{ color: "#333" }}>{user?.email}</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">邮箱</div>
+            <div className="text-brand-text-heading">{user?.email}</div>
           </div>
           <div>
-            <div className="text-xs mb-0.5" style={{ color: "#999" }}>角色</div>
-            <div style={{ color: "#333" }}>{user?.role}</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">角色</div>
+            <div className="text-brand-text-heading">{user?.role}</div>
           </div>
           <div>
-            <div className="text-xs mb-0.5" style={{ color: "#999" }}>注册时间</div>
-            <div style={{ color: "#333" }}>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString("zh-CN") : "—"}</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">注册时间</div>
+            <div className="text-brand-text-heading">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString("zh-CN") : "—"}</div>
           </div>
           <div>
-            <div className="text-xs mb-0.5" style={{ color: "#999" }}>最后登录</div>
-            <div style={{ color: "#333" }}>{user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString("zh-CN") : "—"}</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">最后登录</div>
+            <div className="text-brand-text-heading">{user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString("zh-CN") : "—"}</div>
           </div>
         </div>
       </div>
 
       {/* 个人介绍 — 所有用户可见 */}
       {user?.bio && (
-        <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-          <h2 className="font-semibold mb-3" style={{ color: "#25547A" }}>个人介绍</h2>
-          <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: "#555" }}>
+        <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
+          <h2 className="font-semibold mb-3 text-brand-navy">个人介绍</h2>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed text-brand-text-body">
             <RichContent text={user.bio} />
           </p>
         </div>
@@ -236,12 +236,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         // 敏感信息可见性：自己看自己 或 查看者角色 >= MEMBER
         const canSeeSensitive = !isAdminView || (session.user.role !== "USER");
         return (
-        <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-          <h2 className="font-semibold mb-4" style={{ color: "#25547A" }}>社团成员信息</h2>
+        <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
+          <h2 className="font-semibold mb-4 text-brand-navy">社团成员信息</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
-              <div className="text-xs mb-0.5" style={{ color: "#999" }}>展示名称</div>
-              <div className="flex items-center gap-1.5" style={{ color: "#333" }}>
+              <div className="text-xs mb-0.5 text-brand-text-muted">展示名称</div>
+              <div className="flex items-center gap-1.5 text-brand-text-heading">
                 {member.displayName}
                 {member.position && member.position !== "MEMBER" && (() => {
                   const color = positionColor(member.position);
@@ -254,16 +254,16 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               </div>
             </div>
             <div>
-              <div className="text-xs mb-0.5" style={{ color: "#999" }}>年级</div>
-              <div style={{ color: "#333" }}>{member.grade != null ? `${member.grade}级` : "—"}</div>
+              <div className="text-xs mb-0.5 text-brand-text-muted">年级</div>
+              <div className="text-brand-text-heading">{member.grade != null ? `${member.grade}级` : "—"}</div>
             </div>
             <div>
-              <div className="text-xs mb-0.5" style={{ color: "#999" }}>入社年份</div>
-              <div style={{ color: "#333" }}>{member.joinYear != null ? `${member.joinYear}年` : "—"}</div>
+              <div className="text-xs mb-0.5 text-brand-text-muted">入社年份</div>
+              <div className="text-brand-text-heading">{member.joinYear != null ? `${member.joinYear}年` : "—"}</div>
             </div>
             <div>
-              <div className="text-xs mb-0.5" style={{ color: "#999" }}>毕业状态</div>
-              <div style={member.graduated ? { color: "#E38043" } : { color: "#3388BB" }}>
+              <div className="text-xs mb-0.5 text-brand-text-muted">毕业状态</div>
+              <div className={member.graduated ? "text-brand-orange" : "text-brand-blue"}>
                 {member.graduated ? "已毕业" : "在读"}
               </div>
             </div>
@@ -271,8 +271,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
           {/* 联系方式 — 敏感项，仅成员+可见 */}
           {canSeeSensitive && (member.location || member.phone || member.wechat || member.qq) && (
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-              <div className="text-xs mb-2" style={{ color: "#999" }}>联系方式（仅成员可见）</div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-xs mb-2 text-brand-text-muted">联系方式（仅成员可见）</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 {member.location && <ContactRow label="所在地" value={member.location} />}
                 {member.phone && <ContactRow label="电话" value={member.phone} />}
@@ -284,13 +284,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
           {/* 真实姓名 — 敏感项，仅成员+可见 */}
           {canSeeSensitive && member.realName && (
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-              <div className="text-xs mb-2 flex items-center gap-1" style={{ color: "#999" }}>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-xs mb-2 flex items-center gap-1 text-brand-text-muted">
                 🔒 真实姓名（仅成员可见）
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm" style={{ color: "#333" }}>{member.realName}</span>
-                <span className="text-[10px] px-1 py-0.5 rounded" style={{ background: "#FDE8E8", color: "#C62828" }}>敏感</span>
+                <span className="text-sm text-brand-text-heading">{member.realName}</span>
+                <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700">敏感</span>
               </div>
             </div>
           )}
@@ -299,8 +299,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           {canSeeSensitive && (
             <>
               {!member.graduated && (member.college || member.major) && (
-                <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-                  <div className="text-xs mb-2" style={{ color: "#999" }}>在校信息（仅成员可见）</div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="text-xs mb-2 text-brand-text-muted">在校信息（仅成员可见）</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     {member.college && <ContactRow label="学院" value={member.college} />}
                     {member.major && <ContactRow label="专业" value={member.major} />}
@@ -308,8 +308,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 </div>
               )}
               {member.graduated && (member.workLocation || member.workPosition) && (
-                <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-                  <div className="text-xs mb-2" style={{ color: "#999" }}>工作信息（仅成员可见）</div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="text-xs mb-2 text-brand-text-muted">工作信息（仅成员可见）</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     {member.workLocation && <ContactRow label="工作所在地" value={member.workLocation} />}
                     {member.workPosition && <ContactRow label="工作岗位" value={member.workPosition} />}
@@ -320,20 +320,20 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           )}
 
           {member.bio && (
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-              <div className="text-xs mb-1" style={{ color: "#999" }}>个人简介</div>
-              <div className="text-sm" style={{ color: "#555" }}>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-xs mb-1 text-brand-text-muted">个人简介</div>
+              <div className="text-sm text-brand-text-body">
                 <RichContent text={member.bio} />
               </div>
             </div>
           )}
 
           {member.skills.length > 0 && (
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-              <div className="text-xs mb-2" style={{ color: "#999" }}>职能标签</div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-xs mb-2 text-brand-text-muted">职能标签</div>
               <div className="flex flex-wrap gap-1.5">
                 {member.skills.map((s, i) => (
-                  <span key={i} className="text-xs px-2 py-0.5 rounded" style={{ background: "#E8F5E9", color: "#88C232" }}>
+                  <span key={i} className="text-xs px-2 py-0.5 rounded bg-green-50 text-brand-green">
                     {s}
                   </span>
                 ))}
@@ -342,11 +342,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           )}
 
           {(member.socialLinks?.length ?? 0) > 0 && (
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: "#EEE" }}>
-              <div className="text-xs mb-2" style={{ color: "#999" }}>个人链接</div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-xs mb-2 text-brand-text-muted">个人链接</div>
               <div className="flex flex-wrap gap-3">
                 {member.socialLinks!.map((l) => (
-                  <Link key={l.id} href={l.url} target="_blank" className="text-sm hover:underline flex items-center gap-1" style={{ color: "#3388BB" }}>
+                  <Link key={l.id} href={l.url} target="_blank" className="text-sm hover:underline flex items-center gap-1 text-brand-blue">
                     {LINK_ICONS[l.label] || "🔗"} {l.label}
                   </Link>
                 ))}
@@ -358,10 +358,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       })()}
 
       {/* 作品列表 — 橱窗形式 */}
-      <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-        <h2 className="font-semibold mb-4" style={{ color: "#25547A" }}>我的作品</h2>
+      <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
+        <h2 className="font-semibold mb-4 text-brand-navy">我的作品</h2>
         {userProjects.length === 0 ? (
-          <div className="text-center py-10 text-sm" style={{ color: "#777" }}>
+          <div className="text-center py-10 text-sm text-brand-text-secondary">
             暂无作品
           </div>
         ) : (
@@ -380,8 +380,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
       {/* 我喜欢的作品 */}
       {likedProjects.length > 0 && (
-        <div className="bg-white rounded-xl border p-6 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-          <h2 className="font-semibold mb-4" style={{ color: "#E38043" }}>❤️ 我喜欢的作品</h2>
+        <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
+          <h2 className="font-semibold mb-4 text-brand-orange">❤️ 我喜欢的作品</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {likedProjects.map((p, i) => (
               <ProjectCard
@@ -400,18 +400,18 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 function ContactRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <span style={{ color: "#777" }}>{label}</span>
-      <span style={{ color: "#333" }}>{value}</span>
+      <span className="text-brand-text-secondary">{label}</span>
+      <span className="text-brand-text-heading">{value}</span>
     </div>
   );
 }
 
-function roleBadge(role?: string): React.CSSProperties {
-  const map: Record<string, { bg: string; color: string }> = {
-    ADMIN: { bg: "#FDE8E8", color: "#C62828" },
-    MEMBER: { bg: "#E8F5E9", color: "#2E7D32" },
-    USER: { bg: "#E6F0F8", color: "#25547A" },
+function roleBadge(role?: string): string {
+  const map: Record<string, string> = {
+    ADMIN: "bg-red-100 text-red-700",
+    MEMBER: "bg-green-50 text-green-800",
+    USER: "bg-brand-surface text-brand-navy",
   };
-  if (!role || !map[role]) return { background: "#EEE", color: "#555" };
-  return { background: map[role].bg, color: map[role].color };
+  if (!role || !map[role]) return "bg-gray-200 text-brand-text-body";
+  return map[role];
 }

@@ -70,7 +70,7 @@ export default async function EditProfilePage() {
 
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 animate-fade-in">
-      <h1 className="text-2xl font-bold mb-6" style={{ color: "#25547A" }}>编辑个人资料</h1>
+      <h1 className="text-2xl font-bold mb-6 text-brand-navy">编辑个人资料</h1>
       <EditForm
         user={{ id: dbUser.id, name: dbUser.name, bio: dbUser.bio, image: dbUser.image }}
         member={member}

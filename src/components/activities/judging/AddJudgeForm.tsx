@@ -45,8 +45,7 @@ export function AddJudgeForm({ activityId, existingJudgeIds }: {
       <button
         type="submit"
         disabled={loading || !selectedUserId}
-        className="text-sm px-4 py-1.5 rounded-lg text-white disabled:opacity-50 shrink-0"
-        style={{ background: "#3388BB" }}
+        className="text-sm px-4 py-1.5 rounded-lg text-white disabled:opacity-50 shrink-0 bg-brand-blue"
       >
         {loading ? "添加中…" : "添加评委"}
       </button>

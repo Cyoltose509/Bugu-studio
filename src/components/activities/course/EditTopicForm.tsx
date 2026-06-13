@@ -50,21 +50,18 @@ export default function EditTopicForm({
         onChange={(e) => setTopic(e.target.value)}
         placeholder="输入讲题…"
         maxLength={200}
-        className="flex-1 rounded-lg border px-3 py-1.5 text-sm"
-        style={{ borderColor: "#D0DEE8", color: "#333" }}
+        className="flex-1 rounded-lg border border-brand-border-subtle px-3 py-1.5 text-sm text-brand-text-heading"
         disabled={pending}
       />
       <button
         type="submit"
         disabled={pending}
-        className="text-xs px-3 py-1.5 rounded-lg text-white shrink-0 disabled:opacity-50"
-        style={{ background: "#3388BB" }}
+        className="text-xs px-3 py-1.5 rounded-lg text-white shrink-0 disabled:opacity-50 bg-brand-blue"
       >
         {pending ? "保存中…" : "保存"}
       </button>
       {feedback && (
-        <span className={`text-xs shrink-0 ${feedback.type === "success" ? "text-green-600" : "text-red-500"}`}
-          style={{ color: feedback.type === "success" ? "#16a34a" : "#EF4444" }}>
+        <span className={`text-xs shrink-0 ${feedback.type === "success" ? "text-green-600" : "text-red-500"}`}>
           {feedback.msg}
         </span>
       )}

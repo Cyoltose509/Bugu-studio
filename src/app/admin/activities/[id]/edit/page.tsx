@@ -32,7 +32,7 @@ export default async function EditActivityPage({ params }: PageProps) {
     <div className="animate-fade-in space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
         <a href="/admin/activities" className="btn-secondary px-3 py-1.5 rounded-lg text-sm">← 返回列表</a>
-        <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>编辑活动</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">编辑活动</h1>
       </div>
 
       <form
@@ -41,23 +41,20 @@ export default async function EditActivityPage({ params }: PageProps) {
           await updateActivity(id, formData);
           redirect("/admin/activities");
         }}
-        className="bg-white rounded-xl border p-6 space-y-5 shadow-sm"
-        style={{ borderColor: "#D0DEE8" }}
+        className="bg-card rounded-xl border p-6 space-y-5 shadow-sm border-brand-border-subtle"
       >
         {/* 标题 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>标题 *</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">标题 *</label>
           <input name="title" defaultValue={activity.title} required
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 类型 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>活动类型</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">活动类型</label>
           <select name="type" defaultValue={activity.type}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333", background: "#fff" }}>
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading bg-card">
             <option value="MEETING">例会</option>
             <option value="COURSE">公开课</option>
             <option value="COMPETITION">比赛 / Game Jam</option>
@@ -67,10 +64,9 @@ export default async function EditActivityPage({ params }: PageProps) {
 
         {/* 状态 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>状态</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">状态</label>
           <select name="status" defaultValue={activity.status}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333", background: "#fff" }}>
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading bg-card">
             <option value="DRAFT">草稿</option>
             <option value="PUBLISHED">已发布</option>
             <option value="ARCHIVED">已归档</option>
@@ -79,93 +75,84 @@ export default async function EditActivityPage({ params }: PageProps) {
 
         {/* 简介 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>简介</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">简介</label>
           <input name="summary" defaultValue={activity.summary || ""} maxLength={200}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 描述 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>详细描述</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">详细描述</label>
           <DescriptionEditor defaultValue={activity.description || ""} />
         </div>
 
         {/* 封面 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>封面</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">封面</label>
           <CoverUploadInput defaultValue={activity.coverImage || undefined} />
         </div>
 
         {/* 地点 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>线下地点</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">线下地点</label>
           <input name="location" defaultValue={activity.location || "总图书馆未来学习中心"}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 线上链接 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>线上链接 <span className="text-xs" style={{ color: "#999" }}>(腾讯会议等，可选)</span></label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">线上链接 <span className="text-xs text-brand-text-muted">(腾讯会议等，可选)</span></label>
           <input name="meetingUrl" type="url" defaultValue={activity.meetingUrl || ""} placeholder="https://meeting.tencent.com/…"
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 开始 + 结束时间 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: "#555" }}>开始时间</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body">开始时间</label>
             <input name="startTime" type="datetime-local" defaultValue={fmt(activity.startTime)} required
-              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-              style={{ borderColor: "#D0DEE8", color: "#333" }} />
+              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
           </div>
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: "#555" }}>结束时间</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body">结束时间</label>
             <input name="endTime" type="datetime-local" defaultValue={fmt(activity.endTime)} required
-              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-              style={{ borderColor: "#D0DEE8", color: "#333" }} />
+              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
           </div>
         </div>
 
         {/* 最大人数 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>最大参与人数</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">最大参与人数</label>
           <input name="maxParticipants" type="number" min={1} defaultValue={activity.maxParticipants || ""}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 开放报名 */}
         <div className="flex items-center gap-2">
           <input name="registrationOpen" type="checkbox" defaultChecked={activity.registrationOpen}
-            className="w-4 h-4 accent-[#3388BB]" />
-          <label className="text-sm" style={{ color: "#555" }}>开放报名</label>
+            className="w-4 h-4 accent-brand-blue" />
+          <label className="text-sm text-brand-text-body">开放报名</label>
         </div>
 
         {/* Game Jam 设置（仅 COMPETITION 类型显示） */}
         {activity.type === "COMPETITION" && (
-        <div className="p-4 rounded-lg border" style={{ borderColor: "#FFF3E0", background: "#FFFDF7" }}>
-          <p className="text-sm font-medium mb-3" style={{ color: "#E38043" }}>🏆 Game Jam 设置</p>
+        <div className="p-4 rounded-lg border border-[#FFF3E0] bg-[#FFFDF7]">
+          <p className="text-sm font-medium mb-3 text-brand-orange">🏆 Game Jam 设置</p>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs mb-1" style={{ color: "#777" }}>比赛题目</label>
+              <label className="block text-xs mb-1 text-brand-text-secondary">比赛题目</label>
               <textarea name="theme" rows={3} defaultValue={activity.theme || ""}
-                className="w-full rounded-lg border px-3 py-2 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-[#E38043]"
-                style={{ borderColor: "#D0DEE8", color: "#333" }} />
+                className="w-full rounded-lg border px-3 py-2 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
             </div>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "#777" }}>题目公布时间</label>
+              <label className="block text-xs mb-1 text-brand-text-secondary">题目公布时间</label>
               <input name="themeRevealedAt" type="datetime-local" defaultValue={activity.themeRevealedAt ? fmt(activity.themeRevealedAt) : ""}
-                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
-                style={{ borderColor: "#D0DEE8", color: "#333" }} />
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
             </div>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "#777" }}>每队最大人数 <span className="text-xs" style={{ color: "#999" }}>(默认 6，缩小后将自动踢出超限成员)</span></label>
+              <label className="block text-xs mb-1 text-brand-text-secondary">每队最大人数 <span className="text-xs text-brand-text-muted">(默认 6，缩小后将自动踢出超限成员)</span></label>
               <input name="maxTeamSize" type="number" min={1} max={50} defaultValue={activity.maxTeamSize ?? 6}
-                className="w-32 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
-                style={{ borderColor: "#D0DEE8", color: "#333" }} />
+                className="w-32 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
             </div>
           </div>
         </div>

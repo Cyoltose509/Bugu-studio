@@ -83,58 +83,53 @@ export default function CreateActivityPage() {
     <div className="animate-fade-in space-y-6 max-w-2xl">
       <div className="flex items-center gap-3">
         <Link href="/admin/activities" className="btn-secondary px-3 py-1.5 rounded-lg text-sm">← 返回列表</Link>
-        <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>创建活动</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">创建活动</h1>
       </div>
 
       {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-      <form action={handleSubmit} className="bg-white rounded-xl border p-6 space-y-5 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
+      <form action={handleSubmit} className="bg-card rounded-xl border p-6 space-y-5 shadow-sm border-brand-border-subtle">
         {/* 标题 */}
         <div>
-          <label className="block text-sm mb-2" style={{ color: "#555" }} htmlFor="title">
-            标题 <span className="text-xs" style={{ color: "#999" }}>(不填则自动生成为"年月日 + 活动类型")</span>
+          <label className="block text-sm mb-2 text-brand-text-body" htmlFor="title">
+            标题 <span className="text-xs text-brand-text-muted">(不填则自动生成为"年月日 + 活动类型")</span>
           </label>
           <input id="title" name="title" placeholder="输入活动标题或留空自动生成…" value={title} onChange={e => setTitle(e.target.value)}
-            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
           {startTime && !title && (
-            <p className="text-xs mt-1" style={{ color: "#93B3C8" }}>将自动生成为：{getDefaultTitle()}</p>
+            <p className="text-xs mt-1 text-[#93B3C8]">将自动生成为：{getDefaultTitle()}</p>
           )}
         </div>
 
         {/* 类型 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="type">活动类型 *</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="type">活动类型 *</label>
           <select id="type" name="type" value={type} onChange={e => setType(e.target.value)}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333", background: "#fff" }}>
+            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading bg-card">
             {TYPE_OPTIONS.map(t => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
           {type === "MEETING" && (
-            <p className="text-xs mt-1" style={{ color: "#93B3C8" }}>修改开始时间时，结束时间将自动设为 +2 小时</p>
+            <p className="text-xs mt-1 text-[#93B3C8]">修改开始时间时，结束时间将自动设为 +2 小时</p>
           )}
           {type === "COMPETITION" && (
-            <div className="mt-4 space-y-4 p-4 rounded-lg border" style={{ borderColor: "#FFF3E0", background: "#FFFDF7" }}>
-              <p className="text-sm font-medium" style={{ color: "#E38043" }}>🏆 Game Jam 设置</p>
+            <div className="mt-4 space-y-4 p-4 rounded-lg border border-[#FFF3E0] bg-[#FFFDF7]">
+              <p className="text-sm font-medium text-brand-orange">🏆 Game Jam 设置</p>
               <div>
-                <label className="block text-xs mb-1" style={{ color: "#777" }} htmlFor="theme">比赛题目 <span className="text-xs" style={{ color: "#999" }}>(比赛开始后公布，留空则无需题目)</span></label>
+                <label className="block text-xs mb-1 text-brand-text-secondary" htmlFor="theme">比赛题目 <span className="text-xs text-brand-text-muted">(比赛开始后公布，留空则无需题目)</span></label>
                 <textarea id="theme" name="theme" rows={3} placeholder="如：主题是「时光倒流」—— 创作一个围绕时间回溯玩法的游戏"
-                  className="w-full rounded-lg border px-3 py-2 text-sm resize-y placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#E38043]"
-                  style={{ borderColor: "#D0DEE8", color: "#333" }} />
+                  className="w-full rounded-lg border px-3 py-2 text-sm resize-y placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
               </div>
               <div>
-                <label className="block text-xs mb-1" style={{ color: "#777" }} htmlFor="themeRevealedAt">题目公布时间 <span className="text-xs" style={{ color: "#999" }}>(默认为活动开始时间)</span></label>
+                <label className="block text-xs mb-1 text-brand-text-secondary" htmlFor="themeRevealedAt">题目公布时间 <span className="text-xs text-brand-text-muted">(默认为活动开始时间)</span></label>
                 <input id="themeRevealedAt" name="themeRevealedAt" type="datetime-local"
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
-                  style={{ borderColor: "#D0DEE8", color: "#333" }} />
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
               </div>
               <div>
-                <label className="block text-xs mb-1" style={{ color: "#777" }} htmlFor="maxTeamSize">每队最大人数 <span className="text-xs" style={{ color: "#999" }}>(默认 6)</span></label>
+                <label className="block text-xs mb-1 text-brand-text-secondary" htmlFor="maxTeamSize">每队最大人数 <span className="text-xs text-brand-text-muted">(默认 6)</span></label>
                 <input id="maxTeamSize" name="maxTeamSize" type="number" min={1} max={50} defaultValue={6}
-                  className="w-32 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#E38043]"
-                  style={{ borderColor: "#D0DEE8", color: "#333" }} />
+                  className="w-32 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
               </div>
             </div>
           )}
@@ -142,69 +137,63 @@ export default function CreateActivityPage() {
 
         {/* 简介 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="summary">简介</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="summary">简介</label>
           <input id="summary" name="summary" maxLength={200} placeholder="一句话介绍活动（显示在卡片上）"
-            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 描述 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="description">详细描述</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="description">详细描述</label>
           <MentionEditor id="description" name="description" rows={5} placeholder="活动详细说明"
-            className="w-full rounded-lg border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]" />
+            className="w-full rounded-lg border placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue" />
         </div>
 
         {/* 封面 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>封面</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body">封面</label>
           <CoverUploadInput />
         </div>
 
         {/* 地点 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="location">线下地点</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="location">线下地点</label>
           <input id="location" name="location" defaultValue="总图书馆未来学习中心" placeholder="线下活动地点"
-            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 线上链接 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="meetingUrl">线上链接 <span className="text-xs" style={{ color: "#999" }}>(腾讯会议等，可选)</span></label>
+          <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="meetingUrl">线上链接 <span className="text-xs text-brand-text-muted">(腾讯会议等，可选)</span></label>
           <input id="meetingUrl" name="meetingUrl" type="url" placeholder="https://meeting.tencent.com/…"
-            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 开始时间 + 结束时间 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="startTime">开始时间 *</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="startTime">开始时间 *</label>
             <input id="startTime" name="startTime" type="datetime-local" required value={startTime} onChange={e => handleStartTimeChange(e.target.value)}
-              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-              style={{ borderColor: "#D0DEE8", color: "#333" }} />
+              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
           </div>
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="endTime">结束时间 *</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="endTime">结束时间 *</label>
             <input id="endTime" name="endTime" type="datetime-local" required value={endTime} onChange={e => setEndTime(e.target.value)}
-              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-              style={{ borderColor: "#D0DEE8", color: "#333" }} />
+              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
           </div>
         </div>
 
         {/* 最大参与人数 */}
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="maxParticipants">最大参与人数（留空不限）</label>
+          <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="maxParticipants">最大参与人数（留空不限）</label>
           <input id="maxParticipants" name="maxParticipants" type="number" min={1} placeholder="不限"
-            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
-            style={{ borderColor: "#D0DEE8", color: "#333" }} />
+            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
         </div>
 
         {/* 开放报名 */}
         <div className="flex items-center gap-2">
-          <input id="registrationOpen" name="registrationOpen" type="checkbox" className="w-4 h-4 accent-[#3388BB]" />
-          <label className="text-sm" style={{ color: "#555" }} htmlFor="registrationOpen">开放报名</label>
+          <input id="registrationOpen" name="registrationOpen" type="checkbox" className="w-4 h-4 accent-brand-blue" />
+          <label className="text-sm text-brand-text-body" htmlFor="registrationOpen">开放报名</label>
         </div>
 
         {/* 提交 */}
@@ -213,7 +202,7 @@ export default function CreateActivityPage() {
             className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm" pendingText="创建中...">
             创建活动（草稿）
           </SubmitButton>
-          <p className="text-xs mt-2" style={{ color: "#999" }}>创建后为「草稿」状态，可在列表中发布。</p>
+          <p className="text-xs mt-2 text-brand-text-muted">创建后为「草稿」状态，可在列表中发布。</p>
         </div>
       </form>
     </div>

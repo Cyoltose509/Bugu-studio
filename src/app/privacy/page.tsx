@@ -14,39 +14,39 @@ const lastUpdated = "2026-06-08";
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen" style={{ background: "#F5F9FC" }}>
+    <div className="min-h-screen bg-[#F5F9FC]">
       <div className="container mx-auto px-4 py-12 max-w-3xl">
         {/* 头部 */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Image src="/images/logo.png" alt={siteName} width={32} height={32} className="rounded-lg" />
-            <span className="font-bold text-lg" style={{ color: "#25547A" }}>{siteName}</span>
+            <span className="font-bold text-lg text-brand-navy">{siteName}</span>
           </div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: "#25547A" }}>隐私政策</h1>
-          <p className="text-sm" style={{ color: "#999" }}>最后更新：{lastUpdated}</p>
+          <h1 className="text-2xl font-bold mb-2 text-brand-navy">隐私政策</h1>
+          <p className="text-sm text-brand-text-muted">最后更新：{lastUpdated}</p>
         </div>
 
         {/* 正文 */}
-        <div className="space-y-8 text-sm leading-relaxed" style={{ color: "#555" }}>
+        <div className="space-y-8 text-sm leading-relaxed text-brand-text-body">
           <Section title="1. 概述">
             <p>欢迎使用{siteName}（以下简称「本网站」）。我们深知个人信息对您的重要性，将按照法律法规要求，采取相应安全保护措施，尽力保护您的个人信息安全。</p>
             <p>本隐私政策阐述了当您访问本网站或使用我们的服务时，我们如何收集、使用、存储和保护您的信息。请仔细阅读本政策，以了解我们的做法。</p>
           </Section>
 
           <Section title="2. 我们收集的信息">
-            <h4 className="font-semibold mb-1" style={{ color: "#333" }}>您主动提供的信息：</h4>
+            <h4 className="font-semibold mb-1 text-brand-text-heading">您主动提供的信息：</h4>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>邮箱地址</strong> — 注册账号、接收验证码和通知时使用</li>
               <li><strong>用户名称</strong> — 您在网站上的显示名称</li>
               <li><strong>头像图片</strong> — 您上传的个人头像，用于个人资料展示</li>
               <li><strong>作品信息</strong> — 您提交的游戏作品名称、描述、截图等</li>
             </ul>
-            <h4 className="font-semibold mb-1 mt-3" style={{ color: "#333" }}>我们自动收集的信息：</h4>
+            <h4 className="font-semibold mb-1 mt-3 text-brand-text-heading">我们自动收集的信息：</h4>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>登录凭证 (Cookie)</strong> — 仅用于维持您的登录会话，不用于追踪或广告目的</li>
               <li><strong>访问日志</strong> — 包括 IP 地址、浏览器类型、访问时间等基础网络信息，仅用于安全防护和故障排查</li>
             </ul>
-            <p className="text-xs mt-2" style={{ color: "#999" }}>
+            <p className="text-xs mt-2 text-brand-text-muted">
               * 我们<strong>不会</strong>收集您的手机号、身份证号、精确地理位置、设备指纹等敏感信息。
             </p>
           </Section>
@@ -68,32 +68,32 @@ export default function PrivacyPage() {
             <div className="overflow-x-auto mt-2">
               <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr style={{ background: "#EEF4FA" }}>
-                    <th className="text-left p-2 border" style={{ borderColor: "#D0DEE8" }}>服务</th>
-                    <th className="text-left p-2 border" style={{ borderColor: "#D0DEE8" }}>用途</th>
-                    <th className="text-left p-2 border" style={{ borderColor: "#D0DEE8" }}>涉及数据</th>
+                  <tr className="bg-[#EEF4FA]">
+                    <th className="text-left p-2 border border-brand-border-subtle">服务</th>
+                    <th className="text-left p-2 border border-brand-border-subtle">用途</th>
+                    <th className="text-left p-2 border border-brand-border-subtle">涉及数据</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>Supabase</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>数据库与身份认证</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>用户信息、作品数据</td>
+                    <td className="p-2 border border-brand-border-subtle">Supabase</td>
+                    <td className="p-2 border border-brand-border-subtle">数据库与身份认证</td>
+                    <td className="p-2 border border-brand-border-subtle">用户信息、作品数据</td>
                   </tr>
                   <tr>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>Cloudflare R2</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>文件存储（图片上传）</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>头像、作品截图</td>
+                    <td className="p-2 border border-brand-border-subtle">Cloudflare R2</td>
+                    <td className="p-2 border border-brand-border-subtle">文件存储（图片上传）</td>
+                    <td className="p-2 border border-brand-border-subtle">头像、作品截图</td>
                   </tr>
                   <tr>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>Resend</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>发送验证邮件</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>邮箱地址</td>
+                    <td className="p-2 border border-brand-border-subtle">Resend</td>
+                    <td className="p-2 border border-brand-border-subtle">发送验证邮件</td>
+                    <td className="p-2 border border-brand-border-subtle">邮箱地址</td>
                   </tr>
                   <tr>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>Vercel</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>网站托管与部署</td>
-                    <td className="p-2 border" style={{ borderColor: "#D0DEE8" }}>访问日志</td>
+                    <td className="p-2 border border-brand-border-subtle">Vercel</td>
+                    <td className="p-2 border border-brand-border-subtle">网站托管与部署</td>
+                    <td className="p-2 border border-brand-border-subtle">访问日志</td>
                   </tr>
                 </tbody>
               </table>
@@ -136,13 +136,13 @@ export default function PrivacyPage() {
           <Section title="10. 联系我们">
             <p>如果您对本隐私政策有任何疑问、意见或投诉，请通过以下方式联系我们：</p>
             <p className="mt-2">
-              邮箱：<a href={`mailto:${contactEmail}`} className="font-medium" style={{ color: "#3388BB" }}>{contactEmail}</a>
+              邮箱：<a href={`mailto:${contactEmail}`} className="font-medium text-brand-blue">{contactEmail}</a>
             </p>
           </Section>
         </div>
 
-        <div className="mt-12 pt-6 text-center border-t" style={{ borderColor: "#D0DEE8" }}>
-          <Link href="/" className="text-sm" style={{ color: "#3388BB" }}>&larr; 返回首页</Link>
+        <div className="mt-12 pt-6 text-center border-t border-brand-border-subtle">
+          <Link href="/" className="text-sm text-brand-blue">&larr; 返回首页</Link>
         </div>
       </div>
     </div>
@@ -153,7 +153,7 @@ export default function PrivacyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-base font-bold mb-3" style={{ color: "#333" }}>{title}</h2>
+      <h2 className="text-base font-bold mb-3 text-brand-text-heading">{title}</h2>
       <div className="space-y-2">{children}</div>
     </section>
   );

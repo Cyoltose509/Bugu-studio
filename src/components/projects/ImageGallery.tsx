@@ -181,8 +181,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
             {/* ── 封面（大图） ── */}
             {coverItem && (
                 <div
-                    className="relative aspect-video rounded-xl overflow-hidden border cursor-zoom-in group"
-                    style={{borderColor: "#D0DEE8"}}
+                    className="relative aspect-video rounded-xl overflow-hidden border cursor-zoom-in group border-brand-border-subtle"
                     onClick={() => open(0)}
                     role="button"
                     tabIndex={0}
@@ -208,8 +207,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                         return (
                             <div
                                 key={i}
-                                className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors cursor-zoom-in group"
-                                style={{borderColor: "#D0DEE8"}}
+                                className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors cursor-zoom-in group border-brand-border-subtle"
                                 onClick={() => open(globalIdx)}
                                 role="button"
                                 tabIndex={0}
@@ -235,8 +233,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
             {lightbox && (
                 <div
                     ref={overlayRef}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 animate-fade-in"
-                    style={{cursor: isZoomed ? (dragging.current ? "grabbing" : "grab") : "default"}}
+                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/90 animate-fade-in ${isZoomed ? "cursor-grab" : "cursor-default"}`}
                     onWheel={onWheel}
                     onMouseMove={onMouseMove}
                     onMouseUp={onMouseUp}
@@ -303,27 +300,20 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
 
                     {/* 图片容器 */}
                     <div
-                        className="relative flex items-center justify-center"
-                        style={{
-                            width: "90vw",
-                            height: "85vh",
-                            overflow: isZoomed ? "visible" : "hidden",
-                        }}
+                        className={`relative flex items-center justify-center w-[90vw] h-[85vh] ${isZoomed ? "overflow-visible" : "overflow-hidden"}`}
                     >
                         <img
                             ref={imgRef}
                             src={allImages[lightbox.index].src}
                             alt={allImages[lightbox.index].alt}
                             key={lightbox.index}
-                            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl animate-fade-in select-none"
+                            className={`max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl animate-fade-in select-none origin-center transition-transform duration-150 ${isZoomed ? "cursor-grab" : "cursor-default"}`}
                             style={{
-                                transform: `scale(${transform.scale}) translate(${transform.x / transform.scale}px, ${transform.y / transform.scale}px)`,
-                                transformOrigin: "center center",
-                                transition: dragging.current ? "none" : "transform 0.15s ease",
-                                cursor: isZoomed ? "grab" : "default",
-                                userSelect: "none",
-                                WebkitUserSelect: "none",
-                            }}
+                                "--scale": transform.scale,
+                                "--tx": transform.x / transform.scale,
+                                "--ty": transform.y / transform.scale,
+                                transform: "scale(var(--scale)) translate(calc(var(--tx) * 1px), calc(var(--ty) * 1px))",
+                            } as React.CSSProperties}
                             onMouseDown={onMouseDown}
                             onDoubleClick={onDblClick}
                             draggable={false}

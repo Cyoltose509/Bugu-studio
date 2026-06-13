@@ -16,14 +16,13 @@ export default function HomePage() {
     return (
         <div className="animate-fade-in">
             {/* Hero */}
-            <section className="relative overflow-hidden px-4 py-20 md:py-28 text-center"
-                     style={{background: "linear-gradient(180deg, rgba(230,240,248,0.6) 0%, rgba(208,228,240,0.6) 100%)",}}>
+            <section className="relative overflow-hidden px-4 py-20 md:py-28 text-center hero-gradient">
                 <div className="container mx-auto max-w-3xl relative">
                     <Image src="/images/logo.png" alt="布谷工作室" width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg"
                            priority/>
-                    <h1 className="text-4xl md:text-6xl font-bold mb-4" style={{color: "#25547A"}}>布谷工作室</h1>
-                    <p className="text-xl mb-3" style={{color: "#555"}}>官方网站</p>
-                    <p className="mb-8 max-w-xl mx-auto" style={{color: "#777"}}>
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4 text-brand-navy">布谷工作室</h1>
+                    <p className="text-xl mb-3 text-brand-text-body">官方网站</p>
+                    <p className="mb-8 max-w-xl mx-auto text-brand-text-secondary">
                         我们是一群热爱游戏开发的同学，这里存档了社团的点点滴滴。
                     </p>
                     <div className="flex justify-center gap-4">
@@ -41,8 +40,8 @@ export default function HomePage() {
             {/* 最新作品 — 流式加载（展示 6 个） */}
             <section className="py-16 container mx-auto px-4">
                 <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold" style={{color: "#25547A"}}>最新作品</h2>
-                    <Link href="/works" className="text-sm hover:underline" style={{color: "#3388BB"}}>查看全部 →</Link>
+                    <h2 className="text-2xl font-bold text-brand-navy">最新作品</h2>
+                    <Link href="/works" className="text-sm hover:underline text-brand-blue">查看全部 →</Link>
                 </div>
                 <Suspense fallback={<ProjectGridSkeleton count={6}/>}>
                     <LatestProjects/>
@@ -57,8 +56,8 @@ export default function HomePage() {
             {/* CTA */}
             <section className="py-16 text-center">
                 <div className="container mx-auto px-4 max-w-xl">
-                    <h2 className="text-2xl font-bold mb-3" style={{color: "#25547A"}}>想加入我们？</h2>
-                    <p className="mb-6" style={{color: "#777"}}>每学年开放招新，欢迎对游戏开发充满热情的同学加入。</p>
+                    <h2 className="text-2xl font-bold mb-3 text-brand-navy">想加入我们？</h2>
+                    <p className="mb-6 text-brand-text-secondary">每学年开放招新，欢迎对游戏开发充满热情的同学加入。</p>
                     <Link href="/join" className="btn-primary inline-block px-8 py-3 rounded-lg font-medium text-sm">了解招新信息</Link>
                 </div>
             </section>
@@ -70,7 +69,7 @@ export default function HomePage() {
 
 function StatsSkeleton() {
     return (
-        <div className="py-10 border-y animate-pulse" style={{borderColor: "#D0DEE8"}}>
+        <div className="py-10 border-y animate-pulse border-brand-border-subtle">
             <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 {[1, 2, 3, 4].map(i => (
                     <div key={i} className="space-y-2">
@@ -88,7 +87,7 @@ function ProjectGridSkeleton({count}: { count: number }) {
     return (
         <div className={`grid ${cols} gap-6 animate-pulse`}>
             {Array.from({length: count}).map((_, i) => (
-                <div key={i} className="rounded-xl border overflow-hidden" style={{borderColor: "#D0DEE8"}}>
+                <div key={i} className="rounded-xl border overflow-hidden border-brand-border-subtle">
                     <div className="aspect-video bg-gray-200"/>
                     <div className="p-4 space-y-2">
                         <div className="w-3/4 h-5 rounded bg-gray-200"/>

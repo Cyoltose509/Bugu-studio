@@ -29,12 +29,12 @@ function Countdown({ startTime }: { startTime: Date }) {
   const days = Math.floor(diff / 86400000);
   const hours = Math.floor((diff % 86400000) / 3600000);
   if (days > 0) return (
-    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "#FFF3E0", color: "#E38043" }}>
+    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 text-brand-orange">
       {days}天后开始
     </span>
   );
   return (
-    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: "#FFF3E0", color: "#E38043" }}>
+    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 text-brand-orange">
       {hours}小时后开始
     </span>
   );
@@ -48,11 +48,10 @@ function ActivityCard({ a, badge, countdown }: {
 
   return (
     <Link href={`/activities/${a.id}`} className="group">
-      <div className="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all"
-        style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all">
 
         {/* 封面图 */}
-        <div className="relative aspect-video overflow-hidden" style={{ background: "#E6F0F8" }}>
+        <div className="relative aspect-video overflow-hidden bg-brand-surface">
           <Image
             src={coverSrc}
             alt={a.title}
@@ -82,12 +81,12 @@ function ActivityCard({ a, badge, countdown }: {
         {/* 信息区 */}
         <div className="p-3 space-y-1">
           {/* 标题 */}
-          <h3 className="text-sm font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>
+          <h3 className="text-sm font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
             {a.title}
           </h3>
 
           {/* 时间 */}
-          <p className="text-xs" style={{ color: "#999" }}>
+          <p className="text-xs text-brand-text-muted">
             {a.startTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
             {" ~ "}
             {a.endTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
@@ -96,7 +95,7 @@ function ActivityCard({ a, badge, countdown }: {
 
           {/* 一句话简介 */}
           {a.summary && (
-            <p className="text-xs line-clamp-1" style={{ color: "#777" }}>{a.summary}</p>
+            <p className="text-xs line-clamp-1 text-brand-text-secondary">{a.summary}</p>
           )}
         </div>
       </div>
@@ -115,8 +114,7 @@ function HeroCard({ a, status }: { a: any; status: "ongoing" | "upcoming" | "pas
   return (
       <Link href={`/activities/${a.id}`} className="group block">
         <div
-            className="overflow-hidden rounded-2xl border bg-white"
-            style={{ borderColor: "#D0DEE8" }}
+            className="overflow-hidden rounded-2xl border border-brand-border-subtle bg-card"
         >
           <div className="relative aspect-[16/9] overflow-hidden">
             <Image
@@ -169,20 +167,19 @@ function UpcomingItem({ a }: { a: any }) {
   return (
       <Link href={`/activities/${a.id}`}>
         <div
-            className="rounded-xl border p-3 hover:bg-slate-50 transition-colors flex gap-3"
-            style={{ borderColor: "#D0DEE8" }}
+            className="rounded-xl border border-brand-border-subtle p-3 hover:bg-slate-50 transition-colors flex gap-3"
         >
           {/* 缩略图 */}
-          <div className="w-14 h-10 rounded-md overflow-hidden shrink-0 relative" style={{ background: "#E6F0F8" }}>
+          <div className="w-14 h-10 rounded-md overflow-hidden shrink-0 relative bg-brand-surface">
             <Image src={thumbSrc} alt="" fill className="object-cover" sizes="56px" />
           </div>
 
           <div className="flex-1 min-w-0 flex justify-between items-start gap-2">
             <div className="min-w-0">
-              <h3 className="font-medium text-sm line-clamp-1" style={{ color: "#333" }}>
+              <h3 className="font-medium text-sm line-clamp-1 text-brand-text-heading">
                 {a.title}
               </h3>
-              <p className="text-xs mt-1" style={{ color: "#999" }}>
+              <p className="text-xs mt-1 text-brand-text-muted">
                 {a.startTime.toLocaleDateString("zh-CN")}
               </p>
             </div>
@@ -195,7 +192,7 @@ function UpcomingItem({ a }: { a: any }) {
 // ── 区间标题 ──────────────────────────────────────────────
 function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
   return (
-    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: "#25547A" }}>
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-brand-navy">
       <span>{emoji}</span> {title}
     </h2>
   );
@@ -260,8 +257,8 @@ export default async function ActivitiesPage() {
 
         {/* 页面头 */}
         <div className="mb-10">
-          <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>社团活动</h1>
-          <p className="mt-2" style={{ color: "#777" }}>布谷工作室的例会、公开课、比赛与各类活动</p>
+          <h1 className="text-3xl font-bold text-brand-navy">社团活动</h1>
+          <p className="mt-2 text-brand-text-secondary">布谷工作室的例会、公开课、比赛与各类活动</p>
         </div>
 
         {hero && (
@@ -274,8 +271,7 @@ export default async function ActivitiesPage() {
 
                 <div className="lg:col-span-2">
                   <h2
-                      className="text-lg font-semibold mb-3"
-                      style={{ color: "#25547A" }}
+                      className="text-lg font-semibold mb-3 text-brand-navy"
                   >
                     ⏰ 即将开始
                   </h2>

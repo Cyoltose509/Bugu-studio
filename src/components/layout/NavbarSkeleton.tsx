@@ -8,7 +8,7 @@ import NavLink from "@/components/layout/NavLink";
 
 export function NavbarSkeleton() {
   return (
-    <header className="sticky top-0 z-50 shadow-md" style={{ background: "rgba(37,84,122,0.9)" }}>
+    <header className="sticky top-0 z-50 shadow-md bg-brand-navy/90">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white hover:opacity-85 transition-opacity nav-link">
           <Image src="/images/logo.png" alt="布谷工作室" width={32} height={32} className="rounded" />

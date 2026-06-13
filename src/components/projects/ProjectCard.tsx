@@ -93,8 +93,7 @@ export default function ProjectCard({
 
   const useLink = !onClickStart;
   const commonClassName =
-    "group block bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-md";
-  const commonStyle = { borderColor: "#D0DEE8" as string };
+    "group block bg-card rounded-xl overflow-hidden border shadow-sm hover:shadow-md border-brand-border-subtle";
 
   // 点击处理
   const handleClick = (e: React.MouseEvent) => {
@@ -109,10 +108,9 @@ export default function ProjectCard({
     <>
       {/* 加载遮罩 */}
       {clicking && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 rounded-xl">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-card/40 rounded-xl">
           <div
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/90 shadow-lg"
-            style={{ color: "#25547A" }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/90 shadow-lg text-brand-navy"
           >
             <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.2" />
@@ -124,7 +122,7 @@ export default function ProjectCard({
       )}
 
       {/* 封面图区域 */}
-      <div className="relative aspect-video" style={{ background: "#E6F0F8" }}>
+      <div className="relative aspect-video bg-brand-surface">
         {/* 🏆 奖项角标 */}
         {p.awards && p.awards.length > 0 && (
           <div className="absolute top-2 right-2 text-lg z-10" title={p.awards.join("、")}>
@@ -135,14 +133,7 @@ export default function ProjectCard({
         {/* 状态角标（仅 /profile） */}
         {showStatusBadge && p.status && (
           <span
-            className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm shadow-sm z-10"
-            style={{
-              background:
-                p.status === "PUBLISHED"
-                  ? "rgba(46,125,50,0.85)"
-                  : "rgba(230,81,0,0.85)",
-              color: "#fff",
-            }}
+            className={`absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm shadow-sm z-10 text-white ${p.status === "PUBLISHED" ? "bg-green-700/85" : "bg-orange-600/85"}`}
           >
             {p.status === "PUBLISHED" ? "已发布" : p.status === "PENDING" ? "待审核" : p.status}
           </span>
@@ -166,18 +157,17 @@ export default function ProjectCard({
       {/* 卡片内容区 */}
       <div className="p-4">
         <h3
-          className="font-semibold group-hover:text-[#3388BB] transition-colors flex items-baseline gap-1.5"
-          style={{ color: "#333" }}
+          className="font-semibold group-hover:text-[#3388BB] transition-colors flex items-baseline gap-1.5 text-brand-text-heading"
         >
           <span className="truncate">{p.title}</span>
           {p.subtitle && (
-            <span className="text-xs font-normal flex-shrink-0" style={{ color: "#999" }}>
+            <span className="text-xs font-normal flex-shrink-0 text-brand-text-muted">
               {p.subtitle}
             </span>
           )}
         </h3>
         {!compact && (
-          <p className="text-sm mt-1 line-clamp-2" style={{ color: "#777" }}>
+          <p className="text-sm mt-1 line-clamp-2 text-brand-text-secondary">
             {p.description}
           </p>
         )}
@@ -186,8 +176,7 @@ export default function ProjectCard({
             {p.tags!.slice(0, 3).map(({ tag }) => (
               <span
                 key={tag.slug}
-                className="text-xs px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232" }}
+                className="text-xs px-1.5 py-0.5 rounded bg-brand-green/15 text-brand-green"
               >
                 {tag.name}
               </span>
@@ -197,7 +186,7 @@ export default function ProjectCard({
         <div className="flex items-center gap-1.5 mt-3">
           {/* 年份 */}
           {p.developYear && (
-            <span className="text-xs flex-shrink-0" style={{ color: "#999" }}>
+            <span className="text-xs flex-shrink-0 text-brand-text-muted">
               {p.developYear}
             </span>
           )}
@@ -210,7 +199,7 @@ export default function ProjectCard({
               initialLiked={p.liked ?? false}
             />
             {n > 0 && (
-              <div className="flex items-center overflow-hidden" style={{ maxWidth: `${maxW}px` }}>
+              <div className="flex items-center overflow-hidden" style={{ "--avatar-max-w": `${maxW}px`, maxWidth: "var(--avatar-max-w)" } as React.CSSProperties}>
                 {p.members!.map((pm, i) => {
                   const name =
                     pm.member?.displayName ||
@@ -222,15 +211,10 @@ export default function ProjectCard({
                   return (
                     <span
                       key={pm.id}
-                      className="inline-flex w-5 h-5 rounded-full items-center justify-center text-[10px] text-white border border-white overflow-hidden flex-shrink-0"
-                      style={{
-                        background: pm.member
-                          ? "#E38043"
-                          : pm.user
-                          ? "#3388BB"
-                          : "#6B7280",
-                        marginLeft: i === 0 ? 0 : `-${overlap}px`,
-                      }}
+                      className={`inline-flex w-5 h-5 rounded-full items-center justify-center text-[10px] text-white border border-white overflow-hidden flex-shrink-0 ${
+                        pm.member ? "bg-brand-orange" : pm.user ? "bg-brand-blue" : "bg-gray-500"
+                      }`}
+                      style={{ "--overlap": `${overlap}px`, marginLeft: i === 0 ? "0" : "calc(-1 * var(--overlap))" } as React.CSSProperties}
                       title={name}
                     >
                       {avatarUrl ? (
@@ -256,16 +240,10 @@ export default function ProjectCard({
 
   if (useLink) {
     return (
-      <div style={{ animation: `cardPopIn 0.45s ${delay} both` }}>
+      <div style={{ "--anim-delay": delay, animation: `cardPopIn 0.45s var(--anim-delay) both` } as React.CSSProperties}>
         <Link
           href={link}
-          className={commonClassName}
-          style={{
-            ...commonStyle,
-            cursor: "pointer",
-            opacity: 1,
-            transition: "opacity 0.2s",
-          }}
+          className={`${commonClassName} cursor-pointer opacity-100 transition-opacity duration-200`}
         >
           {cardContent}
         </Link>
@@ -274,17 +252,11 @@ export default function ProjectCard({
   }
 
   return (
-    <div style={{ animation: `cardPopIn 0.45s ${delay} both` }}>
+    <div style={{ "--anim-delay": delay, animation: `cardPopIn 0.45s var(--anim-delay) both` } as React.CSSProperties}>
       <a
         href={link}
         onClick={handleClick}
-        className={commonClassName}
-        style={{
-          ...commonStyle,
-          cursor: clicking ? "default" : "pointer",
-          opacity: clicking ? 0.65 : 1,
-          transition: "opacity 0.2s",
-        }}
+        className={`${commonClassName} transition-opacity duration-200 ${clicking ? "cursor-default opacity-65" : "cursor-pointer opacity-100"}`}
       >
         {cardContent}
       </a>

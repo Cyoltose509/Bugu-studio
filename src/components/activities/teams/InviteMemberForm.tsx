@@ -45,8 +45,7 @@ export function InviteMemberForm({ teamId, activityId, existingMemberIds }: {
       <button
         type="submit"
         disabled={loading || !selectedUserId}
-        className="text-sm px-4 py-1.5 rounded-lg text-white disabled:opacity-50"
-        style={{ background: "#3388BB" }}
+        className="text-sm px-4 py-1.5 rounded-lg text-white disabled:opacity-50 bg-brand-blue"
       >
         {loading ? "发送中…" : "发送邀请"}
       </button>

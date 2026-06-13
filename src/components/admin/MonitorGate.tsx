@@ -52,16 +52,16 @@ export default function MonitorGate({
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="bg-white rounded-xl border p-8 shadow-sm max-w-md w-full" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border border-brand-border-subtle p-8 shadow-sm max-w-md w-full">
         <div className="text-center mb-6">
           <div className="text-4xl mb-3">🔒</div>
-          <h2 className="text-xl font-bold mb-2" style={{ color: "#25547A" }}>
+          <h2 className="text-xl font-bold mb-2 text-brand-navy">
             监控总览
           </h2>
-          <p className="text-sm" style={{ color: "#E38043" }}>
+          <p className="text-sm text-brand-orange">
             ⚠️ 涉及到网站后台重要数据
           </p>
-          <p className="text-xs mt-2" style={{ color: "#999" }}>
+          <p className="text-xs mt-2 text-brand-text-muted">
             请输入管理密码以继续访问
           </p>
         </div>
@@ -74,12 +74,13 @@ export default function MonitorGate({
               onChange={(e) => setPassword(e.target.value)}
               placeholder="请输入监控密码"
               autoFocus
-              className="w-full px-4 py-3 rounded-lg border text-sm outline-none transition-colors focus:border-[#3388BB]"
-              style={{ borderColor: error ? "#E38043" : "#D0DEE8", color: "#333" }}
+              className={`w-full px-4 py-3 rounded-lg border text-sm outline-none transition-colors focus:border-[#3388BB] ${
+                error ? "border-brand-orange" : "border-brand-border-subtle"
+              } text-brand-text-heading`}
               disabled={loading}
             />
             {error && (
-              <p className="text-xs mt-1.5" style={{ color: "#E38043" }}>
+              <p className="text-xs mt-1.5 text-brand-orange">
                 {error}
               </p>
             )}
@@ -88,8 +89,7 @@ export default function MonitorGate({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg text-white font-medium text-sm transition-all hover:opacity-90 disabled:opacity-50"
-            style={{ background: "#25547A" }}
+            className="w-full py-3 rounded-lg text-white font-medium text-sm transition-all hover:opacity-90 disabled:opacity-50 bg-brand-navy"
           >
             {loading ? "验证中..." : "确认进入"}
           </button>

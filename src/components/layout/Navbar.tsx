@@ -7,12 +7,13 @@ import Image from "next/image";
 import { auth } from "@/lib/auth/auth";
 import NotificationBell from "./NotificationBell";
 import NavLink from "./NavLink";
+import ThemeToggle from "./ThemeToggle";
 
 export async function Navbar() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-50 shadow-md" style={{ background: "rgba(37,84,122,0.9)" }}>
+    <header className="sticky top-0 z-50 shadow-md bg-[#25547A]/90 dark:bg-[#141822]/95 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white hover:opacity-85 transition-opacity nav-link">
@@ -30,6 +31,7 @@ export async function Navbar() {
 
         {/* 用户区域 */}
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {session?.user ? (
             <div className="flex items-center gap-3">
               {(session.user.role === "MEMBER" || session.user.role === "ADMIN") && (
@@ -55,7 +57,7 @@ export async function Navbar() {
                     sizes="28px"
                   />
                 ) : (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#E38043" }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white bg-brand-orange">
                     {session.user.name?.[0]?.toUpperCase() || "U"}
                   </div>
                 )}

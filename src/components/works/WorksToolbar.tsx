@@ -81,23 +81,13 @@ export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
         <button
           type="button"
           onClick={toggleSearch}
-          className="w-9 h-9 flex items-center justify-center rounded-lg border transition-colors shrink-0"
-          style={{
-            borderColor: "#D0DEE8",
-            background: searchOpen ? "#E6F0F8" : "#fff",
-            color: searchOpen ? "#3388BB" : "#999",
-          }}
+          className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors shrink-0 border-brand-border-subtle ${searchOpen ? "bg-brand-surface text-brand-blue" : "bg-card text-brand-text-muted"}`}
           title={searchOpen ? "关闭搜索" : "搜索"}
         >
           {searchOpen ? "✕" : "🔍"}
         </button>
         <div
-          className="overflow-hidden transition-all duration-300"
-          style={{
-            maxWidth: searchOpen ? "220px" : "0px",
-            opacity: searchOpen ? 1 : 0,
-            marginLeft: searchOpen ? "0.5rem" : "0",
-          }}
+          className={`overflow-hidden transition-all duration-300 ${searchOpen ? "max-w-[220px] opacity-100 ml-2" : "max-w-0 opacity-0 ml-0"}`}
         >
           <input
             ref={searchInputRef}
@@ -114,15 +104,14 @@ export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
               }
             }}
             placeholder="搜索作品名称或简介..."
-            className="bg-white border rounded-lg px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-            style={{ borderColor: "#D0DEE8", color: "#333", width: "220px" }}
+            className="bg-card border rounded-lg px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent border-brand-border-subtle text-brand-text-heading w-[220px]"
           />
         </div>
       </div>
 
       {/* 排序 */}
       <div className="flex items-center gap-1 ml-auto">
-        <span className="text-xs mr-1 shrink-0" style={{ color: "#999" }}>排序:</span>
+        <span className="text-xs mr-1 shrink-0 text-brand-text-muted">排序:</span>
         {SORT_OPTIONS.map((s) => {
           const isActive = currentSort === s.value;
           return (
@@ -130,12 +119,7 @@ export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
               key={s.value}
               type="button"
               onClick={() => changeSort(s.value)}
-              className="px-2 py-1 rounded text-xs transition-colors"
-              style={{
-                background: isActive ? "#E38043" : "transparent",
-                color: isActive ? "#fff" : "#999",
-                border: isActive ? "none" : "1px solid #D0DEE8",
-              }}
+              className={`px-2 py-1 rounded text-xs transition-colors ${isActive ? "bg-brand-orange text-white" : "bg-transparent text-brand-text-muted border border-brand-border-subtle"}`}
             >
               {s.label}
             </button>

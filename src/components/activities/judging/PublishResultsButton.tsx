@@ -17,8 +17,7 @@ export function PublishResultsButton({ activityId }: { activityId: string }) {
     <button
       type="button"
       disabled={isPending}
-      className="text-sm px-4 py-2 rounded-lg text-white font-semibold disabled:opacity-50"
-      style={{ background: "linear-gradient(135deg, #E38043, #FFB347)" }}
+      className="text-sm px-4 py-2 rounded-lg text-white font-semibold disabled:opacity-50 bg-[linear-gradient(135deg,#E38043,#FFB347)]"
       onClick={handlePublish}
     >
       {isPending ? "公布中…" : "🏆 公布结果"}

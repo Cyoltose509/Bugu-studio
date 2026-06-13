@@ -30,8 +30,8 @@ export default function BulkDeleteButtons({ invalidCount, totalCount, deleteInva
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#D0DEE8", background: "#FFF9F0" }}>
-      <span className="text-xs" style={{ color: "#777" }}>
+    <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border-subtle bg-[#FFF9F0]">
+      <span className="text-xs text-brand-text-secondary">
         共 {totalCount} 个邀请码，其中 {invalidCount} 个无效
       </span>
       <div className="flex gap-2">
@@ -39,12 +39,7 @@ export default function BulkDeleteButtons({ invalidCount, totalCount, deleteInva
           type="button"
           onClick={handleDeleteInvalid}
           disabled={isPending || invalidCount === 0}
-          className="px-3 py-1 text-xs rounded-md border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            borderColor: "#E38043",
-            color: "#E38043",
-            background: "transparent",
-          }}
+          className="px-3 py-1 text-xs rounded-md border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-brand-orange text-brand-orange bg-transparent"
         >
           删除无效
         </button>
@@ -52,12 +47,7 @@ export default function BulkDeleteButtons({ invalidCount, totalCount, deleteInva
           type="button"
           onClick={handleDeleteAll}
           disabled={isPending || totalCount === 0}
-          className="px-3 py-1 text-xs rounded-md border transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            borderColor: "#C62828",
-            color: "#C62828",
-            background: "transparent",
-          }}
+          className="px-3 py-1 text-xs rounded-md border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-[var(--ui-text-red)] text-[var(--ui-text-red)] bg-transparent"
         >
           全部删除
         </button>

@@ -13,7 +13,7 @@ export default function LogoLoading({ text = "加载中..." }: { text?: string }
           className="rounded-xl"
         />
       </div>
-      <p className="mt-4 text-sm" style={{ color: "#999" }}>{text}</p>
+      <p className="mt-4 text-sm text-brand-text-muted">{text}</p>
     </div>
   );
 }

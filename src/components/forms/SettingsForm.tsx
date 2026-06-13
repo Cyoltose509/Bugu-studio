@@ -46,16 +46,16 @@ export default function SettingsForm({
           disabled={saving || isPending}
           className="sr-only peer"
         />
-        <div className="w-11 h-6 rounded-full transition-colors peer-focus:outline-none peer:bg-[#D0DEE8] peer-checked:bg-[#88C232] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+        <div className="w-11 h-6 rounded-full transition-colors peer-focus:outline-none peer:bg-[#D0DEE8] peer-checked:bg-[#88C232] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
       </label>
-      <span className="text-sm" style={{ color: "#555" }}>
+      <span className="text-sm text-brand-text-body">
         {checked ? "已开启" : "已关闭"}
       </span>
       {(saving || isPending) && (
-        <span className="text-xs" style={{ color: "#999" }}>保存中…</span>
+        <span className="text-xs text-brand-text-muted">保存中…</span>
       )}
       {message && (
-        <span className="text-xs" style={{ color: "#88C232" }}>{message}</span>
+        <span className="text-xs text-brand-green">{message}</span>
       )}
     </div>
   );

@@ -325,35 +325,16 @@ export default function MentionEditor({
     }).join("");
   }, [value, richPreview]);
 
-  const sharedStyle: React.CSSProperties = {
-    fontFamily: "inherit",
-    fontSize: "inherit",
-    lineHeight: "inherit",
-    letterSpacing: "inherit",
-    wordSpacing: "inherit",
-    padding: "0.625rem 0.75rem",
-    border: "1px solid transparent",
-    whiteSpace: "pre-wrap",
-    wordWrap: "break-word",
-    overflowWrap: "break-word",
-    boxSizing: "border-box",
-    width: "100%",
-    resize: "vertical",
-    minHeight: `${rows * 1.5 + 1.5}em`,
-  };
+  const sharedClassName = "font-[inherit] text-[inherit] leading-[inherit] tracking-[inherit] [word-spacing:inherit] px-3 py-2.5 border border-transparent whitespace-pre-wrap break-words box-border w-full";
 
   return (
-    <div className="relative" style={{ isolation: "isolate" }}>
+    <div className="relative isolate">
       {richPreview && (
         <div
           ref={backdropRef}
           aria-hidden
-          className="absolute inset-0 pointer-events-none overflow-auto"
-          style={{
-            ...sharedStyle,
-            color: "transparent",
-            zIndex: 1,
-          }}
+          className={`absolute inset-0 pointer-events-none overflow-auto ${sharedClassName} text-transparent min-h-[var(--min-h)] z-[1]`}
+          style={{"--min-h": `${rows * 1.5 + 1.5}em`} as React.CSSProperties}
         >
           <div dangerouslySetInnerHTML={{ __html: highlightHtml + " " }} />
         </div>
@@ -373,28 +354,17 @@ export default function MentionEditor({
         required={required}
         minLength={minLength}
         maxLength={maxLength}
-        className={`relative resize-y ${className}`}
+        className={`relative resize-y ${sharedClassName} ${className} min-h-[var(--min-h)] bg-transparent caret-black z-[2]${richPreview ? " text-transparent" : ""}`}
         style={{
-          ...sharedStyle,
           ...style,
-          color: richPreview ? "transparent" : undefined,
-          caretColor: "black",
-          background: "transparent",
-          position: "relative",
-          zIndex: 2,
-        }}
+          "--min-h": `${rows * 1.5 + 1.5}em`,
+        } as React.CSSProperties}
       />
 
       {showPopup && members.length > 0 && (
         <div
           ref={popupRef}
-          className="absolute left-0 z-50 bg-white rounded-lg border shadow-lg overflow-hidden max-h-48 overflow-y-auto"
-          style={{
-            borderColor: "#D0DEE8",
-            bottom: "100%",
-            marginBottom: 4,
-            minWidth: 200,
-          }}
+          className="absolute left-0 z-50 bg-card rounded-lg border shadow-lg overflow-hidden max-h-48 overflow-y-auto border-brand-border-subtle bottom-full mb-1 min-w-[200px]"
         >
           {members.map((m, i) => (
             <button
@@ -402,8 +372,7 @@ export default function MentionEditor({
               type="button"
               className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
                 i === popupIdx ? "bg-[#F0F5F9]" : "hover:bg-[#F5F8FA]"
-              }`}
-              style={{ color: "#333" }}
+              } text-brand-text-heading`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 selectMember(m);
@@ -411,8 +380,7 @@ export default function MentionEditor({
               onMouseEnter={() => setPopupIdx(i)}
             >
               <span
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, #E38043, #F09055)" }}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 bg-gradient-to-br from-brand-orange to-brand-orange-light"
               >
                 {m.displayName[0]}
               </span>

@@ -38,8 +38,7 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
     <>
       {/* 移动端汉堡按钮 */}
       <button
-        className="lg:hidden fixed top-3 left-3 z-[60] w-10 h-10 flex items-center justify-center rounded-lg shadow-md text-white"
-        style={{ background: "#25547A" }}
+        className="lg:hidden fixed top-3 left-3 z-[60] w-10 h-10 flex items-center justify-center rounded-lg shadow-md text-white bg-brand-navy"
         onClick={() => setOpen(!open)}
         aria-label="菜单"
       >
@@ -56,10 +55,9 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
 
       {/* 侧边栏 */}
       <aside
-        className={`w-56 shrink-0 text-white flex flex-col fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-[50] transition-transform duration-200 ${
+        className={`w-56 shrink-0 text-white flex flex-col fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-[50] transition-transform duration-200 bg-brand-navy ${
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
-        style={{ background: "#25547A" }}
       >
         <div className="p-5 border-b border-white/10">
           <Link href="/admin" className="flex items-center gap-2">

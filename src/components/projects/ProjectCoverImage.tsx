@@ -46,9 +46,8 @@ export default function ProjectCoverImage({
       <img
         src={src}
         alt={alt}
-        className={imgClass}
+        className={`${imgClass} aspect-video`}
         loading={priority ? "eager" : "lazy"}
-        style={{ aspectRatio: "16/9" }}
         onError={(e) => {
           (e.target as HTMLImageElement).style.display = "none";
         }}

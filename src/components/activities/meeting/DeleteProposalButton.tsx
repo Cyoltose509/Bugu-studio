@@ -13,8 +13,7 @@ function ConfirmDeleteButton() {
     <button
       type="submit"
       disabled={pending}
-      className="text-xs px-1.5 py-0.5 rounded text-white transition-colors disabled:opacity-60"
-      style={{ background: "#EF4444" }}
+      className="text-xs px-1.5 py-0.5 rounded text-white transition-colors disabled:opacity-60 bg-red-500"
     >
       {pending ? "..." : "确认"}
     </button>
@@ -46,13 +45,12 @@ export default function DeleteProposalButton({ proposalId }: { proposalId: strin
     return (
       <form action={formAction} className="inline-flex items-center gap-1 shrink-0">
         <input type="hidden" name="proposalId" value={proposalId} />
-        <span className="text-xs" style={{ color: "#EF4444" }}>确认删除？</span>
+        <span className="text-xs text-red-500">确认删除？</span>
         <ConfirmDeleteButton />
         <button
           type="button"
           onClick={() => setShowConfirm(false)}
-          className="text-xs px-1.5 py-0.5 rounded hover:bg-gray-100 transition-colors"
-          style={{ color: "#777" }}
+          className="text-xs px-1.5 py-0.5 rounded hover:bg-gray-100 transition-colors text-brand-text-secondary"
         >
           取消
         </button>
@@ -64,8 +62,7 @@ export default function DeleteProposalButton({ proposalId }: { proposalId: strin
     <button
       type="button"
       onClick={() => setShowConfirm(true)}
-      className="text-xs px-2 py-1 rounded hover:bg-red-50 transition-colors shrink-0"
-      style={{ color: "#EF4444" }}
+      className="text-xs px-2 py-1 rounded hover:bg-red-50 transition-colors shrink-0 text-red-500"
       title="删除此议程项"
     >
       ✕

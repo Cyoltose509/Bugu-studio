@@ -35,8 +35,7 @@ export default function DeleteSubmissionButton({
       type="button"
       onClick={handleDelete}
       disabled={deleting}
-      className="text-xs px-3 py-1.5 rounded-lg border disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-50 transition-colors"
-      style={{ borderColor: "#F5C6C6", color: "#C62828" }}
+      className="text-xs px-3 py-1.5 rounded-lg border border-[#F5C6C6] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-red-50 transition-colors text-[var(--ui-text-red)]"
     >
       {deleting ? "删除中..." : "删除作品"}
     </button>

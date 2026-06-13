@@ -26,8 +26,7 @@ export function RemoveMemberButton({
       type="button"
       onClick={handleRemove}
       disabled={isPending}
-      className="text-xs px-2 py-1 rounded disabled:opacity-40"
-      style={{ color: "#bbb" }}
+      className="text-xs px-2 py-1 rounded disabled:opacity-40 text-[#bbb]"
     >
       {isPending ? "移除中…" : "移除"}
     </button>

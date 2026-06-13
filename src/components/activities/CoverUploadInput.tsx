@@ -59,8 +59,7 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
           <img
             src={displaySrc}
             alt="封面预览"
-            className="w-40 h-24 object-cover rounded-lg border"
-            style={{ borderColor: "#D0DEE8" }}
+            className="w-40 h-24 object-cover rounded-lg border border-brand-border-subtle"
           />
         </div>
 
@@ -70,16 +69,15 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="text-sm px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50"
-            style={{ borderColor: "#D0DEE8", color: "#555" }}
+            className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle transition-colors hover:bg-gray-50 text-brand-text-body"
           >
             {uploading ? "上传中..." : preview && preview !== DEFAULT_COVER ? "更换封面" : "选择封面图"}
           </button>
           {!uploading && coverUrl && (
-            <span className="text-xs ml-2" style={{ color: "#88C232" }}>✓ 已上传</span>
+            <span className="text-xs ml-2 text-brand-green">✓ 已上传</span>
           )}
           {error && <p className="text-xs text-red-500">{error}</p>}
-          <p className="text-xs" style={{ color: "#999" }}>
+          <p className="text-xs text-brand-text-muted">
             留空则使用默认封面，支持 JPG/PNG/WebP，最大 5MB
           </p>
         </div>

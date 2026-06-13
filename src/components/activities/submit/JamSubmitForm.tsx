@@ -32,8 +32,7 @@ interface LinkEntry {
 }
 
 const inputClass =
-  "w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent transition-shadow disabled:opacity-50";
-const inputStyle = { borderColor: "#D0DEE8", color: "#333" };
+  "w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm text-brand-text-heading focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent transition-shadow disabled:opacity-50";
 
 export function JamSubmitForm({
   activityId,
@@ -214,18 +213,17 @@ export function JamSubmitForm({
     return (
       <div className="animate-fade-in text-center py-12">
         <div className="text-5xl mb-4">🎉</div>
-        <h2 className="text-2xl font-bold mb-2" style={{ color: "#25547A" }}>
+        <h2 className="text-2xl font-bold mb-2 text-brand-navy">
           {existing ? "作品已更新！" : "提交成功！"}
         </h2>
-        <p className="mb-6" style={{ color: "#777" }}>
+        <p className="mb-6 text-brand-text-secondary">
           {submitToWorks
             ? "你的作品已提交参赛，并已同步到作品库待审核。"
             : "你的作品已提交参赛！"}
         </p>
         <a
           href={`/activities/${activityId}`}
-          className="px-6 py-2 rounded-lg text-sm text-white inline-block"
-          style={{ background: "#3388BB" }}
+          className="px-6 py-2 rounded-lg text-sm text-white inline-block bg-brand-blue"
         >
           返回活动
         </a>
@@ -237,8 +235,7 @@ export function JamSubmitForm({
     <form onSubmit={handleSubmit} className="space-y-8">
       {error && (
         <div
-          className="p-3 rounded-lg text-sm whitespace-pre-line"
-          style={{ background: "#FDE8E8", color: "#C62828" }}
+          className="p-3 rounded-lg text-sm whitespace-pre-line bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
         >
           {error}
         </div>
@@ -246,12 +243,12 @@ export function JamSubmitForm({
 
       {/* 基本信息 */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>
+        <h2 className="text-lg font-semibold text-brand-navy">
           基本信息
         </h2>
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>
-            作品标题 <span style={{ color: "#C62828" }}>*</span>
+          <label className="block text-sm mb-1.5 text-brand-text-body">
+            作品标题 <span className="text-red-700">*</span>
           </label>
           <input
             name="title"
@@ -260,13 +257,12 @@ export function JamSubmitForm({
             defaultValue={existing?.title || ""}
             placeholder="给作品起个名字"
             className={inputClass}
-            style={inputStyle}
             disabled={!isOngoing || loading}
           />
         </div>
         <div>
-          <label className="block text-sm mb-1.5" style={{ color: "#555" }}>
-            作品描述 <span style={{ color: "#C62828" }}>*</span>
+          <label className="block text-sm mb-1.5 text-brand-text-body">
+            作品描述 <span className="text-red-700">*</span>
           </label>
           <MentionEditor
             name="description"
@@ -277,7 +273,6 @@ export function JamSubmitForm({
             minLength={10}
             maxLength={10000}
             className={inputClass}
-            style={inputStyle}
             disabled={!isOngoing || loading}
           />
         </div>
@@ -285,7 +280,7 @@ export function JamSubmitForm({
 
       {/* 封面图 */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>
+        <h2 className="text-lg font-semibold text-brand-navy">
           封面图
         </h2>
         <input
@@ -301,8 +296,7 @@ export function JamSubmitForm({
             <img
               src={coverPreview}
               alt="封面预览"
-              className="w-48 h-32 object-cover rounded-lg border"
-              style={{ borderColor: "#D0DEE8" }}
+              className="w-48 h-32 object-cover rounded-lg border border-brand-border-subtle"
             />
             <button
               type="button"
@@ -321,8 +315,7 @@ export function JamSubmitForm({
           type="button"
           onClick={() => coverFileRef.current?.click()}
           disabled={coverUploading || !isOngoing || loading}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white"
-          style={{ background: "#3388BB" }}
+          className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white bg-brand-blue"
         >
           {coverUploading ? "上传中..." : coverPreview ? "更换封面" : "+ 上传封面"}
         </button>
@@ -330,7 +323,7 @@ export function JamSubmitForm({
 
       {/* 截图 */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>
+        <h2 className="text-lg font-semibold text-brand-navy">
           截图 / GIF
         </h2>
         <input
@@ -346,8 +339,7 @@ export function JamSubmitForm({
             {screenshots.map((img, i) => (
               <div
                 key={i}
-                className="relative group rounded-lg overflow-hidden border"
-                style={{ borderColor: "#D0DEE8" }}
+                className="relative group rounded-lg overflow-hidden border border-brand-border-subtle"
               >
                 <img
                   src={img.url}
@@ -372,8 +364,7 @@ export function JamSubmitForm({
           type="button"
           onClick={() => screenshotFileRef.current?.click()}
           disabled={screenshotUploading || screenshots.length >= 3 || !isOngoing || loading}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white"
-          style={{ background: "#3388BB" }}
+          className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white bg-brand-blue"
         >
           {screenshotUploading
             ? "上传中..."
@@ -381,15 +372,15 @@ export function JamSubmitForm({
             ? "已达到上限"
             : "+ 添加截图"}
         </button>
-        <p className="text-xs" style={{ color: "#999" }}>最多 3 张</p>
+        <p className="text-xs text-brand-text-muted">最多 3 张</p>
       </section>
 
       {/* 制作人员 */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>
+        <h2 className="text-lg font-semibold text-brand-navy">
           制作人员
         </h2>
-        <p className="text-xs" style={{ color: "#999" }}>
+        <p className="text-xs text-brand-text-muted">
           已自动填入队伍成员，可增删或修改职位
         </p>
         <div className="flex gap-2">
@@ -402,7 +393,7 @@ export function JamSubmitForm({
             }}
             placeholder="输入姓名（内部或外部成员）"
             className={`${inputClass} flex-1`}
-            style={inputStyle}
+
             disabled={!isOngoing || loading}
           />
         </div>
@@ -417,10 +408,9 @@ export function JamSubmitForm({
                 disabled={!isOngoing || loading}
                 className={`text-xs px-2 py-1 rounded-full border transition-all ${
                   active
-                    ? "border-[#88C232] text-white"
-                    : "border-[#D0DEE8] text-gray-500 bg-white"
+                    ? "border-[#88C232] text-white bg-brand-green"
+                    : "border-[#D0DEE8] text-gray-500 bg-card"
                 } disabled:opacity-50`}
-                style={active ? { background: "#88C232" } : undefined}
               >
                 {r}
               </button>
@@ -430,8 +420,7 @@ export function JamSubmitForm({
             type="button"
             onClick={addCreator}
             disabled={!creatorName.trim() || selectedRoles.length === 0 || !isOngoing || loading}
-            className="px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 text-white ml-2"
-            style={{ background: "#88C232" }}
+            className="px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 text-white ml-2 bg-brand-green"
           >
             + 添加
           </button>
@@ -441,8 +430,7 @@ export function JamSubmitForm({
             {creators.map((m, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
-                style={{ background: "rgba(37,84,122,0.1)", color: "#25547A" }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-[rgba(37,84,122,0.1)] text-brand-navy"
               >
                 {m.name}
                 <span className="text-xs opacity-70">{m.roles.join("、")}</span>
@@ -462,7 +450,7 @@ export function JamSubmitForm({
 
       {/* 外部链接 */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>
+        <h2 className="text-lg font-semibold text-brand-navy">
           外部链接
         </h2>
         {links.length > 0 && (
@@ -470,21 +458,18 @@ export function JamSubmitForm({
             {links.map((link, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-                style={{ background: "#F0F5F9" }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-[#F0F5F9]"
               >
                 <span
-                  className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 text-white"
-                  style={{ background: "#25547A" }}
+                  className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 text-white bg-brand-navy"
                 >
                   {link.label}
                 </span>
-                <span className="truncate flex-1" style={{ color: "#3388BB" }}>{link.url}</span>
+                <span className="truncate flex-1 text-brand-blue">{link.url}</span>
                 <button
                   type="button"
                   onClick={() => removeLink(i)}
-                  className="text-xs flex-shrink-0 hover:text-red-500"
-                  style={{ color: "#999" }}
+                  className="text-xs flex-shrink-0 hover:text-red-500 text-brand-text-muted"
                   disabled={!isOngoing || loading}
                 >
                   移除
@@ -503,7 +488,6 @@ export function JamSubmitForm({
                 else setNewLinkLabel(v);
               }}
               className={`${inputClass} w-36`}
-              style={inputStyle}
               disabled={!isOngoing || loading}
             >
               <option value="">选择类型</option>
@@ -519,7 +503,6 @@ export function JamSubmitForm({
               onChange={(e) => setNewLinkLabel(e.target.value)}
               placeholder="链接标签"
               className={`${inputClass} w-36`}
-              style={inputStyle}
               disabled={!isOngoing || loading}
             />
           )}
@@ -530,15 +513,14 @@ export function JamSubmitForm({
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
             placeholder="https://..."
             className={`${inputClass} flex-1 min-w-[200px]`}
-            style={inputStyle}
+
             disabled={!isOngoing || loading}
           />
           <button
             type="button"
             onClick={addLink}
             disabled={!newLinkLabel.trim() || !newLinkUrl.trim() || !isOngoing || loading}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 text-white"
-            style={{ background: "#88C232" }}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 text-white bg-brand-green"
           >
             + 添加
           </button>
@@ -547,7 +529,7 @@ export function JamSubmitForm({
 
       {/* 标签 */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "#25547A" }}>
+        <h2 className="text-lg font-semibold text-brand-navy">
           标签
         </h2>
         {tags.length > 0 && (
@@ -562,10 +544,9 @@ export function JamSubmitForm({
                   disabled={!isOngoing || loading}
                   className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                     active
-                      ? "border-[#88C232] text-white"
-                      : "border-[#D0DEE8] text-gray-500 bg-white"
+                      ? "border-[#88C232] text-white bg-brand-green"
+                      : "border-[#D0DEE8] text-gray-500 bg-card"
                   } disabled:opacity-50`}
-                  style={active ? { background: "#88C232" } : undefined}
                 >
                   {tag.name}
                   {tag.group ? ` (${tag.group})` : ""}
@@ -584,15 +565,14 @@ export function JamSubmitForm({
             }}
             placeholder="自定义标签..."
             className={`${inputClass} w-40`}
-            style={inputStyle}
+
             disabled={!isOngoing || loading}
           />
           <button
             type="button"
             onClick={addCustomTag}
             disabled={!customTagInput.trim() || !isOngoing || loading}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 text-white"
-            style={{ background: "#88C232" }}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 text-white bg-brand-green"
           >
             + 添加
           </button>
@@ -602,8 +582,7 @@ export function JamSubmitForm({
             {customTags.map((name) => (
               <span
                 key={name}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs"
-                style={{ background: "rgba(227,128,67,0.1)", color: "#E38043" }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[rgba(227,128,67,0.1)] text-brand-orange"
               >
                 {name}
                 <button
@@ -622,8 +601,7 @@ export function JamSubmitForm({
 
       {/* 提交到作品库 */}
       <section
-        className="p-4 rounded-lg border space-y-3"
-        style={{ borderColor: "#FFF3E0", background: "#FFFDF7" }}
+        className="p-4 rounded-lg border border-[#FFF3E0] bg-[#FFFDF7] space-y-3"
       >
         <label className="flex items-center gap-2 cursor-pointer">
           <input
@@ -633,17 +611,17 @@ export function JamSubmitForm({
             disabled={!isOngoing || loading}
             className="w-4 h-4 accent-[#E38043]"
           />
-          <span className="text-sm font-medium" style={{ color: "#555" }}>
+          <span className="text-sm font-medium text-brand-text-body">
             同时提交到作品库
           </span>
         </label>
-        <p className="text-xs" style={{ color: "#999" }}>
+        <p className="text-xs text-brand-text-muted">
           勾选后，参赛作品将同步创建为作品库中的作品（状态为"待审核"），可在 /works 页面展示。不勾选则仅作为参赛作品，不会出现在作品库。
         </p>
         {submitToWorks && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div>
-              <label className="block text-xs mb-1" style={{ color: "#777" }}>
+              <label className="block text-xs mb-1 text-brand-text-secondary">
                 作品类型
               </label>
               <select
@@ -651,7 +629,6 @@ export function JamSubmitForm({
                 value={projectType}
                 onChange={(e) => setProjectType(e.target.value)}
                 className={inputClass}
-                style={inputStyle}
                 disabled={!isOngoing || loading}
               >
                 {PROJECT_TYPES.map((t) => (
@@ -662,7 +639,7 @@ export function JamSubmitForm({
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "#777" }}>
+              <label className="block text-xs mb-1 text-brand-text-secondary">
                 开发年份
               </label>
               <input
@@ -674,7 +651,6 @@ export function JamSubmitForm({
                 min={2000}
                 max={new Date().getFullYear() + 1}
                 className={inputClass}
-                style={inputStyle}
                 disabled={!isOngoing || loading}
               />
             </div>
@@ -688,8 +664,7 @@ export function JamSubmitForm({
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-            style={{ background: "#25547A" }}
+            className="px-6 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 bg-brand-navy"
           >
             {loading && (
               <svg
@@ -717,12 +692,7 @@ export function JamSubmitForm({
 
       {!isOngoing && (
         <div
-          className="p-4 rounded-lg text-center text-sm"
-          style={{
-            background: "#FFFDF7",
-            border: "1px solid #FFF3E0",
-            color: "#E38043",
-          }}
+          className="p-4 rounded-lg text-center text-sm bg-[#FFFDF7] border border-[#FFF3E0] text-brand-orange"
         >
           比赛尚未开始，开始后即可提交作品
         </div>

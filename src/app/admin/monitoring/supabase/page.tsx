@@ -78,28 +78,26 @@ export default async function SupabaseMonitorPage() {
     return (
         <div className="animate-fade-in">
             <div className="flex items-center gap-3 mb-6">
-                <Link href="/admin/monitoring" className="text-sm hover:underline" style={{color: "#3388BB"}}>
+                <Link href="/admin/monitoring" className="text-sm hover:underline text-brand-blue">
                     ← 监控总览
                 </Link>
-                <h1 className="text-2xl font-bold" style={{color: "#25547A"}}>
+                <h1 className="text-2xl font-bold text-brand-navy">
                     🗄️ 数据库管理
                 </h1>
                 {/* 子页面快捷入口 */}
                 <div className="ml-auto flex gap-2">
-                    <Link href="/admin/monitoring/r2" className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                          style={{borderColor: "#D0DEE8", color: "#555"}}>
+                    <Link href="/admin/monitoring/r2" className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 border-brand-border-subtle text-brand-text-body">
                         📦 R2 存储
                     </Link>
                     <Link href="/admin/monitoring/resend"
-                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50"
-                          style={{borderColor: "#D0DEE8", color: "#555"}}>
+                          className="text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 border-brand-border-subtle text-brand-text-body">
                         ✉️ 邮件监控
                     </Link>
                 </div>
             </div>
 
             {error ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm" style={{color: "#C62828"}}>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
                     查询失败：{error}
                 </div>
             ) : (
@@ -107,20 +105,20 @@ export default async function SupabaseMonitorPage() {
                     {/* ============ 第 1 节：概览统计 ============ */}
                     <section>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                            <StatCard label="数据库大小" value={dbSize} icon="💾" color="#3ECF8E"/>
-                            <StatCard label="当前连接" value={connections} icon="🔗" color="#3388BB"/>
-                            <StatCard label="用户表数" value={String(tableStats.length)} icon="📊" color="#E8A040"/>
+                            <StatCard label="数据库大小" value={dbSize} icon="💾" colorClass="text-[#3ECF8E]"/>
+                            <StatCard label="当前连接" value={connections} icon="🔗" colorClass="text-brand-blue"/>
+                            <StatCard label="用户表数" value={String(tableStats.length)} icon="📊" colorClass="text-[#E8A040]"/>
                             <StatCard label="总行数" value={String(tableStats.reduce((sum, t) => sum + t.rows, 0))} icon="📝"
-                                      color="#88C232"/>
+                                      colorClass="text-brand-green"/>
                         </div>
-                        <div className="bg-white border rounded-lg p-3 text-xs" style={{borderColor: "#D0DEE8", color: "#777"}}>
+                        <div className="bg-card border rounded-lg p-3 text-xs border-brand-border-subtle text-brand-text-secondary">
                             {version}
                         </div>
                     </section>
 
                     {/* ============ 第 2 节：表空间占用（折叠展开） ============ */}
                     <section>
-                        <h2 className="text-lg font-semibold mb-3" style={{color: "#25547A"}}>
+                        <h2 className="text-lg font-semibold mb-3 text-brand-navy">
                             📁 表空间占用
                         </h2>
                         <CollapsibleTableStats tableStats={tableStats} dbSizeBytes={dbSizeBytes}/>
@@ -146,14 +144,14 @@ export default async function SupabaseMonitorPage() {
     );
 }
 
-function StatCard({label, value, icon, color}: { label: string; value: string; icon: string; color: string }) {
+function StatCard({label, value, icon, colorClass}: { label: string; value: string; icon: string; colorClass: string }) {
     return (
-        <div className="bg-white border rounded-xl p-4 shadow-sm" style={{borderColor: "#D0DEE8"}}>
+        <div className="bg-card border rounded-xl p-4 shadow-sm border-brand-border-subtle">
             <div className="flex items-center gap-2 mb-2">
                 <span className="text-xl">{icon}</span>
-                <span className="text-xs" style={{color: "#777"}}>{label}</span>
+                <span className="text-xs text-brand-text-secondary">{label}</span>
             </div>
-            <div className="text-2xl font-bold" style={{color}}>{value}</div>
+            <div className={`text-2xl font-bold ${colorClass}`}>{value}</div>
         </div>
     );
 }

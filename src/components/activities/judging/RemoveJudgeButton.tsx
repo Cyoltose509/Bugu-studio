@@ -23,8 +23,7 @@ export function RemoveJudgeButton({
       type="button"
       onClick={handleRemove}
       disabled={isPending}
-      className="text-xs disabled:opacity-40"
-      style={{ color: "#bbb" }}
+      className="text-xs disabled:opacity-40 text-[#bbb]"
     >
       {isPending ? "…" : "✕"}
     </button>

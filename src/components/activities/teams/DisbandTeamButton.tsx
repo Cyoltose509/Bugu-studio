@@ -18,8 +18,7 @@ export function DisbandTeamButton({ teamId, activityId }: { teamId: string; acti
       type="button"
       onClick={handleDisband}
       disabled={isPending}
-      className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
-      style={{ color: "#bbb" }}
+      className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 text-[#bbb]"
     >
       {isPending ? "解散中…" : "解散队伍"}
     </button>

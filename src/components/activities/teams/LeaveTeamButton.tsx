@@ -18,8 +18,7 @@ export function LeaveTeamButton({ teamId, activityId }: { teamId: string; activi
       type="button"
       onClick={handleLeave}
       disabled={isPending}
-      className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
-      style={{ color: "#E38043", border: "1px solid #E38043" }}
+      className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 text-brand-orange border border-brand-orange"
     >
       {isPending ? "退出中…" : "退出队伍"}
     </button>

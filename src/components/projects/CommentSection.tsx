@@ -53,22 +53,21 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
 }) {
     const isMine = session?.user?.id === c.user.id;
     return (
-        <div className={`${isReply ? "ml-6 pl-3 border-l-2" : "py-3"} rounded-lg`}
-             style={isReply ? {borderColor: "#E8F0F8"} : {}}>
+        <div className={`${isReply ? "ml-6 pl-3 border-l-2" : "py-3"} rounded-lg ${isReply ? "border-[#E8F0F8]" : ""}`}
+             >
             <div className="flex items-start gap-2.5">
                 <Avatar user={c.user}/>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium" style={{color: "#25547A"}}>{c.user.name || "匿名"}</span>
-                        <span className="text-xs" style={{color: "#999"}}>{formatTime(c.createdAt)}</span>
+                        <span className="text-xs font-medium text-brand-navy">{c.user.name || "匿名"}</span>
+                        <span className="text-xs text-brand-text-muted">{formatTime(c.createdAt)}</span>
                     </div>
-                    <p className="text-sm mt-0.5 whitespace-pre-wrap break-words" style={{color: "#444"}}>{c.content}</p>
+                    <p className="text-sm mt-0.5 whitespace-pre-wrap break-words text-[#444]">{c.content}</p>
                     {canOperate && (
                         <div className="flex items-center gap-3 mt-1.5">
                             <button
                                 onClick={() => onReplyToggle(c.id)}
-                                className="text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70"
-                                style={{color: replyingTo === c.id ? "#3388BB" : "#999"}}
+                                className={`text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70 ${replyingTo === c.id ? "text-brand-blue" : "text-brand-text-muted"}`}
                                 title="回复"
                             >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -79,8 +78,7 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                             {isMine && (
                                 <button
                                     onClick={() => onDelete(c.id)}
-                                    className="text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70"
-                                    style={{color: "#bbb"}}
+                                    className="text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70 text-[#bbb]"
                                     title="删除"
                                 >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -98,13 +96,11 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                             <input value={replyContent} onChange={(e) => onReplyChange(e.target.value)}
                                    maxLength={300}
                                    placeholder={`回复 ${c.user.name || "Ta"}...`}
-                                   className="flex-1 text-xs px-2 py-1.5 rounded border focus:outline-none focus:ring-1 focus:ring-[#3388BB]"
-                                   style={{borderColor: "#D0DEE8"}}/>
+                                   className="flex-1 text-xs px-2 py-1.5 rounded border focus:outline-none focus:ring-1 focus:ring-[#3388BB] border-brand-border-subtle"/>
                             <button onClick={() => onReplySubmit(c.id)} disabled={!replyContent.trim() || submitting}
-                                    className="text-xs px-3 py-1.5 rounded text-white disabled:opacity-40 transition-all active:scale-95 inline-flex items-center gap-1"
-                                    style={{background: "#3388BB"}}>{submitting ? <><svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>发送中</> : "发送"}</button>
+                                    className="text-xs px-3 py-1.5 rounded text-white disabled:opacity-40 transition-all active:scale-95 inline-flex items-center gap-1 bg-brand-blue">{submitting ? <><svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>发送中</> : "发送"}</button>
                             <button onClick={() => onReplyToggle(c.id)}
-                                    className="text-xs px-2 py-1.5 rounded hover:text-[#25547A] transition-colors active:opacity-70" style={{color: "#999"}}>取消
+                                    className="text-xs px-2 py-1.5 rounded hover:text-[#25547A] transition-colors active:opacity-70 text-brand-text-muted">取消
                             </button>
                         </div>
                     )}
@@ -255,7 +251,7 @@ export default function CommentSection({projectId, initialComments = []}: Props)
 
     return (
         <section className="mt-8">
-            <h2 className="text-lg font-semibold mb-4" style={{color: "#25547A"}}>
+            <h2 className="text-lg font-semibold mb-4 text-brand-navy">
                 留言板（{comments.reduce((s, c) => s + 1 + (c.replies?.length || 0), 0)} 条）
             </h2>
 
@@ -266,30 +262,28 @@ export default function CommentSection({projectId, initialComments = []}: Props)
             <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)}
                       maxLength={300} rows={2}
                       placeholder="写下你的留言…（最多300字）"
-                      className="flex-1 text-sm px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-1 focus:ring-[#3388BB]"
-                      style={{borderColor: "#D0DEE8"}}/>
+                      className="flex-1 text-sm px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-1 focus:ring-[#3388BB] border-brand-border-subtle"/>
                         <button onClick={() => submitComment()} disabled={!newContent.trim() || submitting}
-                                className="self-end px-4 py-2 rounded-lg text-sm text-white disabled:opacity-40 transition-all active:scale-95 hover:opacity-90"
-                                style={{background: "#25547A"}}>
+                                className="self-end px-4 py-2 rounded-lg text-sm text-white disabled:opacity-40 transition-all active:scale-95 hover:opacity-90 bg-brand-navy">
                             {submitting ? "发送中…" : "发表"}
                         </button>
                     </div>
-                    <div className="text-right text-xs mt-1" style={{color: "#999"}}>
+                    <div className="text-right text-xs mt-1 text-brand-text-muted">
                         {newContent.length}/300
                     </div>
                 </div>
             )}
             {!isLoggedIn && (
-                <p className="text-xs mb-3" style={{color: "#999"}}>请登录后发表留言</p>
+                <p className="text-xs mb-3 text-brand-text-muted">请登录后发表留言</p>
             )}
 
             {/* 留言列表 */}
             {loading ? (
-                <p className="text-xs" style={{color: "#999"}}>加载中…</p>
+                <p className="text-xs text-brand-text-muted">加载中…</p>
             ) : comments.length === 0 ? (
-                <p className="text-xs" style={{color: "#999"}}>暂无留言，来抢沙发吧～</p>
+                <p className="text-xs text-brand-text-muted">暂无留言，来抢沙发吧～</p>
             ) : (
-                <div className="space-y-1 divide-y" style={{borderColor: "#F0F0F0"}}>
+                <div className="space-y-1 divide-y divide-[#F0F0F0]">
                     {comments.map((c) => (
                         <div key={c.id} className="first:pt-0 pt-3">
                             <CommentCard

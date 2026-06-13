@@ -20,17 +20,16 @@ export default async function SubmitPage() {
   return (
     <div className="container mx-auto px-4 py-10 max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold" style={{ color: "#25547A" }}>
+        <h1 className="text-3xl font-bold text-brand-navy">
           提交作品
         </h1>
-        <p className="mt-2" style={{ color: "#777" }}>
+        <p className="mt-2 text-brand-text-secondary">
           将你的游戏作品提交到作品库。提交后将由管理员审核，通过后即可公开展示。
         </p>
       </div>
 
       <div
-        className="bg-white rounded-xl border shadow-sm p-6"
-        style={{ borderColor: "#D0DEE8" }}
+        className="bg-card rounded-xl border shadow-sm p-6 border-brand-border-subtle"
       >
         <SubmitForm tags={tags} />
       </div>

@@ -13,20 +13,20 @@ const lastUpdated = "2026-06-11";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen" style={{ background: "#F5F9FC" }}>
+    <div className="min-h-screen bg-brand-surface-page">
       <div className="container mx-auto px-4 py-12 max-w-3xl">
         {/* 头部 */}
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Image src="/images/logo.png" alt={siteName} width={32} height={32} className="rounded-lg" />
-            <span className="font-bold text-lg" style={{ color: "#25547A" }}>{siteName}</span>
+            <span className="font-bold text-lg text-brand-navy">{siteName}</span>
           </div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: "#25547A" }}>使用条款</h1>
-          <p className="text-sm" style={{ color: "#999" }}>最后更新：{lastUpdated}</p>
+          <h1 className="text-2xl font-bold mb-2 text-brand-navy">使用条款</h1>
+          <p className="text-sm text-brand-text-muted">最后更新：{lastUpdated}</p>
         </div>
 
         {/* 正文 */}
-        <div className="space-y-8 text-sm leading-relaxed" style={{ color: "#555" }}>
+        <div className="space-y-8 text-sm leading-relaxed text-brand-text-body">
           <Section title="1. 接受条款">
             <p>欢迎访问{siteName}（以下简称「本网站」）。通过访问或使用本网站，即表示您同意遵守本使用条款的全部规定。如果您不同意其中任何条款，请不要使用本网站。</p>
             <p>本网站为布谷工作室（游戏开发社团）的官方平台，旨在展示社团历史、成员作品，促进成员间的交流与合作。</p>
@@ -67,13 +67,13 @@ export default function TermsPage() {
           </Section>
 
           <Section title="5. 知识产权">
-            <h4 className="font-semibold mb-1" style={{ color: "#333" }}>您的作品：</h4>
+            <h4 className="font-semibold mb-1 text-brand-text-heading">您的作品：</h4>
             <ul className="list-disc pl-5 space-y-1">
               <li>您上传和发布的游戏作品及其截图、描述等内容的知识产权仍归您所有</li>
               <li>您授予本网站在平台上展示该内容的非独占、免版税许可</li>
               <li>您可以随时要求下架您的作品</li>
             </ul>
-            <h4 className="font-semibold mb-1 mt-3" style={{ color: "#333" }}>网站内容：</h4>
+            <h4 className="font-semibold mb-1 mt-3 text-brand-text-heading">网站内容：</h4>
             <ul className="list-disc pl-5 space-y-1">
               <li>布谷工作室的名称、logo、网站界面设计、源代码归布谷工作室所有</li>
               <li>未经明确授权，不得以任何形式复制、修改或分发网站的非用户生成内容</li>
@@ -115,13 +115,13 @@ export default function TermsPage() {
           <Section title="11. 联系我们">
             <p>如果您对本使用条款有任何疑问或建议，请通过以下方式联系我们：</p>
             <p className="mt-2">
-              邮箱：<a href={`mailto:${contactEmail}`} className="font-medium" style={{ color: "#3388BB" }}>{contactEmail}</a>
+              邮箱：<a href={`mailto:${contactEmail}`} className="font-medium text-brand-blue">{contactEmail}</a>
             </p>
           </Section>
         </div>
 
-        <div className="mt-12 pt-6 text-center border-t" style={{ borderColor: "#D0DEE8" }}>
-          <Link href="/" className="text-sm" style={{ color: "#3388BB" }}>&larr; 返回首页</Link>
+        <div className="mt-12 pt-6 text-center border-t border-brand-border-subtle">
+          <Link href="/" className="text-sm text-brand-blue">&larr; 返回首页</Link>
         </div>
       </div>
     </div>
@@ -131,7 +131,7 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-base font-bold mb-3" style={{ color: "#333" }}>{title}</h2>
+      <h2 className="text-base font-bold mb-3 text-brand-text-heading">{title}</h2>
       <div className="space-y-2">{children}</div>
     </section>
   );

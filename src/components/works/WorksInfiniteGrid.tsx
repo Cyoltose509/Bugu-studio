@@ -113,7 +113,7 @@ export default function WorksInfiniteGrid({
 
     if (items.length === 0) {
         return (
-            <div className="text-center py-20" style={{ color: "#999" }}>
+            <div className="text-center py-20 text-brand-text-muted">
                 <div className="text-4xl mb-4">🔍</div>
                 <p>没有找到匹配的作品</p>
             </div>
@@ -123,7 +123,7 @@ export default function WorksInfiniteGrid({
     return (
         <>
             {/* 统计提示 */}
-            <div className="text-sm mb-4" style={{ color: "#999" }}>
+            <div className="text-sm mb-4 text-brand-text-muted">
                 已加载 {items.length} / {total} 件作品
             </div>
 
@@ -157,12 +157,11 @@ export default function WorksInfiniteGrid({
                     </div>
                 )}
                 {!hasMore && items.length > 0 && (
-                    <div className="text-center py-8 text-sm flex flex-col items-center gap-3" style={{ color: "#bbb" }}>
+                    <div className="text-center py-8 text-sm flex flex-col items-center gap-3 text-[#bbb]">
                         <span>— 已到底部，共 {total} 件作品 —</span>
                         <button
                             onClick={() => window.location.reload()}
-                            className="text-xs px-4 py-1.5 rounded border transition-colors hover:bg-gray-50"
-                            style={{ color: "#777", borderColor: "#D0DEE8" }}
+                            className="text-xs px-4 py-1.5 rounded border transition-colors hover:bg-gray-50 text-brand-text-secondary border-brand-border-subtle"
                         >
                             🔄 刷新列表
                         </button>

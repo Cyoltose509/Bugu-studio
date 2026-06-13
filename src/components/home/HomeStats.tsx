@@ -19,10 +19,7 @@ export default async function HomeStats() {
     ]);
 
     return (
-        <section className="py-10 border-y" style={{
-          //  borderColor: "#D0DEE8",
-            background: "linear-gradient(180deg,  rgba(255,255,255,0.5) 0%, rgba(230,240,248,0.5) 100%)",
-        }}>
+        <section className="py-10 border-y stats-gradient border-brand-border-subtle">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                     <Stat value={`${new Date().getFullYear() - foundedYear + 1}年`} label="社团历史"/>
@@ -38,8 +35,8 @@ export default async function HomeStats() {
 function Stat({value, label}: { value: string; label: string }) {
     return (
         <div>
-            <div className="text-3xl font-bold" style={{color: "#E38043"}}>{value}</div>
-            <div className="text-sm mt-1" style={{color: "#777"}}>{label}</div>
+            <div className="text-3xl font-bold text-brand-orange">{value}</div>
+            <div className="text-sm mt-1 text-brand-text-secondary">{label}</div>
         </div>
     );
 }

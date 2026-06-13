@@ -59,25 +59,23 @@ export default function EditableSelect({ memberId, field, currentValue, options,
         value={localValue}
         onChange={handleChange}
         disabled={isPending || readOnly}
-        className="text-xs rounded border px-2 py-1 bg-white cursor-pointer transition-opacity"
-        style={{
-          borderColor: "#D0DEE8",
-          color: "#333",
-          minWidth: field === "grade" ? "80px" : undefined,
-          opacity: isPending ? 0.6 : 1,
-        }}
+        className={`text-xs rounded border px-2 py-1 bg-card cursor-pointer transition-opacity ${
+          isPending ? "opacity-60" : ""
+        } border-brand-border-subtle text-brand-text-heading ${
+          field === "grade" ? "min-w-[80px]" : ""
+        }`}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
       {isPending && (
-        <span className="text-xs whitespace-nowrap" style={{ color: "#E38043" }}>
+        <span className="text-xs whitespace-nowrap text-brand-orange">
           保存中…
         </span>
       )}
       {saved && !isPending && (
-        <span className="text-xs whitespace-nowrap" style={{ color: "#88C232" }}>
+        <span className="text-xs whitespace-nowrap text-brand-green">
           ✓ 已保存
         </span>
       )}

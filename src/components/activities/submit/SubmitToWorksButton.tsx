@@ -31,8 +31,7 @@ export default function SubmitToWorksButton({
         type="button"
         onClick={() => setShowForm(true)}
         disabled={pending}
-        className="text-xs px-3 py-1.5 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-        style={{ background: "#88C232" }}
+        className="text-xs px-3 py-1.5 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity bg-brand-green"
       >
         {pending ? "提交中..." : "提交到作品库"}
       </button>
@@ -44,8 +43,7 @@ export default function SubmitToWorksButton({
       <select
         name="projectType"
         defaultValue="TRIAL_DEMO"
-        className="text-xs rounded border px-2 py-1"
-        style={{ borderColor: "#D0DEE8", color: "#333" }}
+        className="text-xs rounded border border-brand-border-subtle px-2 py-1 text-brand-text-heading"
       >
         <option value="IN_DEVELOPMENT">开发阶段</option>
         <option value="TRIAL_DEMO">提供试玩</option>
@@ -58,14 +56,12 @@ export default function SubmitToWorksButton({
         defaultValue={new Date().getFullYear()}
         min={1980}
         max={2100}
-        className="text-xs rounded border px-2 py-1 w-16"
-        style={{ borderColor: "#D0DEE8", color: "#333" }}
+        className="text-xs rounded border border-brand-border-subtle px-2 py-1 w-16 text-brand-text-heading"
       />
       <button
         type="submit"
         disabled={pending}
-        className="text-xs px-3 py-1.5 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ background: "#88C232" }}
+        className="text-xs px-3 py-1.5 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed bg-brand-green"
       >
         {pending ? "提交中..." : "确认提交"}
       </button>
@@ -73,8 +69,7 @@ export default function SubmitToWorksButton({
         type="button"
         onClick={() => setShowForm(false)}
         disabled={pending}
-        className="text-xs px-2 py-1 rounded-lg border"
-        style={{ borderColor: "#D0DEE8", color: "#999" }}
+        className="text-xs px-2 py-1 rounded-lg border border-brand-border-subtle text-brand-text-muted"
       >
         取消
       </button>

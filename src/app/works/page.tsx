@@ -67,7 +67,7 @@ export default async function WorksPage({searchParams}: PageProps) {
     const filterContent = (
         <div className="space-y-6">
             <div>
-                <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>类型</h3>
+                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">类型</h3>
                 <div className="space-y-1.5">
                     <FilterLink href={buildUrl(params, {types: void 0, page: 1})} active={!params.types} label="全部类型"/>
                     {typeOptions.map(t => (
@@ -80,7 +80,7 @@ export default async function WorksPage({searchParams}: PageProps) {
             </div>
             {years.length > 0 && (
                 <div>
-                    <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>年份</h3>
+                    <h3 className="text-sm font-semibold mb-3 text-brand-text-body">年份</h3>
                     <div className="space-y-1.5">
                         <FilterLink href={buildUrl(params, {year: void 0, page: 1})} active={!params.year} label="全部年份"/>
                         {years.map(y => <FilterLink key={y.developYear}
@@ -91,19 +91,18 @@ export default async function WorksPage({searchParams}: PageProps) {
                 </div>
             )}
             <div>
-                <h3 className="text-sm font-semibold mb-3" style={{color: "#555"}}>标签</h3>
+                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">标签</h3>
                 <div className="space-y-3">
                     {sortedGroups.map((group) => (
                         <div key={group}>
-                            <h4 className="text-xs font-medium mb-1.5" style={{color: "#999"}}>{group}</h4>
+                            <h4 className="text-xs font-medium mb-1.5 text-brand-text-muted">{group}</h4>
                             <div className="flex flex-wrap gap-2">
                                 {(tagGroups[group] || []).map(tag => (
                                     <Link key={tag.slug} href={buildUrl(params, {
                                         tag: params.tag === tag.slug ? void 0 : tag.slug,
                                         page: 1
                                     })}
-                                          className={`text-xs px-2 py-1 rounded transition-all ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1" : "opacity-70 hover:opacity-100"}`}
-                                          style={{backgroundColor: "rgba(136,194,50,0.13)", color: "#88C232"}}>
+                                          className={`text-xs px-2 py-1 rounded transition-all bg-brand-green/15 text-brand-green ${params.tag === tag.slug ? "ring-1 ring-[#88C232] ring-offset-1" : "opacity-70 hover:opacity-100"}`}>
                                         {tag.name} ({tag._count.projects})
                                     </Link>
                                 ))}
@@ -118,9 +117,9 @@ export default async function WorksPage({searchParams}: PageProps) {
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold" style={{color: "#25547A"}}>作品库</h1>
+                <h1 className="text-3xl font-bold text-brand-navy">作品库</h1>
                 {/* 桌面端统计，移动端统计在 FilterSidebarClient 中 */}
-                <p style={{color: "#777"}} className="mt-2 hidden lg:block">共 {total} 件作品</p>
+                <p className="mt-2 hidden lg:block text-brand-text-secondary">共 {total} 件作品</p>
             </div>
             <div className="flex flex-col lg:flex-row gap-8">
                 <FilterSidebarClient total={total}>
@@ -236,8 +235,7 @@ function buildWhere(params: Record<string, any>) {
 
 function FilterLink({href, active, label}: { href: string; active: boolean; label: string }) {
     return (
-        <Link href={href} className={`block text-sm px-3 py-1.5 rounded transition-colors ${active ? "font-medium" : ""}`}
-              style={active ? {background: "rgba(37,84,122,0.07)", color: "#25547A"} : {color: "#777"}}>
+        <Link href={href} className={`block text-sm px-3 py-1.5 rounded transition-colors ${active ? "font-medium bg-brand-navy/10 text-brand-navy" : "text-brand-text-secondary"}`}>
             {label}
         </Link>
     );

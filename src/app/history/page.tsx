@@ -257,8 +257,8 @@ export default async function HistoryPage() {
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-8 text-center">
-                <h1 className="text-3xl font-bold" style={{color: "#25547A"}}>社团历史</h1>
-                <p className="mt-2" style={{color: "#777"}}>记录每一届成员的努力与成果</p>
+                <h1 className="text-3xl font-bold text-brand-navy">社团历史</h1>
+                <p className="mt-2 text-brand-text-secondary">记录每一届成员的努力与成果</p>
             </div>
 
             <HistoryClient

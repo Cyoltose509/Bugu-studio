@@ -18,8 +18,7 @@ export default function EditButton({ slug, submitterId }: { slug: string; submit
     <div className="flex gap-2">
       <Link
         href={`/works/${slug}/edit`}
-        className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors"
-        style={{ background: "#25547A", color: "#fff" }}
+        className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors bg-brand-navy text-white"
       >
         ✏️ 编辑作品
       </Link>

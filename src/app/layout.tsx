@@ -26,9 +26,25 @@ export const viewport: Viewport = {
 
 export default function RootLayout({children}: { children: React.ReactNode }) {
     return (
-        <html lang="zh-CN">
+        <html lang="zh-CN" suppressHydrationWarning>
         <head>
             <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/>
+            {/* 在页面渲染前设置 dark class，避免 hydration mismatch */}
+            <script
+                dangerouslySetInnerHTML={{
+                    __html: `
+(function() {
+  try {
+    var theme = localStorage.getItem('theme');
+    if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    }
+  } catch (e) {}
+})();
+          `.trim(),
+                }}
+            />
         </head>
         <body className={`${inter.className} text-[#333333] min-h-screen flex flex-col`}>
         <Providers>
@@ -37,19 +53,8 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
                 <Navbar/>
             </Suspense>
             <main className="flex-1 relative">
-                <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                        backgroundImage: "url(/images/geo_pattern.png)",
-                        backgroundRepeat: "repeat",
-                        backgroundSize: "600px",
-                        opacity: 0.06,
-                        maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)",
-                        WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)",
-                        zIndex: 0,
-                    }}
-                />
-                <div className="relative" style={{zIndex: 1}}>{children}</div>
+                <div className="absolute inset-0 pointer-events-none texture-bg texture-bg--fade-down" />
+                <div className="relative z-[1]">{children}</div>
             </main>
             <Footer/>
         </Providers>

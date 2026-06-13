@@ -15,8 +15,7 @@ function ApproveButton() {
       value="APPROVED"
       type="submit"
       disabled={pending}
-      className="text-xs px-3 py-1.5 rounded-lg text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-      style={{ background: "#3388BB" }}
+      className="text-xs px-3 py-1.5 rounded-lg text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed bg-brand-blue"
     >
       {pending ? "处理中..." : "通过"}
     </button>
@@ -31,8 +30,7 @@ function RejectButton() {
       value="REJECTED"
       type="submit"
       disabled={pending}
-      className="text-xs px-3 py-1.5 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-      style={{ borderColor: "#EF4444", color: "#EF4444" }}
+      className="text-xs px-3 py-1.5 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed border-red-500 text-red-500"
     >
       {pending ? "处理中..." : "拒绝"}
     </button>
@@ -75,15 +73,15 @@ export default function ReviewProposalForm({
   if (state.success) return null;
 
   return (
-    <form action={formAction} className="bg-white rounded-xl border p-4 space-y-3" style={{ borderColor: "#FFF3E0" }}>
+    <form action={formAction} className="bg-card rounded-xl border border-[#FFF3E0] p-4 space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-semibold" style={{ color: "#333" }}>{title}</span>
+            <span className="font-semibold text-brand-text-heading">{title}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">待审核</span>
           </div>
-          <p className="text-xs mt-1" style={{ color: "#777" }}>by {userName} · {createdAt}</p>
-          {description && <p className="text-sm mt-1" style={{ color: "#555" }}>{description}</p>}
+          <p className="text-xs mt-1 text-brand-text-secondary">by {userName} · {createdAt}</p>
+          {description && <p className="text-sm mt-1 text-brand-text-body">{description}</p>}
         </div>
       </div>
 
@@ -97,8 +95,7 @@ export default function ReviewProposalForm({
         <input
           name="adminNote"
           placeholder="审核意见（可选）"
-          className="flex-1 min-w-[120px] rounded-lg border px-3 py-1.5 text-xs placeholder-gray-400"
-          style={{ borderColor: "#D0DEE8" }}
+          className="flex-1 min-w-[120px] rounded-lg border border-brand-border-subtle px-3 py-1.5 text-xs placeholder-gray-400"
         />
       </div>
     </form>

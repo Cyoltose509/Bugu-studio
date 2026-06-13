@@ -25,8 +25,8 @@ export default function UserAvatar({
     if (!src || error) {
         return (
             <div
-                className={`rounded-full flex items-center justify-center text-white shrink-0 ${className}`}
-                style={{width: size, height: size, fontSize: size * 0.4, background: "#E38043"}}
+                className={`w-[var(--avatar-size)] h-[var(--avatar-size)] [font-size:var(--avatar-font)] bg-brand-orange flex items-center justify-center text-white shrink-0 rounded-full ${className}`}
+                style={{"--avatar-size": `${size}px`, "--avatar-font": `${size * 0.4}px`} as React.CSSProperties}
             >
                 {initial}
             </div>

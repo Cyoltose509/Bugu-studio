@@ -114,16 +114,18 @@ export default function AuditLogsSection() {
   }
 
   return (
-    <div className="rounded-2xl border p-6 shadow-sm" style={{ background: "#fff", borderColor: "#D0DEE8" }}>
+    <div className="rounded-2xl border border-brand-border-subtle p-6 shadow-sm bg-card">
       <button
         onClick={doToggle}
         className="w-full flex items-center justify-between text-left"
       >
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: "#25547A" }}>📋 审计日志</h3>
-          <p className="text-sm mt-0.5" style={{ color: "#888" }}>数据库操作记录，支持按类型和表筛选</p>
+          <h3 className="text-lg font-semibold text-brand-navy">📋 审计日志</h3>
+          <p className="text-sm mt-0.5 text-brand-text-muted">数据库操作记录，支持按类型和表筛选</p>
         </div>
-        <span className="text-lg transition-transform" style={{ color: "#999", transform: expanded ? "rotate(180deg)" : "" }}>▼</span>
+        <span
+          className={`text-lg transition-transform text-brand-text-muted ${expanded ? "rotate-180" : ""}`}
+        >▼</span>
       </button>
 
       {expanded && (
@@ -131,35 +133,37 @@ export default function AuditLogsSection() {
           {/* 筛选栏 */}
           <div className="space-y-2">
             <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-xs font-medium mr-1" style={{ color: "#777" }}>操作:</span>
+              <span className="text-xs font-medium mr-1 text-brand-text-muted">操作:</span>
               {ACTION_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => switchFilter(f.value, model)}
                   className={`text-xs px-2 py-1 rounded transition-colors ${
-                    action === f.value ? "font-medium text-white" : ""
+                    action === f.value
+                      ? "font-medium text-white bg-brand-navy"
+                      : "text-brand-text-body bg-brand-surface-page"
                   }`}
-                  style={action === f.value ? { background: "#25547A" } : { color: "#555", background: "#F0F5F9" }}
                 >
                   {f.label}
                 </button>
               ))}
             </div>
             <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-xs font-medium mr-1" style={{ color: "#777" }}>涉及:</span>
+              <span className="text-xs font-medium mr-1 text-brand-text-muted">涉及:</span>
               {MODEL_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => switchFilter(action, f.value)}
                   className={`text-xs px-2 py-1 rounded transition-colors ${
-                    model === f.value ? "font-medium text-white" : ""
+                    model === f.value
+                      ? "font-medium text-white bg-brand-navy"
+                      : "text-brand-text-body bg-brand-surface-page"
                   }`}
-                  style={model === f.value ? { background: "#25547A" } : { color: "#555", background: "#F0F5F9" }}
                 >
                   {f.label}
                 </button>
               ))}
-              {total > 0 && <span className="text-xs ml-2" style={{ color: "#999" }}>共 {total} 条</span>}
+              {total > 0 && <span className="text-xs ml-2 text-brand-text-muted">共 {total} 条</span>}
             </div>
           </div>
 
@@ -171,14 +175,13 @@ export default function AuditLogsSection() {
                   type="button"
                   disabled={deleting}
                   onClick={() => setShowDeleteLastN(true)}
-                  className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-50"
-                  style={{ borderColor: "#D0DEE8", color: "#777", background: "#fff" }}
+                  className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-50 border-brand-border-subtle text-brand-text-muted bg-card"
                 >
                   🗑️ 删末尾N条
                 </button>
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs" style={{ color: "#555" }}>删最后</span>
+                  <span className="text-xs text-brand-text-body">删最后</span>
                   <input
                     type="number"
                     min={1}
@@ -186,10 +189,9 @@ export default function AuditLogsSection() {
                     value={deleteN}
                     onChange={(e) => setDeleteN(e.target.value)}
                     placeholder="N"
-                    className="w-16 rounded border px-1.5 py-0.5 text-xs text-center"
-                    style={{ borderColor: "#D0DEE8", color: "#333" }}
+                    className="w-16 rounded border px-1.5 py-0.5 text-xs text-center border-brand-border-subtle text-brand-text-heading"
                   />
-                  <span className="text-xs" style={{ color: "#555" }}>条</span>
+                  <span className="text-xs text-brand-text-body">条</span>
                   <button
                     type="button"
                     disabled={deleting || !deleteN || parseInt(deleteN, 10) < 1}
@@ -199,8 +201,7 @@ export default function AuditLogsSection() {
                         handleDelete("lastN", n);
                       }
                     }}
-                    className="text-xs px-2 py-0.5 rounded text-white transition-colors disabled:opacity-50"
-                    style={{ background: "#E38043" }}
+                    className="text-xs px-2 py-0.5 rounded text-white transition-colors disabled:opacity-50 bg-brand-orange"
                   >
                     {deleting ? "删除中..." : "确认"}
                   </button>
@@ -208,8 +209,7 @@ export default function AuditLogsSection() {
                     type="button"
                     disabled={deleting}
                     onClick={() => { setShowDeleteLastN(false); setDeleteN(""); }}
-                    className="text-xs px-1.5 py-0.5 rounded border transition-colors disabled:opacity-50"
-                    style={{ borderColor: "#D0DEE8", color: "#999", background: "#fff" }}
+                    className="text-xs px-1.5 py-0.5 rounded border transition-colors disabled:opacity-50 border-brand-border-subtle text-brand-text-muted bg-card"
                   >
                     取消
                   </button>
@@ -221,21 +221,19 @@ export default function AuditLogsSection() {
                   type="button"
                   disabled={deleting}
                   onClick={() => setShowDeleteAll(true)}
-                  className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-50"
-                  style={{ borderColor: "#FDE8E8", color: "#C62828", background: "#fff" }}
+                  className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-50 border-[var(--ui-bg-red-light)] text-[var(--ui-text-red)] bg-card"
                 >
                   🗑️ 删除全部
                 </button>
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs" style={{ color: "#C62828" }}>
+                  <span className="text-xs text-[var(--ui-text-red)]">
                     输入「确认删除」：
                   </span>
                   <input
                     type="text"
                     placeholder="确认删除"
-                    className="rounded border px-1.5 py-0.5 text-xs"
-                    style={{ borderColor: "#FDE8E8", color: "#333" }}
+                    className="rounded border px-1.5 py-0.5 text-xs border-[var(--ui-bg-red-light)] text-brand-text-heading"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && (e.target as HTMLInputElement).value === "确认删除") {
                         handleDelete("all");
@@ -249,8 +247,7 @@ export default function AuditLogsSection() {
                       const input = document.querySelector('input[placeholder="确认删除"]') as HTMLInputElement;
                       if (input?.value === "确认删除") handleDelete("all");
                     }}
-                    className="text-xs px-2 py-0.5 rounded text-white transition-colors disabled:opacity-50"
-                    style={{ background: "#C62828" }}
+                    className="text-xs px-2 py-0.5 rounded text-white transition-colors disabled:opacity-50 bg-[var(--ui-text-red)]"
                   >
                     {deleting ? "删除中..." : "确认全部删除"}
                   </button>
@@ -258,8 +255,7 @@ export default function AuditLogsSection() {
                     type="button"
                     disabled={deleting}
                     onClick={() => setShowDeleteAll(false)}
-                    className="text-xs px-1.5 py-0.5 rounded border transition-colors disabled:opacity-50"
-                    style={{ borderColor: "#D0DEE8", color: "#999", background: "#fff" }}
+                    className="text-xs px-1.5 py-0.5 rounded border transition-colors disabled:opacity-50 border-brand-border-subtle text-brand-text-muted bg-card"
                   >
                     取消
                   </button>
@@ -268,7 +264,7 @@ export default function AuditLogsSection() {
 
               {deleteMsg && (
                 <span className={`text-xs px-2 py-0.5 rounded ${
-                  deleteMsg.includes("已删除") ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#FDE8E8] text-[#C62828]"
+                  deleteMsg.includes("已删除") ? "bg-[var(--ui-bg-green-light)] text-[var(--ui-text-green)]" : "bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
                 }`}>
                   {deleteMsg}
                 </span>
@@ -279,39 +275,41 @@ export default function AuditLogsSection() {
           {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">⚠️ {error}</div>}
 
           {loading ? (
-            <div className="text-center py-6 text-sm" style={{ color: "#999" }}>加载中...</div>
+            <div className="text-center py-6 text-sm text-brand-text-muted">加载中...</div>
           ) : logs.length === 0 ? (
-            <div className="text-center py-6 text-sm" style={{ color: "#999" }}>暂无审计日志</div>
+            <div className="text-center py-6 text-sm text-brand-text-muted">暂无审计日志</div>
           ) : (
             <>
-              <div className="overflow-x-auto rounded-lg border" style={{ borderColor: "#E6F0F8" }}>
+              <div className="overflow-x-auto rounded-lg border border-[#E6F0F8]">
                 <table className="w-full text-sm">
-                  <thead style={{ background: "#F0F5FA" }}>
+                  <thead className="bg-[#F0F5FA]">
                     <tr>
-                      <th className="text-left p-2.5 font-medium text-xs" style={{ color: "#555" }}>时间</th>
-                      <th className="text-left p-2.5 font-medium text-xs" style={{ color: "#555" }}>用户</th>
-                      <th className="text-left p-2.5 font-medium text-xs" style={{ color: "#555" }}>操作</th>
-                      <th className="text-left p-2.5 font-medium text-xs" style={{ color: "#555" }}>目标</th>
-                      <th className="text-left p-2.5 font-medium text-xs" style={{ color: "#555" }}>IP</th>
-                      <th className="text-left p-2.5 font-medium text-xs" style={{ color: "#555" }}>详情</th>
+                      <th className="text-left p-2.5 font-medium text-xs text-brand-text-body">时间</th>
+                      <th className="text-left p-2.5 font-medium text-xs text-brand-text-body">用户</th>
+                      <th className="text-left p-2.5 font-medium text-xs text-brand-text-body">操作</th>
+                      <th className="text-left p-2.5 font-medium text-xs text-brand-text-body">目标</th>
+                      <th className="text-left p-2.5 font-medium text-xs text-brand-text-body">IP</th>
+                      <th className="text-left p-2.5 font-medium text-xs text-brand-text-body">详情</th>
                     </tr>
                   </thead>
                   <tbody>
                     {logs.map((log) => (
-                      <tr key={log.id} className="border-t hover:bg-[#F0F5F9] transition-colors" style={{ borderColor: "#EEE" }}>
-                        <td className="p-2.5 text-xs whitespace-nowrap" style={{ color: "#999" }}>
+                      <tr key={log.id} className="border-t border-[#EEE] hover:bg-[#F0F5F9] transition-colors">
+                        <td className="p-2.5 text-xs whitespace-nowrap text-brand-text-muted">
                           {new Date(log.createdAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </td>
-                        <td className="p-2.5"><span className="text-xs" style={{ color: "#333" }}>{log.user?.name || log.user?.email?.split("@")[0] || "系统"}</span></td>
+                        <td className="p-2.5"><span className="text-xs text-brand-text-heading">{log.user?.name || log.user?.email?.split("@")[0] || "系统"}</span></td>
                         <td className="p-2.5">
-                          <span className="text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap" style={{
-                            background: log.action === "DELETE" ? "#FDE8E8" : log.action === "CREATE" ? "#E8F5E9" : log.action === "UPDATE" ? "#E3F2FD" : "#FFF3E0",
-                            color: log.action === "DELETE" ? "#C62828" : log.action === "CREATE" ? "#2E7D32" : log.action === "UPDATE" ? "#1565C0" : "#E65100",
-                          }}>{log.action}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                            log.action === "DELETE" ? "bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
+                              : log.action === "CREATE" ? "bg-[var(--ui-bg-green-light)] text-[var(--ui-text-green)]"
+                              : log.action === "UPDATE" ? "bg-[#E3F2FD] text-[#1565C0]"
+                              : "bg-[#FFF3E0] text-[#E65100]"
+                          }`}>{log.action}</span>
                         </td>
-                        <td className="p-2.5"><span className="text-xs" style={{ color: "#333" }}>{log.targetType || "-"}</span></td>
-                        <td className="p-2.5 text-xs font-mono" style={{ color: "#999" }}>{log.ipAddress || "-"}</td>
-                        <td className="p-2.5 text-xs" style={{ color: "#777" }}>
+                        <td className="p-2.5"><span className="text-xs text-brand-text-heading">{log.targetType || "-"}</span></td>
+                        <td className="p-2.5 text-xs font-mono text-brand-text-muted">{log.ipAddress || "-"}</td>
+                        <td className="p-2.5 text-xs text-brand-text-muted">
                           {log.metadata?.changedFields?.length
                             ? `字段: ${log.metadata.changedFields.join(", ")}`
                             : log.metadata?.elapsed
@@ -330,17 +328,15 @@ export default function AuditLogsSection() {
                   <button
                     disabled={page <= 1}
                     onClick={() => { setPage(page - 1); fetchLogs(page - 1, action, model); }}
-                    className="px-3 py-1 rounded text-xs border disabled:opacity-30"
-                    style={{ borderColor: "#D0DEE8", color: "#555" }}
+                    className="px-3 py-1 rounded text-xs border border-brand-border-subtle text-brand-text-body disabled:opacity-30"
                   >
                     上一页
                   </button>
-                  <span className="text-xs" style={{ color: "#777" }}>{page} / {totalPages}</span>
+                  <span className="text-xs text-brand-text-muted">{page} / {totalPages}</span>
                   <button
                     disabled={page >= totalPages}
                     onClick={() => { setPage(page + 1); fetchLogs(page + 1, action, model); }}
-                    className="px-3 py-1 rounded text-xs border disabled:opacity-30"
-                    style={{ borderColor: "#D0DEE8", color: "#555" }}
+                    className="px-3 py-1 rounded text-xs border border-brand-border-subtle text-brand-text-body disabled:opacity-30"
                   >
                     下一页
                   </button>

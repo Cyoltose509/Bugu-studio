@@ -73,15 +73,13 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
             name="title"
             placeholder="分享主题…"
             required
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            style={{ borderColor: "#D0DEE8" }}
+            className="w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm"
           />
           <MentionEditor
             name="description"
             placeholder="简介（可选）"
             rows={2}
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            style={{ borderColor: "#D0DEE8" }}
+            className="w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm"
           />
           <SubmitButton />
         </>

@@ -84,15 +84,13 @@ export default function MemberSelector({
           }}
           onFocus={() => setShowDropdown(true)}
           placeholder={placeholder}
-          className="flex-1 rounded-lg border px-3 py-1.5 text-sm"
-          style={{ borderColor: "#D0DEE8", color: "#333" }}
+          className="flex-1 rounded-lg border px-3 py-1.5 text-sm border-brand-border-subtle text-brand-text-heading"
         />
         {selectedUser && (
           <button
             type="button"
             onClick={clearSelection}
-            className="text-xs px-2 py-1.5 rounded"
-            style={{ color: "#999", border: "1px solid #D0DEE8" }}
+            className="text-xs px-2 py-1.5 rounded text-brand-text-muted border border-brand-border-subtle"
           >
             清除
           </button>
@@ -101,15 +99,14 @@ export default function MemberSelector({
 
       {showDropdown && results.length > 0 && (
         <div
-          className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto"
-          style={{ borderColor: "#D0DEE8" }}
+          className="absolute z-20 mt-1 w-full bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto border-brand-border-subtle"
         >
           {results.map((u) => (
             <button
               key={u.id}
               type="button"
               onClick={() => handleSelect(u)}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-[#F0F5F9] flex items-center gap-2 transition-colors"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface-page flex items-center gap-2 transition-colors"
             >
               {u.image ? (
                 <img
@@ -120,13 +117,12 @@ export default function MemberSelector({
                 />
               ) : (
                 <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs shrink-0"
-                  style={{ background: "#E38043" }}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs shrink-0 bg-brand-orange"
                 >
                   {(u.name || "?")[0]}
                 </span>
               )}
-              <span style={{ color: "#333" }}>{u.name}</span>
+              <span className="text-brand-text-heading">{u.name}</span>
             </button>
           ))}
         </div>

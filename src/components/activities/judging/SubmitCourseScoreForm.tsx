@@ -32,18 +32,17 @@ function ScoreSlider({
     <div>
       <div className="flex items-center justify-between mb-1">
         <div>
-          <span className="text-xs font-medium" style={{ color: "#555" }}>{label}</span>
-          <span className="text-[10px] ml-1.5" style={{ color: "#aaa" }}>{desc}</span>
+          <span className="text-xs font-medium text-brand-text-body">{label}</span>
+          <span className="text-[10px] ml-1.5 text-[#aaa]">{desc}</span>
         </div>
         <span
-          className="text-sm font-bold tabular-nums min-w-[2rem] text-right"
-          style={{ color: trackColor }}
+          className={`text-sm font-bold tabular-nums min-w-[2rem] text-right ${pct < 35 ? "text-[#e57373]" : pct < 65 ? "text-[#FFB347]" : "text-brand-green"}`}
         >
           {value}
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[10px]" style={{ color: "#ccc" }}>0</span>
+        <span className="text-[10px] text-[#ccc]">0</span>
         <input
           type="range"
           min={0}
@@ -58,7 +57,7 @@ function ScoreSlider({
             accentColor: trackColor,
           }}
         />
-        <span className="text-[10px]" style={{ color: "#ccc" }}>100</span>
+        <span className="text-[10px] text-[#ccc]">100</span>
       </div>
     </div>
   );
@@ -91,12 +90,11 @@ export function SubmitCourseScoreForm({
   return (
     <details className="mt-2">
       <summary
-        className="text-xs cursor-pointer list-none inline-flex items-center gap-1.5"
-        style={{ color: myScore ? "#3388BB" : "#E38043" }}
+        className={`text-xs cursor-pointer list-none inline-flex items-center gap-1.5 ${myScore ? "text-brand-blue" : "text-brand-orange"}`}
       >
         {myScore ? "✏️ 修改评分" : "📝 打分"}
       </summary>
-      <form action={handleSubmit} className="mt-3 space-y-3 p-3 rounded-lg" style={{ background: "#F8FAFB" }}>
+      <form action={handleSubmit} className="mt-3 space-y-3 p-3 rounded-lg bg-[#F8FAFB]">
         <input type="hidden" name="teamId" value={teamId} />
         <input type="hidden" name="content" value={content} />
         <input type="hidden" name="delivery" value={delivery} />
@@ -110,7 +108,7 @@ export function SubmitCourseScoreForm({
 
         {/* 快捷选分 */}
         <div className="flex items-center gap-1">
-          <span className="text-[10px] mr-1" style={{ color: "#bbb" }}>快捷：</span>
+          <span className="text-[10px] mr-1 text-[#bbb]">快捷：</span>
           {QUICK_SCORES.map((s) => (
             <button
               key={s}
@@ -121,12 +119,11 @@ export function SubmitCourseScoreForm({
                 setDelivery(s);
                 setPreparation(s);
               }}
-              className="text-[10px] px-1.5 py-0.5 rounded border transition-colors disabled:opacity-40"
-              style={{
-                borderColor: "#D0DEE8",
-                color: content === s && delivery === s && preparation === s ? "#fff" : "#777",
-                background: content === s && delivery === s && preparation === s ? "#3388BB" : "#fff",
-              }}
+              className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors disabled:opacity-40 ${
+                content === s && delivery === s && preparation === s
+                  ? "border-brand-blue bg-brand-blue text-white"
+                  : "border-brand-border-subtle bg-card text-brand-text-secondary"
+              }`}
             >
               {s}
             </button>
@@ -135,33 +132,28 @@ export function SubmitCourseScoreForm({
 
         {/* 综合分预览 */}
         <div
-          className="flex items-center justify-between px-3 py-2 rounded-lg"
-          style={{ background: "#E8F4FD" }}
+          className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#E8F4FD]"
         >
-          <span className="text-xs font-medium" style={{ color: "#25547A" }}>
+          <span className="text-xs font-medium text-brand-navy">
             综合分（平均）
           </span>
           <span
-            className="text-lg font-bold"
-            style={{
-              color: avgScore < 35 ? "#e57373" : avgScore < 65 ? "#E38043" : "#2E7D32",
-            }}
+            className={`text-lg font-bold ${avgScore < 35 ? "text-[#e57373]" : avgScore < 65 ? "text-brand-orange" : "text-[var(--ui-text-green)]"}`}
           >
             {avgScore}
-            <span className="text-xs font-normal ml-1" style={{ color: "#999" }}>/ 100</span>
+            <span className="text-xs font-normal ml-1 text-brand-text-muted">/ 100</span>
           </span>
         </div>
 
         {/* 评语 */}
         <div>
-          <label className="block text-xs mb-1" style={{ color: "#777" }}>评语（可选）</label>
+          <label className="block text-xs mb-1 text-brand-text-secondary">评语（可选）</label>
           <textarea
             name="comment"
             rows={2}
             defaultValue={myScore?.comment || ""}
             disabled={isPending}
-            className="w-full rounded-lg border px-3 py-1.5 text-sm resize-y disabled:opacity-50"
-            style={{ borderColor: "#D0DEE8" }}
+            className="w-full rounded-lg border border-brand-border-subtle px-3 py-1.5 text-sm resize-y disabled:opacity-50"
             placeholder="可以写下对讲题的评价、建议…"
           />
         </div>
@@ -169,8 +161,7 @@ export function SubmitCourseScoreForm({
         <button
           type="submit"
           disabled={isPending}
-          className="text-xs px-4 py-1.5 rounded-lg text-white disabled:opacity-50 transition-colors"
-          style={{ background: "#3388BB" }}
+          className="text-xs px-4 py-1.5 rounded-lg text-white disabled:opacity-50 transition-colors bg-brand-blue"
         >
           {isPending ? "提交中…" : myScore ? "更新评分" : "提交评分"}
         </button>

@@ -18,12 +18,7 @@ export default function FilterSidebarClient({ total, children }: Props) {
         <button
           type="button"
           onClick={toggle}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors active:scale-95"
-          style={{
-            borderColor: "#D0DEE8",
-            background: open ? "#E6F0F8" : "#fff",
-            color: open ? "#3388BB" : "#555",
-          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors active:scale-95 border-brand-border-subtle ${open ? "bg-brand-surface text-brand-blue" : "bg-card text-brand-text-body"}`}
         >
           <svg
             className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`}
@@ -36,7 +31,7 @@ export default function FilterSidebarClient({ total, children }: Props) {
           </svg>
           筛选 ({total} 件作品)
         </button>
-        <span className="text-xs" style={{ color: "#999" }}>
+        <span className="text-xs text-brand-text-muted">
           共 {total} 件作品
         </span>
       </div>
@@ -47,7 +42,7 @@ export default function FilterSidebarClient({ total, children }: Props) {
           open ? "max-h-[2000px] opacity-100 mb-6" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="p-4 bg-white rounded-xl border shadow-sm" style={{ borderColor: "#D0DEE8" }}>
+        <div className="p-4 bg-card rounded-xl border shadow-sm border-brand-border-subtle">
           {children}
         </div>
       </div>

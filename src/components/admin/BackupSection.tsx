@@ -141,16 +141,18 @@ export default function BackupSection() {
   }
 
   return (
-    <div className="rounded-2xl border p-6 shadow-sm" style={{ background: "#fff", borderColor: "#D0DEE8" }}>
+    <div className="rounded-2xl border border-brand-border-subtle p-6 shadow-sm bg-card">
       <button
         onClick={doToggle}
         className="w-full flex items-center justify-between text-left"
       >
         <div>
-          <h3 className="text-lg font-semibold" style={{ color: "#25547A" }}>💾 数据库备份与版本管理</h3>
-          <p className="text-sm mt-0.5" style={{ color: "#888" }}>创建、恢复、删除大版本备份</p>
+          <h3 className="text-lg font-semibold text-brand-navy">💾 数据库备份与版本管理</h3>
+          <p className="text-sm mt-0.5 text-brand-text-muted">创建、恢复、删除大版本备份</p>
         </div>
-        <span className="text-lg transition-transform" style={{ color: "#999", transform: expanded ? "rotate(180deg)" : "" }}>▼</span>
+        <span
+          className={`text-lg transition-transform text-brand-text-muted ${expanded ? "rotate-180" : ""}`}
+        >▼</span>
       </button>
 
       {expanded && (
@@ -160,12 +162,13 @@ export default function BackupSection() {
             <button
               onClick={doBackup}
               disabled={backing}
-              className="px-4 py-2 rounded-lg text-white text-sm font-medium transition disabled:opacity-50"
-              style={{ background: backing ? "#aaa" : "#25547A" }}
+              className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition disabled:opacity-50 ${
+                backing ? "bg-[#aaa]" : "bg-brand-navy"
+              }`}
             >
               {backing ? "⏳ 备份中..." : "📦 一键备份大版本"}
             </button>
-            <span className="text-xs" style={{ color: "#888" }}>将当前全部数据导出为新的备份版本</span>
+            <span className="text-xs text-brand-text-muted">将当前全部数据导出为新的备份版本</span>
           </div>
 
           {msg && (
@@ -182,96 +185,107 @@ export default function BackupSection() {
 
           {restoreResult && (
             <div className="p-4 rounded-md bg-blue-50 border border-blue-200 text-sm">
-              <div className="font-semibold mb-2" style={{ color: "#25547A" }}>📋 恢复详情 — {restoreResult.date}</div>
+              <div className="font-semibold mb-2 text-brand-navy">📋 恢复详情 — {restoreResult.date}</div>
               <div className="grid grid-cols-3 gap-3 mb-2">
-                <div><span style={{ color: "#777" }}>恢复前：</span><b>{restoreResult.totalBefore}</b></div>
-                <div><span style={{ color: "#777" }}>备份：</span><b>{restoreResult.totalBackup}</b></div>
-                <div><span style={{ color: "#777" }}>已恢复：</span><b style={{ color: "#2E7D32" }}>{restoreResult.restoredCount}</b></div>
+                <div><span className="text-brand-text-muted">恢复前：</span><b>{restoreResult.totalBefore}</b></div>
+                <div><span className="text-brand-text-muted">备份：</span><b>{restoreResult.totalBackup}</b></div>
+                <div><span className="text-brand-text-muted">已恢复：</span><b className="text-[var(--ui-text-green)]">{restoreResult.restoredCount}</b></div>
               </div>
               {restoreResult.skipped.length > 0 && (
-                <div className="text-xs" style={{ color: "#E65100" }}>⚠ 跳过：{restoreResult.skipped.join("; ")}</div>
+                <div className="text-xs text-[#E65100]">⚠ 跳过：{restoreResult.skipped.join("; ")}</div>
               )}
             </div>
           )}
 
           {/* 统计卡片 */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white border rounded-lg p-3" style={{ borderColor: "#E0E8F0" }}>
-              <div className="text-xs" style={{ color: "#777" }}>审计日志总数</div>
-              <div className="text-xl font-bold mt-0.5" style={{ color: "#25547A" }}>{totalLogs}</div>
+            <div className="bg-card border border-[#E0E8F0] rounded-lg p-3">
+              <div className="text-xs text-brand-text-muted">审计日志总数</div>
+              <div className="text-xl font-bold mt-0.5 text-brand-navy">{totalLogs}</div>
             </div>
-            <div className="bg-white border rounded-lg p-3" style={{ borderColor: "#E0E8F0" }}>
-              <div className="text-xs" style={{ color: "#777" }}>现行版本日志</div>
-              <div className="text-xl font-bold mt-0.5" style={{ color: "#E38043" }}>{activeLogCount}</div>
+            <div className="bg-card border border-[#E0E8F0] rounded-lg p-3">
+              <div className="text-xs text-brand-text-muted">现行版本日志</div>
+              <div className="text-xl font-bold mt-0.5 text-brand-orange">{activeLogCount}</div>
             </div>
-            <div className="bg-white border rounded-lg p-3" style={{ borderColor: "#E0E8F0" }}>
-              <div className="text-xs" style={{ color: "#777" }}>大版本数量</div>
-              <div className="text-xl font-bold mt-0.5" style={{ color: "#3388BB" }}>{versions.length}</div>
+            <div className="bg-card border border-[#E0E8F0] rounded-lg p-3">
+              <div className="text-xs text-brand-text-muted">大版本数量</div>
+              <div className="text-xl font-bold mt-0.5 text-brand-blue">{versions.length}</div>
             </div>
           </div>
 
           {/* 版本时间线 */}
           {loading ? (
-            <div className="text-center py-6 text-sm" style={{ color: "#999" }}>加载中...</div>
+            <div className="text-center py-6 text-sm text-brand-text-muted">加载中...</div>
           ) : versions.length === 0 ? (
-            <div className="text-center py-8 bg-white border rounded-lg" style={{ borderColor: "#E0E8F0", color: "#999" }}>
+            <div className="text-center py-8 bg-card border border-[#E0E8F0] rounded-lg text-brand-text-muted">
               暂无大版本备份，点击上方按钮创建
             </div>
           ) : (
             <div className="space-y-0">
               {/* 现行版本 */}
-              <div className="relative pl-8 pb-5 border-l-2" style={{ borderColor: "#E38043" }}>
-                <div className="absolute left-0 top-0 w-3.5 h-3.5 -translate-x-[8px] rounded-full border-2 bg-white" style={{ borderColor: "#E38043" }} />
-                <div className="bg-white border rounded-lg p-3" style={{ borderColor: "#F0D0B0", background: "#FFFAF5" }}>
+              <div className="relative pl-8 pb-5 border-l-2 border-brand-orange">
+                <div className="absolute left-0 top-0 w-3.5 h-3.5 -translate-x-[8px] rounded-full border-2 bg-card border-brand-orange" />
+                <div className="bg-card border border-[#F0D0B0] rounded-lg p-3 bg-[#FFFAF5]">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold" style={{ color: "#E38043" }}>📝 正在更新的日志</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "#FFF0E0", color: "#E38043" }}>{activeLogCount} 条</span>
+                    <span className="text-xs font-bold text-brand-orange">📝 正在更新的日志</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#FFF0E0] text-brand-orange">{activeLogCount} 条</span>
                   </div>
-                  <div className="text-xs mt-1" style={{ color: "#999" }}>现行版本 — 最新大版本之后的所有操作记录</div>
+                  <div className="text-xs mt-1 text-brand-text-muted">现行版本 — 最新大版本之后的所有操作记录</div>
                 </div>
               </div>
 
               {/* 各版本 */}
               {versions.map((v, i) => (
-                <div key={v.id} className="relative pl-8 pb-5 border-l-2" style={{ borderColor: i === versions.length - 1 ? "#D0DEE8" : "#3388BB" }}>
-                  <div className="absolute left-0 top-0 w-3.5 h-3.5 -translate-x-[8px] rounded-full border-2 bg-white" style={{ borderColor: "#3388BB" }} />
-                  <div className="bg-white border rounded-lg p-3" style={{ borderColor: "#D0DEE8" }}>
+                <div
+                  key={v.id}
+                  className={`relative pl-8 pb-5 border-l-2 ${
+                    i === versions.length - 1 ? "border-brand-border-subtle" : "border-brand-blue"
+                  }`}
+                >
+                  <div className="absolute left-0 top-0 w-3.5 h-3.5 -translate-x-[8px] rounded-full border-2 bg-card border-brand-blue" />
+                  <div className="bg-card border border-brand-border-subtle rounded-lg p-3">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold" style={{ color: "#25547A" }}>📦 大版本 v{v.version}</span>
-                        {v.label && <span className="text-xs" style={{ color: "#777" }}>{v.label}</span>}
+                        <span className="text-xs font-bold text-brand-navy">📦 大版本 v{v.version}</span>
+                        {v.label && <span className="text-xs text-brand-text-muted">{v.label}</span>}
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => doRestore(v)}
                           disabled={restoring === v.id || deleting === v.id}
-                          className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-40"
-                          style={{ borderColor: "#E38043", color: restoring === v.id ? "#999" : "#E38043", background: restoring === v.id ? "#FFF8F0" : "transparent" }}
+                          className={`text-xs px-2 py-1 rounded border transition-colors disabled:opacity-40 ${
+                            restoring === v.id
+                              ? "border-brand-orange text-brand-text-muted bg-[#FFF8F0]"
+                              : "border-brand-orange text-brand-orange bg-transparent"
+                          }`}
                         >
                           {restoring === v.id ? "⏳ 恢复中..." : "🔄 恢复"}
                         </button>
                         <button
                           onClick={() => doDelete(v)}
                           disabled={deleting === v.id || restoring === v.id}
-                          className="text-xs px-2 py-1 rounded border transition-colors disabled:opacity-40"
-                          style={{ borderColor: "#E74C3C", color: deleting === v.id ? "#999" : "#E74C3C", background: deleting === v.id ? "#FFF0F0" : "transparent" }}
+                          className={`text-xs px-2 py-1 rounded border transition-colors disabled:opacity-40 ${
+                            deleting === v.id
+                              ? "border-[#E74C3C] text-brand-text-muted bg-[#FFF0F0]"
+                              : "border-[#E74C3C] text-[#E74C3C] bg-transparent"
+                          }`}
                         >
                           {deleting === v.id ? "⏳ 删除中..." : "🗑 删除"}
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-3 mt-1 text-xs" style={{ color: "#777" }}>
+                    <div className="flex gap-3 mt-1 text-xs text-brand-text-muted">
                       <span>{new Date(v.createdAt).toLocaleString("zh-CN")}</span>
                       <span>{v.recordCount} 条数据</span>
-                      <span style={{ color: "#3388BB" }}>← {v.logCount} 条阶段日志</span>
+                      <span className="text-brand-blue">← {v.logCount} 条阶段日志</span>
                     </div>
                   </div>
                 </div>
               ))}
 
               <div className="relative pl-8 pb-2">
-                <div className="absolute left-0 top-0 w-3.5 h-3.5 -translate-x-[8px] rounded-full border-2 bg-white" style={{ borderColor: "#D0DEE8" }} />
-                <div className="text-xs" style={{ color: "#BBB" }}>🏁 数据库初始状态</div>
+                <div className="absolute left-0 top-0 w-3.5 h-3.5 -translate-x-[8px] rounded-full border-2 bg-card border-brand-border-subtle" />
+                <div className="text-xs text-[#BBB]">🏁 数据库初始状态</div>
               </div>
             </div>
           )}

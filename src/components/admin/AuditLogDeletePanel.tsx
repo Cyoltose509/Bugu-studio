@@ -37,11 +37,11 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border p-4 shadow-sm space-y-3" style={{ borderColor: "#D0DEE8" }}>
+    <div className="bg-card rounded-xl border border-brand-border-subtle p-4 shadow-sm space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold" style={{ color: "#25547A" }}>
+        <h3 className="text-sm font-semibold text-brand-navy">
           审计日志管理
-          <span className="text-xs font-normal ml-2" style={{ color: "#999" }}>共 {total} 条</span>
+          <span className="text-xs font-normal ml-2 text-brand-text-muted">共 {total} 条</span>
         </h3>
       </div>
 
@@ -52,14 +52,13 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
             type="button"
             onClick={() => setShowLastN(true)}
             disabled={deleting || total === 0}
-            className="text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50"
-            style={{ borderColor: "#D0DEE8", color: "#777", background: "#fff" }}
+            className="text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 border-brand-border-subtle text-brand-text-muted bg-card"
           >
             🗑️ 删除末尾 N 条
           </button>
         ) : (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs" style={{ color: "#555" }}>删除最后</span>
+            <span className="text-xs text-brand-text-body">删除最后</span>
             <input
               type="number"
               min={1}
@@ -67,10 +66,9 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
               value={nValue}
               onChange={(e) => setNValue(e.target.value)}
               placeholder="N"
-              className="w-20 rounded border px-2 py-1 text-sm text-center"
-              style={{ borderColor: "#D0DEE8", color: "#333" }}
+              className="w-20 rounded border px-2 py-1 text-sm text-center border-brand-border-subtle text-brand-text-heading"
             />
-            <span className="text-xs" style={{ color: "#555" }}>条</span>
+            <span className="text-xs text-brand-text-body">条</span>
             <button
               type="button"
               disabled={deleting || !nValue || parseInt(nValue, 10) < 1}
@@ -80,8 +78,7 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
                   handleDelete("lastN", n);
                 }
               }}
-              className="text-xs px-3 py-1 rounded-lg text-white transition-colors disabled:opacity-50"
-              style={{ background: "#E38043" }}
+              className="text-xs px-3 py-1 rounded-lg text-white transition-colors disabled:opacity-50 bg-brand-orange"
             >
               {deleting ? "删除中..." : "确认删除"}
             </button>
@@ -89,8 +86,7 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
               type="button"
               disabled={deleting}
               onClick={() => { setShowLastN(false); setNValue(""); }}
-              className="text-xs px-2 py-1 rounded-lg border transition-colors disabled:opacity-50"
-              style={{ borderColor: "#D0DEE8", color: "#999", background: "#fff" }}
+              className="text-xs px-2 py-1 rounded-lg border transition-colors disabled:opacity-50 border-brand-border-subtle text-brand-text-muted bg-card"
             >
               取消
             </button>
@@ -103,14 +99,13 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
             type="button"
             onClick={() => setShowAll(true)}
             disabled={deleting || total === 0}
-            className="text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50"
-            style={{ borderColor: "#FDE8E8", color: "#C62828", background: "#FFF" }}
+            className="text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 border-[var(--ui-bg-red-light)] text-[var(--ui-text-red)] bg-card"
           >
             🗑️ 删除全部
           </button>
         ) : (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs" style={{ color: "#C62828" }}>
+            <span className="text-xs text-[var(--ui-text-red)]">
               确认删除全部 {total} 条？请输入「确认删除」：
             </span>
             <input
@@ -118,8 +113,7 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="确认删除"
-              className="rounded border px-2 py-1 text-sm"
-              style={{ borderColor: "#FDE8E8", color: "#333" }}
+              className="rounded border px-2 py-1 text-sm border-[var(--ui-bg-red-light)] text-brand-text-heading"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && confirmText === "确认删除") {
                   handleDelete("all");
@@ -134,8 +128,7 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
                   handleDelete("all");
                 }
               }}
-              className="text-xs px-3 py-1 rounded-lg text-white transition-colors disabled:opacity-50"
-              style={{ background: "#C62828" }}
+              className="text-xs px-3 py-1 rounded-lg text-white transition-colors disabled:opacity-50 bg-[var(--ui-text-red)]"
             >
               {deleting ? "删除中..." : "确认删除全部"}
             </button>
@@ -143,8 +136,7 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
               type="button"
               disabled={deleting}
               onClick={() => { setShowAll(false); setConfirmText(""); }}
-              className="text-xs px-2 py-1 rounded-lg border transition-colors disabled:opacity-50"
-              style={{ borderColor: "#D0DEE8", color: "#999", background: "#fff" }}
+              className="text-xs px-2 py-1 rounded-lg border transition-colors disabled:opacity-50 border-brand-border-subtle text-brand-text-muted bg-card"
             >
               取消
             </button>
@@ -154,7 +146,7 @@ export default function AuditLogDeletePanel({ total }: { total: number }) {
 
       {msg && (
         <div className={`text-xs px-3 py-1.5 rounded-lg ${
-          msg.includes("已删除") ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#FDE8E8] text-[#C62828]"
+          msg.includes("已删除") ? "bg-[var(--ui-bg-green-light)] text-[var(--ui-text-green)]" : "bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
         }`}>
           {msg}
         </div>

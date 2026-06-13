@@ -67,31 +67,29 @@ function LoginForm() {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
-      <div className="w-full max-w-md bg-white border rounded-xl p-8 shadow-sm" style={{ borderColor: "#D0DEE8" }}>
-        <h1 className="text-2xl font-bold mb-2 text-center" style={{ color: "#25547A" }}>登录</h1>
-        <p className="text-sm text-center mb-8" style={{ color: "#777" }}>布谷工作室</p>
+      <div className="w-full max-w-md bg-card border rounded-xl p-8 shadow-sm border-brand-border-subtle">
+        <h1 className="text-2xl font-bold mb-2 text-center text-brand-navy">登录</h1>
+        <p className="text-sm text-center mb-8 text-brand-text-secondary">布谷工作室</p>
         {error && <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">{getLoginErrorMsg(error)}</div>}
         {msg && <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">{msg}</div>}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="email">邮箱</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="email">邮箱</label>
             <input id="email" type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-              style={{ borderColor: "#D0DEE8", color: "#333" }} placeholder="you@example.com" />
+              className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent border-brand-border-subtle text-brand-text-heading" placeholder="you@example.com" />
           </div>
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: "#555" }} htmlFor="password">密码</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="password">密码</label>
             <input id="password" type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-lg bg-white border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent"
-              style={{ borderColor: "#D0DEE8", color: "#333" }} placeholder="至少 8 位" />
+              className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent border-brand-border-subtle text-brand-text-heading" placeholder="至少 8 位" />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
             {loading ? "登录中..." : "登录"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm" style={{ color: "#777" }}>
-          还没有账号？ <Link href="/auth/register" className="hover:underline" style={{ color: "#3388BB" }}>注册</Link>
+        <p className="mt-6 text-center text-sm text-brand-text-secondary">
+          还没有账号？ <Link href="/auth/register" className="hover:underline text-brand-blue">注册</Link>
         </p>
       </div>
     </div>
@@ -100,7 +98,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center"><div style={{ color: "#999" }}>加载中...</div></div>}>
+    <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center"><div className="text-brand-text-muted">加载中...</div></div>}>
       <LoginForm />
     </Suspense>
   );

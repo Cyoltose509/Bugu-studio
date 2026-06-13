@@ -23,33 +23,31 @@ export default function SignOutPage() {
           />
         </div>
 
-        <h1 className="text-xl font-bold mb-2" style={{ color: "#25547A" }}>
+        <h1 className="text-xl font-bold mb-2 text-brand-navy">
           退出登录
         </h1>
-        <p className="text-sm mb-8" style={{ color: "#777" }}>
+        <p className="text-sm mb-8 text-brand-text-secondary">
           确认要退出当前账号吗？
         </p>
 
         <div className="space-y-3">
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-opacity hover:opacity-90"
-            style={{ background: "#C62828" }}
+            className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-opacity hover:opacity-90 bg-[var(--ui-text-red)]"
           >
             确认退出
           </button>
 
           <button
             onClick={() => router.back()}
-            className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors border"
-            style={{ color: "#555", borderColor: "#D0DEE8" }}
+            className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors border text-brand-text-body border-brand-border-subtle"
           >
             返回上一页
           </button>
         </div>
 
-        <p className="mt-8 text-xs" style={{ color: "#AAA" }}>
-          <Link href="/" className="hover:underline" style={{ color: "#3388BB" }}>
+        <p className="mt-8 text-xs text-[#AAA]">
+          <Link href="/" className="hover:underline text-brand-blue">
             返回首页
           </Link>
         </p>

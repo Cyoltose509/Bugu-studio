@@ -44,8 +44,8 @@ export default async function HomeActivities() {
   return (
     <section className="py-16 container mx-auto px-4">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold" style={{ color: "#25547A" }}>近期活动</h2>
-        <Link href="/activities" className="text-sm hover:underline" style={{ color: "#3388BB" }}>
+        <h2 className="text-2xl font-bold text-brand-navy">近期活动</h2>
+        <Link href="/activities" className="text-sm hover:underline text-brand-blue">
           查看全部 →
         </Link>
       </div>
@@ -56,9 +56,9 @@ export default async function HomeActivities() {
           const coverSrc = a.coverImage || DEFAULT_COVER;
           return (
             <Link key={a.id} href={`/activities/${a.id}`} className="group block">
-              <div className="bg-white rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-all" style={{ borderColor: "#D0DEE8" }}>
+              <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all">
                 {/* 封面 */}
-                <div className="relative aspect-video overflow-hidden" style={{ background: "#E6F0F8" }}>
+                <div className="relative aspect-video overflow-hidden bg-brand-surface">
                   <Image src={coverSrc} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, 33vw" />
                   <div className="absolute top-2 left-2 flex items-center gap-1.5">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
@@ -72,10 +72,10 @@ export default async function HomeActivities() {
                 </div>
                 {/* 信息 */}
                 <div className="p-4 space-y-1.5">
-                  <h3 className="font-semibold group-hover:text-[#3388BB] transition-colors line-clamp-1" style={{ color: "#333" }}>
+                  <h3 className="font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
                     {a.title}
                   </h3>
-                  <p className="text-xs" style={{ color: "#999" }}>
+                  <p className="text-xs text-brand-text-muted">
                     {a.startTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
                     {" ~ "}
                     {a.endTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}

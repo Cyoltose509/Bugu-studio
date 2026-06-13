@@ -24,8 +24,7 @@ export function InvitationButtons({
         type="button"
         onClick={() => act("ACCEPTED")}
         disabled={isPending}
-        className="text-xs px-3 py-1 rounded text-white disabled:opacity-50"
-        style={{ background: "#3388BB" }}
+        className="text-xs px-3 py-1 rounded text-white disabled:opacity-50 bg-brand-blue"
       >
         {isPending ? "处理中…" : "接受"}
       </button>
@@ -33,8 +32,7 @@ export function InvitationButtons({
         type="button"
         onClick={() => act("REJECTED")}
         disabled={isPending}
-        className="text-xs px-3 py-1 rounded disabled:opacity-50"
-        style={{ color: "#999", border: "1px solid #D0DEE8" }}
+        className="text-xs px-3 py-1 rounded disabled:opacity-50 text-brand-text-muted border border-brand-border-subtle"
       >
         {isPending ? "处理中…" : "拒绝"}
       </button>

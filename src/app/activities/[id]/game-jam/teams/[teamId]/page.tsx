@@ -68,17 +68,17 @@ export default async function JamTeamDetailPage({
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <Link href={`/activities/${activityId}`} className="text-sm hover:underline" style={{ color: "#999" }}>
+        <Link href={`/activities/${activityId}`} className="text-sm hover:underline text-brand-text-muted">
           ← 返回活动
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl border p-6 mb-6" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border p-6 mb-6 border-brand-border-subtle">
         {/* 队名 & 队长 */}
         <div className="flex items-center gap-3 mb-6">
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "#25547A" }}>{team.name}</h1>
-            <p className="text-sm mt-1" style={{ color: "#999" }}>
+            <h1 className="text-xl font-bold text-brand-navy">{team.name}</h1>
+            <p className="text-sm mt-1 text-brand-text-muted">
               👑 队长：{team.leader.name} · {team.members.length} 人
             </p>
           </div>
@@ -86,22 +86,24 @@ export default async function JamTeamDetailPage({
 
         {/* 编辑队名（队长） */}
         {isLeader && (
-          <details className="mb-6" style={{ display: "block" }}>
-            <summary className="text-xs cursor-pointer list-none" style={{ color: "#999" }}>✏️ 编辑队伍名称</summary>
+          <details className="mb-6 block">
+            <summary className="text-xs cursor-pointer list-none text-brand-text-muted">✏️ 编辑队伍名称</summary>
             <EditTeamNameForm teamId={teamId} activityId={activityId} defaultName={team.name} />
           </details>
         )}
 
         {/* 成员列表 */}
-        <h2 className="text-sm font-semibold mb-3" style={{ color: "#25547A" }}>队伍成员</h2>
+        <h2 className="text-sm font-semibold mb-3 text-brand-navy">队伍成员</h2>
         <div className="space-y-3">
           {team.members.map(m => (
-            <div key={m.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "#F8FAFB" }}>
+            <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F8FAFB]">
               <div className="flex items-center gap-3">
                 <UserAvatar src={m.user.image} name={m.user.name} size={32} />
                 <div>
-                  <span className="text-sm font-medium" style={{ color: "#333" }}>{m.user.name}</span>
-                  <span className="text-xs ml-2 px-1.5 py-0.5 rounded-full" style={{ background: m.role === "LEADER" ? "#FFF3E0" : "#F0F6FA", color: m.role === "LEADER" ? "#E38043" : "#999" }}>
+                  <span className="text-sm font-medium text-brand-text-heading">{m.user.name}</span>
+                  <span className={`text-xs ml-2 px-1.5 py-0.5 rounded-full ${
+                    m.role === "LEADER" ? "bg-[#FFF3E0] text-brand-orange" : "bg-[#F0F6FA] text-brand-text-muted"
+                  }`}>
                     {m.role === "LEADER" ? "队长" : "队员"}
                   </span>
                 </div>
@@ -115,7 +117,7 @@ export default async function JamTeamDetailPage({
 
         {/* 退出 / 解散 */}
         {isMember && (
-          <div className="mt-6 pt-4 border-t" style={{ borderColor: "#D0DEE8" }}>
+          <div className="mt-6 pt-4 border-t border-brand-border-subtle">
             {isLeader ? (
               <DisbandTeamButton teamId={teamId} activityId={activityId} />
             ) : (
@@ -127,10 +129,10 @@ export default async function JamTeamDetailPage({
 
       {/* 入队申请（非成员、未在其他队伍中） */}
       {!isMember && !alreadyInAnotherTeam && session?.user && (
-        <div className="bg-white rounded-xl border p-6 mb-6" style={{ borderColor: "#D0DEE8" }}>
-          <h2 className="text-sm font-semibold mb-3" style={{ color: "#25547A" }}>申请加入</h2>
+        <div className="bg-card rounded-xl border p-6 mb-6 border-brand-border-subtle">
+          <h2 className="text-sm font-semibold mb-3 text-brand-navy">申请加入</h2>
           {myApplication ? (
-            <p className="text-sm" style={{ color: "#E38043" }}>⏳ 申请已提交，等待队长审批</p>
+            <p className="text-sm text-brand-orange">⏳ 申请已提交，等待队长审批</p>
           ) : (
             <ApplyToTeamForm teamId={teamId} activityId={activityId} />
           )}
@@ -139,23 +141,23 @@ export default async function JamTeamDetailPage({
 
       {/* 已在其他队伍中，不能申请 */}
       {!isMember && alreadyInAnotherTeam && (
-        <div className="bg-white rounded-xl border p-6 mb-6" style={{ borderColor: "#D0DEE8" }}>
-          <p className="text-sm" style={{ color: "#999" }}>🚫 你已加入其他队伍，请先退出当前队伍后再申请。</p>
+        <div className="bg-card rounded-xl border p-6 mb-6 border-brand-border-subtle">
+          <p className="text-sm text-brand-text-muted">🚫 你已加入其他队伍，请先退出当前队伍后再申请。</p>
         </div>
       )}
 
       {/* 入队申请管理（队长） */}
       {isLeader && team.applications.length > 0 && (
-        <div className="bg-white rounded-xl border p-6 mb-6" style={{ borderColor: "#D0DEE8" }}>
-          <h2 className="text-sm font-semibold mb-3" style={{ color: "#25547A" }}>入队申请（{team.applications.length}）</h2>
+        <div className="bg-card rounded-xl border p-6 mb-6 border-brand-border-subtle">
+          <h2 className="text-sm font-semibold mb-3 text-brand-navy">入队申请（{team.applications.length}）</h2>
           <div className="space-y-3">
             {team.applications.map(app => (
-              <div key={app.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "#F8FAFB" }}>
+              <div key={app.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F8FAFB]">
                 <div className="flex items-center gap-3">
                   <UserAvatar src={app.user.image} name={app.user.name} size={32} />
                   <div>
-                    <span className="text-sm font-medium" style={{ color: "#333" }}>{app.user.name}</span>
-                    {app.message && <p className="text-xs mt-0.5" style={{ color: "#999" }}>{app.message}</p>}
+                    <span className="text-sm font-medium text-brand-text-heading">{app.user.name}</span>
+                    {app.message && <p className="text-xs mt-0.5 text-brand-text-muted">{app.message}</p>}
                   </div>
                 </div>
                 <ApplicationButtons teamId={teamId} activityId={activityId} applicationId={app.id} />
@@ -167,8 +169,8 @@ export default async function JamTeamDetailPage({
 
       {/* 邀请队员（队长） */}
       {isLeader && (
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#D0DEE8" }}>
-          <h2 className="text-sm font-semibold mb-3" style={{ color: "#25547A" }}>邀请队员</h2>
+        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+          <h2 className="text-sm font-semibold mb-3 text-brand-navy">邀请队员</h2>
           <InviteMemberForm
             teamId={teamId}
             activityId={activityId}

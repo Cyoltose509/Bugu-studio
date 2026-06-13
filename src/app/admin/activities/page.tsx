@@ -76,7 +76,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
   return (
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold" style={{ color: "#25547A" }}>活动管理</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">活动管理</h1>
         <div className="flex gap-2">
           <Link href="/admin" className="btn-secondary px-4 py-2 rounded-lg text-sm">← 返回仪表盘</Link>
           <Link href="/admin/activities/create" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">+ 创建活动</Link>
@@ -84,15 +84,14 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
       </div>
 
       {/* 状态筛选 */}
-      <div className="bg-white rounded-xl border p-4 shadow-sm flex flex-wrap gap-2" style={{ borderColor: "#D0DEE8" }}>
+      <div className="bg-card rounded-xl border p-4 shadow-sm flex flex-wrap gap-2 border-brand-border-subtle">
         {STATUS_TABS.map(tab => {
           const isAll = tab.value === "";
           const count = isAll ? allCount : statusCounts.find(c => c.status === tab.value)?._count.status || 0;
           const active = status === tab.value;
           return (
             <Link key={tab.value} href={`/admin/activities?status=${tab.value}&page=1`}
-              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${active ? "font-medium" : ""}`}
-              style={active ? { background: "#25547A", color: "#fff" } : { color: "#555", background: "#F0F5F9" }}>
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${active ? "font-medium bg-brand-navy text-white" : "text-brand-text-body bg-brand-surface-page"}`}>
               {tab.label} ({count})
             </Link>
           );
@@ -112,19 +111,19 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
           else                                  timeLabel = "进行中";
 
           return (
-            <div key={activity.id} className="bg-white rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow flex flex-wrap items-center gap-4" style={{ borderColor: "#D0DEE8" }}>
+            <div key={activity.id} className="bg-card rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow flex flex-wrap items-center gap-4 border-brand-border-subtle">
               {/* 封面 */}
-              <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0" style={{ background: "#E6F0F8" }}>
+              <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0 bg-brand-surface">
                 <img src={activity.coverImage || DEFAULT_COVER} alt="" className="w-full h-full object-cover" />
               </div>
 
               {/* 信息 */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Link href={`/activities/${activity.id}`} target="_blank" className="font-semibold hover:text-[#3388BB]" style={{ color: "#333" }}>
+                  <Link href={`/activities/${activity.id}`} target="_blank" className="font-semibold hover:text-brand-blue text-brand-text-heading">
                     {activity.title}
                   </Link>
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#E6F0F8", color: "#3388BB" }}>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-brand-surface text-brand-blue">
                     {TYPE_LABELS[activity.type] || activity.type}
                   </span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -132,14 +131,14 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
                     activity.status === "DRAFT"     ? "bg-gray-100 text-gray-600" :
                                                      "bg-yellow-100 text-yellow-700"
                   }`}>{STATUS_LABELS[activity.status] || activity.status}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#FFF3E0", color: "#E38043" }}>{timeLabel}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E0] text-brand-orange">{timeLabel}</span>
                 </div>
-                <p className="text-xs mt-1 truncate" style={{ color: "#777" }}>
+                <p className="text-xs mt-1 truncate text-brand-text-secondary">
                   {activity.startTime.toLocaleDateString("zh-CN")} ~ {activity.endTime.toLocaleDateString("zh-CN")}
                   {activity.location ? ` · ${activity.location}` : ""}
                   {activity.registrationOpen ? " · 开放报名" : ""}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: "#999" }}>
+                <p className="text-xs mt-0.5 text-brand-text-muted">
                   申请 {activity._count.proposals}
                 </p>
               </div>
@@ -148,15 +147,15 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
               <div className="flex gap-2 shrink-0">
                 {activity.status === "DRAFT" && (
                   <form action={async () => { "use server"; await updateActivityStatus(activity.id, ActivityStatus.PUBLISHED); }}>
-                    <SubmitButton type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#22C55E", color: "#22C55E" }} pendingText="发布中...">发布</SubmitButton>
+                    <SubmitButton type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors border-[#22C55E] text-[#22C55E]" pendingText="发布中...">发布</SubmitButton>
                   </form>
                 )}
                 {activity.status === "PUBLISHED" && (
                   <form action={async () => { "use server"; await updateActivityStatus(activity.id, ActivityStatus.ARCHIVED); }}>
-                    <SubmitButton type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#EAB308", color: "#EAB308" }} pendingText="归档中...">归档</SubmitButton>
+                    <SubmitButton type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors border-[#EAB308] text-[#EAB308]" pendingText="归档中...">归档</SubmitButton>
                   </form>
                 )}
-                <Link href={`/admin/activities/${activity.id}/edit`} className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: "#3388BB", color: "#3388BB" }}>编辑</Link>
+                <Link href={`/admin/activities/${activity.id}/edit`} className="text-xs px-3 py-1.5 rounded-lg border transition-colors border-brand-blue text-brand-blue">编辑</Link>
                 <DeleteButton id={activity.id} title={activity.title} />
               </div>
             </div>
@@ -169,8 +168,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
         <div className="flex justify-center gap-2">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
             <Link key={p} href={`/admin/activities?status=${status}&page=${p}`}
-              className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm transition-colors ${p === page ? "font-bold text-white" : ""}`}
-              style={p === page ? { background: "#25547A" } : { color: "#555", background: "#F0F5F9" }}>
+              className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm transition-colors ${p === page ? "font-bold text-white bg-brand-navy" : "text-brand-text-body bg-brand-surface-page"}`}>
               {p}
             </Link>
           ))}

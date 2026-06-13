@@ -23,6 +23,51 @@
     --radius: 0.5rem;
     --navbar: 201 53% 31%;
     --navbar-foreground: 0 0% 100%;
+    /* 暗色模式适配的 UI 颜色（组件用 bg-[var(--xxx)] 引用） */
+    --ui-surface-alt: #F8FAFB;
+    --ui-surface-alt2: #F0F5F9;
+    --ui-bg-orange-light: #FFF3E0;
+    --ui-bg-warm-light: #FFF8F0;
+    --ui-bg-red-light: #FDE8E8;
+    --ui-bg-green-light: #E8F5E9;
+    --ui-text-red: #C62828;
+    --ui-text-orange: #E65100;
+    --ui-text-yellow: #F57F17;
+    --ui-text-green: #2E7D32;
+    --ui-border-highlight: #E8F0F8;
+  }
+
+  .dark {
+    --background: 225 25% 12%;
+    --background-end: 225 20% 10%;
+    --foreground: 210 20% 92%;
+    --card: 225 20% 16%;
+    --card-foreground: 210 20% 92%;
+    --primary: 24 73% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 201 55% 58%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 225 15% 20%;
+    --muted-foreground: 210 15% 62%;
+    --accent: 85 55% 52%;
+    --accent-foreground: 0 0% 100%;
+    --border: 225 15% 28%;
+    --input: 225 15% 28%;
+    --ring: 201 55% 58%;
+    --navbar: 225 25% 8%;
+    --navbar-foreground: 0 0% 100%;
+    /* 暗色模式 UI 变量 */
+    --ui-surface-alt: #1e2438;
+    --ui-surface-alt2: #1a2030;
+    --ui-bg-orange-light: #2a2418;
+    --ui-bg-warm-light: #1e1c18;
+    --ui-bg-red-light: #2a1818;
+    --ui-bg-green-light: #1a2e1a;
+    --ui-text-red: #ef5350;
+    --ui-text-orange: #ff8a50;
+    --ui-text-yellow: #ffca28;
+    --ui-text-green: #66bb6a;
+    --ui-border-highlight: #1e2840;
   }
 }
 
@@ -35,18 +80,25 @@
     min-height: 100vh;
     @apply text-foreground;
   }
+  .dark body {
+    background: linear-gradient(135deg, #1a1f2e 0%, #141822 100%);
+  }
 }
 
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #E6F0F8; }
 ::-webkit-scrollbar-thumb { background: #B0C4D8; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #90A8C0; }
+.dark ::-webkit-scrollbar-track { background: #1e2330; }
+.dark ::-webkit-scrollbar-thumb { background: #3a4055; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #4a5068; }
 
 .animate-fade-in { animation: fade-in 0.4s ease-out; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 .game-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .game-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37,84,122,0.12); }
+.dark .game-card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
 
 /* 作品卡片逐个弹出动画 */
 @keyframes cardPopIn {
@@ -61,6 +113,8 @@
 
 .btn-secondary { background: transparent; color: #3388BB; border: 1.5px solid #3388BB; transition: all .2s; }
 .btn-secondary:hover { background: #fff; color: #3388BB; border-color: #3388BB; }
+.dark .btn-secondary { color: #5ba8d8; border-color: #5ba8d8; }
+.dark .btn-secondary:hover { background: rgba(91,168,216,0.1); color: #5ba8d8; border-color: #5ba8d8; }
 
 /* 导航链接点击反馈 */
 .nav-link:active {
@@ -69,9 +123,99 @@
   transition: opacity 0.1s, transform 0.1s;
 }
 
+/* 通用卡片样式（夜间模式友好） */
+.card-panel {
+  @apply bg-card rounded-xl border shadow-sm;
+  border-color: #D0DEE8;
+}
+.dark .card-panel {
+  border-color: #2a3045;
+}
+
 /* Loading 条动画 */
 @keyframes loading-bar {
   0%   { width: 0%; left: 0; }
   50%  { width: 70%; left: 0; }
   100% { width: 30%; left: 70%; }
 }
+
+/* 纹理背景（替代 inline style） */
+.texture-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url(/images/geo_pattern.png);
+  background-repeat: repeat;
+  background-size: 600px;
+  opacity: 0.06;
+}
+.texture-bg--fade-down {
+  mask: linear-gradient(to bottom, black 0%, transparent 100%);
+  -webkit-mask: linear-gradient(to bottom, black 0%, transparent 100%);
+}
+.texture-bg--fade-up {
+  mask: linear-gradient(to bottom, transparent 0%, black 100%);
+  -webkit-mask: linear-gradient(to bottom, transparent 0%, black 100%);
+}
+
+/* Hero 渐变背景（首页） */
+.hero-gradient {
+  background: linear-gradient(180deg, rgba(230,240,248,0.6) 0%, rgba(208,228,240,0.6) 100%);
+}
+.dark .hero-gradient {
+  background: linear-gradient(180deg, rgba(30,35,50,0.8) 0%, rgba(20,24,38,0.8) 100%);
+}
+
+/* 统计区域渐变 */
+.stats-gradient {
+  background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(230,240,248,0.5) 100%);
+}
+.dark .stats-gradient {
+  background: linear-gradient(180deg, rgba(30,40,58,0.6) 0%, rgba(22,28,42,0.6) 100%);
+}
+
+/* 毛玻璃卡片（/join 页面） */
+.glass-card {
+  background: rgba(255,255,255,0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.dark .glass-card {
+  background: rgba(30,35,50,0.5);
+}
+
+/* /join 页渐变区块 */
+.join-g1 { background: linear-gradient(180deg, #E6F0F8 0%, #D0E4F0 100%); }
+.join-g2 { background: linear-gradient(180deg, #D0E4F0 0%, #AACFCD 100%); }
+.join-g3 { background: linear-gradient(180deg, #AACFCD 0%, #C3DAD3 100%); }
+.join-g4 { background: linear-gradient(180deg, #C3DAD3 0%, #ACC7FC 100%); }
+.join-g5 { background: linear-gradient(180deg, #ACC7FC 0%, #DDE8FD 100%); }
+.join-g6 { background: linear-gradient(180deg, #DDE8FD 0%, #EFF4F8 100%); }
+.dark .join-g1 { background: linear-gradient(180deg, #1a1f30 0%, #151a28 100%); }
+.dark .join-g2 { background: linear-gradient(180deg, #151a28 0%, #121a24 100%); }
+.dark .join-g3 { background: linear-gradient(180deg, #121a24 0%, #151d2c 100%); }
+.dark .join-g4 { background: linear-gradient(180deg, #151d2c 0%, #1a1f35 100%); }
+.dark .join-g5 { background: linear-gradient(180deg, #1a1f35 0%, #1e2438 100%); }
+.dark .join-g6 { background: linear-gradient(180deg, #1e2438 0%, #1e2638 100%); }
+
+/* ── 暗色模式 brand 颜色覆盖 ─────────────────────────────────────── */
+/* 文字 */
+.dark .text-brand-navy { color: #8db8d8; }
+.dark .text-brand-text-heading { color: #d0d8e8; }
+.dark .text-brand-text-body { color: #a8b4c4; }
+.dark .text-brand-text-secondary { color: #8898a8; }
+.dark .text-brand-text-muted { color: #6a7888; }
+/* 背景 */
+.dark .bg-brand-surface { background-color: #1e2840; }
+.dark .bg-brand-surface-page { background-color: #182030; }
+/* 边框 */
+.dark .border-brand-border-subtle { border-color: #2a3045; }
+/* 链接等 */
+.dark .text-brand-blue { color: #5ba8d8; }
+.dark .hover\:text-brand-blue:hover { color: #6fb8e8; }
+.dark .text-brand-orange { color: #f09055; }
+.dark .bg-brand-orange { background-color: #c86830; }
+
+/* 输入框 placeholder 暗色适配（使用标准 ::placeholder 伪元素，IDE 友好） */
+.dark input::placeholder,
+.dark textarea::placeholder { color: #6b7280; opacity: 0.6; }
