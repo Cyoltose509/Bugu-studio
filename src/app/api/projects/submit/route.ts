@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   if (!body) return apiError("请求体格式错误", 400);
 
-  const { title, subtitle, description, type, developYear, coverImage, tagIds, customTags, links, members, memberRoles, images } = body;
+  const { title, subtitle, description, type, developYear, coverImage, tagIds, customTags, links, members, memberRoles, images, aiUsages, platforms } = body;
 
   const data = {
     title: title || "",
@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
     customTags: (customTags || []).filter(Boolean),
     memberRoles: (memberRoles || members || []).filter((m: any) => m.memberId || m.userId || m.externalName).slice(0, 50),
     images: (images || []).slice(0, 3),
+    aiUsages: (aiUsages || []).filter(Boolean),
+    platforms: (platforms || []).filter(Boolean),
   };
 
   // Zod 校验
@@ -135,6 +137,8 @@ export async function POST(request: NextRequest) {
       type: parsed.data.type as any,
       developYear: parsed.data.developYear,
       coverImage: parsed.data.coverImage || null,
+      aiUsages: parsed.data.aiUsages,
+      platforms: parsed.data.platforms,
       status: projectStatus,
       publishedAt,
       submitterId: session.user.id,

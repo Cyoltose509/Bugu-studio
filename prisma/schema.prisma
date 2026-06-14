@@ -308,6 +308,8 @@ model Project {
 
   // 内容
   techStack  String[] @default([])
+  aiUsages   String[] @default([]) // AI 使用声明: AI_GENERATED, AI_ART, AI_MUSIC
+  platforms  String[] @default([]) // 支持平台: WINDOWS, MAC, LINUX, ANDROID, IOS, WEB
   awards     String[] @default([]) // 所获奖项
 
 

@@ -92,6 +92,8 @@ export const projectCreateSchema = z.object({
     .max(20)
     .optional(),
   awards: z.array(z.string().max(100)).default([]),
+  aiUsages: z.array(z.string().max(50)).max(10).default([]),
+  platforms: z.array(z.string().max(50)).max(10).default([]),
 });
 
 export const projectUpdateSchema = projectCreateSchema.partial();

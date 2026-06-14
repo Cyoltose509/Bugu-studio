@@ -221,6 +221,21 @@ const STATUS_LABEL: Record<string, string> = {
   DRAFT: "草稿", PENDING: "待审核", REJECTED: "已拒绝", ARCHIVED: "已归档",
 };
 
+const AI_USAGE_LABELS: Record<string, string> = {
+  AI_GENERATED: "AI 生成式内容",
+  AI_ART: "AI 美术素材",
+  AI_MUSIC: "AI 音乐素材",
+};
+
+const PLATFORM_LABELS: Record<string, string> = {
+  WINDOWS: "Windows",
+  MAC: "macOS",
+  LINUX: "Linux",
+  ANDROID: "Android",
+  IOS: "iOS",
+  WEB: "Web",
+};
+
 async function WorkDetailContent({ params, searchParams }: PageProps) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const sort = sp.sort || "date";
@@ -406,6 +421,30 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                   <dd className="space-y-1">
                     {project.awards.map((award, i) => (
                       <span key={i} className="text-xs px-2 py-0.5 rounded block bg-[#c4a86a]/[0.12] text-[#8B7355]">{award}</span>
+                    ))}
+                  </dd>
+                </div>
+              )}
+              {project.aiUsages && project.aiUsages.length > 0 && (
+                <div>
+                  <dt className="mb-1 text-brand-text-secondary">🤖 AI 使用</dt>
+                  <dd className="flex flex-wrap gap-1.5">
+                    {project.aiUsages.map((u) => (
+                      <span key={u} className="text-xs px-2 py-0.5 rounded bg-brand-purple/10 text-brand-purple">
+                        {AI_USAGE_LABELS[u] || u}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              )}
+              {project.platforms && project.platforms.length > 0 && (
+                <div>
+                  <dt className="mb-1 text-brand-text-secondary">💻 支持平台</dt>
+                  <dd className="flex flex-wrap gap-1.5">
+                    {project.platforms.map((p) => (
+                      <span key={p} className="text-xs px-2 py-0.5 rounded bg-brand-blue/10 text-brand-blue">
+                        {PLATFORM_LABELS[p] || p}
+                      </span>
                     ))}
                   </dd>
                 </div>

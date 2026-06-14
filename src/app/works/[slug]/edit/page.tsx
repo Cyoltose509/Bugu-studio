@@ -100,6 +100,8 @@ async function EditContent({ params }: { params: Promise<{ slug: string }> }) {
     })),
     images: project.images.map((img) => ({ url: img.url, altText: img.altText || undefined })),
     awards: project.awards,
+    aiUsages: project.aiUsages,
+    platforms: project.platforms,
   };
 
   return (

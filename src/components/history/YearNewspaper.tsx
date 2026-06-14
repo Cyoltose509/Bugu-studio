@@ -29,6 +29,7 @@ interface Project {
     members?: { memberId: string | null; externalName: string | null; roles: string[]; member?: { displayName: string } | null }[];
     _count?: { likes: number };
     awards?: string[];
+    aiUsages?: string[];
 }
 
 interface EventItem {
@@ -87,6 +88,7 @@ function pickFeaturedWork(projects: Project[]): Project | null {
     if (projects.length === 0) return null;
     // 权重：正式上架 x1.0, 提供试玩 x0.8, 小游戏 x0.6, 开发中 x0.4
     // 奖项加权：整体权重 × (1 + 奖项数)
+    // AI 创作惩罚：若涉及 AI 创作（AI_ART / AI_MUSIC，非 AI 生成式内容），权重 × 0.5
     const getWeight = (type: string) => {
         switch (type) {
             case "OFFICIAL_RELEASE": return 1.0;
@@ -99,7 +101,9 @@ function pickFeaturedWork(projects: Project[]): Project | null {
     const scored = projects.map(p => {
         const likes = p._count?.likes ?? 0;
         const awardCount = (p.awards || []).length;
-        const score = getWeight(p.type) * (likes || 0) * (1 + awardCount);
+        const hasAiCreation = (p.aiUsages || []).some((u: string) => u !== "AI_GENERATED");
+        const aiPenalty = hasAiCreation ? 0.5 : 1.0;
+        const score = getWeight(p.type) * (likes || 0) * (1 + awardCount) * aiPenalty;
         return {p, score};
     });
     scored.sort((a, b) => b.score - a.score);

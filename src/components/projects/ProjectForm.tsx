@@ -44,6 +44,8 @@ export interface ProjectFormData {
   memberRoles: { memberId?: string; userId?: string; externalName?: string; roles: string[] }[];
   images?: ProjectImage[];
   awards?: string[];
+  aiUsages?: string[];
+  platforms?: string[];
 }
 
 export interface InitialData {
@@ -59,6 +61,8 @@ export interface InitialData {
   memberRoles: SelectedMember[];
   images: ProjectImage[];
   awards?: string[];
+  aiUsages?: string[];
+  platforms?: string[];
 }
 
 export interface ProjectFormProps {
@@ -90,6 +94,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const [customTagInput, setCustomTagInput] = useState("");
   const [awards, setAwards] = useState<string[]>(initialData?.awards ?? []);
   const [awardInput, setAwardInput] = useState("");
+  const [selectedAiUsages, setSelectedAiUsages] = useState<string[]>(initialData?.aiUsages ?? []);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(initialData?.platforms ?? []);
 
   // ── 截图 ──
   const [screenshots, setScreenshots] = useState<ProjectImage[]>(initialData?.images ?? []);
@@ -327,6 +333,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         roles: m.roles,
       })),
       awards: awards.filter(Boolean),
+      aiUsages: selectedAiUsages,
+      platforms: selectedPlatforms,
       images: screenshots.length > 0 ? screenshots : undefined,
     };
 
@@ -497,6 +505,68 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
             ))}
           </div>
         )}
+      </section>
+
+      {/* ═════════ AI 使用声明 ═════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-brand-navy">🤖 AI 使用声明</h2>
+        <p className="text-xs text-brand-text-muted">如作品使用了 AI 技术，请如实声明（可多选）</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: "AI_GENERATED", label: "AI 生成式内容", desc: "作品核心内容由 AI 生成" },
+            { value: "AI_ART", label: "AI 美术素材", desc: "使用了 AI 生成的图像/美术资源" },
+            { value: "AI_MUSIC", label: "AI 音乐素材", desc: "使用了 AI 生成的音乐/音效" },
+          ].map((item) => {
+            const active = selectedAiUsages.includes(item.value);
+            return (
+              <button key={item.value} type="button"
+                onClick={() => setSelectedAiUsages(prev =>
+                  prev.includes(item.value) ? prev.filter(v => v !== item.value) : [...prev, item.value]
+                )}
+                className={`text-sm px-3 py-2 rounded-lg border transition-all cursor-pointer text-left ${
+                  active
+                    ? "border-brand-purple bg-brand-purple/10 text-brand-purple ring-1 ring-brand-purple"
+                    : "border-brand-border-subtle hover:border-brand-purple/40 text-brand-text-secondary"
+                }`}
+              >
+                <div className="font-medium">{item.label}</div>
+                <div className="text-xs mt-0.5 opacity-75">{item.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ═════════ 支持平台 ═════════ */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-brand-navy">💻 支持平台</h2>
+        <p className="text-xs text-brand-text-muted">选择作品可运行的操作系统或平台（可多选）</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: "WINDOWS", label: "Windows" },
+            { value: "MAC", label: "macOS" },
+            { value: "LINUX", label: "Linux" },
+            { value: "ANDROID", label: "Android" },
+            { value: "IOS", label: "iOS" },
+            { value: "WEB", label: "Web" },
+          ].map((item) => {
+            const active = selectedPlatforms.includes(item.value);
+            return (
+              <button key={item.value} type="button"
+                onClick={() => setSelectedPlatforms(prev =>
+                  prev.includes(item.value) ? prev.filter(v => v !== item.value) : [...prev, item.value]
+                )}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition-all cursor-pointer ${
+                  active
+                    ? "border-brand-blue bg-brand-blue/10 text-brand-blue ring-1 ring-brand-blue font-medium"
+                    : "border-brand-border-subtle hover:border-brand-blue/40 text-brand-text-secondary"
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="space-y-3">
