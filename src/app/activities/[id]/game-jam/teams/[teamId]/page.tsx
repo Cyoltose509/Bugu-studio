@@ -37,33 +37,33 @@ export default async function JamTeamDetailPage({
 
   if (!team) notFound();
 
-  // 获取该活动所有队伍的成员 ID（用于邀请时排除已在队伍中的用户）
-  const allTeamMemberIds = session?.user?.id ? (
-    await prisma.jamTeamMember.findMany({
-      where: {
-        team: { activityId },
-        userId: { not: session.user.id },
-      },
-      select: { userId: true },
-    })
-  ).map(m => m.userId) : [];
+  const userId = session?.user?.id;
 
-  const isLeader = team.members.some(m => m.userId === session?.user?.id && m.role === "LEADER");
-  const isMember = team.members.some(m => m.userId === session?.user?.id);
+  // ── 并行：allTeamMemberIds + alreadyInAnotherTeam + myApplication ──
+  const [allTeamMemberIds, alreadyInAnotherTeam, myApplication] = userId
+    ? await Promise.all([
+        prisma.jamTeamMember.findMany({
+          where: {
+            team: { activityId },
+            userId: { not: userId },
+          },
+          select: { userId: true },
+        }).then(arr => arr.map(m => m.userId)),
+        prisma.jamTeamMember.findFirst({
+          where: {
+            userId,
+            team: { activityId, id: { not: teamId } },
+          },
+        }),
+        prisma.jamTeamApplication.findFirst({
+          where: { teamId, userId, status: "PENDING" },
+        }),
+      ])
+    : [[], null, null];
+
+  const isLeader = team.members.some(m => m.userId === userId && m.role === "LEADER");
+  const isMember = team.members.some(m => m.userId === userId);
   const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
-
-  // 检查是否已在该活动的任意队伍中
-  const alreadyInAnotherTeam = !isMember && session?.user?.id ? await prisma.jamTeamMember.findFirst({
-    where: {
-      userId: session.user.id,
-      team: { activityId, id: { not: teamId } },
-    },
-  }) : null;
-
-  // 检查是否已申请
-  const myApplication = await prisma.jamTeamApplication.findFirst({
-    where: { teamId, userId: session?.user?.id, status: "PENDING" },
-  });
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">

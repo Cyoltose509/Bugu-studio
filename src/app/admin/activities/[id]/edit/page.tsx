@@ -3,6 +3,7 @@
  */
 
 import { Metadata } from "next";
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { notFound, redirect } from "next/navigation";
 import { updateActivity } from "../../actions";
@@ -15,15 +16,20 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+/* React.cache 去重：generateMetadata 和页面共享同一查询 */
+const getActivity = cache(async (id: string) => {
+  return prisma.activity.findUnique({ where: { id } });
+});
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const a = await prisma.activity.findUnique({ where: { id }, select: { title: true } });
+  const a = await getActivity(id);
   return { title: a ? `编辑 — ${a.title}` : "编辑活动" };
 }
 
 export default async function EditActivityPage({ params }: PageProps) {
   const { id } = await params;
-  const activity = await prisma.activity.findUnique({ where: { id } });
+  const activity = await getActivity(id);
   if (!activity) notFound();
 
   const fmt = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);

@@ -1,15 +1,17 @@
 /**
- * 作品编辑页
+ * 作品编辑页（流式渲染）
  * 提交者和管理员可编辑自己的作品
  */
 
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import nextDynamic from "next/dynamic";
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth/auth";
 import { canEditProject } from "@/lib/auth/rbac";
 import { ensureDefaultTags } from "@/lib/db/tags";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 // 懒加载编辑表单，避免 react-easy-crop (~54KB gzip) 打包进主客户端 bundle
 const ProjectEditForm = nextDynamic(() => import("@/components/forms/ProjectEditForm"), {
@@ -30,7 +32,19 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export default async function ProjectEditPage({ params }: PageProps) {
+/* ── 同步 Shell ── */
+
+export default function ProjectEditPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<LogoLoading text="正在加载编辑页面..." />}>
+      <EditContent params={params} />
+    </Suspense>
+  );
+}
+
+/* ── 异步数据组件 ── */
+
+async function EditContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const session = await auth();
   if (!session?.user) redirect("/auth/login?callbackUrl=/works/" + slug + "/edit");

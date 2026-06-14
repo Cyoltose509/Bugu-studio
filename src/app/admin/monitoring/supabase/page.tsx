@@ -34,23 +34,34 @@ export default async function SupabaseMonitorPage() {
     let error: string | null = null;
 
     try {
-        const sizeResult = await prisma.$queryRawUnsafe<{ size: string }[]>(
-            `SELECT pg_size_pretty(pg_database_size(current_database())) as size`
-        );
+        // 5 个独立查询全部并行
+        const [sizeResult, sizeBytes, rawStats, connResult, verResult] =
+          await Promise.all([
+            prisma.$queryRawUnsafe<{ size: string }[]>(
+              `SELECT pg_size_pretty(pg_database_size(current_database())) as size`
+            ),
+            prisma.$queryRawUnsafe<{ size: bigint }[]>(
+              `SELECT pg_database_size(current_database()) as size`
+            ),
+            prisma.$queryRawUnsafe<
+              { relname: string; total_size: bigint; n_live_tup: bigint }[]
+            >(`
+              SELECT relname, pg_total_relation_size(relid) as total_size, n_live_tup
+              FROM pg_stat_user_tables
+              ORDER BY total_size DESC
+            `),
+            prisma.$queryRawUnsafe<{ count: bigint }[]>(
+              `SELECT count(*) as count FROM pg_stat_activity`
+            ),
+            prisma.$queryRawUnsafe<{ version: string }[]>(
+              `SELECT version()`
+            ),
+          ]);
+
         if (sizeResult.length > 0) dbSize = sizeResult[0].size;
-
-        const sizeBytes = await prisma.$queryRawUnsafe<{ size: bigint }[]>(
-            `SELECT pg_database_size(current_database()) as size`
-        );
         if (sizeBytes.length > 0) dbSizeBytes = Number(sizeBytes[0].size);
-
-        const rawStats = await prisma.$queryRawUnsafe<
-            { relname: string; total_size: bigint; n_live_tup: bigint }[]
-        >(`
-            SELECT relname, pg_total_relation_size(relid) as total_size, n_live_tup
-            FROM pg_stat_user_tables
-            ORDER BY total_size DESC
-        `);
+        if (connResult.length > 0) connections = String(connResult[0].count);
+        if (verResult.length > 0) version = verResult[0].version;
 
         tableStats = rawStats
             .filter((r) => !r.relname.startsWith("_") && !r.relname.startsWith("pg_"))
@@ -59,17 +70,6 @@ export default async function SupabaseMonitorPage() {
                 size: formatBytes(Number(r.total_size)),
                 rows: Number(r.n_live_tup),
             }));
-
-        const connResult = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
-            `SELECT count(*) as count
-             FROM pg_stat_activity`
-        );
-        if (connResult.length > 0) connections = String(connResult[0].count);
-
-        const verResult = await prisma.$queryRawUnsafe<{ version: string }[]>(
-            `SELECT version()`
-        );
-        if (verResult.length > 0) version = verResult[0].version;
     } catch (e: any) {
         error = e.message || "查询失败";
         console.error("[monitor/supabase]", e);

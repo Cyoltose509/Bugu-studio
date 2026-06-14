@@ -1,7 +1,8 @@
 /**
- * 作品详情页 — ISR 静态缓存，无 auth() 阻塞
+ * 作品详情页 — 流式渲染，首字节 < 50ms
  *
- * 优化：React.cache 让 generateMetadata 和页面共享同一查询
+ * 架构：同步 Shell（立即发送 HTML）→ Suspense 包裹异步数据组件
+ * navQuery 使用游标相邻查询代替全表扫描
  */
 
 import { cache } from "react";
@@ -27,14 +28,37 @@ const ImageGallery = nextDynamic(() => import("@/components/projects/ImageGaller
   ),
 });
 
-export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时动态路由连接池耗尽
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ sort?: string }>;
 }
 
-/* ── 共享查询（React.cache 去重） ── */
+/* ── 极轻量 metadata 查询（仅 select，无 join，不阻塞首字节） ── */
+
+const getProjectMeta = cache(async (slug: string) => {
+  return prisma.project.findUnique({
+    where: { slug },
+    select: { title: true, description: true, coverImage: true, status: true },
+  });
+});
+
+export async function generateMetadata(
+  { params }: PageProps,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const { slug } = await params;
+  const project = await getProjectMeta(slug);
+  if (!project || project.status !== ProjectStatus.PUBLISHED) return { title: "作品不存在" };
+  return {
+    title: project.title,
+    description: project.description.slice(0, 160),
+    openGraph: { images: project.coverImage ? [project.coverImage] : [] },
+  };
+}
+
+/* ── 页面内容查询（React.cache + cachedQuery，含所有 join） ── */
 
 const getProject = cache(async (slug: string) => {
   return cachedQuery(`project:detail:${slug}`, () =>
@@ -62,23 +86,100 @@ const getProject = cache(async (slug: string) => {
   , 120);
 });
 
-/* ── Metadata（复用同一查询，无额外 DB 开销） ── */
+/* ── 高效的相邻作品查询（2 个 findFirst 代替全表 findMany） ── */
 
-export async function generateMetadata(
-  { params }: PageProps,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  const { slug } = await params;
-  const project = await getProject(slug);
-  if (!project || project.status !== ProjectStatus.PUBLISHED) return { title: "作品不存在" };
-  return {
-    title: project.title,
-    description: project.description.slice(0, 160),
-    openGraph: { images: project.coverImage ? [project.coverImage] : [] },
-  };
+async function getAdjacentProjects(
+  slug: string, title: string, developYear: number, sort: string
+) {
+  if (sort === "name") {
+    const [prev, next] = await Promise.all([
+      prisma.project.findFirst({
+        where: { status: ProjectStatus.PUBLISHED, title: { lt: title } },
+        orderBy: { title: "desc" },
+        select: { slug: true, title: true },
+      }),
+      prisma.project.findFirst({
+        where: { status: ProjectStatus.PUBLISHED, title: { gt: title } },
+        orderBy: { title: "asc" },
+        select: { slug: true, title: true },
+      }),
+    ]);
+    return { prev, next };
+  }
+
+  // date sort: ORDER BY developYear DESC, slug ASC
+  const [prev, next] = await Promise.all([
+    prisma.project.findFirst({
+      where: {
+        status: ProjectStatus.PUBLISHED,
+        OR: [
+          { developYear: { gt: developYear } },
+          { developYear, slug: { lt: slug } },
+        ],
+      },
+      orderBy: [{ developYear: "asc" }, { slug: "desc" }],
+      select: { slug: true, title: true },
+    }),
+    prisma.project.findFirst({
+      where: {
+        status: ProjectStatus.PUBLISHED,
+        OR: [
+          { developYear: { lt: developYear } },
+          { developYear, slug: { gt: slug } },
+        ],
+      },
+      orderBy: [{ developYear: "desc" }, { slug: "asc" }],
+      select: { slug: true, title: true },
+    }),
+  ]);
+  return { prev, next };
 }
 
-/* ── 页面主体 ── */
+/* ── DetailSkeleton ── */
+
+function DetailSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="lg:col-span-2 space-y-6">
+        <div className="aspect-video rounded-xl bg-brand-surface animate-pulse" />
+        <div className="space-y-3">
+          <div className="h-8 w-48 bg-brand-surface rounded animate-pulse" />
+          <div className="h-5 w-64 bg-brand-surface rounded animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-full bg-brand-surface rounded animate-pulse" />
+          <div className="h-4 w-3/4 bg-brand-surface rounded animate-pulse" />
+        </div>
+      </div>
+      <aside className="space-y-4">
+        <div className="h-32 bg-brand-surface rounded-xl animate-pulse" />
+        <div className="h-40 bg-brand-surface rounded-xl animate-pulse" />
+      </aside>
+    </div>
+  );
+}
+
+/* ── Shell（同步，立即渲染） ── */
+
+export default function WorkDetailPage({ params, searchParams }: PageProps) {
+  return (
+    <div className="container mx-auto px-4 py-10 animate-fade-in">
+      <Suspense fallback={
+        <nav className="text-sm mb-6 text-brand-text-muted">
+          <Link href="/" className="hover:underline text-brand-text-secondary">首页</Link>
+          <span className="mx-2">/</span>
+          <Link href="/works" className="hover:underline text-brand-text-secondary">作品库</Link>
+          <span className="mx-2">/</span>
+          <span className="inline-block w-32 h-3 bg-brand-surface rounded animate-pulse align-middle" />
+        </nav>
+      }>
+        <WorkDetailContent params={params} searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+/* ── 异步数据组件 ── */
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   DRAFT:    "bg-gray-100 text-brand-text-secondary",
@@ -90,9 +191,8 @@ const STATUS_LABEL: Record<string, string> = {
   DRAFT: "草稿", PENDING: "待审核", REJECTED: "已拒绝", ARCHIVED: "已归档",
 };
 
-export default async function WorkDetailPage({ params, searchParams }: PageProps) {
-  const { slug } = await params;
-  const sp = await searchParams;
+async function WorkDetailContent({ params, searchParams }: PageProps) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const sort = sp.sort || "date";
   const project = await getProject(slug);
 
@@ -109,38 +209,23 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
     if (!isSubmitter && !isStaff) notFound();
   }
 
-  // 查询当前用户是否已点赞（仅非 PUBLISHED 时 session 可用）
-  let initialLiked: boolean | undefined;
-  if (session?.user?.id) {
-    const existing = await prisma.projectLike.findUnique({
-      where: { projectId_userId: { projectId: project.id, userId: session.user.id } },
-      select: { id: true },
-    });
-    initialLiked = !!existing;
-  }
+  // ── 并行：点赞状态 + 相邻导航 ──
+  const [likeResult, navResult] = await Promise.all([
+    session?.user?.id
+      ? prisma.projectLike.findUnique({
+          where: { projectId_userId: { projectId: project.id, userId: session.user.id } },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+    getAdjacentProjects(slug, project.title, project.developYear, sort),
+  ]);
+
+  const initialLiked = !!likeResult;
+  const { prev, next } = navResult;
 
   const isPending = project.status !== ProjectStatus.PUBLISHED;
   const statusBadgeClass = STATUS_BADGE_CLASS[project.status];
   const statusLabel = STATUS_LABEL[project.status];
-
-  // ── 上一个 / 下一个作品 ──
-  const navQuery = cachedQuery(`works:nav:${slug}:${sort}`, async () => {
-    const orderBy: any = sort === "name"
-      ? { title: "asc" }
-      : { developYear: "desc" };
-    const allSlugs = await prisma.project.findMany({
-      where: { status: ProjectStatus.PUBLISHED },
-      orderBy,
-      select: { slug: true, title: true },
-    });
-    const idx = allSlugs.findIndex((p) => p.slug === slug);
-    if (idx === -1) return { prev: null, next: null };
-    return {
-      prev: idx < allSlugs.length - 1 ? allSlugs[idx + 1] : null,
-      next: idx > 0 ? allSlugs[idx - 1] : null,
-    };
-  }, 60);
-  const { prev, next } = await navQuery;
 
   const LINK_ICONS: Record<string, string> = {
     steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📁", drive: "📁", 官网: "🌐",
@@ -150,7 +235,7 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
   ];
 
   return (
-    <div className="container mx-auto px-4 py-10 animate-fade-in">
+    <>
       <nav className="text-sm mb-6 text-brand-text-muted">
         <Link href="/" className="hover:underline text-brand-text-secondary">首页</Link>
         <span className="mx-2">/</span>
@@ -339,7 +424,7 @@ export default async function WorkDetailPage({ params, searchParams }: PageProps
           )}
         </aside>
       </div>
-    </div>
+    </>
   );
 }
 

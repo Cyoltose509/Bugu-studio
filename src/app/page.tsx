@@ -8,6 +8,7 @@ import Image from "next/image";
 import HomeStats from "@/components/home/HomeStats";
 import LatestProjects from "@/components/home/LatestProjects";
 import HomeActivities from "@/components/home/HomeActivities";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 export const metadata = {title: "布谷工作室"};
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -43,7 +44,7 @@ export default function HomePage() {
                     <h2 className="text-2xl font-bold text-brand-navy">最新作品</h2>
                     <Link href="/works" className="text-sm hover:underline text-brand-blue">查看全部 →</Link>
                 </div>
-                <Suspense fallback={<ProjectGridSkeleton count={6}/>}>
+                <Suspense fallback={<LogoLoading text="正在加载最新作品..." />}>
                     <LatestProjects/>
                 </Suspense>
             </section>
@@ -78,24 +79,6 @@ function StatsSkeleton() {
                     </div>
                 ))}
             </div>
-        </div>
-    );
-}
-
-function ProjectGridSkeleton({count}: { count: number }) {
-    const cols = count === 4 ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
-    return (
-        <div className={`grid ${cols} gap-6 animate-pulse`}>
-            {Array.from({length: count}).map((_, i) => (
-                <div key={i} className="rounded-xl border overflow-hidden border-brand-border-subtle">
-                    <div className="aspect-video bg-gray-200"/>
-                    <div className="p-4 space-y-2">
-                        <div className="w-3/4 h-5 rounded bg-gray-200"/>
-                        <div className="w-full h-4 rounded bg-gray-200"/>
-                        <div className="w-2/3 h-4 rounded bg-gray-200"/>
-                    </div>
-                </div>
-            ))}
         </div>
     );
 }

@@ -1,8 +1,9 @@
 /**
- * 个人中心
+ * 个人中心（流式渲染）
  * - 普通用户：查看/编辑自己的资料
  * - 管理员：可通过 ?id=xxx 查看任意用户资料
  */
+import { Suspense } from "react";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
@@ -12,16 +13,23 @@ import ProjectCard from "@/components/projects/ProjectCard";
 import { RichContent } from "@/components/ui/RichContent";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 export const dynamic = "force-dynamic";
 
-const LINK_ICONS: Record<string, string> = {
-  "GitHub": "💻", "B站": "▶️", "个人网站": "🌐", "知乎": "📝",
-  "小红书": "📕", "微博": "📢", "抖音": "🎵", "CSDN": "📋",
-  "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
-};
+/* ── 同步 Shell ── */
 
-export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+export default function ProfilePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+  return (
+    <Suspense fallback={<LogoLoading text="正在加载个人中心..." />}>
+      <ProfileContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+/* ── 异步数据组件 ── */
+
+async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const session = await auth();
 
   if (!session?.user) {
@@ -396,6 +404,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     </div>
   );
 }
+
+const LINK_ICONS: Record<string, string> = {
+  "GitHub": "💻", "B站": "▶️", "个人网站": "🌐", "知乎": "📝",
+  "小红书": "📕", "微博": "📢", "抖音": "🎵", "CSDN": "📋",
+  "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
+};
 
 function ContactRow({ label, value }: { label: string; value: string }) {
   return (

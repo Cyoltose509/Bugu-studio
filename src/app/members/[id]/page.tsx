@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,6 +13,7 @@ import AdminMemberEditor from "@/components/members/AdminMemberEditor";
 import { RichContent } from "@/components/ui/RichContent";
 import { positionLabel, positionColor } from "@/lib/position";
 import ProjectCard from "@/components/projects/ProjectCard";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -20,14 +22,18 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+/* ── 极轻量 metadata 查询（React.cache 去重，仅 2 字段）── */
+
+const getMemberMeta = cache(async (id: string) => {
+  return prisma.clubMember.findUnique({
+    where: { id },
+    select: { displayName: true, bio: true },
+  });
+});
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const member = await cachedQuery(`member:meta:${id}`, () =>
-    prisma.clubMember.findUnique({
-      where: { id },
-      select: { displayName: true, bio: true },
-    })
-  , 300);
+  const member = await getMemberMeta(id);
   if (!member) return { title: "成员不存在" };
   return {
     title: member.displayName,
@@ -35,7 +41,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function MemberDetailPage({ params }: PageProps) {
+/* ── 同步 Shell：首字节 < 50ms ── */
+
+export default function MemberDetailPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<LogoLoading text="正在加载成员信息..." />}>
+      <MemberDetailContent params={params} />
+    </Suspense>
+  );
+}
+
+/* ── 异步数据组件（在 Suspense 内执行）── */
+
+async function MemberDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const member = await cachedQuery(`member:detail:${id}`, async () => {

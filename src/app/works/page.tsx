@@ -41,7 +41,7 @@ export default async function WorksPage({searchParams}: PageProps) {
             </div>
             <div className="flex flex-col lg:flex-row gap-8">
                 {/* ── 侧栏：流式加载（tags/total/years 数据）── */}
-                <Suspense fallback={<WorksSidebarSkeleton />}>
+                <Suspense fallback={<LogoLoading text="正在加载筛选..." />}>
                     <WorksSidebarData params={params} />
                 </Suspense>
 
@@ -278,49 +278,4 @@ function buildUrl(current: Record<string, any>, overrides: Record<string, any>):
     }
     const qs = params.toString();
     return `/works${qs ? `?${qs}` : ""}`;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   骨架屏
-   ═══════════════════════════════════════════════════════════════════ */
-
-function WorksSidebarSkeleton() {
-    return (
-        <>
-            {/* 移动端按钮骨架 */}
-            <div className="lg:hidden mb-4">
-                <div className="h-10 w-40 rounded-lg bg-gray-200 animate-pulse" />
-            </div>
-            {/* 桌面端侧栏骨架 */}
-            <aside className="hidden lg:block lg:w-56 shrink-0 space-y-6">
-                {/* 类型 */}
-                <div className="space-y-2">
-                    <div className="h-4 w-10 rounded bg-gray-200 animate-pulse" />
-                    <div className="space-y-1.5">
-                        {[1,2,3,4,5].map(i => (
-                            <div key={i} className="h-8 rounded bg-gray-200 animate-pulse" />
-                        ))}
-                    </div>
-                </div>
-                {/* 年份 */}
-                <div className="space-y-2">
-                    <div className="h-4 w-10 rounded bg-gray-200 animate-pulse" />
-                    <div className="space-y-1.5">
-                        {[1,2,3,4].map(i => (
-                            <div key={i} className="h-8 rounded bg-gray-200 animate-pulse" />
-                        ))}
-                    </div>
-                </div>
-                {/* 标签 */}
-                <div className="space-y-2">
-                    <div className="h-4 w-10 rounded bg-gray-200 animate-pulse" />
-                    <div className="flex flex-wrap gap-2">
-                        {[1,2,3,4,5,6].map(i => (
-                            <div key={i} className="h-6 w-14 rounded bg-gray-200 animate-pulse" />
-                        ))}
-                    </div>
-                </div>
-            </aside>
-        </>
-    );
 }

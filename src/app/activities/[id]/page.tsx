@@ -1,10 +1,10 @@
 /**
- * 前台 - 活动详情页
+ * 前台 - 活动详情页（流式渲染）
  * 根据活动类型动态渲染不同内容
  */
 
 import { Metadata, ResolvingMetadata } from "next";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { notFound } from "next/navigation";
@@ -23,6 +23,7 @@ import EditTopicForm from "@/components/activities/course/EditTopicForm";
 import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksButton";
 import { cachedQuery } from "@/lib/db/cache";
 import UserAvatar from "@/components/ui/UserAvatar";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",
@@ -44,7 +45,30 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-// React.cache() 去重：generateMetadata 和页面组件共用同一查询
+/* ── 极轻量 metadata 查询（仅 select，无 include，不阻塞首字节）── */
+
+const getActivityMeta = cache(async (id: string) => {
+  return prisma.activity.findUnique({
+    where: { id },
+    select: { title: true, summary: true },
+  });
+});
+
+export async function generateMetadata(
+  { params }: PageProps,
+  _parent: ResolvingMetadata,
+): Promise<Metadata> {
+  const { id } = await params;
+  const a = await getActivityMeta(id);
+  if (!a) return { title: "活动不存在" };
+  return {
+    title: `${a.title} - 活动 - 布谷工作室`,
+    description: (a as any).summary || a.title,
+  };
+}
+
+/* ── 主页面数据查询（React.cache + cachedQuery，含全部 include）── */
+
 const getActivity = cache(async (id: string) => {
   return cachedQuery(
     `activity:detail:${id}`,
@@ -75,20 +99,19 @@ const getActivity = cache(async (id: string) => {
   );
 });
 
-export async function generateMetadata(
-  { params }: PageProps,
-  _parent: ResolvingMetadata,
-): Promise<Metadata> {
-  const { id } = await params;
-  const a = await getActivity(id);
-  if (!a) return { title: "活动不存在" };
-  return {
-    title: `${a.title} - 活动 - 布谷工作室`,
-    description: (a as any).summary || a.title,
-  };
+/* ── 同步 Shell：首字节 < 50ms ── */
+
+export default function ActivityDetailPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<LogoLoading text="正在加载活动..." />}>
+      <ActivityDetailContent params={params} />
+    </Suspense>
+  );
 }
 
-export default async function ActivityDetailPage({ params }: PageProps) {
+/* ── 异步数据组件（在 Suspense 内执行，流式加载）── */
+
+async function ActivityDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const { id } = await params;
   const now = new Date();
@@ -332,7 +355,6 @@ async function CourseSection({
       </div>
 
       {/* ── 我的队伍 ──────────────────────────── */}
-      {/* ── 我的队伍 ──────────────────────────── */}
       {myTeam ? (
         <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
           <div className="flex items-center justify-between mb-3">
@@ -557,7 +579,6 @@ async function CompetitionSection({
         )}
       </div>
 
-      {/* ── 我的队伍 ──────────────────────────── */}
       {/* ── 我的队伍 ──────────────────────────── */}
       {myTeam ? (
         <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">

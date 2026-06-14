@@ -1,7 +1,9 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { ensureDefaultTags } from "@/lib/db/tags";
 import SubmitForm from "@/components/forms/SubmitForm";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 export const metadata: Metadata = {
   title: "提交作品",
@@ -10,7 +12,19 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function SubmitPage() {
+/* ── 同步 Shell ── */
+
+export default function SubmitPage() {
+  return (
+    <Suspense fallback={<LogoLoading text="正在加载提交页面..." />}>
+      <SubmitContent />
+    </Suspense>
+  );
+}
+
+/* ── 异步数据组件 ── */
+
+async function SubmitContent() {
   await ensureDefaultTags();
   const tags = await prisma.tag.findMany({
     orderBy: { sortOrder: "asc" },

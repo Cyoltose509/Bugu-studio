@@ -28,24 +28,19 @@ async function checkResendStatus(): Promise<ResendStatus> {
 export default async function ResendMonitorPage() {
     const status = await checkResendStatus();
 
-    // 统计用户邮箱验证情况
+    // 统计用户邮箱验证情况（3 个查询并行）
     let totalUsers = 0;
     let verifiedUsers = 0;
     let unverifiedUsers = 0;
-
-    try {
-        totalUsers = await prisma.user.count();
-        verifiedUsers = await prisma.user.count({
-            where: {emailVerified: {not: null}},
-        });
-        unverifiedUsers = totalUsers - verifiedUsers;
-    } catch {
-    }
-
-    // 统计最近的 verificationToken
     let pendingTokens = 0;
+
     try {
-        pendingTokens = await prisma.verificationToken.count();
+        [totalUsers, verifiedUsers, pendingTokens] = await Promise.all([
+            prisma.user.count(),
+            prisma.user.count({ where: { emailVerified: { not: null } } }),
+            prisma.verificationToken.count(),
+        ]);
+        unverifiedUsers = totalUsers - verifiedUsers;
     } catch {
     }
 
