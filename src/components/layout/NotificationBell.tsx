@@ -19,6 +19,36 @@ interface NotificationItem {
 let _lastFetched = 0;
 const CACHE_TTL = 10_000; // 10 秒去重
 
+// ── 工具函数（组件外，避免每次 render 重建） ──
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = (now.getTime() - d.getTime()) / 60000;
+  if (diff < 1) return "刚刚";
+  if (diff < 60) return `${Math.floor(diff)}分钟前`;
+  if (diff < 1440) return `${Math.floor(diff / 60)}小时前`;
+  return d.toLocaleDateString("zh-CN");
+}
+
+function getIcon(type: string) {
+  if (type === "PROJECT_REVIEW") return "✅";
+  if (type === "PROPOSAL_REVIEW") return "📋";
+  if (type === "COMMENT_REPLY" || type === "COMMENT_LIKE") return "💬";
+  if (type === "ROLE_CHANGE") return "🏷️";
+  if (type === "NEW_PROJECT") return "🎮";
+  if (type === "NEW_USER") return "👤";
+  if (type === "ACTIVITY_PROPOSAL") return "🎤";
+  if (type === "ACTIVITY_ENROLL") return "📚";
+  if (type === "ACTIVITY_SUBMISSION") return "🏆";
+  if (type === "JAM_APPLICATION") return "📨";
+  if (type === "JAM_APPROVED") return "✅";
+  if (type === "JAM_REJECTED") return "❌";
+  if (type === "JAM_INVITATION") return "📩";
+  if (type === "JAM_INVITATION_ACCEPTED") return "🤝";
+  if (type === "MENTION") return "💬";
+  return "🔔";
+}
+
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -89,7 +119,7 @@ export default function NotificationBell() {
   }, [open]);
 
   // ── 标记单条已读并跳转 ──
-  async function handleClick(item: NotificationItem) {
+  const handleClick = useCallback(async (item: NotificationItem) => {
     if (!item.read) {
       await fetch("/api/notifications/read", {
         method: "PATCH",
@@ -126,10 +156,10 @@ export default function NotificationBell() {
     } else if (item.relatedType === "HistoryEvent") {
       window.location.href = `/history`;
     }
-  }
+  }, []);
 
   // ── 全部标为已读 ──
-  async function markAllRead(e: React.MouseEvent) {
+  const markAllRead = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     await fetch("/api/notifications/read", {
       method: "PATCH",
@@ -138,7 +168,7 @@ export default function NotificationBell() {
     });
     setUnreadCount(0);
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-  }
+  }, []);
 
   // ── 删除单条通知 ──
   async function deleteOne(e: React.MouseEvent, id: string) {
@@ -169,34 +199,6 @@ export default function NotificationBell() {
     setUnreadCount(0);
   }
 
-  function formatTime(iso: string) {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = (now.getTime() - d.getTime()) / 60000;
-    if (diff < 1) return "刚刚";
-    if (diff < 60) return `${Math.floor(diff)}分钟前`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}小时前`;
-    return d.toLocaleDateString("zh-CN");
-  }
-
-  function getIcon(type: string) {
-    if (type === "PROJECT_REVIEW") return "✅";
-    if (type === "PROPOSAL_REVIEW") return "📋";
-    if (type === "COMMENT_REPLY" || type === "COMMENT_LIKE") return "💬";
-    if (type === "ROLE_CHANGE") return "🏷️";
-    if (type === "NEW_PROJECT") return "🎮";
-    if (type === "NEW_USER") return "👤";
-    if (type === "ACTIVITY_PROPOSAL") return "🎤";
-    if (type === "ACTIVITY_ENROLL") return "📚";
-    if (type === "ACTIVITY_SUBMISSION") return "🏆";
-    if (type === "JAM_APPLICATION") return "📨";
-    if (type === "JAM_APPROVED") return "✅";
-    if (type === "JAM_REJECTED") return "❌";
-    if (type === "JAM_INVITATION") return "📩";
-    if (type === "JAM_INVITATION_ACCEPTED") return "🤝";
-    if (type === "MENTION") return "💬";
-    return "🔔";
-  }
 
   return (
     <div id="notif-bell" className="relative">

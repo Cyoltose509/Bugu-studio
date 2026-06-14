@@ -20,11 +20,50 @@ interface PageProps {
     searchParams: Promise<{ q?: string; types?: string; tag?: string; year?: string; sort?: string }>;
 }
 
+/**
+ * 作品库页面 — 流式渲染
+ *
+ * 架构要点：
+ * 1. 主组件仅 resolve searchParams（~0ms），立即返回页面骨架
+ * 2. 侧栏数据和作品网格各自在 Suspense 中流式加载
+ * 3. 避免 force-dynamic 页面因 DB 查询阻塞首字节（TTFB）
+ *
+ * 导航体验：点击"作品库" → 页面骨架瞬间出现 → 数据逐步填充
+ */
 export default async function WorksPage({searchParams}: PageProps) {
-    await ensureDefaultTags();
+    // 仅解析 URL 参数 — 无 DB 操作，瞬间完成
     const params = await searchParams;
 
-    // 侧栏数据（立即渲染，有长 TTL 缓存）
+    return (
+        <div className="container mx-auto px-4 py-10 animate-fade-in">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-brand-navy">作品库</h1>
+            </div>
+            <div className="flex flex-col lg:flex-row gap-8">
+                {/* ── 侧栏：流式加载（tags/total/years 数据）── */}
+                <Suspense fallback={<WorksSidebarSkeleton />}>
+                    <WorksSidebarData params={params} />
+                </Suspense>
+
+                {/* ── 主区域：工具栏（即时渲染）+ 作品网格（流式加载）── */}
+                <div className="flex-1">
+                    <WorksToolbar currentQ={params.q} />
+
+                    <Suspense fallback={<LogoLoading text="正在加载作品..." />}>
+                        <WorksFirstPage params={params} />
+                    </Suspense>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   侧栏数据 — 异步组件（Suspense 包裹，流式加载）
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function WorksSidebarData({ params }: { params: Record<string, any> }) {
+    await ensureDefaultTags();
     const [tags, total, years] = await Promise.all([
         cachedQuery('works:sidebar:tags', () =>
                 prisma.tag.findMany({
@@ -46,7 +85,6 @@ export default async function WorksPage({searchParams}: PageProps) {
         (acc[key] ??= []).push(tag);
         return acc;
     }, {});
-    // 指定分组顺序
     const groupOrder = ["引擎", "大类", "要素", "其他"];
     const sortedGroups = Object.keys(tagGroups).sort((a, b) => {
         const ia = groupOrder.indexOf(a);
@@ -114,33 +152,14 @@ export default async function WorksPage({searchParams}: PageProps) {
         </div>
     );
 
-    return (
-        <div className="container mx-auto px-4 py-10 animate-fade-in">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-brand-navy">作品库</h1>
-                {/* 桌面端统计，移动端统计在 FilterSidebarClient 中 */}
-                <p className="mt-2 hidden lg:block text-brand-text-secondary">共 {total} 件作品</p>
-            </div>
-            <div className="flex flex-col lg:flex-row gap-8">
-                <FilterSidebarClient total={total}>
-                    {filterContent}
-                </FilterSidebarClient>
-
-                {/* 主区域 — 工具栏 + 作品网格 */}
-                <div className="flex-1">
-                    <WorksToolbar currentQ={params.q}/>
-
-                    <Suspense fallback={<LogoLoading text="正在加载作品..."/>}>
-                        <WorksFirstPage params={params} total={total}/>
-                    </Suspense>
-                </div>
-            </div>
-        </div>
-    );
+    return <FilterSidebarClient total={total}>{filterContent}</FilterSidebarClient>;
 }
 
-/** 服务端预取首批数据，然后交给客户端无限滚动组件 */
-async function WorksFirstPage({params, total}: { params: Record<string, any>; total: number }) {
+/* ═══════════════════════════════════════════════════════════════════
+   作品首屏数据 — 异步组件（Suspense 包裹，流式加载）
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function WorksFirstPage({ params }: { params: Record<string, any> }) {
     const sort = params.sort || "date";
     const orderBy: any = sort === "name"
         ? [{title: "asc"}, {id: "desc"}]
@@ -150,34 +169,41 @@ async function WorksFirstPage({params, total}: { params: Record<string, any>; to
 
     const where = buildWhere(params);
 
-    // 预取首批 PAGE_SIZE+1 条（用于判断是否有更多）
-    const projects = await cachedQuery(
-        `works:infinite:first:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
-        () =>
-            prisma.project.findMany({
-                where,
-                take: PAGE_SIZE + 1,
-                orderBy,
-                select: {
-                    id: true, slug: true, title: true, subtitle: true,
-                    description: true, coverImage: true, type: true,
-                    developYear: true, publishedAt: true,
-                    tags: {include: {tag: true}},
-                    awards: true,
-                    _count: {select: {likes: true}},
-                    members: {
-                        orderBy: {sortOrder: "asc"},
-                        include: {
-                            member: {
-                                select: {displayName: true, avatar: true, user: {select: {image: true}}},
+    // 并行获取作品列表 + 总数
+    const [projects, total] = await Promise.all([
+        cachedQuery(
+            `works:infinite:first:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
+            () =>
+                prisma.project.findMany({
+                    where,
+                    take: PAGE_SIZE + 1,
+                    orderBy,
+                    select: {
+                        id: true, slug: true, title: true, subtitle: true,
+                        description: true, coverImage: true, type: true,
+                        developYear: true, publishedAt: true,
+                        tags: {include: {tag: true}},
+                        awards: true,
+                        _count: {select: {likes: true}},
+                        members: {
+                            orderBy: {sortOrder: "asc"},
+                            include: {
+                                member: {
+                                    select: {displayName: true, avatar: true, user: {select: {image: true}}},
+                                },
+                                user: {select: {id: true, name: true, image: true}},
                             },
-                            user: {select: {id: true, name: true, image: true}},
                         },
                     },
-                },
-            }),
-        60,
-    );
+                }),
+            60,
+        ),
+        cachedQuery(
+            `works:total:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}`,
+            () => prisma.project.count({where}),
+            60,
+        ),
+    ]);
 
     const hasMore = projects.length > PAGE_SIZE;
     const items = hasMore ? projects.slice(0, PAGE_SIZE) : projects;
@@ -215,12 +241,15 @@ async function WorksFirstPage({params, total}: { params: Record<string, any>; to
     );
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   工具函数
+   ═══════════════════════════════════════════════════════════════════ */
+
 function buildWhere(params: Record<string, any>) {
     const where: any = {status: ProjectStatus.PUBLISHED};
     if (params.types) {
         const typeList = params.types.split(",").filter(Boolean)
             .map((t: string) => {
-                // 兼容旧类型参数：STEAM→OFFICIAL_RELEASE, DEMO/ITCH→TRIAL_DEMO
                 if (t === "STEAM") return "OFFICIAL_RELEASE";
                 if (t === "DEMO" || t === "ITCH") return "TRIAL_DEMO";
                 return t;
@@ -249,4 +278,49 @@ function buildUrl(current: Record<string, any>, overrides: Record<string, any>):
     }
     const qs = params.toString();
     return `/works${qs ? `?${qs}` : ""}`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   骨架屏
+   ═══════════════════════════════════════════════════════════════════ */
+
+function WorksSidebarSkeleton() {
+    return (
+        <>
+            {/* 移动端按钮骨架 */}
+            <div className="lg:hidden mb-4">
+                <div className="h-10 w-40 rounded-lg bg-gray-200 animate-pulse" />
+            </div>
+            {/* 桌面端侧栏骨架 */}
+            <aside className="hidden lg:block lg:w-56 shrink-0 space-y-6">
+                {/* 类型 */}
+                <div className="space-y-2">
+                    <div className="h-4 w-10 rounded bg-gray-200 animate-pulse" />
+                    <div className="space-y-1.5">
+                        {[1,2,3,4,5].map(i => (
+                            <div key={i} className="h-8 rounded bg-gray-200 animate-pulse" />
+                        ))}
+                    </div>
+                </div>
+                {/* 年份 */}
+                <div className="space-y-2">
+                    <div className="h-4 w-10 rounded bg-gray-200 animate-pulse" />
+                    <div className="space-y-1.5">
+                        {[1,2,3,4].map(i => (
+                            <div key={i} className="h-8 rounded bg-gray-200 animate-pulse" />
+                        ))}
+                    </div>
+                </div>
+                {/* 标签 */}
+                <div className="space-y-2">
+                    <div className="h-4 w-10 rounded bg-gray-200 animate-pulse" />
+                    <div className="flex flex-wrap gap-2">
+                        {[1,2,3,4,5,6].map(i => (
+                            <div key={i} className="h-6 w-14 rounded bg-gray-200 animate-pulse" />
+                        ))}
+                    </div>
+                </div>
+            </aside>
+        </>
+    );
 }

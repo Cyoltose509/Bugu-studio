@@ -12,6 +12,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import React, { useCallback, useMemo } from "react";
 import MiniLikeButton from "./MiniLikeButton";
 import ProjectCoverImage from "./ProjectCoverImage";
 
@@ -60,48 +61,50 @@ export interface ProjectCardProps {
   compact?: boolean;
   /** 点击加载中状态，用于 /works 无限滚动 */
   clicking?: boolean;
-  /** 点击开始回调，用于 /works 无限滚动 */
-  onClickStart?: (e: React.MouseEvent) => void;
+  /** 点击回调，用于 /works 无限滚动（稳定引用） */
+  onCardClick?: (id: string, slug: string) => void;
   /** 动画延迟（仅本地卡片用） */
   idx?: number;
 }
 
 // ── 组件 ───────────────────────────────────────────────────────────────────────
 
-export default function ProjectCard({
+function ProjectCard({
   project: p,
   href,
   showStatusBadge = false,
   compact = false,
   clicking = false,
-  onClickStart,
+  onCardClick,
   idx = 0,
 }: ProjectCardProps) {
   const link = href ?? `/works/${p.slug}`;
   const delay = `${Math.min(idx % 16, 15) * 50}ms`;
 
-  // 头像动态重叠计算
+  // 头像动态重叠计算（useMemo 缓存）
   const n = p.members?.length ?? 0;
   const avatarSize = 20;
   const maxW = 155;
   const normalOverlap = 6;
-  const totalW = avatarSize + (n - 1) * (avatarSize - normalOverlap);
-  const overlap =
-    totalW > maxW
+  const overlap = useMemo(() => {
+    if (n === 0) return normalOverlap;
+    const totalW = avatarSize + (n - 1) * (avatarSize - normalOverlap);
+    return totalW > maxW
       ? Math.max(2, Math.min(avatarSize - 2, (n * avatarSize - maxW) / Math.max(1, n - 1)))
       : normalOverlap;
+  }, [n]);
 
-  const useLink = !onClickStart;
+  const useLink = !onCardClick;
   const commonClassName =
     "group block bg-card rounded-xl overflow-hidden border shadow-sm hover:shadow-md border-brand-border-subtle";
 
   // 点击处理
-  const handleClick = (e: React.MouseEvent) => {
-    if (onClickStart) {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (onCardClick) {
       e.preventDefault();
-      if (!clicking) onClickStart(e);
+      if (!clicking) onCardClick(p.id, p.slug);
     }
-  };
+  }, [onCardClick, p.id, p.slug, clicking]);
 
   // 渲染卡片内容
   const cardContent = (
@@ -263,3 +266,17 @@ export default function ProjectCard({
     </div>
   );
 }
+
+/*
+ * React.memo：
+ * - 只有 project / compact / clicking / onCardClick 发生变化时才 re-render
+ * - onCardClick 现在通过 useCallback 保持稳定引用
+ */
+export default React.memo(ProjectCard, (prev, next) => {
+  return (
+    prev.project === next.project &&
+    prev.compact === next.compact &&
+    prev.clicking === next.clicking &&
+    prev.onCardClick === next.onCardClick
+  );
+});

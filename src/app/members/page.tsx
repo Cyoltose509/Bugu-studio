@@ -1,12 +1,33 @@
-﻿import {Metadata} from "next";
+import {Metadata} from "next";
+import {Suspense} from "react";
 import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
 import MembersList from "@/components/members/MembersList";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 export const metadata: Metadata = {title: "成员", description: "认识历届布谷工作室成员"};
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
+/**
+ * 成员页面 — 流式渲染
+ * async 组件确保路由级 loading.tsx 正确触发
+ * 数据在 Suspense 内异步加载，首字节不阻塞
+ */
 export default async function MembersPage() {
+    return (
+        <div className="container mx-auto px-4 py-10 animate-fade-in">
+            <div className="mb-10">
+                <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
+                <Suspense fallback={<LogoLoading text="正在加载成员..." />}>
+                    <MembersData />
+                </Suspense>
+            </div>
+        </div>
+    );
+}
+
+/** 成员数据 — 异步组件（Suspense 包裹，流式加载） */
+async function MembersData() {
     const members = await cachedQuery('members:all', async () => {
         const list = await prisma.clubMember.findMany({
             orderBy: [{sortOrder: "asc"}],
@@ -38,13 +59,13 @@ export default async function MembersPage() {
             ),
         }));
     }, 300);
+
     // 按 grade（如 2024 → "2024级"）分组，无 grade 时按 joinYear 分组
     const grouped = members.reduce<Record<string, typeof members>>((acc, m: any) => {
         const key = m.grade ? `${m.grade}级` : (m.joinYear ? `${m.joinYear} 年入社` : "未知");
         (acc[key] ??= []).push(m);
         return acc;
     }, {});
-    // 按提取出的年份降序排列
     const sortedKeys = Object.keys(grouped).sort((a, b) => {
         const yA = parseInt(a) || 0;
         const yB = parseInt(b) || 0;
@@ -54,16 +75,16 @@ export default async function MembersPage() {
     const activeCount = members.filter((m: any) => !m.graduated).length;
 
     return (
-        <div className="container mx-auto px-4 py-10 animate-fade-in">
-            <div className="mb-10">
-                <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
-                <p className="mt-2 text-brand-text-secondary">共 {members.length} 位历届成员，{activeCount} 位在读成员</p>
-            </div>
+        <>
+            <p className="mt-2 text-brand-text-secondary">
+                共 {members.length} 位历届成员，{activeCount} 位在读成员
+            </p>
             <MembersList
                 members={members as any}
                 grouped={grouped}
                 sortedKeys={sortedKeys}
             />
-        </div>
+        </>
     );
 }
+

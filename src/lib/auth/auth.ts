@@ -2,7 +2,9 @@
  * Auth.js v5 配置
  * 策略：JWT（Credentials 登录必须用 JWT）
  * 换届下线：jwt + session callback 中校验 isActive
- * 注意：顶层不 import Prisma，确保 middleware (Edge Runtime) 兼容
+ *
+ * 重要：middleware 在 Next.js 中始终运行在 Edge Runtime，因此 auth.ts
+ * 不能顶层静态导入 prisma。所有 Prisma 调用均使用动态 import。
  */
 
 import NextAuth, { type NextAuthConfig } from "next-auth";
@@ -23,7 +25,34 @@ const LOGIN_RATE_MAX = 5;
  * Next.js dev 模式下 server action 和 page route 跑在不同编译上下文，
  * 同一个 Map 在两个上下文中是不同的实例，导致 clear → 无效。
  * session callback 每次直接读 DB（主键索引，毫秒级），确保名称立即生效。
+ *
+ * 2026-06 优化：session callback 添加 30s TTL 缓存。
+ * 每次客户端导航都会触发 auth() → session callback，在无缓存情况下
+ * 每次都是 1 次 DB findUnique（东京 Supabase），累积延迟 ~300-500ms/click。
+ * 30s 缓存将重复导航的 DB 查询降为 0，仅在缓存过期后才重新同步。
  */
+
+/** Session 回调结果缓存 (TTL 30s) */
+const _sessionCache = new Map<string, { data: SessionCacheEntry; ts: number }>();
+const SESSION_CACHE_MS = 30_000;
+
+interface SessionCacheEntry {
+  isActive: boolean;
+  image: string | null;
+  name: string | null;
+  role: string;
+}
+
+function _getSessionCache(key: string): SessionCacheEntry | null {
+  const entry = _sessionCache.get(key);
+  if (entry && Date.now() - entry.ts < SESSION_CACHE_MS) return entry.data;
+  _sessionCache.delete(key);
+  return null;
+}
+
+function _setSessionCache(key: string, data: SessionCacheEntry) {
+  _sessionCache.set(key, { data, ts: Date.now() });
+}
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET!,
@@ -146,25 +175,42 @@ export const authConfig = {
         session.user.image = (token.picture as string) ?? undefined;
         session.user.name = (token.name as string) ?? undefined;
 
-        // 每次从 DB 同步最新状态（无内存缓存，避免跨上下文不同步）
-        try {
-          const { prisma } = await import("@/lib/db/prisma");
-          const userId = token.id as string;
+        const userId = token.id as string;
 
-          const dbUser = await prisma.user.findUnique({
+        // 30 秒内有缓存 → 跳过 DB 查询（消除每次导航的 ~300ms 延迟）
+        const cached = _getSessionCache(userId);
+        if (cached) {
+          if (!cached.isActive) { session.user = undefined as any; return session; }
+          if (cached.image) session.user.image = cached.image;
+          if (cached.name) session.user.name = cached.name;
+          session.user.role = cached.role as any;
+          return session;
+        }
+
+        // 缓存未命中 → 查 DB 并写入缓存
+        try {
+          const { prisma: sessionPrisma } = await import("@/lib/db/prisma");
+          const dbUser = await sessionPrisma.user.findUnique({
             where: { id: userId },
             select: { isActive: true, image: true, name: true, role: true },
           });
 
           if (!dbUser?.isActive) {
+            _setSessionCache(userId, { isActive: false, image: null, name: null, role: "" });
             session.user = undefined as any;
           } else {
+            _setSessionCache(userId, {
+              isActive: true,
+              image: dbUser.image ?? null,
+              name: dbUser.name ?? null,
+              role: dbUser.role,
+            });
             if (dbUser.image) session.user.image = dbUser.image;
             if (dbUser.name) session.user.name = dbUser.name;
             if (dbUser.role) session.user.role = dbUser.role;
           }
         } catch {
-          // Edge runtime 降级
+          // Edge runtime 降级：使用 JWT 中的数据
         }
       }
       return session;

@@ -1,14 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import {useState} from "react";
+import React, {useState} from "react";
 
 /**
  * 统一的用户头像组件
  * 使用 next/Image 优化加载，fallback 到首字母
  * 通过设置 width/height 防止 CLS
  */
-export default function UserAvatar({
+function UserAvatar({
                                        src,
                                        name,
                                        size = 32,
@@ -47,3 +47,9 @@ export default function UserAvatar({
         />
     );
 }
+
+/*
+ * React.memo：src / name / size 不变则不触发 re-render
+ * 适用于成员列表、头像列表等大量渲染场景
+ */
+export default React.memo(UserAvatar);

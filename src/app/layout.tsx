@@ -6,6 +6,7 @@ import {Providers} from "@/components/providers/Providers";
 import {Navbar} from "@/components/layout/Navbar";
 import {NavbarSkeleton} from "@/components/layout/NavbarSkeleton";
 import {Footer} from "@/components/layout/Footer";
+import TopLoader from "@/components/layout/TopLoader";
 import {SpeedInsights} from "@vercel/speed-insights/next";
 import {Analytics} from "@vercel/analytics/react";
 
@@ -47,6 +48,7 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
             />
         </head>
         <body className={`${inter.className} text-[#333333] min-h-screen flex flex-col`}>
+        <TopLoader />
         <Providers>
             {/* Navbar 用 Suspense 包裹 — auth() 不阻塞首屏渲染 */}
             <Suspense fallback={<NavbarSkeleton/>}>

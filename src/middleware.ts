@@ -40,8 +40,10 @@ export default async function middleware(req: NextRequest) {
   const isAdmin = ADMIN_ROUTES.some((r) => pathname.startsWith(r));
   const needsAuth = isProtected || isMember || isAdmin;
 
-  // 3. 公开路由且不是 RSC 请求 → 直接放行，不调用 auth()
-  if (!needsAuth && !isRscRequest(req)) {
+  // 3. 公开路由 → 直接放行，不调用 auth()
+  //    Navbar 本身是 Server Component，会自己调用 auth() 获取 session
+  //    中间件不需要替公开页做这件事，避免每次客户端导航都触发 JWT 解码 + DB 查询
+  if (!needsAuth) {
     return NextResponse.next();
   }
 

@@ -36,6 +36,13 @@ export default function WorksInfiniteGrid({
     const router = useRouter();
     const [clickingId, setClickingId] = useState<string | null>(null);
 
+    // 稳定引用：所有 ProjectCard 共享同一个 callback，避免每次 render 重建
+    const handleCardClick = useCallback((id: string, slug: string) => {
+        clickingRef.current = true;
+        setClickingId(id);
+        router.push(`/works/${slug}`);
+    }, [router]);
+
     // ref 防并发：loading state 是异步的，Observer 可能在 setLoading(true) 生效前再次触发
     const loadingRef = useRef(false);
     const cursorRef = useRef(cursor);
@@ -134,12 +141,7 @@ export default function WorksInfiniteGrid({
                         project={p}
                         idx={idx}
                         clicking={clickingId === p.id}
-                        onClickStart={(e) => {
-                            e.preventDefault();
-                            clickingRef.current = true;
-                            setClickingId(p.id);
-                            router.push(`/works/${p.slug}`);
-                        }}
+                        onCardClick={handleCardClick}
                     />
                 ))}
             </div>

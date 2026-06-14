@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useCallback, useEffect} from "react";
+import {useState, useCallback, useEffect, useRef} from "react";
 import {useSession} from "next-auth/react";
 import UserAvatar from "../ui/UserAvatar";
 
@@ -131,8 +131,11 @@ export default function CommentSection({projectId, initialComments = []}: Props)
     const [loading, setLoading] = useState(initialComments.length === 0);
     const [submitting, setSubmitting] = useState(false);
     const [newContent, setNewContent] = useState("");
-    const [replyingTo, setReplyingTo] = useState<string | null>(null);
-    const [replyContent, setReplyContent] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+
+  // 如果已有服务端数据，跳过首次客户端 fetch
+  const shouldSkipInitialLoad = useRef(!!(initialComments && initialComments.length > 0));
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -146,8 +149,13 @@ export default function CommentSection({projectId, initialComments = []}: Props)
     }, [projectId]);
 
     useEffect(() => {
-        load();
-    }, [load]);
+    // 如果已有初始数据，跳过首次 fetch（避免与 SSR 重复请求）
+    if (shouldSkipInitialLoad.current) {
+      shouldSkipInitialLoad.current = false;
+      return;
+    }
+    load();
+  }, [load]);
 
     async function submitComment(parentId?: string) {
         const content = parentId ? replyContent.trim() : newContent.trim();

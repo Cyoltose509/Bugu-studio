@@ -3,9 +3,9 @@
  * 支持 cursor-based 分页（用 lastId 作为游标）
  */
 import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
-import { auth } from "@/lib/auth/auth";
 
 const PAGE_SIZE = 16; // 4x4
 
@@ -78,12 +78,17 @@ export async function GET(request: NextRequest) {
     const items = hasMore ? projects.slice(0, PAGE_SIZE) : projects;
     const nextCursor = hasMore ? items[items.length - 1].id : null;
 
-    // 查询当前用户点赞状态
-    const session = await auth().catch(() => null);
+    // 查询当前用户点赞状态（getToken 纯 JWT 解码，不查 DB，比 auth() 快 5-10x）
+    const token = await getToken({
+        req: request,
+        secret: process.env.AUTH_SECRET,
+        secureCookie: process.env.NODE_ENV === "production",
+    }).catch(() => null);
+
     let likedSet = new Set<string>();
-    if (session?.user?.id && items.length > 0) {
+    if (token?.id && items.length > 0) {
         const liked = await prisma.projectLike.findMany({
-            where: { userId: session.user.id, projectId: { in: items.map((p) => p.id) } },
+            where: { userId: token.id as string, projectId: { in: items.map((p) => p.id) } },
             select: { projectId: true },
         });
         likedSet = new Set(liked.map((l) => l.projectId));

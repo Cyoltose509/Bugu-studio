@@ -1,12 +1,17 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 
 /**
  * 作品封面图客户端组件
- * - 使用 next/image（本地 logo）或原生 <img>（远程 R2 图）
- * - 支持 onError 隐藏损坏图片
- * - 需要 "use client" 因为使用了 onError 事件处理器
+ *
+ * 渐进式加载策略：
+ * 1. 卡片文字内容即时渲染（不受封面图影响）
+ * 2. 封面区域显示灰色骨架脉冲动画
+ * 3. 图片加载完成后淡入（opacity 过渡 500ms）
+ * 4. 非首图使用 loading="lazy" + decoding="async"，浏览器自然逐个加载
+ * 5. 处理浏览器缓存（img.complete 为 true 时跳过骨架）
  */
 export default function ProjectCoverImage({
   src,
@@ -25,45 +30,78 @@ export default function ProjectCoverImage({
   className?: string;
   fillParent?: boolean;
 }) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
   const defaultClass = fillParent
     ? "absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
     : "object-cover group-hover:scale-105 transition-transform duration-300";
   const imgClass = className || defaultClass;
 
-  if (!src) {
+  // 处理浏览器缓存：图片可能早已加载完成（complete = true）
+  useEffect(() => {
+    if (imgRef.current?.complete && !imgError) {
+      setLoaded(true);
+    }
+  }, [src, imgError]);
+
+  // ── 无封面图：显示 fallback logo ──
+  if (!src || imgError) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <div className="w-full h-full flex items-center justify-center bg-gray-100">
         <img src={fallbackSrc} alt="" width={40} height={40} className="opacity-30" />
       </div>
     );
   }
 
-  // R2 远程图片用原生 <img>（避免 next/image 优化代理失败），同时保持宽高比防 CLS
+  // ── 骨架占位（封面加载中） ──
+  const skeleton = (
+    <div
+      className={`absolute inset-0 bg-gray-200 animate-pulse transition-opacity duration-500 ${
+        loaded ? "opacity-0 pointer-events-none" : "opacity-100"
+      }`}
+    />
+  );
+
   const isRemote = src.startsWith("http");
 
   if (isRemote) {
     return (
-      <img
-        src={src}
-        alt={alt}
-        className={`${imgClass} aspect-video`}
-        loading={priority ? "eager" : "lazy"}
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
-        }}
-      />
+      <>
+        {skeleton}
+        <img
+          ref={imgRef}
+          src={src}
+          alt={alt}
+          className={`${imgClass} aspect-video transition-opacity duration-500 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
+          loading={priority ? "eager" : "lazy"}
+          decoding={priority ? "sync" : "async"}
+          onLoad={() => setLoaded(true)}
+          onError={() => setImgError(true)}
+        />
+      </>
     );
   }
 
   // 本地图片用 next/image
   return (
-    <Image
-      src={src}
-      alt={alt}
-      fill={fillParent}
-      className={`object-cover group-hover:scale-105 transition-transform duration-300 ${className || ""}`.trim()}
-      sizes={compact ? "(max-width:768px) 100vw, 25vw" : "(max-width:768px) 100vw, 33vw"}
-      {...(priority ? { priority: true, fetchPriority: "high" as const } : {})}
-    />
+    <>
+      {skeleton}
+      <Image
+        src={src}
+        alt={alt}
+        fill={fillParent}
+        className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
+          loaded ? "opacity-100" : "opacity-0"
+        } transition-opacity duration-500`}
+        sizes={compact ? "(max-width:768px) 100vw, 25vw" : "(max-width:768px) 100vw, 33vw)"}
+        onLoad={() => setLoaded(true)}
+        onError={() => setImgError(true)}
+        {...(priority ? { priority: true, fetchPriority: "high" as const } : {})}
+      />
+    </>
   );
 }
