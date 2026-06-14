@@ -88,49 +88,102 @@ const getProject = cache(async (slug: string) => {
   , 120);
 });
 
-/* ── 高效的相邻作品查询（2 个 findFirst 代替全表 findMany） ── */
+/* ── 高效的相邻作品查询（与 /api/works 排序完全一致） ── */
 
 async function getAdjacentProjects(
-  slug: string, title: string, developYear: number, sort: string
+  slug: string,
+  title: string,
+  developYear: number,
+  publishedAt: Date,
+  id: string,
+  sort: string,
 ) {
+  if (sort === "likes") {
+    // likes 排序是动态的（点赞数随时变），prev/next 无意义
+    return { prev: null, next: null };
+  }
+
   if (sort === "name") {
+    // API 排序: title ASC, id DESC
     const [prev, next] = await Promise.all([
+      // prev = 列表中当前之前（标题更小，或同标题但 id 更大）
       prisma.project.findFirst({
-        where: { status: ProjectStatus.PUBLISHED, title: { lt: title } },
-        orderBy: { title: "desc" },
+        where: {
+          status: ProjectStatus.PUBLISHED,
+          OR: [
+            { title: { lt: title } },
+            { title, id: { gt: id } },
+          ],
+        },
+        orderBy: [{ title: "desc" }, { id: "asc" }],
         select: { slug: true, title: true },
       }),
+      // next = 列表中当前之后（标题更大，或同标题但 id 更小）
       prisma.project.findFirst({
-        where: { status: ProjectStatus.PUBLISHED, title: { gt: title } },
-        orderBy: { title: "asc" },
+        where: {
+          status: ProjectStatus.PUBLISHED,
+          OR: [
+            { title: { gt: title } },
+            { title, id: { lt: id } },
+          ],
+        },
+        orderBy: [{ title: "asc" }, { id: "desc" }],
         select: { slug: true, title: true },
       }),
     ]);
     return { prev, next };
   }
 
-  // date sort: ORDER BY developYear DESC, slug ASC
+  // date 排序（默认）: developYear DESC, publishedAt DESC, id DESC
   const [prev, next] = await Promise.all([
+    // prev = 列表中当前之前（更靠近开头 = 更新的作品）
+    // WHERE: developYear 更大，或同年份 publishedAt 更大，或同年份同 publishedAt 但 id 更大
     prisma.project.findFirst({
       where: {
         status: ProjectStatus.PUBLISHED,
         OR: [
           { developYear: { gt: developYear } },
-          { developYear, slug: { lt: slug } },
+          {
+            AND: [
+              { developYear },
+              { publishedAt: { gt: publishedAt } },
+            ],
+          },
+          {
+            AND: [
+              { developYear },
+              { publishedAt },
+              { id: { gt: id } },
+            ],
+          },
         ],
       },
-      orderBy: [{ developYear: "asc" }, { slug: "desc" }],
+      orderBy: [{ developYear: "asc" }, { publishedAt: "asc" }, { id: "asc" }],
       select: { slug: true, title: true },
     }),
+    // next = 列表中当前之后（更靠近结尾 = 更旧的作品）
+    // WHERE: developYear 更小，或同年份 publishedAt 更小，或同年份同 publishedAt 但 id 更小
     prisma.project.findFirst({
       where: {
         status: ProjectStatus.PUBLISHED,
         OR: [
           { developYear: { lt: developYear } },
-          { developYear, slug: { gt: slug } },
+          {
+            AND: [
+              { developYear },
+              { publishedAt: { lt: publishedAt } },
+            ],
+          },
+          {
+            AND: [
+              { developYear },
+              { publishedAt },
+              { id: { lt: id } },
+            ],
+          },
         ],
       },
-      orderBy: [{ developYear: "desc" }, { slug: "asc" }],
+      orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
       select: { slug: true, title: true },
     }),
   ]);
@@ -211,7 +264,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           select: { id: true },
         })
       : Promise.resolve(null),
-    getAdjacentProjects(slug, project.title, project.developYear, sort),
+    getAdjacentProjects(slug, project.title, project.developYear, project.publishedAt!, project.id, sort),
   ]);
 
   const initialLiked = !!likeResult;
@@ -239,7 +292,12 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
       </nav>
 
       {/* ── 上一个 / 下一个导航 ── */}
-      <div className="flex items-center justify-between mb-6">
+      {sort === "likes" ? (
+        <div className="text-xs text-brand-text-muted mb-6 text-center py-2 border rounded-lg border-brand-border-subtle">
+          当前为「喜欢」排序（动态变化），无法定位前后作品
+        </div>
+      ) : (
+      <div className={`flex items-center ${prev && next ? "justify-between" : prev ? "justify-start" : "justify-end"} mb-6`}>
         <div>
           {prev ? (
             <Link href={`/works/${prev.slug}${sort !== "date" ? `?sort=${sort}` : ""}`} className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-brand-border-subtle text-brand-text-body transition-colors hover:bg-brand-surface-page">
@@ -257,6 +315,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           ) : <span className="text-sm px-3 py-2 text-gray-300">已是最后一个</span>}
         </div>
       </div>
+      )}
 
       {/* 后台预取相邻作品 → 切换时无需等待 */}
       <PrefetchNav prevSlug={prev?.slug} nextSlug={next?.slug} sort={sort} />
