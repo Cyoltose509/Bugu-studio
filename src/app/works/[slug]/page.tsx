@@ -21,6 +21,7 @@ import ApproveButton from "@/components/works/ApproveButton";
 import CommentSection from "@/components/projects/CommentSection";
 import ProjectLikeButton from "@/components/projects/ProjectLikeButton";
 import { RichContent } from "@/components/ui/RichContent";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 const ImageGallery = nextDynamic(() => import("@/components/projects/ImageGallery"), {
   loading: () => (
@@ -164,15 +165,7 @@ function DetailSkeleton() {
 export default function WorkDetailPage({ params, searchParams }: PageProps) {
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
-      <Suspense fallback={
-        <nav className="text-sm mb-6 text-brand-text-muted">
-          <Link href="/" className="hover:underline text-brand-text-secondary">首页</Link>
-          <span className="mx-2">/</span>
-          <Link href="/works" className="hover:underline text-brand-text-secondary">作品库</Link>
-          <span className="mx-2">/</span>
-          <span className="inline-block w-32 h-3 bg-brand-surface rounded animate-pulse align-middle" />
-        </nav>
-      }>
+      <Suspense fallback={<LogoLoading text="正在加载作品详情..." />}>
         <WorkDetailContent params={params} searchParams={searchParams} />
       </Suspense>
     </div>

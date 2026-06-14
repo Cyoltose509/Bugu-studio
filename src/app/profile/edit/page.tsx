@@ -1,15 +1,29 @@
 /**
- * 编辑个人资料
+ * 编辑个人资料 — 流式渲染，首字节 < 50ms
  */
 
+import { Suspense } from "react";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import EditForm from "@/components/forms/EditForm";
+import LogoLoading from "@/components/ui/LogoLoading";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditProfilePage() {
+/* ── Shell（同步，立即渲染） ── */
+
+export default function EditProfilePage() {
+  return (
+    <Suspense fallback={<LogoLoading text="正在加载编辑资料..." />}>
+      <EditProfileContent />
+    </Suspense>
+  );
+}
+
+/* ── 异步数据组件 ── */
+
+async function EditProfileContent() {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
 
