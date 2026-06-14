@@ -96,8 +96,8 @@ export default function EditForm({
     // 邀请码
     const [inviteInput, setInviteInput] = useState("");
     const [invitePending, setInvitePending] = useState(false);
-    const [inviteMsg, setInviteMsg] = useState("");
-    const [inviteError, setInviteError] = useState("");
+  const [inviteMsg, setInviteMsg] = useState("");
+  const [inviteError, setInviteError] = useState("");
 
     // 表单值
     const [nameValue, setNameValue] = useState(originalName);

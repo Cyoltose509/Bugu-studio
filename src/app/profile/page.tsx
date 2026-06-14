@@ -199,6 +199,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
                 )}
                 <Link href="/profile/edit" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">编辑资料</Link>
                 <Link href="/profile/settings" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">通知设置</Link>
+                <Link href="/profile/privacy" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">隐私设置</Link>
                 <Link href="/auth/signout" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">退出登录</Link>
               </>
             )}

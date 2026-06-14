@@ -2,7 +2,25 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import { saveAllAsLongImage, saveAllAsPDF } from "@/lib/print-utils";
-import YearNewspaper from "@/components/history/YearNewspaper";
+import YearNewspaper, { SectionVisibility } from "@/components/history/YearNewspaper";
+
+const SECTION_LABELS: { key: keyof SectionVisibility; label: string }[] = [
+  { key: "lead", label: "卷首语" },
+  { key: "stats", label: "数字面板" },
+  { key: "projects", label: "作品巡礼" },
+  { key: "awards", label: "所获奖项" },
+  { key: "members", label: "新血液" },
+  { key: "activeMembers", label: "活跃成员" },
+  { key: "activities", label: "活动回顾" },
+  { key: "events", label: "大事记" },
+];
+
+function allSections(value: boolean): SectionVisibility {
+  return {
+    lead: value, stats: value, projects: value, awards: value,
+    members: value, activeMembers: value, activities: value, events: value,
+  };
+}
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
@@ -61,6 +79,8 @@ export default function HistoryClient({
   const [savingAllImg, setSavingAllImg] = useState(false);
   const [savingAllPdf, setSavingAllPdf] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [sections, setSections] = useState<SectionVisibility>(allSections(true));
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // 等待客户端挂载后再显示按钮（避免 SSR 水合不匹配）
   useEffect(() => { setMounted(true); }, []);
@@ -116,6 +136,8 @@ export default function HistoryClient({
     }
   }, [savingAllPdf, startYear]);
 
+  const visibleCount = Object.values(sections).filter(Boolean).length;
+
   return (
     <>
       {/* ═══ 打印样式 ═══ */}
@@ -137,7 +159,7 @@ export default function HistoryClient({
             max-width: 100% !important;
             margin: 0 auto 16px !important;
           }
-          [data-save-buttons], [data-toolbar] {
+          [data-save-buttons], [data-toolbar], [data-history-sidebar] {
             display: none !important;
           }
           @page {
@@ -162,49 +184,136 @@ export default function HistoryClient({
         }
       `}</style>
 
-      {/* ═══ 顶部工具栏 ═══ */}
-      {mounted && (
-        <div data-toolbar className="flex flex-wrap items-center justify-center gap-4 mb-6">
-          <span className="text-sm mr-2 text-brand-text-secondary">
-            共 {yearCount} 年年报（{startYear}年至今）
-          </span>
-          <button type="button" onClick={saveAllPDF} disabled={savingAllPdf} className={topBtnClass(savingAllPdf)} title="可能需要关闭浏览器的窗口拦截">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/>
-              <polyline points="9 15 12 18 15 15"/>
-            </svg>
-            {savingAllPdf ? "生成中…" : "保存全部为PDF"}
-          </button>
-          <button type="button" onClick={saveAllAsImage} disabled={savingAllImg} className={topBtnClass(savingAllImg)} title="页面左侧上暂时出现图片是正常现象">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-            {savingAllImg ? "生成中…" : "保存全部为长图"}
-          </button>
-        </div>
-      )}
+      <div className="flex gap-0 lg:gap-8 items-start">
+        {/* ═══ 左侧栏目筛选边栏 ═══ */}
+        {mounted && (
+          <aside data-history-sidebar className={`
+            shrink-0 transition-all duration-300
+            ${sidebarOpen
+              ? "w-[200px] bg-card border border-brand-border-subtle rounded-lg p-4"
+              : "w-10"}
+            sticky top-24
+          `}>
+            {sidebarOpen ? (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-brand-navy">栏目筛选</span>
+                  <button
+                    type="button"
+                    onClick={() => setSidebarOpen(false)}
+                    className="text-brand-text-muted hover:text-brand-text-heading text-xs p-0.5"
+                    title="收起"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                  </button>
+                </div>
 
-      {/* ═══ 报纸列表 ═══ */}
-      <div className="space-y-8">
-        {yearDetails.map(({ year, members, projects, events, activities, activeMembers, presidents }) => (
-          <div key={year} className="history-scroll-wrapper">
-            <YearNewspaper
-              year={year}
-              members={members}
-              projects={projects}
-              events={events}
-              activities={activities}
-              activeMembers={activeMembers}
-              presidents={presidents}
-              startYear={startYear}
-              registerRef={(el) => registerPaper(year, el)}
-            />
+                {/* 全选 / 取消全选 */}
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setSections(allSections(true))}
+                    className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 8 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
+                  >
+                    全选
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSections(allSections(false))}
+                    className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 0 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
+                  >
+                    清空
+                  </button>
+                </div>
+
+                {/* 栏目列表 */}
+                <div className="flex flex-col gap-1">
+                  {SECTION_LABELS.map(({ key, label }) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 py-1 px-1.5 rounded cursor-pointer hover:bg-brand-surface transition-colors text-sm text-brand-text-body"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={sections[key]}
+                        onChange={() => setSections(prev => ({ ...prev, [key]: !prev[key] }))}
+                        className="w-3.5 h-3.5 rounded accent-brand-navy cursor-pointer"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+
+                <div className="mt-3 pt-2 border-t border-brand-border-subtle text-[11px] text-brand-text-muted">
+                  显示 {visibleCount}/8 个栏目
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="w-full h-full flex flex-col items-center justify-center gap-1 text-brand-text-muted hover:text-brand-text-heading"
+                title="展开栏目筛选"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+                <span className="text-[10px] leading-tight" style={{ writingMode: "vertical-rl" }}>栏目</span>
+              </button>
+            )}
+          </aside>
+        )}
+
+        {/* ═══ 主内容区 ═══ */}
+        <div className="flex-1 min-w-0">
+          {/* ═══ 顶部工具栏 ═══ */}
+          {mounted && (
+            <div data-toolbar className="flex flex-wrap items-center justify-center gap-4 mb-6">
+              <span className="text-sm mr-2 text-brand-text-secondary">
+                共 {yearCount} 年年报（{startYear}年至今）
+              </span>
+              <button type="button" onClick={saveAllPDF} disabled={savingAllPdf} className={topBtnClass(savingAllPdf)} title="可能需要关闭浏览器的窗口拦截">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="12" y1="18" x2="12" y2="12"/>
+                  <polyline points="9 15 12 18 15 15"/>
+                </svg>
+                {savingAllPdf ? "生成中…" : "保存全部为PDF"}
+              </button>
+              <button type="button" onClick={saveAllAsImage} disabled={savingAllImg} className={topBtnClass(savingAllImg)} title="页面左侧上暂时出现图片是正常现象">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                {savingAllImg ? "生成中…" : "保存全部为长图"}
+              </button>
+            </div>
+          )}
+
+          {/* ═══ 报纸列表 ═══ */}
+          <div className="space-y-8">
+            {yearDetails.map(({ year, members, projects, events, activities, activeMembers, presidents }) => (
+              <div key={year} className="history-scroll-wrapper">
+                <YearNewspaper
+                  year={year}
+                  members={members}
+                  projects={projects}
+                  events={events}
+                  activities={activities}
+                  activeMembers={activeMembers}
+                  presidents={presidents}
+                  startYear={startYear}
+                  registerRef={(el) => registerPaper(year, el)}
+                  sections={sections}
+                />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     </>
   );

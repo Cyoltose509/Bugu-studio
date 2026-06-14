@@ -62,6 +62,17 @@ interface ActiveMember extends Member {
     meetings: number;
 }
 
+export interface SectionVisibility {
+    lead: boolean;
+    stats: boolean;
+    projects: boolean;
+    awards: boolean;
+    members: boolean;
+    activeMembers: boolean;
+    activities: boolean;
+    events: boolean;
+}
+
 interface Props {
     year: number;
     members: Member[];
@@ -72,6 +83,7 @@ interface Props {
     presidents: Member[];
     startYear: number;
     registerRef?: (el: HTMLDivElement | null) => void;
+    sections: SectionVisibility;
 }
 
 const TYPE_DESC: Record<string, string> = {
@@ -412,7 +424,8 @@ function YearNewspaper({
                                           activeMembers,
                                           presidents,
                                           startYear,
-                                          registerRef
+                                          registerRef,
+                                          sections,
                                       }: Props) {
     const paperRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
@@ -498,13 +511,16 @@ function YearNewspaper({
                     <div className={Q.body}>
 
                         {/* ─── 卷首语 ─── */}
+                        {sections.lead && (
                         <div className={Q.lead}>
                             <span className={Q.leadText}>{leadText}</span>
                         </div>
+                        )}
 
-                        <div className={Q.rule} style={QS.rule}/>
+                        {sections.lead && <div className={Q.rule} style={QS.rule}/>}
 
                         {/* ─── 数字面板 ─── */}
+                        {sections.stats && (
                         <div className={Q.twoCol}>
                             <div className={Q.statPanel} style={QS.statPanel}>
                                 <div className={Q.panelLabel} style={F_SANS}>{yearIndex <= 1 ? "创社元年" : `第 ${yearIndex} 年`} 数字</div>
@@ -532,9 +548,10 @@ function YearNewspaper({
                                 )}
                             </div>
                         </div>
+                        )}
 
                         {/* ═══ 作品巡礼（代表作 + 其余作品） ═══ */}
-                        {projects.length > 0 && (
+                        {sections.projects && projects.length > 0 && (
                             <>
                                 <div className={Q.thickRule}/>
                                 <div className={Q.sectionTitle}>作 品 巡 礼</div>
@@ -625,8 +642,37 @@ function YearNewspaper({
                             </>
                         )}
 
+                        {/* ═══ 所获奖项 ═══ */}
+                        {sections.awards && projects.some(p => (p.awards || []).length > 0) && (
+                            <>
+                                <div className={Q.thickRule} style={QS.thickRule}/>
+                                <div className={Q.sectionTitle}>所 获 奖 项</div>
+
+                                <div className="flex flex-col gap-4">
+                                    {projects
+                                        .filter(p => (p.awards || []).length > 0)
+                                        .map(p => (
+                                            <div key={p.id} className="py-2 border-b border-[#e8ddd0] last:border-b-0">
+                                                <Link href={`/works/${p.slug}`}
+                                                      className="text-sm no-underline hover:text-[#25547A] transition-colors italic text-[#8B7D6B]">
+                                                    {p.title}
+                                                </Link>
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {(p.awards || []).map((award, i) => (
+                                                        <span key={i}
+                                                              className="text-xs px-2.5 py-1 rounded font-medium bg-[rgba(196,168,106,0.12)] text-[#8B7355]">
+                                                            🏆 {award}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </>
+                        )}
+
                         {/* ═══ 这一年的新血液（当年加入的成员） ═══ */}
-                        {members.length > 0 && (
+                        {sections.members && members.length > 0 && (
                             <>
                                 <div className={Q.thickRule} style={QS.thickRule}/>
                                 <div className={Q.sectionTitle} style={QS.sectionTitle}>这 一 年 的 新 血 液</div>
@@ -655,7 +701,7 @@ function YearNewspaper({
                         )}
 
                         {/* ═══ 年度活跃成员（Top3 展示 + 当年社长） ═══ */}
-                        {(activeMembers.length > 0 || presidents.length > 0) && (
+                        {sections.activeMembers && (activeMembers.length > 0 || presidents.length > 0) && (
                             <>
                                     <div className={Q.thickRule} style={QS.thickRule}/>
                                 <div className={Q.sectionTitle} style={F_SANS}>年 度 活 跃 成 员</div>
@@ -720,7 +766,7 @@ function YearNewspaper({
                         )}
 
                         {/* ═══ 活动回顾 ═══ */}
-                        {(nonMeeting.length > 0 || meetingCount > 0) && (
+                        {sections.activities && (nonMeeting.length > 0 || meetingCount > 0) && (
                             <>
                                 <div className={Q.thickRule} style={QS.thickRule}/>
                                 <div className={Q.sectionTitle} style={QS.sectionTitle}>活 动 回 顾</div>
@@ -762,7 +808,7 @@ function YearNewspaper({
                         )}
 
                         {/* ═══ 大事记 ═══ */}
-                        {events.length > 0 && (
+                        {sections.events && events.length > 0 && (
                             <>
                                 <div className={Q.thickRule} style={QS.thickRule}/>
                                 <div className={Q.sectionTitle} style={QS.sectionTitle}>大 事 记</div>

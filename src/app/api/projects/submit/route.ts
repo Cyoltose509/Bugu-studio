@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     return apiError(msg, 422);
   }
 
-  // 解析 userId → memberId
+  // 解析 userId → memberId（如果是社团成员则关联 memberId，否则保留 userId）
   const rolesWithUserId = parsed.data.memberRoles.filter((r: any) => r.userId && !r.memberId);
   if (rolesWithUserId.length > 0) {
     const userIds = [...new Set(rolesWithUserId.map((r: any) => r.userId as string))];
@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
     for (const r of parsed.data.memberRoles) {
       if (r.userId && !r.memberId) {
         const mid = userToMember.get(r.userId as string);
-        if (!mid) return apiError(`用户 ${r.userId} 不是社团成员，请以外部成员方式添加`, 400);
-        r.memberId = mid;
+        if (mid) r.memberId = mid;
+        // 找不到 ClubMember 说明是普通注册用户，保留 userId 直接关联
       }
     }
   }
@@ -154,7 +154,8 @@ export async function POST(request: NextRequest) {
       members: {
         create: finalMemberRoles.map((m) => ({
           memberId: m.memberId || null,
-          externalName: m.memberId ? null : (m.externalName || null),
+          userId: m.userId || null,
+          externalName: (m.memberId || m.userId) ? null : (m.externalName || null),
           roles: m.roles,
         })),
       },

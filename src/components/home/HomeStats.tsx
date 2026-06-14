@@ -22,7 +22,7 @@ export default async function HomeStats() {
         <section className="py-10 border-y stats-gradient border-brand-border-subtle">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                    <Stat value={`${new Date().getFullYear() - foundedYear + 1}年`} label="社团历史"/>
+                    <Stat value={`${new Date().getFullYear() - foundedYear}年`} label="社团历史"/>
                     <Stat value={`${memberCount}+`} label="历届成员"/>
                     <Stat value={`${projectCount}+`} label="累计作品"/>
                     <Stat value={`${releasedCount}`} label="正式上架"/>
