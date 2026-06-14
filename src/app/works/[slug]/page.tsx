@@ -91,10 +91,9 @@ const getProject = cache(async (slug: string) => {
 /* ── 高效的相邻作品查询（与 /api/works 排序完全一致） ── */
 
 async function getAdjacentProjects(
-  slug: string,
   title: string,
   developYear: number,
-  publishedAt: Date,
+  publishedAt: Date | null,
   id: string,
   sort: string,
 ) {
@@ -134,53 +133,61 @@ async function getAdjacentProjects(
     return { prev, next };
   }
 
-  // date 排序（默认）: developYear DESC, publishedAt DESC, id DESC
+  // date 排序（默认）: developYear DESC, publishedAt DESC NULLS LAST, id DESC
+  if (publishedAt === null) {
+    // publishedAt 为空时，跳过 publishedAt 比较（避免 Prisma null 校验错误）
+    // NULLS LAST → 同一年份中有日期的作品在前
+    const [prev, next] = await Promise.all([
+      prisma.project.findFirst({
+        where: {
+          status: ProjectStatus.PUBLISHED,
+          OR: [
+            { developYear: { gt: developYear } },
+            { AND: [{ developYear }, { publishedAt: { not: null } }] },
+            { AND: [{ developYear }, { publishedAt: null }, { id: { gt: id } }] },
+          ],
+        },
+        orderBy: [{ developYear: "asc" }, { publishedAt: "asc" }, { id: "asc" }],
+        select: { slug: true, title: true },
+      }),
+      prisma.project.findFirst({
+        where: {
+          status: ProjectStatus.PUBLISHED,
+          OR: [
+            { developYear: { lt: developYear } },
+            { AND: [{ developYear }, { publishedAt: null }, { id: { lt: id } }] },
+          ],
+        },
+        orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
+        select: { slug: true, title: true },
+      }),
+    ]);
+    return { prev, next };
+  }
+
+  // publishedAt 非空时的正常三级级联比较
   const [prev, next] = await Promise.all([
     // prev = 列表中当前之前（更靠近开头 = 更新的作品）
-    // WHERE: developYear 更大，或同年份 publishedAt 更大，或同年份同 publishedAt 但 id 更大
     prisma.project.findFirst({
       where: {
         status: ProjectStatus.PUBLISHED,
         OR: [
           { developYear: { gt: developYear } },
-          {
-            AND: [
-              { developYear },
-              { publishedAt: { gt: publishedAt } },
-            ],
-          },
-          {
-            AND: [
-              { developYear },
-              { publishedAt },
-              { id: { gt: id } },
-            ],
-          },
+          { AND: [{ developYear }, { publishedAt: { gt: publishedAt } }] },
+          { AND: [{ developYear }, { publishedAt }, { id: { gt: id } }] },
         ],
       },
       orderBy: [{ developYear: "asc" }, { publishedAt: "asc" }, { id: "asc" }],
       select: { slug: true, title: true },
     }),
     // next = 列表中当前之后（更靠近结尾 = 更旧的作品）
-    // WHERE: developYear 更小，或同年份 publishedAt 更小，或同年份同 publishedAt 但 id 更小
     prisma.project.findFirst({
       where: {
         status: ProjectStatus.PUBLISHED,
         OR: [
           { developYear: { lt: developYear } },
-          {
-            AND: [
-              { developYear },
-              { publishedAt: { lt: publishedAt } },
-            ],
-          },
-          {
-            AND: [
-              { developYear },
-              { publishedAt },
-              { id: { lt: id } },
-            ],
-          },
+          { AND: [{ developYear }, { publishedAt: { lt: publishedAt } }] },
+          { AND: [{ developYear }, { publishedAt }, { id: { lt: id } }] },
         ],
       },
       orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
@@ -188,30 +195,6 @@ async function getAdjacentProjects(
     }),
   ]);
   return { prev, next };
-}
-
-/* ── DetailSkeleton ── */
-
-function DetailSkeleton() {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-      <div className="lg:col-span-2 space-y-6">
-        <div className="aspect-video rounded-xl bg-brand-surface animate-pulse" />
-        <div className="space-y-3">
-          <div className="h-8 w-48 bg-brand-surface rounded animate-pulse" />
-          <div className="h-5 w-64 bg-brand-surface rounded animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <div className="h-4 w-full bg-brand-surface rounded animate-pulse" />
-          <div className="h-4 w-3/4 bg-brand-surface rounded animate-pulse" />
-        </div>
-      </div>
-      <aside className="space-y-4">
-        <div className="h-32 bg-brand-surface rounded-xl animate-pulse" />
-        <div className="h-40 bg-brand-surface rounded-xl animate-pulse" />
-      </aside>
-    </div>
-  );
 }
 
 /* ── Shell（同步，立即渲染） ── */
@@ -264,7 +247,11 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           select: { id: true },
         })
       : Promise.resolve(null),
-    getAdjacentProjects(slug, project.title, project.developYear, project.publishedAt!, project.id, sort),
+    getAdjacentProjects(project.title, project.developYear, project.publishedAt, project.id, sort)
+      .catch((err) => {
+        console.error("[WorkDetail] getAdjacentProjects failed:", err);
+        return { prev: null, next: null } as const;
+      }),
   ]);
 
   const initialLiked = !!likeResult;
