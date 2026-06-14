@@ -15,23 +15,11 @@ async function getProjects() {
         where: { status: ProjectStatus.PUBLISHED },
         orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }],
         take: 6,
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          subtitle: true,
-          description: true,
-          coverImage: true,
-          type: true,
-          developYear: true,
-          awards: true,
-          aiUsages: true,
+        include: {
           tags: { include: { tag: true } },
           members: {
             orderBy: { sortOrder: "asc" },
-            select: {
-              id: true,
-              externalName: true,
+            include: {
               member: {
                 select: {
                   displayName: true,

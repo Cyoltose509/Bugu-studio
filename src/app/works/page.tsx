@@ -184,6 +184,7 @@ async function WorksFirstPage({ params }: { params: Record<string, any> }) {
                         developYear: true, publishedAt: true,
                         tags: {include: {tag: true}},
                         awards: true,
+                        aiUsages: true,
                         _count: {select: {likes: true}},
                         members: {
                             orderBy: {sortOrder: "asc"},

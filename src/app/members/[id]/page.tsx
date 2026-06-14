@@ -66,18 +66,13 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
         projectMembers: {
           orderBy: [{ project: { developYear: "desc" } }, { project: { publishedAt: "desc" } }, { sortOrder: "asc" }],
           where: { project: { status: ProjectStatus.PUBLISHED } },
-          select: {
-            id: true, externalName: true, roles: true, memberId: true, sortOrder: true,
+          include: {
             project: {
-              select: {
-                id: true, slug: true, title: true, subtitle: true,
-                description: true, coverImage: true, type: true, developYear: true,
-                awards: true, aiUsages: true,
+              include: {
                 tags: { include: { tag: true } },
                 members: {
                   orderBy: { sortOrder: "asc" },
-                  select: {
-                    id: true, externalName: true,
+                  include: {
                     member: {
                       select: {
                         displayName: true,
@@ -108,8 +103,20 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
             status: ProjectStatus.PUBLISHED,
           },
           select: {
-            id: true, slug: true, title: true,
-            type: true, coverImage: true, developYear: true,
+            id: true, slug: true, title: true, subtitle: true,
+            description: true, type: true, coverImage: true, developYear: true,
+            awards: true, aiUsages: true,
+            tags: {include: {tag: true}},
+            members: {
+              orderBy: {sortOrder: "asc"},
+              include: {
+                member: {
+                  select: {displayName: true, avatar: true, user: {select: {image: true}}},
+                },
+                user: {select: {name: true, image: true}},
+              },
+            },
+            _count: {select: {likes: true}},
           },
           orderBy: { createdAt: "desc" },
         })

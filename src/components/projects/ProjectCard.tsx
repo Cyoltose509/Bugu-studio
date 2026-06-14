@@ -128,16 +128,16 @@ function ProjectCard({
       {/* 封面图区域 */}
       <div className="relative aspect-video bg-brand-surface">
         {/* 🏆 奖项角标 + 🤖 AI 角标 */}
-        {(p.awards?.length || p.aiUsages?.length) ? (
-          <div className="absolute top-2 right-2 flex gap-0.5 text-lg z-10">
-            {p.awards && p.awards.length > 0 && (
-              <span title={p.awards.join("、")}>🏆</span>
-            )}
-            {p.aiUsages && p.aiUsages.length > 0 && (
-              <span title="使用了 AI 技术">🤖</span>
-            )}
-          </div>
-        ) : null}
+        <div className="absolute top-2 right-2 flex gap-0.5 text-lg z-10"
+          data-ai={JSON.stringify(p.aiUsages)}
+          data-awards={JSON.stringify(p.awards)}>
+          {p.awards && p.awards.length > 0 && (
+            <span title={p.awards.join("、")}>🏆</span>
+          )}
+          {p.aiUsages && p.aiUsages.length > 0 && (
+            <span title="使用了 AI 技术">🤖</span>
+          )}
+        </div>
 
         {/* 状态角标（仅 /profile） */}
         {showStatusBadge && p.status && (

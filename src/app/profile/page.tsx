@@ -75,16 +75,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       prisma.project.findMany({
         where: { submitterId: userId },
         orderBy: [{ developYear: "desc" }, { createdAt: "desc" }],
-        select: {
-          id: true, slug: true, title: true, subtitle: true,
-          description: true, coverImage: true, type: true,
-          developYear: true, status: true,
-          awards: true, aiUsages: true,
+        include: {
           tags: { include: { tag: true } },
           members: {
             orderBy: { sortOrder: "asc" },
-            select: {
-              id: true, externalName: true,
+            include: {
               member: {
                 select: {
                   displayName: true,
@@ -107,16 +102,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           status: "PUBLISHED",
         },
         orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }],
-        select: {
-          id: true, slug: true, title: true, subtitle: true,
-          description: true, coverImage: true, type: true,
-          developYear: true, status: true,
-          awards: true, aiUsages: true,
+        include: {
           tags: { include: { tag: true } },
           members: {
             orderBy: { sortOrder: "asc" },
-            select: {
-              id: true, externalName: true,
+            include: {
               member: {
                 select: {
                   displayName: true,
