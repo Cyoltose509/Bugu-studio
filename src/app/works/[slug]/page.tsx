@@ -22,6 +22,7 @@ import CommentSection from "@/components/projects/CommentSection";
 import ProjectLikeButton from "@/components/projects/ProjectLikeButton";
 import { RichContent } from "@/components/ui/RichContent";
 import LogoLoading from "@/components/ui/LogoLoading";
+import PrefetchNav from "@/components/works/PrefetchNav";
 
 const ImageGallery = nextDynamic(() => import("@/components/projects/ImageGallery"), {
   loading: () => (
@@ -256,6 +257,9 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           ) : <span className="text-sm px-3 py-2 text-gray-300">已是最后一个</span>}
         </div>
       </div>
+
+      {/* 后台预取相邻作品 → 切换时无需等待 */}
+      <PrefetchNav prevSlug={prev?.slug} nextSlug={next?.slug} sort={sort} />
 
       {/* 待审核横幅 */}
       {isPending && (
