@@ -36,6 +36,7 @@ export interface ProjectCardProject {
   developYear: number | null;
   status?: string; // 仅 /profile 使用
   awards?: string[];
+  aiUsages?: string[];
   tags?: { tag: { slug: string; name: string } }[];
   _count?: { likes: number };
   liked?: boolean;
@@ -126,12 +127,17 @@ function ProjectCard({
 
       {/* 封面图区域 */}
       <div className="relative aspect-video bg-brand-surface">
-        {/* 🏆 奖项角标 */}
-        {p.awards && p.awards.length > 0 && (
-          <div className="absolute top-2 right-2 text-lg z-10" title={p.awards.join("、")}>
-            🏆
+        {/* 🏆 奖项角标 + 🤖 AI 角标 */}
+        {(p.awards?.length || p.aiUsages?.length) ? (
+          <div className="absolute top-2 right-2 flex gap-0.5 text-lg z-10">
+            {p.awards && p.awards.length > 0 && (
+              <span title={p.awards.join("、")}>🏆</span>
+            )}
+            {p.aiUsages && p.aiUsages.length > 0 && (
+              <span title="使用了 AI 技术">🤖</span>
+            )}
           </div>
-        )}
+        ) : null}
 
         {/* 状态角标（仅 /profile） */}
         {showStatusBadge && p.status && (

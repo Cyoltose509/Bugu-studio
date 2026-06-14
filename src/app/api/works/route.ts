@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
             publishedAt: true,
             tags: { include: { tag: true } },
             awards: true,
+            aiUsages: true,
             _count: { select: { likes: true } },
             members: {
                 orderBy: { sortOrder: "asc" },
