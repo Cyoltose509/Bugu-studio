@@ -66,13 +66,18 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
         projectMembers: {
           orderBy: [{ project: { developYear: "desc" } }, { project: { publishedAt: "desc" } }, { sortOrder: "asc" }],
           where: { project: { status: ProjectStatus.PUBLISHED } },
-          include: {
+          select: {
+            id: true, externalName: true, roles: true, memberId: true, sortOrder: true,
             project: {
-              include: {
+              select: {
+                id: true, slug: true, title: true, subtitle: true,
+                description: true, coverImage: true, type: true, developYear: true,
+                awards: true, aiUsages: true,
                 tags: { include: { tag: true } },
                 members: {
                   orderBy: { sortOrder: "asc" },
-                  include: {
+                  select: {
+                    id: true, externalName: true,
                     member: {
                       select: {
                         displayName: true,
