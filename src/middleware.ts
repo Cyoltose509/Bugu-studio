@@ -97,7 +97,9 @@ export default async function middleware(req: NextRequest) {
   // 检查 MEMBER 路由
   if (isMember) {
     const role = (user as any)?.role;
-    if (!role || !["MEMBER", "ADMIN"].includes(role)) {
+    const memberId = (user as any)?.memberId;
+    // 双重校验：role 为 MEMBER/ADMIN，或 JWT 中有 memberId（ClubMember 记录）
+    if ((!role || !["MEMBER", "ADMIN"].includes(role)) && !memberId) {
       if (isRscRequest(req)) return new NextResponse("Unauthorized", { status: 401 });
       if (user) {
         return NextResponse.redirect(new URL("/auth/login?error=permission_denied", req.url));

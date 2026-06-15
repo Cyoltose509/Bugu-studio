@@ -155,19 +155,40 @@ export const authConfig = {
       if (trigger === "update" && token.id) {
         try {
           const { prisma } = await import("@/lib/db/prisma");
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { image: true, name: true, role: true, isActive: true },
-          });
+          const [dbUser, member] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: { image: true, name: true, role: true, isActive: true },
+            }),
+            prisma.clubMember.findUnique({
+              where: { userId: token.id as string },
+              select: { id: true },
+            }),
+          ]);
           if (!dbUser?.isActive) return {} as any;
           if (dbUser) {
             token.picture = dbUser.image ?? undefined;
             token.name = dbUser.name ?? undefined;
             token.role = dbUser.role;
           }
+          // 同步 memberId 到 token，供 middleware 备用校验
+          if (member) token.memberId = member.id;
+          else delete (token as any).memberId;
         } catch {
-          // Edge Runtime 降级
+          // Edge Runtime 降级：使用现有 token 数据
         }
+      }
+
+      // 首次登录时也查一下 memberId（避免 jwt callback 未执行过 update 时无此字段）
+      if (!token.memberId && token.id) {
+        try {
+          const { prisma } = await import("@/lib/db/prisma");
+          const member = await prisma.clubMember.findUnique({
+            where: { userId: token.id as string },
+            select: { id: true },
+          });
+          if (member) token.memberId = member.id;
+        } catch { /* Edge Runtime 降级 */ }
       }
 
       return token;
@@ -179,6 +200,7 @@ export const authConfig = {
         session.user.email = token.email as string;
         session.user.image = (token.picture as string) ?? undefined;
         session.user.name = (token.name as string) ?? undefined;
+        (session.user as any).memberId = (token as any).memberId || undefined;
 
         const userId = token.id as string;
 

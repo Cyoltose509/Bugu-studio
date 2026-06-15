@@ -68,7 +68,7 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
     const { prisma } = await import("@/lib/db/prisma");
 
     const [admins, notifMembers] = await Promise.all([
-      prisma.user.findMany({ where: { role: "ADMIN", member: { graduated: false } }, select: { id: true } }),
+      prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } }),
       prisma.clubMember.findMany({
         where: { notifyNewProjects: true },
         select: { userId: true },
@@ -126,7 +126,7 @@ export async function notifyProjectEdit(projectId: string, projectTitle: string,
     const { prisma } = await import("@/lib/db/prisma");
 
     const admins = await prisma.user.findMany({
-      where: { role: "ADMIN", member: { graduated: false } },
+      where: { role: "ADMIN" },
       select: { id: true },
     });
 

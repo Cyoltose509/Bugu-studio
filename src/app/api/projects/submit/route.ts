@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { withAuditContext } from "@/lib/db/audit-context";
+import { notifyNewProject } from "@/lib/services/notification";
 import { ProjectStatus } from "@prisma/client";
 
 export const POST = withAuditContext(async function (request: NextRequest) {
@@ -137,7 +138,7 @@ export const POST = withAuditContext(async function (request: NextRequest) {
   const publishedAt = isAdminUser ? new Date() : null;
 
   // 写入
-  await prisma.project.create({
+  const created = await prisma.project.create({
     data: {
       title: parsed.data.title,
       subtitle: parsed.data.subtitle || null,
@@ -173,6 +174,11 @@ export const POST = withAuditContext(async function (request: NextRequest) {
         : undefined,
     },
   });
+
+  // ── 成员提交后通知管理员审核 ──
+  if (projectStatus === ProjectStatus.PENDING) {
+    notifyNewProject(created.id, parsed.data.title, session.user.name || "未知用户").catch(() => {});
+  }
 
   await Promise.all([
     invalidateCache("members:all"),
