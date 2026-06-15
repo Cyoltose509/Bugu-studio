@@ -54,6 +54,11 @@ function _setSessionCache(key: string, data: SessionCacheEntry) {
   _sessionCache.set(key, { data, ts: Date.now() });
 }
 
+/** 强制清除指定用户的 session 缓存（角色变更/邀请码兑换后调用） */
+export function invalidateSessionCache(userId: string) {
+  _sessionCache.delete(userId);
+}
+
 export const authConfig = {
   secret: process.env.AUTH_SECRET!,
   session: {

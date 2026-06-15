@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db/prisma";
 import { invalidateCache } from "@/lib/db/cache";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { withAuditContext } from "@/lib/db/audit-context";
+import { invalidateSessionCache } from "@/lib/auth/auth";
 
 export const POST = withAuditContext(async function (request: NextRequest) {
   // 速率限制：每 IP 每分钟 3 次
@@ -75,6 +76,9 @@ export const POST = withAuditContext(async function (request: NextRequest) {
     where: { id: session.user.id },
     data: { role: targetRole },
   });
+
+  // 清除 session 缓存，确保 role 立即生效（否则 middleware 可能因缓存读到旧 role 而拒绝访问）
+  invalidateSessionCache(session.user.id);
 
   // 如果升级为 MEMBER 或 ADMIN，同步创建 ClubMember 记录
   if (targetRole === "MEMBER" || targetRole === "ADMIN") {

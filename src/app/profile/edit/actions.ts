@@ -226,6 +226,9 @@ export async function redeemInviteCode(inviteCode: string) {
     data: { role: targetRole },
   });
 
+  // 清除 session 缓存，确保 role 立即生效
+  (await import("@/lib/auth/auth")).invalidateSessionCache(session.user.id);
+
   // 同步 ClubMember
   if (targetRole === "MEMBER" || targetRole === "ADMIN") {
     const existing = await prisma.clubMember.findUnique({
