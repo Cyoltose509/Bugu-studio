@@ -159,11 +159,11 @@ export default function WorksInfiniteGrid({
                     </div>
                 )}
                 {!hasMore && items.length > 0 && (
-                    <div className="text-center py-8 text-sm flex flex-col items-center gap-3 text-[#bbb]">
+                    <div className="text-center py-8 text-sm flex flex-col items-center gap-3 text-[#bbb] dark:text-[#556]">
                         <span>— 已到底部，共 {total} 件作品 —</span>
                         <button
                             onClick={() => window.location.reload()}
-                            className="text-xs px-4 py-1.5 rounded border transition-colors hover:bg-gray-50 text-brand-text-secondary border-brand-border-subtle"
+                            className="text-xs px-4 py-1.5 rounded border transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 text-brand-text-secondary border-brand-border-subtle"
                         >
                             🔄 刷新列表
                         </button>

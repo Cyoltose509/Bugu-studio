@@ -104,7 +104,7 @@ export default function WorksToolbar({ currentQ }: { currentQ?: string }) {
               }
             }}
             placeholder="搜索作品名称或简介..."
-            className="bg-card border rounded-lg px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent border-brand-border-subtle text-brand-text-heading w-[220px]"
+            className="bg-card border rounded-lg px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent border-brand-border-subtle text-brand-text-heading w-[220px]"
           />
         </div>
       </div>

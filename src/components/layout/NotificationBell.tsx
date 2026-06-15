@@ -247,16 +247,16 @@ export default function NotificationBell() {
               {items.map((n) => (
                 <div
                   key={n.id}
-                  className={`relative w-full group ${n.read ? "" : "bg-[#F0F8FF]"} border-[#f0f0f0]`}
+                  className={`relative w-full group ${n.read ? "" : "bg-[#F0F8FF] dark:bg-[#1a2a3a]"} border-[#f0f0f0] dark:border-[#2a3045]`}
                 >
                   <button
                     onClick={() => handleClick(n)}
-                    className="w-full text-left px-4 py-3 border-b transition-colors hover:bg-[#F0F5F9] border-[#f0f0f0]"
+                    className="w-full text-left px-4 py-3 border-b transition-colors hover:bg-[#F0F5F9] dark:hover:bg-[#1e2840] border-[#f0f0f0] dark:border-[#2a3045]"
                   >
                     <div className="flex items-start gap-2">
                       <span className="text-sm shrink-0 mt-0.5">{getIcon(n.type)}</span>
                       <div className="min-w-0 flex-1">
-                        <div className={`text-sm font-medium truncate ${n.read ? "" : "text-[#25547A]"}`}>
+                        <div className={`text-sm font-medium truncate ${n.read ? "" : "text-[#25547A] dark:text-[#7ab8e0]"}`}>
                           {n.title}
                         </div>
                         <div className="text-xs mt-0.5 truncate text-brand-text-secondary">{n.content}</div>
@@ -270,7 +270,7 @@ export default function NotificationBell() {
                   <button
                     type="button"
                     onClick={(e) => deleteOne(e, n.id)}
-                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 text-brand-text-muted"
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-950 text-brand-text-muted"
                     title="删除此通知"
                   >
                     ×

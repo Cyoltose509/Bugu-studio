@@ -179,13 +179,13 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
   };
 
   const badgeColor = (directive: string) => {
-    if (directive.includes("script")) return "bg-red-100 text-red-700 border-red-200";
-    if (directive.includes("style")) return "bg-orange-100 text-orange-700 border-orange-200";
-    if (directive.includes("img")) return "bg-yellow-100 text-yellow-700 border-yellow-200";
-    if (directive.includes("connect")) return "bg-blue-100 text-blue-700 border-blue-200";
-    if (directive.includes("font")) return "bg-green-100 text-green-700 border-green-200";
-    if (directive.includes("frame")) return "bg-purple-100 text-purple-700 border-purple-200";
-    return "bg-gray-100 text-gray-600 border-gray-200";
+    if (directive.includes("script")) return "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800";
+    if (directive.includes("style")) return "bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800";
+    if (directive.includes("img")) return "bg-yellow-100 dark:bg-yellow-950 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800";
+    if (directive.includes("connect")) return "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800";
+    if (directive.includes("font")) return "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800";
+    if (directive.includes("frame")) return "bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800";
+    return "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700";
   };
 
   return (
@@ -229,7 +229,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                   key={d.directive}
                   onClick={() => setSelectedDirective(selectedDirective === d.directive ? null : d.directive)}
                   className={`w-full flex items-center justify-between gap-4 text-left p-2 rounded-lg text-sm transition-colors ${
-                    selectedDirective === d.directive ? "bg-brand-blue/10" : "hover:bg-gray-50"
+                    selectedDirective === d.directive ? "bg-brand-blue/10" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
                 >
                   <span className="font-medium text-brand-text-body">{directiveLabel(d.directive)}</span>
@@ -237,7 +237,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                     <span>{d.uniqueReports} 项</span>
                     <span>{d.totalEvents} 次</span>
                     {/* 简易进度条 */}
-                    <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="w-24 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-brand-blue rounded-full transition-all"
                         style={{
@@ -281,7 +281,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
               <button
                 onClick={clearAll}
                 disabled={deleting}
-                className="px-3 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 text-xs border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 transition-colors"
               >
                 清空全部
               </button>
@@ -304,7 +304,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
         {loading && <div className="text-sm text-brand-text-secondary text-center py-4">加载中...</div>}
 
         {!loading && reports.length === 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+          <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl p-8 text-center">
             <div className="text-3xl mb-2">✅</div>
             <p className="text-brand-green font-medium">暂无 CSP 违规</p>
             <p className="text-xs text-brand-text-secondary mt-1">
@@ -317,7 +317,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
           <div className="bg-card border rounded-xl shadow-sm overflow-hidden border-brand-border-subtle">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-50 dark:bg-gray-800/50 border-b dark:border-gray-700">
                   <tr>
                     <th className="px-4 py-3 w-10">
                       <input
@@ -342,7 +342,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                     const isOpen = expanded.has(r.id);
                     return (
                       <Fragment key={r.id}>
-                        <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                        <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                           <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
@@ -366,7 +366,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                           </td>
                           <td className="px-4 py-2.5 text-center cursor-pointer" onClick={() => toggleExpand(r.id)}>
                             <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${
-                              r.count > 10 ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"
+                              r.count > 10 ? "bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-300" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300"
                             }`}>
                               {r.count}
                             </span>
@@ -387,7 +387,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                         </tr>
                         {isOpen && (
                           <tr key={`${r.id}-detail`}>
-                            <td colSpan={7} className="bg-gray-50/50 px-6 py-3">
+                            <td colSpan={7} className="bg-gray-50/50 dark:bg-gray-800/30 px-6 py-3">
                               <ReportDetail report={r} />
                             </td>
                           </tr>
@@ -407,7 +407,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
             <button
               onClick={() => { const p = Math.max(1, page - 1); setPage(p); fetchData(p); }}
               disabled={page <= 1}
-              className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-30 hover:bg-gray-50"
+              className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               上一页
             </button>
@@ -422,7 +422,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                   className={`w-8 h-8 text-xs rounded-lg ${
                     p === page
                       ? "bg-brand-blue text-white"
-                      : "border hover:bg-gray-50"
+                      : "border hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
                   {p}
@@ -432,7 +432,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
             <button
               onClick={() => { const p = Math.min(totalPages, page + 1); setPage(p); fetchData(p); }}
               disabled={page >= totalPages}
-              className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-30 hover:bg-gray-50"
+              className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               下一页
             </button>
@@ -459,7 +459,7 @@ function ReportDetail({ report }: { report: CspReportItem }) {
       {report.sample && (
         <div className="md:col-span-2 mt-1">
           <span className="text-brand-text-secondary">违规样本：</span>
-          <code className="block mt-1 p-2 bg-red-50 border border-red-100 rounded text-red-700 font-mono text-[11px] break-all max-h-20 overflow-y-auto">
+          <code className="block mt-1 p-2 bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 rounded text-red-700 dark:text-red-300 font-mono text-[11px] break-all max-h-20 overflow-y-auto">
             {escapeHtml(report.sample)}
           </code>
         </div>
