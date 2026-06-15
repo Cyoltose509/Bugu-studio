@@ -188,6 +188,18 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// 密码重置令牌
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  identifier String   // 用户邮箱
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([identifier])
+  @@index([expires])
+}
+
 // 邀请码（注册时赋予对应角色）
 model InviteCode {
   id          String    @id @default(cuid())

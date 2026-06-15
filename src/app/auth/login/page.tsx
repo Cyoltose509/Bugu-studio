@@ -82,6 +82,9 @@ function LoginForm() {
             <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="password">密码</label>
             <input id="password" type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
               className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent border-brand-border-subtle text-brand-text-heading" placeholder="至少 8 位" />
+            <div className="mt-1.5 text-right">
+              <Link href="/auth/forgot-password" className="text-xs text-brand-text-muted hover:text-brand-blue hover:underline transition-colors">忘记密码？</Link>
+            </div>
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}

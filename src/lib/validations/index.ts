@@ -43,6 +43,23 @@ export const verifyCodeSchema = z.object({
   code: z.string().length(6, "验证码为 6 位数字").regex(/^\d{6}$/, "验证码格式不正确"),
 });
 
+/** 忘记密码 — 申请重置 */
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("邮箱格式不正确").max(255),
+});
+
+/** 重置密码 — 执行重置 */
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "令牌不能为空"),
+    password: z.string().min(8, "密码至少 8 位").max(128),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "两次密码不一致",
+    path: ["confirmPassword"],
+  });
+
 // ============================================================
 // 作品相关
 // ============================================================
