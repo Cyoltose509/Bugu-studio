@@ -46,6 +46,7 @@ function getIcon(type: string) {
   if (type === "JAM_INVITATION") return "📩";
   if (type === "JAM_INVITATION_ACCEPTED") return "🤝";
   if (type === "MENTION") return "💬";
+  if (type === "ERROR_REPORT") return "🔥";
   return "🔔";
 }
 
@@ -155,6 +156,8 @@ export default function NotificationBell() {
       }
     } else if (item.relatedType === "HistoryEvent") {
       window.location.href = `/history`;
+    } else if (item.relatedType === "ErrorReport") {
+      window.location.href = `/admin/monitoring/error-reports`;
     }
   }, []);
 

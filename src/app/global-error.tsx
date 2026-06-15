@@ -1,10 +1,10 @@
 "use client"; // 全局错误边界必须是 Client Component
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Next.js 全局错误边界 — 捕获根布局中的未处理错误
- * 生产环境下显示降级页面，避免白屏
+ * 生产环境下显示降级页面，自动上报错误给管理员
  */
 export default function GlobalError({
   error,
@@ -13,6 +13,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [reportId, setReportId] = useState<number | null>(null);
+
   useEffect(() => {
     // 发送到日志服务
     console.error(
@@ -24,6 +26,23 @@ export default function GlobalError({
         e: { name: error.name, message: error.message, digest: error.digest, stack: error.stack?.split("\n").slice(0, 5) },
       })
     );
+
+    // 自动上报错误给管理员
+    fetch("/api/errors/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+      }),
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.data?.reportId) setReportId(json.data.reportId);
+      })
+      .catch(() => {});
   }, [error]);
 
   return (
@@ -41,8 +60,16 @@ export default function GlobalError({
             <h1 className="text-2xl font-bold text-[#333] dark:text-[#d0d8e8] mb-2">
               抱歉，出了点问题
             </h1>
-            <p className="text-[#666] dark:text-[#8898a8] mb-6">
+            <p className="text-[#666] dark:text-[#8898a8] mb-2">
               页面加载时发生了意外错误，请尝试刷新页面。
+            </p>
+            <p className="text-sm text-[#3388BB] dark:text-[#5ba8d8] mb-6">
+              该错误已自动上报给管理员
+              {reportId && (
+                <span className="font-mono font-bold ml-1">
+                  （错误编号：#{reportId}）
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -51,9 +78,9 @@ export default function GlobalError({
           >
             重新加载
           </button>
-          {error.digest && (
+          {reportId && (
             <p className="mt-4 text-xs text-[#999] dark:text-[#667]">
-              错误追踪 ID：{error.digest}
+              请将此页面截图发送给管理员以加速处理
             </p>
           )}
         </div>

@@ -33,6 +33,13 @@ const cards = [
     desc: "查看 Content-Security-Policy 违规：被拦资源、违规指令、XSS 尝试",
     colorClass: "text-[#DC2626]",
   },
+  {
+    href: "/admin/monitoring/error-reports",
+    icon: "🔥",
+    title: "前端错误报告",
+    desc: "查看用户遇到的前端错误：自动上报错误信息、堆栈、页面地址",
+    colorClass: "text-[#E38043]",
+  },
 ];
 
 export default function MonitoringPage() {

@@ -28,7 +28,9 @@
     "benchmark": "tsx scripts/benchmark.ts",
     "benchmark:load": "tsx scripts/benchmark.ts --mode load",
     "benchmark:stress": "tsx scripts/benchmark.ts --mode stress",
-    "benchmark:spike": "tsx scripts/benchmark.ts --mode spike"
+    "benchmark:spike": "tsx scripts/benchmark.ts --mode spike",
+    "test:csp-real": "tsx scripts/test-csp-real.ts",
+    "test:error-real": "tsx scripts/test-error-real.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.0",
