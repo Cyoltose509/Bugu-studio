@@ -133,21 +133,23 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const isResubmit = isEdit && projectStatus === "REJECTED";
   const isReEdit = isEdit && projectStatus === "PUBLISHED";
 
-  // ── 创建模式：默认填入当前登录用户（代投时用户可自行删除）──
-  const autoAddedRef = useRef(false);
+  // ── 创建模式：搜索框预填当前用户名，用户选择角色后点击「+ 添加」即可加入 ──
+  const namePrefilledRef = useRef(false);
   const { data: sessionData } = useSession();
   useEffect(() => {
     if (mode !== "create") return;
-    if (autoAddedRef.current) return;
+    if (namePrefilledRef.current) return;
     if (!sessionData?.user?.id) return;
-    // 避免和 initialData 冲突（编辑模式不会走到这里）
-    if (selectedMembers.length > 0) return;
-    autoAddedRef.current = true;
-    setSelectedMembers([{
-      userId: sessionData.user.id,
-      displayName: sessionData.user.name || sessionData.user.email || "我",
-      roles: [],
-    }]);
+    const displayName = sessionData.user.name || sessionData.user.email || "";
+    if (!displayName) return;
+    namePrefilledRef.current = true;
+    setMemberQuery(displayName);
+    // 预设当前用户，之后点击「+ 添加」时 addMemberFromSearch 会读取
+    (memberDropdownRef.current as any).__selectedMember = {
+      id: sessionData.user.id,
+      displayName,
+      _type: "user",
+    };
   }, [mode, sessionData?.user?.id]);
 
   // ── 成员搜索 ──
