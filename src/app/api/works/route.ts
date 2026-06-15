@@ -6,17 +6,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 
 const PAGE_SIZE = 16; // 4x4
 
 export async function GET(request: NextRequest) {
+    // 速率限制：每 IP 每分钟 60 次
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 60, prefix: "works:list" });
+    if (!rl.allowed) {
+        return NextResponse.json({ error: "请求过于频繁" }, { status: 429 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const cursor = searchParams.get("cursor"); // 上一批最后一个 id
+    const cursor = searchParams.get("cursor");
     const types = searchParams.get("types");
     const year = searchParams.get("year");
     const tag = searchParams.get("tag");
-    const q = searchParams.get("q");
+    const q = searchParams.get("q")?.slice(0, 100); // 限制搜索词长度
     const sort = searchParams.get("sort") || "date";
+
+    // 输入验证：year 必须是合法整数
+    const yearNum = year ? parseInt(year) : null;
+    if (year && (isNaN(yearNum!) || yearNum! < 2000 || yearNum! > 2100)) {
+        return NextResponse.json({ error: "无效的年份参数" }, { status: 400 });
+    }
+
+    // 输入验证：sort 必须是指定值之一
+    if (!["date", "name", "likes"].includes(sort)) {
+        return NextResponse.json({ error: "无效的排序参数" }, { status: 400 });
+    }
 
     // 构建筛选条件
     const where: any = { status: ProjectStatus.PUBLISHED };
@@ -28,7 +47,7 @@ export async function GET(request: NextRequest) {
         });
         if (typeList.length > 0) where.type = { in: typeList };
     }
-    if (year) where.developYear = parseInt(year);
+    if (yearNum) where.developYear = yearNum;
     if (q) where.OR = [
         { title: { contains: q, mode: "insensitive" } },
         { description: { contains: q, mode: "insensitive" } },

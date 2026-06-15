@@ -5,7 +5,7 @@ import { apiResponse, apiError } from "@/lib/utils";
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { withAuditContext } from "@/lib/db/audit-context";
-import bcrypt from "bcryptjs";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 
 export const POST = withAuditContext(async function (request: NextRequest) {
   // 速率限制：每用户每分钟 2 次密码修改尝试
@@ -53,13 +53,13 @@ export const POST = withAuditContext(async function (request: NextRequest) {
   }
 
   // 验证当前密码
-  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  const valid = await verifyPassword(currentPassword, user.passwordHash);
   if (!valid) {
     return apiError("当前密码不正确", 400);
   }
 
   // 哈希新密码
-  const hashed = await bcrypt.hash(newPassword, 12);
+  const hashed = await hashPassword(newPassword);
 
   // 更新密码
   await prisma.user.update({

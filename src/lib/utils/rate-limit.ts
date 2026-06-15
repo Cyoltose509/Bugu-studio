@@ -16,6 +16,29 @@ interface RateLimitEntry {
 // 内存存储（单实例适用）
 const store = new Map<string, RateLimitEntry>();
 
+/**
+ * 重置内存中的速率限制条目（dev 调试用）
+ */
+export function resetInMemoryRateLimit(prefix: string, identifier: string): void {
+  const key = `${prefix}:${identifier}`;
+  store.delete(key);
+}
+
+/**
+ * 清除所有匹配前缀的内存速率限制（dev 调试用）
+ */
+export function clearInMemoryRateLimits(prefix?: string): number {
+  let cleared = 0;
+  const keys = Array.from(store.keys());
+  for (const key of keys) {
+    if (!prefix || key.startsWith(`${prefix}:`)) {
+      store.delete(key);
+      cleared++;
+    }
+  }
+  return cleared;
+}
+
 // 定期清理过期记录
 setInterval(() => {
   const now = Date.now();

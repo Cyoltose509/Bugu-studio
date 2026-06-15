@@ -18,8 +18,9 @@ test.describe("未登录权限守卫", () => {
     test(`${name} → 重定向到登录页`, async ({ page }) => {
       await page.goto(route, { waitUntil: "domcontentloaded", timeout: 15_000 });
 
-      // 必须被重定向（URL 不再是原始 admin 路由）
-      await expect(page).not.toHaveURL(new RegExp(route), { timeout: 5_000 });
+      // 必须被重定向 —— pathname 不再是原始 admin 路由
+      // （注意：不能用 RegExp 匹配整个 URL，因为 callbackUrl 参数里会包含 /admin）
+      await expect.poll(() => new URL(page.url()).pathname).not.toBe(route);
     });
   }
 });

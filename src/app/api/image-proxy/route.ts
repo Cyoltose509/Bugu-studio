@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dns from "dns/promises";
 import { promisify } from "util";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 
 /**
  * 图片代理 API
@@ -61,6 +62,13 @@ function isAllowedHost(hostname: string): boolean {
 }
 
 export async function GET(req: NextRequest) {
+  // 速率限制：每 IP 每分钟 30 次
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 30, prefix: "imgproxy" });
+  if (!rl.allowed) {
+    return new NextResponse("Rate limited", { status: 429 });
+  }
+
   const { searchParams } = new URL(req.url);
   const rawUrl = searchParams.get("url");
 

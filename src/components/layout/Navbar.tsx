@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth/auth";
 import NotificationBell from "./NotificationBell";
 import NavLink from "./NavLink";
 import ThemeToggle from "./ThemeToggle";
+import MobileNav from "./MobileNav";
 
 export async function Navbar() {
   const session = await auth();
@@ -32,6 +33,7 @@ export async function Navbar() {
         {/* 用户区域 */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
+          <MobileNav />
           {session?.user ? (
             <div className="flex items-center gap-3">
               {(session.user.role === "MEMBER" || session.user.role === "ADMIN") && (

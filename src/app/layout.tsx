@@ -14,10 +14,33 @@ import {Analytics} from "@vercel/analytics/react";
 const inter = Inter({subsets: ["latin"], display: "swap", preload: true});
 
 export const metadata: Metadata = {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bugoostudio.com"),
     title: {template: "%s | 布谷工作室", default: "布谷工作室 - 官方网站"},
     description: "布谷工作室官方网站，展示历届成员作品与社团历史。",
-    keywords: ["游戏开发", "社团"],
+    keywords: ["游戏开发", "社团", "独立游戏", "布谷工作室", "Game Jam"],
     icons: {icon: "/images/logo.png", apple: "/images/logo.png", shortcut: "/images/logo.png"},
+    openGraph: {
+        type: "website",
+        locale: "zh_CN",
+        siteName: "布谷工作室",
+        title: "布谷工作室 - 官方网站",
+        description: "布谷工作室官方网站，展示历届成员作品与社团历史。",
+        images: [{ url: "/images/logo.png", width: 512, height: 512 }],
+    },
+    twitter: {
+        card: "summary",
+        title: "布谷工作室 - 官方网站",
+        description: "布谷工作室官方网站，展示历届成员作品与社团历史。",
+        images: ["/images/logo.png"],
+    },
+    alternates: {
+        canonical: "/",
+    },
+    robots: {
+        index: true,
+        follow: true,
+        googleBot: { index: true, follow: true },
+    },
 };
 
 export const viewport: Viewport = {

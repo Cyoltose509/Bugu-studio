@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 
 interface DirectiveStat {
   directive: string;
@@ -341,7 +341,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                   {reports.map((r) => {
                     const isOpen = expanded.has(r.id);
                     return (
-                      <>
+                      <Fragment key={r.id}>
                         <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                             <input
@@ -392,7 +392,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>

@@ -588,6 +588,7 @@ model Comment {
   @@index([projectId, createdAt])
   @@index([userId])
   @@index([parentId])
+  @@index([parentId, createdAt])
 }
 
 // ── 作品点赞（爱心）──
@@ -602,6 +603,7 @@ model ProjectLike {
 
   @@unique([projectId, userId])
   @@index([projectId])
+  @@index([userId])
 }
 
 model Notification {

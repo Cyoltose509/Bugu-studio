@@ -14,9 +14,40 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
+    // ============================================================
+    // 桌面浏览器 — 日常测试
+    // ============================================================
     {
       name: "msedge",
       use: { ...devices["Desktop Edge"], channel: "msedge" },
+    },
+    // ============================================================
+    // 兼容性测试 — 多浏览器 (仅运行 @compat 标签或全部)
+    // ============================================================
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+      // grep: /.*/,  // 默认运行所有
+    },
+    // {
+    //   name: "webkit",
+    //   use: { ...devices["Desktop Safari"] },
+    //   // WebKit on Windows 需要特殊配置; 仅在 macOS CI 启用
+    // },
+    // ============================================================
+    // 移动设备 — 响应式验证
+    // ============================================================
+    {
+      name: "iphone-14",
+      use: { ...devices["iPhone 14"] },
+    },
+    {
+      name: "pixel-7",
+      use: { ...devices["Pixel 7"] },
+    },
+    {
+      name: "ipad-pro",
+      use: { ...devices["iPad Pro"] },
     },
   ],
   webServer: process.env.CI

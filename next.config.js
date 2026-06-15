@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // ❌ 移除 output: 'standalone' — Vercel 不需要，会导致部署失败
+  experimental: {
+    optimizePackageImports: ["lucide-react", "date-fns", "bcryptjs"],
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24, // 24h — 减少重复优化请求

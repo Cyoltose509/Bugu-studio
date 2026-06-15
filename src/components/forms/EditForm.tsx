@@ -3,11 +3,13 @@
 import {useActionState, useState, useRef, useEffect} from "react";
 import {useSession} from "next-auth/react";
 import {useRouter} from "next/navigation";
+import dynamic from "next/dynamic";
 import {saveProfile, redeemInviteCode} from "@/app/profile/edit/actions";
 import {SubmitButton} from "@/components/ui/SubmitButton";
-import Cropper from "react-easy-crop";
 import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
 import MentionEditor from "@/components/ui/MentionEditor";
+
+const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false }) as any;
 
 type UserSnippet = { id: string; name: string | null; bio: string | null; image: string | null };
 type MemberSnippet = {
@@ -987,7 +989,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                 showGrid={false}
                                 onCropChange={setCrop}
                                 onZoomChange={setZoom}
-                                onCropComplete={(_, croppedAreaPixels) => setCroppedPixels(croppedAreaPixels)}
+                                onCropComplete={(_: any, croppedAreaPixels: any) => setCroppedPixels(croppedAreaPixels)}
                             />
                         </div>
                         <div className="p-4 space-y-3">

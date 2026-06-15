@@ -5,10 +5,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { signMonitoringToken } from "@/lib/monitoring-token";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
+    // 速率限制：每 IP 每分钟最多 5 次密码尝试
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 5, prefix: "mon:verify" });
+    if (!rl.allowed) {
+      return NextResponse.json({ ok: false, error: "尝试过多，请稍后再试" }, { status: 429 });
+    }
     const { password } = await req.json();
     if (!password || typeof password !== "string") {
       return NextResponse.json({ ok: false, error: "请输入密码" }, { status: 400 });

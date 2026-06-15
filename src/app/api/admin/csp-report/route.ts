@@ -190,7 +190,9 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 新违规 → 通知所有管理员 ──
-  if (isNew && reportId) {
+  // 测试模式（X-Bugu-Test 头）跳过通知，避免污染
+  const isTest = request.headers.get("x-bugu-test") === "true";
+  if (isNew && reportId && !isTest) {
     notifyAdmins(reportId, violatedDirective, blockedUri, documentUri).catch(() => {
       // 通知失败不影响 CSP 报告接收
     });
