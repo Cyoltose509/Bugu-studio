@@ -1,6 +1,7 @@
 "use client";
 
 import {useState, useCallback, useEffect, useRef} from "react";
+import { createPortal } from "react-dom";
 import SafeImage from "../ui/SafeImage";
 
 interface ImageItem {
@@ -37,9 +38,13 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
     }
 
     const [lightbox, setLightbox] = useState<{ index: number } | null>(null);
+    const [mounted, setMounted] = useState(false);
     const [transform, setTransform] = useState<Transform>({scale: 1, x: 0, y: 0});
     const overlayRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
+
+    // 客户端挂载后才 Portal，避免 SSR 报错
+    useEffect(() => { setMounted(true); }, []);
 
     // 拖拽状态
     const dragging = useRef(false);
@@ -229,8 +234,8 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                 </div>
             )}
 
-            {/* ── 灯箱弹窗（支持缩放+拖拽） ── */}
-            {lightbox && (
+            {/* ── 灯箱弹窗（支持缩放+拖拽，Portal 到 body 避免被 Navbar z-50 遮挡） ── */}
+            {lightbox && mounted && createPortal(
                 <div
                     ref={overlayRef}
                     className={`fixed inset-0 z-50 flex items-center justify-center bg-black/90 animate-fade-in ${isZoomed ? "cursor-grab" : "cursor-default"}`}
@@ -335,7 +340,8 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                             滚轮或捏合缩放 · 拖拽移动 · 双击重置
                         </div>
                     )}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
