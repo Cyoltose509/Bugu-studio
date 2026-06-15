@@ -8,6 +8,7 @@
 import {
   S3Client,
   PutObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 import { extname } from "path";
@@ -105,4 +106,78 @@ export async function uploadToR2(
 
   const url = `${process.env.R2_PUBLIC_URL}/${key}`;
   return { url, key };
+}
+
+/**
+ * 从 R2 删除文件（best-effort，静默失败）
+ * @param urlOrKey - 完整 URL 或 R2 key
+ * @returns 是否删除成功
+ */
+export async function deleteFromR2(urlOrKey: string): Promise<boolean> {
+  if (!urlOrKey) return false;
+
+  // R2 未配置则跳过
+  if (
+    !process.env.R2_ACCOUNT_ID ||
+    !process.env.R2_BUCKET_NAME ||
+    !process.env.R2_ACCESS_KEY_ID ||
+    !process.env.R2_SECRET_ACCESS_KEY
+  ) {
+    return false;
+  }
+
+  // 从 URL 提取 key，或直接使用 key
+  let key = urlOrKey;
+  if (urlOrKey.startsWith("http")) {
+    const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "");
+    if (publicUrl && urlOrKey.startsWith(publicUrl)) {
+      key = urlOrKey.slice(publicUrl.length + 1); // +1 for the "/"
+    } else {
+      // 尝试匹配 avatars/、covers/、screenshots/ 路径
+      const match = urlOrKey.match(/\/((?:avatar|covers?|screenshot)s?\/[^?#]+)/);
+      if (match) {
+        key = match[1];
+      } else {
+        console.warn("[R2 delete] Cannot extract key from URL:", urlOrKey);
+        return false;
+      }
+    }
+  }
+
+  // 安全校验：key 必须以 avatars/、covers/、screenshots/ 开头
+  if (!/^(avatars|covers|screenshots)\//.test(key)) {
+    console.warn("[R2 delete] Refusing to delete key outside allowed prefixes:", key);
+    return false;
+  }
+
+  try {
+    const client = getR2Client();
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: key,
+      })
+    );
+    return true;
+  } catch (err: any) {
+    console.error(`[R2 delete] Failed to delete "${key}":`, err.message);
+    return false;
+  }
+}
+
+/**
+ * 批量删除 R2 文件（并行、静默失败）
+ * @param urls - 要删除的 URL 或 key 数组
+ */
+export async function deleteManyFromR2(urls: (string | null | undefined)[]): Promise<{ deleted: number; failed: number }> {
+  const validUrls = urls.filter(Boolean) as string[];
+  if (validUrls.length === 0) return { deleted: 0, failed: 0 };
+
+  const results = await Promise.allSettled(
+    validUrls.map((u) => deleteFromR2(u))
+  );
+
+  const deleted = results.filter((r) => r.status === "fulfilled" && r.value).length;
+  const failed = results.filter((r) => r.status === "rejected" || !r.value).length;
+  return { deleted, failed };
 }

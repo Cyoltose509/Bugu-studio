@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { UserRole } from "@prisma/client";
 import { apiResponse, apiError } from "@/lib/utils";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { withAuditContext } from "@/lib/db/audit-context";
 
 // 内存缓存：避免短时间内对同一项目重复查 DB（5s TTL）
 const likeCache = new Map<string, { data: { liked: boolean; likeCount: number; canLike: boolean }; ts: number }>();
@@ -54,10 +56,17 @@ export async function GET(
  * 优化：用 deleteMany + create 替代 findUnique + create/delete，减少 1 次查询
  * 通知采用 fire-and-forget 不阻塞响应
  */
-export async function POST(
+const _likePost = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
+  // 速率限制：每 IP 每秒 3 次（防止刷赞）
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, { windowSeconds: 1, maxRequests: 3, prefix: "like" });
+  if (!rl.allowed) {
+    return apiError("操作过于频繁", 429);
+  }
+
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
   if (session.user.role === UserRole.GUEST) return apiError("无权限点赞", 403);
@@ -96,6 +105,8 @@ export async function POST(
 
   return apiResponse({ liked, likeCount: count });
 }
+
+export const POST = withAuditContext(_likePost);
 
 /** 发送点赞通知，fire-and-forget，不阻塞主响应 */
 async function sendLikeNotification(projectId: string, likerId: string, likerName: string) {

@@ -7,7 +7,7 @@ export function Footer() {
 
     return (
         <footer className="border-t border-[#D0DEE8] dark:border-[#2a3045] bg-[#F0F5F9] dark:bg-[#141822]">
-            <main className="flex-1 relative">
+            <div className="flex-1 relative">
                 <div className="absolute inset-0 pointer-events-none texture-bg texture-bg--fade-up" />
                 <div className="relative z-[1]">
                     <div className="container mx-auto px-4 py-10">
@@ -51,7 +51,7 @@ export function Footer() {
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
 
         </footer>
     );

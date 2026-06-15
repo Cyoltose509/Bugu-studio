@@ -97,6 +97,35 @@
 .dark ::-webkit-scrollbar-thumb { background: #3a4055; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #4a5068; }
 
+/* ── 可访问性 — focus-visible 键盘焦点环 ─────────── */
+*:focus-visible {
+  outline: 2px solid #E38043;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.dark *:focus-visible {
+  outline-color: #f09055;
+}
+
+/* 暗色模式对比度修复 — #999 对比度不足 AA，替换为 #666 */
+.dark .text-\[\#999\],
+.dark [class*="text-[#999]"] { color: #8899aa; }
+.dark .text-\[\#667\],
+.dark [class*="text-[#667]"] { color: #7788aa; }
+
+/* 表单元素：确保 label 可读、input 有清晰的 focus 状态 */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #3388BB;
+  outline-offset: 1px;
+}
+.dark input:focus-visible,
+.dark textarea:focus-visible,
+.dark select:focus-visible {
+  outline-color: #5ba8d8;
+}
+
 .animate-fade-in { animation: fade-in 0.4s ease-out; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 

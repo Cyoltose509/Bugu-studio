@@ -10,6 +10,7 @@ import { apiResponse, apiError } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
 import { notifyMentions } from "@/lib/services/notification";
+import { deleteManyFromR2 } from "@/lib/utils/upload";
 
 export async function PATCH(
   request: NextRequest,
@@ -32,8 +33,14 @@ export async function PATCH(
     : [];
 
   try {
-    // 使用事务保证原子性：如果传了 images，先删旧图再创建新图
+    // 如果传了 images，先捕获旧图片 URL 再删 DB 记录
+    let oldImageUrls: string[] = [];
     if (images !== undefined) {
+      const oldImages = await prisma.eventImage.findMany({
+        where: { eventId: id },
+        select: { url: true },
+      });
+      oldImageUrls = oldImages.map((img) => img.url).filter(Boolean);
       await prisma.eventImage.deleteMany({ where: { eventId: id } });
     }
 
@@ -64,6 +71,12 @@ export async function PATCH(
 
     revalidatePath("/history");
     invalidateCache("history:events"); // 非阻塞
+
+    // ── 清理 R2 旧图片（best-effort）──
+    if (oldImageUrls.length > 0) {
+      deleteManyFromR2(oldImageUrls).catch(() => {});
+    }
+
     return apiResponse(event);
   } catch (err: any) {
     console.error("更新历史事件失败:", err);
@@ -79,9 +92,23 @@ export async function DELETE(
   if (!session?.user || session.user.role !== "ADMIN") return apiError("权限不足", 403);
 
   const { id } = await params;
+
+  // 捕获旧图片 URL 再删除
+  const oldImages = await prisma.eventImage.findMany({
+    where: { eventId: id },
+    select: { url: true },
+  });
+  const oldImageUrls = oldImages.map((img) => img.url).filter(Boolean);
+
   await prisma.yearEvent.delete({ where: { id } });
 
   revalidatePath("/history");
   await invalidateCache("history:events");
+
+  // ── 清理 R2 旧图片（best-effort）──
+  if (oldImageUrls.length > 0) {
+    deleteManyFromR2(oldImageUrls).catch(() => {});
+  }
+
   return apiResponse({ deleted: true });
 }

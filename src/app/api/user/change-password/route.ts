@@ -3,9 +3,18 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { withAuditContext } from "@/lib/db/audit-context";
 import bcrypt from "bcryptjs";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuditContext(async function (request: NextRequest) {
+  // 速率限制：每用户每分钟 2 次密码修改尝试
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 2, prefix: "chpwd" });
+  if (!rl.allowed) {
+    return apiError("操作过于频繁，请稍后再试", 429);
+  }
+
   const session = await auth();
   if (!session?.user?.id) return apiError("请先登录", 401);
 
@@ -72,4 +81,4 @@ export async function POST(request: NextRequest) {
   });
 
   return apiResponse({ success: true });
-}
+});

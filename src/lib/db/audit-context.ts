@@ -1,17 +1,18 @@
 /**
  * 审计上下文 — 使用 AsyncLocalStorage 在请求链路中传递操作用户和 IP
  *
- * 用法：
- *   API Route 中:
- *     const ip = getClientIp(request);
- *     auditContext.run({ userId: session.user.id, ipAddress: ip }, async () => {
- *       // Prisma 操作将自动记录审计日志，含 userId + ipAddress
- *     });
+ * 机制：
+ *   1. middleware 在 Edge Runtime 将 x-audit-user-id / x-audit-ip 写入响应头
+ *   2. withAuditContext() 包装器读取请求头中的审计信息，注入 AsyncLocalStorage
+ *   3. Prisma 中间件从 AsyncLocalStorage 读取，写入 AuditLog
  *
- *   注意：目前仅 auth.ts 中的 login attempt 会设置上下文；
- *   其他 API 路由暂未包裹，审计日志的 userId 和 ipAddress 将为空。
+ * 用法：
+ *   import { withAuditContext } from "@/lib/db/audit-context";
+ *   export const GET = withAuditContext(async (req) => { ... });
+ *   export const POST = withAuditContext(async (req) => { ... });
  */
 import { AsyncLocalStorage } from "async_hooks";
+import { NextRequest } from "next/server";
 
 interface AuditContextValue {
   userId?: string;
@@ -28,3 +29,41 @@ export const auditContext = {
     return storage.run(ctx, fn);
   },
 };
+
+/**
+ * API Route 处理器包装器 — 自动从 middleware 注入的请求头中提取用户和 IP，
+ * 并注入到 AsyncLocalStorage，确保 Prisma 审计中间件能获取到正确信息。
+ */
+type ApiHandler = (
+  req: NextRequest,
+  context?: any
+) => Promise<Response>;
+
+export function withAuditContext(handler: ApiHandler): ApiHandler {
+  return (req, context) => {
+    const userId = req.headers.get("x-audit-user-id") || undefined;
+    const ipAddress = req.headers.get("x-audit-ip") || undefined;
+
+    return storage.run({ userId, ipAddress }, () => handler(req, context));
+  };
+}
+
+/**
+ * Server Action 辅助 — 从 cookies 中读取审计信息并执行
+ * 用于那些不经过 API route 的 Server Action
+ */
+export async function runWithAuditFromHeaders<T>(
+  req: NextRequest | Request,
+  fn: () => Promise<T>
+): Promise<T> {
+  let userId: string | undefined;
+  let ipAddress: string | undefined;
+
+  if (req instanceof NextRequest || "headers" in req) {
+    const headers = req.headers;
+    userId = headers.get("x-audit-user-id") || undefined;
+    ipAddress = headers.get("x-audit-ip") || undefined;
+  }
+
+  return storage.run({ userId, ipAddress }, fn);
+}

@@ -26,6 +26,13 @@ const cards = [
     desc: "查看 API 配置状态、域名验证情况",
     colorClass: "text-[#7C3AED]",
   },
+  {
+    href: "/admin/monitoring/csp-reports",
+    icon: "🛡️",
+    title: "CSP 违规报告",
+    desc: "查看 Content-Security-Policy 违规：被拦资源、违规指令、XSS 尝试",
+    colorClass: "text-[#DC2626]",
+  },
 ];
 
 export default function MonitoringPage() {
@@ -34,7 +41,7 @@ export default function MonitoringPage() {
       <h1 className="text-2xl font-bold mb-6 text-brand-navy">📡 系统监控</h1>
       <p className="mb-8 text-brand-text-secondary">查看各项外部服务的运行状态和使用情况</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {cards.map((c) => (
           <Link
             key={c.href}

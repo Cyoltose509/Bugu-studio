@@ -4,8 +4,17 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { withAuditContext } from "@/lib/db/audit-context";
 
-export async function GET(req: NextRequest) {
+export const GET = withAuditContext(async function (req: NextRequest) {
+  // 速率限制：每 IP 每秒 5 次（防爬虫/滥用自动补全）
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(ip, { windowSeconds: 1, maxRequests: 5, prefix: "memsearch" });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "请求过于频繁" }, { status: 429 });
+  }
+
   const q = req.nextUrl.searchParams.get("q")?.trim() || "";
   if (!q || q.length < 1) return NextResponse.json([]);
 
@@ -19,4 +28,4 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json(members);
-}
+});

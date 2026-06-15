@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { uploadToR2 } from "@/lib/utils/upload";
+import { uploadToR2, deleteFromR2 } from "@/lib/utils/upload";
 import { isRateLimited, getRateLimitRemaining, resetRateLimit } from "@/lib/utils/rate-limit";
 import sharp from "sharp";
 
@@ -38,8 +38,11 @@ export async function POST(req: NextRequest) {
   // 二次检查：读取数据库中的上次更换时间（防御性）
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { avatarChangedAt: true },
+    select: { avatarChangedAt: true, image: true },
   });
+
+  // 保存旧头像 URL 供后续清理
+  const oldImageUrl = user?.image;
   if (user?.avatarChangedAt) {
     const cooldownEnd = new Date(
       user.avatarChangedAt.getTime() + AVATAR_CHANGE_DAYS * 24 * 3600 * 1000
@@ -119,6 +122,11 @@ export async function POST(req: NextRequest) {
     where: { userId: session.user.id },
     data: { avatar: url },
   });
+
+  // ── 清理旧头像（best-effort，不影响响应）──
+  if (oldImageUrl && oldImageUrl !== url) {
+    deleteFromR2(oldImageUrl).catch(() => {});
+  }
 
   // 重置速率限制（允许用户立即再次尝试如果本次上传失败的话）
   // 这里不清除，因为 7 天限制是严格的

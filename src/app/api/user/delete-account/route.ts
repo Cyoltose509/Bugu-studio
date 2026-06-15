@@ -3,8 +3,18 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { createAuditLog, extractRequestInfo } from "@/lib/utils/audit";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { withAuditContext } from "@/lib/db/audit-context";
+import { deleteFromR2 } from "@/lib/utils/upload";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuditContext(async function (request: NextRequest) {
+  // 速率限制：每用户每小时 1 次删除账户
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, { windowSeconds: 3600, maxRequests: 1, prefix: "delacct" });
+  if (!rl.allowed) {
+    return apiError("操作过于频繁，请稍后再试", 429);
+  }
+
   const session = await auth();
   if (!session?.user?.id) return apiError("请先登录", 401);
 
@@ -13,7 +23,7 @@ export async function POST(request: NextRequest) {
   // 获取用户信息
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, image: true },
   });
 
   if (!user) return apiError("用户不存在", 404);
@@ -66,5 +76,10 @@ export async function POST(request: NextRequest) {
     statusCode: 200,
   });
 
+  // 4. 清理 R2 头像（best-effort）
+  if (user.image) {
+    deleteFromR2(user.image).catch(() => {});
+  }
+
   return apiResponse({ success: true });
-}
+});

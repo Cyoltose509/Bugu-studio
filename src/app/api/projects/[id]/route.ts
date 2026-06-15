@@ -17,6 +17,7 @@ import {invalidateCache} from "@/lib/db/cache";
 import {createNotification, notifyNewProject, notifyProjectEdit, notifyMentions} from "@/lib/services/notification";
 import {cachedQuery} from "@/lib/db/cache";
 import {ProjectStatus} from "@prisma/client";
+import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -71,7 +72,10 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
     const session = await auth();
     if (!session?.user) return apiError("请先登录", 401);
 
-    const project = await prisma.project.findUnique({where: {id}});
+    const project = await prisma.project.findUnique({
+      where: {id},
+      include: { images: { select: { url: true } } }
+    });
     if (!project) return apiError("作品不存在", 404);
 
     if (
@@ -327,6 +331,18 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
     revalidatePath("/works");
     revalidatePath(`/works/${updated.slug}`);
     revalidatePath("/admin/projects");
+
+    // ── 清理 R2 旧文件（best-effort）──
+    const oldCover = project.coverImage;
+    const newCover = projectData.coverImage;
+    if (oldCover && newCover !== undefined && oldCover !== newCover) {
+      deleteFromR2(oldCover).catch(() => {});
+    }
+    if (images !== undefined && project.images.length > 0) {
+      const oldUrls = project.images.map((img) => img.url).filter(Boolean);
+      deleteManyFromR2(oldUrls).catch(() => {});
+    }
+
     return apiResponse(updated);
 }
 
@@ -337,8 +353,15 @@ export async function DELETE(request: NextRequest, {params}: RouteParams) {
     if (!session?.user) return apiError("请先登录", 401);
     if (!isAdmin(session.user.role as any)) return apiError("权限不足", 403);
 
-    const project = await prisma.project.findUnique({where: {id}});
+    const project = await prisma.project.findUnique({
+      where: {id},
+      include: { images: { select: { url: true } } }
+    });
     if (!project) return apiError("作品不存在", 404);
+
+    // ── 收集要清理的 R2 文件 ──
+    const filesToCleanup: (string | null)[] = [project.coverImage];
+    project.images.forEach((img) => filesToCleanup.push(img.url));
 
     await prisma.project.delete({where: {id}});
 
@@ -369,6 +392,9 @@ export async function DELETE(request: NextRequest, {params}: RouteParams) {
     revalidatePath("/works");
     revalidatePath(`/works/${project.slug}`);
     revalidatePath("/admin/projects");
+
+    // ── 清理 R2 文件（best-effort，不阻塞响应）──
+    deleteManyFromR2(filesToCleanup).catch(() => {});
 
     return apiResponse({deleted: true});
 }

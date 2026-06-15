@@ -291,6 +291,36 @@ model WorkExperience {
 }
 
 // ============================================================
+// CSP 违规报告
+// ============================================================
+
+model CspReport {
+  id                String   @id @default(cuid())
+  blockedUri        String?  @db.Text // 被拦截的资源 URI
+  violatedDirective String   // 被违反的 CSP 指令，如 "script-src"
+  documentUri       String?  @db.Text // 发生违规的页面 URI
+  referrer          String?  @db.Text // 来源页面
+  sourceFile        String?  @db.Text // 源码文件（如内联脚本有 source-file）
+  lineNumber        Int?     // 行号
+  columnNumber      Int?     // 列号
+  originalPolicy    String?  @db.Text // 触发违规的 CSP 策略（截断至500字符）
+  disposition       String?  // "enforce" | "report" — 策略是强制执行还是仅报告
+  sample            String?  @db.Text // 违规代码前40个字符
+  scriptSample      String?  @db.Text // 内联脚本样本
+  userAgent         String?  // 浏览器 UA
+  ipAddress         String?  // 客户端 IP
+  count             Int      @default(1) // 相同违规聚合计数（用于去重显示）
+  lastSeenAt        DateTime @default(now())
+  firstSeenAt       DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  @@index([violatedDirective, lastSeenAt])
+  @@index([documentUri, lastSeenAt])
+  @@index([lastSeenAt])
+  @@index([blockedUri])
+}
+
+// ============================================================
 // 作品 & 项目
 // ============================================================
 

@@ -11,9 +11,18 @@ import { projectCreateSchema } from "@/lib/validations";
 import { apiResponse, apiError, generateSlug } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { withAuditContext } from "@/lib/db/audit-context";
 import { ProjectStatus } from "@prisma/client";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuditContext(async function (request: NextRequest) {
+  // 速率限制：每用户每小时 5 次提交
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, { windowSeconds: 3600, maxRequests: 5, prefix: "submit" });
+  if (!rl.allowed) {
+    return apiError("提交过于频繁，请稍后再试", 429);
+  }
+
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
   // 双重校验：role 为 MEMBER 及以上，或有关联的 ClubMember 记录
@@ -179,4 +188,4 @@ export async function POST(request: NextRequest) {
   revalidatePath("/members");
 
   return apiResponse({ slug }, 201);
-}
+});

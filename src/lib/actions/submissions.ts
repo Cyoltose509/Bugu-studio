@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
+import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
 
 // ============================================================
 // 辅助函数
@@ -192,6 +193,11 @@ export async function submitJamWork(activityId: string, formData: FormData) {
   if (customTags.length > 0) metadata.customTags = customTags;
 
   if (existing) {
+    // 捕获旧文件 URL 用于后续清理
+    const oldFiles = existing.files || [];
+    const oldMetadata = (existing.metadata || {}) as Record<string, any>;
+    const oldCoverImage = typeof oldMetadata.coverImage === "string" ? oldMetadata.coverImage : null;
+
     await prisma.jamSubmission.update({
       where: { id: existing.id },
       data: {
@@ -202,6 +208,13 @@ export async function submitJamWork(activityId: string, formData: FormData) {
         metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       },
     });
+
+    // ── 清理 R2 旧文件（best-effort）──
+    const oldUrls: (string | null)[] = [...oldFiles];
+    if (oldCoverImage && oldCoverImage !== metadata.coverImage) {
+      oldUrls.push(oldCoverImage);
+    }
+    deleteManyFromR2(oldUrls).catch(() => {});
   } else {
     await prisma.jamSubmission.create({
       data: {
@@ -256,7 +269,16 @@ export async function deleteJamSubmission(activityId: string) {
 
   if (!submission) return { error: "未找到参赛作品" };
 
+  // 捕获旧文件 URL
+  const oldFiles = submission.files || [];
+  const oldMetadata = (submission.metadata || {}) as Record<string, any>;
+  const oldCoverImage = typeof oldMetadata.coverImage === "string" ? oldMetadata.coverImage : null;
+
   await prisma.jamSubmission.delete({ where: { id: submission.id } });
+
+  // ── 清理 R2 文件（best-effort）──
+  const oldUrls: (string | null)[] = [...oldFiles, oldCoverImage];
+  deleteManyFromR2(oldUrls).catch(() => {});
 
   invalidateCache(`jam:${activityId}:submissions`);
   revalidatePath(`/activities/${activityId}`);

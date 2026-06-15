@@ -5,6 +5,8 @@ import { cachedQuery, invalidateCache } from "@/lib/db/cache";
 import { UserRole } from "@prisma/client";
 import { apiResponse, apiError } from "@/lib/utils";
 import { createNotification } from "@/lib/services/notification";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { withAuditContext } from "@/lib/db/audit-context";
 
 /** 递归收集某评论的所有子孙 ID */
 async function collectAllChildIds(commentId: string): Promise<string[]> {
@@ -73,10 +75,17 @@ export async function GET(
 }
 
 // ── POST: 创建留言/回复（USER+权限，300字限制）──
-export async function POST(
+const _postComment = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
+  // 速率限制：每用户每分钟 10 条评论
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 10, prefix: "comment" });
+  if (!rl.allowed) {
+    return apiError("发言过于频繁，请稍后再试", 429);
+  }
+
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
   if (session.user.role === UserRole.GUEST) return apiError("无权限发表留言", 403);
@@ -164,6 +173,8 @@ export async function POST(
     replies: [],
   }, 201);
 }
+
+export const POST = withAuditContext(_postComment);
 
 // ── PATCH: 编辑或删除留言 ──
 export async function PATCH(

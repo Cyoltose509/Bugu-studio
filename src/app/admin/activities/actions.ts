@@ -7,6 +7,7 @@ import { invalidateCache } from "@/lib/db/cache";
 import { createNotification, notifyMentions } from "@/lib/services/notification";
 import { revalidatePath } from "next/cache";
 import { ActivityStatus, ProposalStatus } from "@prisma/client";
+import { deleteFromR2 } from "@/lib/utils/upload";
 
 const TYPE_LABEL: Record<string, string> = {
   MEETING: "例会", COURSE: "公开课", COMPETITION: "比赛", GENERAL: "活动",
@@ -156,7 +157,7 @@ export async function updateActivity(id: string, formData: FormData) {
   if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
   if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
 
-  const activity = await prisma.activity.findUnique({ where: { id }, select: { slug: true, maxTeamSize: true } });
+  const activity = await prisma.activity.findUnique({ where: { id }, select: { slug: true, maxTeamSize: true, coverImage: true } });
   const slug = activity ? activity.slug : toSlug(title);
   const maxParticipants = maxStr ? parseInt(maxStr, 10) : undefined;
   const newMaxTeamSize = maxTeamSizeStr ? parseInt(maxTeamSizeStr, 10) : 6;
@@ -201,6 +202,12 @@ export async function updateActivity(id: string, formData: FormData) {
     await trimTeamMembers(id, newMaxTeamSize);
   }
 
+  // ── 清理 R2 旧封面（best-effort）──
+  const oldCover = activity?.coverImage;
+  if (oldCover && coverImage && oldCover !== coverImage) {
+    deleteFromR2(oldCover).catch(() => {});
+  }
+
   await invalidateActivityCaches(id);
   return { success: true };
 }
@@ -208,7 +215,18 @@ export async function updateActivity(id: string, formData: FormData) {
 // ── 删除活动 ──────────────────────────────────────────────────
 export async function deleteActivity(id: string) {
   await requireAdmin();
+
+  // 捕获旧封面 URL
+  const activity = await prisma.activity.findUnique({ where: { id }, select: { coverImage: true } });
+  const oldCover = activity?.coverImage;
+
   await prisma.activity.delete({ where: { id } });
+
+  // ── 清理 R2 旧封面（best-effort）──
+  if (oldCover) {
+    deleteFromR2(oldCover).catch(() => {});
+  }
+
   await invalidateActivityCaches(id);
   return { success: true };
 }

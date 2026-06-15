@@ -3,12 +3,24 @@
  * 已登录用户使用邀请码转换为 MEMBER 或 ADMIN 角色
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { invalidateCache } from "@/lib/db/cache";
+import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { withAuditContext } from "@/lib/db/audit-context";
 
-export async function POST(request: Request) {
+export const POST = withAuditContext(async function (request: NextRequest) {
+  // 速率限制：每 IP 每分钟 3 次
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 3, prefix: "redeem" });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "操作过于频繁，请稍后再试" },
+      { status: 429, headers: { "X-RateLimit-Reset": rl.resetAt.toISOString() } }
+    );
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "请先登录" }, { status: 401 });
@@ -89,4 +101,4 @@ export async function POST(request: Request) {
         ? "已升级为管理员"
         : "已升级为社团成员",
   });
-}
+});

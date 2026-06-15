@@ -6,7 +6,7 @@
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { NextResponse } from "next/server";
-import { uploadToR2 } from "@/lib/utils/upload";
+import { uploadToR2, deleteFromR2 } from "@/lib/utils/upload";
 import sharp from "sharp";
 
 export async function POST() {
@@ -86,6 +86,11 @@ export async function POST() {
           where: { userId: user.id },
           data: { avatar: uploadResult.url },
         });
+
+        // ── 清理旧头像（best-effort）──
+        if (user.image) {
+          deleteFromR2(user.image).catch(() => {});
+        }
       } else {
         // 本地存储：写入新文件
         const { writeFile, mkdir } = await import("fs/promises");

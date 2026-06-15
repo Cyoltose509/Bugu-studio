@@ -50,3 +50,5 @@ tmp/
 
 nul
 /backups/
+/playwright-report/
+/test-results/
