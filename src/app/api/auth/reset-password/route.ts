@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     const issues = parsed.error.flatten().fieldErrors;
     // 提取第一条有意义的错误信息
-    const firstKey = Object.keys(issues)[0];
+    const firstKey = Object.keys(issues)[0] as keyof typeof issues;
     const firstMsg = firstKey ? issues[firstKey]?.[0] : "数据验证失败";
     return apiError(firstMsg || "数据验证失败", 422);
   }
