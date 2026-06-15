@@ -113,7 +113,6 @@ export default async function AdminDashboard() {
           <Link href="/admin/projects" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">管理作品</Link>
           <Link href="/admin/members" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">管理成员</Link>
           <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">管理用户</Link>
-          <Link href="/admin/settings" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">站点设置</Link>
           <Link href="/" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">返回前台</Link>
         </div>
       </div>

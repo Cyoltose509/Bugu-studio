@@ -13,7 +13,6 @@ const navItems = [
   { href: "/admin/invites", label: "邀请码", icon: "🎫" },
   { href: "/admin/activities", label: "活动管理", icon: "📅" },
   { href: "/admin/history-events", label: "历史事件", icon: "📆" },
-  { href: "/admin/settings", label: "站点设置", icon: "⚙️" },
   { href: "/admin/monitoring", label: "系统管理", icon: "🗄️" },
   { href: "/", label: "返回前台", icon: "🏠" },
 ];

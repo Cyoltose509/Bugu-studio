@@ -10,6 +10,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import DeleteMemberButton from "@/components/admin/DeleteMemberButton";
 import EditableSelect from "@/components/admin/EditableSelect";
 import EditableNumber from "@/components/admin/EditableNumber";
+import GraduateCheckButton from "@/components/admin/GraduateCheckButton";
 
 export const metadata: Metadata = { title: "成员管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -55,7 +56,10 @@ export default async function AdminMembersPage({ searchParams }: PageProps) {
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-brand-navy">成员管理</h1>
-        <Link href="/admin" className="btn-secondary px-4 py-2 rounded-lg text-sm">← 返回仪表盘</Link>
+        <div className="flex items-center gap-3">
+          <GraduateCheckButton />
+          <Link href="/admin" className="btn-secondary px-4 py-2 rounded-lg text-sm">← 返回仪表盘</Link>
+        </div>
       </div>
 
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden border-brand-border-subtle">

@@ -10,7 +10,6 @@
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:backup": "tsx scripts/backup-db.ts",
     "db:push": "tsx scripts/safe-db-push.ts",
