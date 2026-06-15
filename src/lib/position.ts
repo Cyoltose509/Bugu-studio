@@ -10,6 +10,7 @@ export const POSITION_LABEL: Record<string, string> = {
   PAST_PRESIDENT:      "往届社长",
   PAST_VICE_PRESIDENT: "往届副社长",
   FOUNDER:             "创始人",
+  NON_STUDENT:         "非本校成员",
 };
 
 export const POSITION_COLOR: Record<string, { bg: string; text: string }> = {
@@ -19,6 +20,7 @@ export const POSITION_COLOR: Record<string, { bg: string; text: string }> = {
   PAST_PRESIDENT:      { bg: "#999999",  text: "#fff" },
   PAST_VICE_PRESIDENT: { bg: "#999999",  text: "#fff" },
   FOUNDER:             { bg: "#FFE384",  text: "#5C4B00" },
+  NON_STUDENT:         { bg: "#E8D5F0",  text: "#4A1A70" },
 };
 
 /** 报纸展示用的职位标签（去"往届"前缀，创始人→社长） */

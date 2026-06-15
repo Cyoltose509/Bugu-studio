@@ -185,10 +185,8 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
                 <h1 className="text-2xl font-bold text-brand-navy">{member.displayName}</h1>
                 {member.position && member.position !== "MEMBER" && (() => {
                   const color = positionColor(member.position);
-                  const bgClass = color.bg === "#25547A" ? "bg-brand-navy" : color.bg === "#999999" ? "bg-[#999999]" : "bg-[#FFE384]";
-                  const textClass = color.text === "#fff" ? "text-white" : "text-[#5C4B00]";
                   return (
-                    <span className={`text-xs px-2 py-1 rounded font-medium ${bgClass} ${textClass}`}>
+                    <span className="text-xs px-2 py-1 rounded font-medium" style={{ background: color.bg, color: color.text }}>
                       {positionLabel(member.position)}
                     </span>
                   );
