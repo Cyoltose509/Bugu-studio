@@ -10,7 +10,7 @@ export const POSITION_LABEL: Record<string, string> = {
   PAST_PRESIDENT:      "往届社长",
   PAST_VICE_PRESIDENT: "往届副社长",
   FOUNDER:             "创始人",
-  NON_STUDENT:         "非本校成员",
+  NON_STUDENT:         "非本校",
 };
 
 export const POSITION_COLOR: Record<string, { bg: string; text: string }> = {
