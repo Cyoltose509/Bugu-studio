@@ -6,6 +6,7 @@ import { AddJudgeForm } from "@/components/activities/judging/AddJudgeForm";
 import { RemoveJudgeButton } from "@/components/activities/judging/RemoveJudgeButton";
 import { SubmitCourseScoreForm } from "@/components/activities/judging/SubmitCourseScoreForm";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { resolveActivityId } from "@/lib/activities/resolve";
 
 async function ensureAdminJudges(activityId: string) {
   const adminUsers = await prisma.user.findMany({
@@ -34,7 +35,8 @@ async function ensureAdminJudges(activityId: string) {
 
 export default async function CourseJudgingPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const activityId = (await params).id;
+  const activityId = await resolveActivityId((await params).id);
+  if (!activityId) notFound();
   const currentUserId = session?.user?.id;
 
   if (session?.user) {

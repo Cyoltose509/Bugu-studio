@@ -45,13 +45,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 动态路由：活动
   const activities = await prisma.activity.findMany({
     where: { status: "PUBLISHED" },
-    select: { slug: true, updatedAt: true },
+    select: { id: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
 
+  // 与前台链接一致：活动详情用 id（同时详情页也兼容 slug）
   const activityRoutes: MetadataRoute.Sitemap = activities.map((a) => ({
-    url: `${BASE_URL}/activities/${a.slug}`,
+    url: `${BASE_URL}/activities/${a.id}`,
     lastModified: a.updatedAt,
     changeFrequency: "weekly" as const,
     priority: 0.7,

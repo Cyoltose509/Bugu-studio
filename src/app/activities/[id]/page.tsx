@@ -24,6 +24,7 @@ import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksBut
 import { cachedQuery } from "@/lib/db/cache";
 import UserAvatar from "@/components/ui/UserAvatar";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { resolveActivityId } from "@/lib/activities/resolve";
 
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",
@@ -47,7 +48,9 @@ interface PageProps {
 
 /* ── 极轻量 metadata 查询（仅 select，无 include，不阻塞首字节）── */
 
-const getActivityMeta = cache(async (id: string) => {
+const getActivityMeta = cache(async (key: string) => {
+  const id = await resolveActivityId(key);
+  if (!id) return null;
   return prisma.activity.findUnique({
     where: { id },
     select: { title: true, summary: true },
@@ -58,8 +61,8 @@ export async function generateMetadata(
   { params }: PageProps,
   _parent: ResolvingMetadata,
 ): Promise<Metadata> {
-  const { id } = await params;
-  const a = await getActivityMeta(id);
+  const { id: key } = await params;
+  const a = await getActivityMeta(key);
   if (!a) return { title: "活动不存在" };
   return {
     title: `${a.title} - 活动 - 布谷工作室`,
@@ -113,7 +116,9 @@ export default function ActivityDetailPage({ params }: PageProps) {
 
 async function ActivityDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const { id } = await params;
+  const { id: key } = await params;
+  const id = await resolveActivityId(key);
+  if (!id) notFound();
   const now = new Date();
 
   const activity = await getActivity(id);

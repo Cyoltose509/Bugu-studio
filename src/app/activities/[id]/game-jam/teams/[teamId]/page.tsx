@@ -11,6 +11,7 @@ import { ApplicationButtons } from "@/components/activities/teams/ApplicationBut
 import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
 import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { resolveActivityId } from "@/lib/activities/resolve";
 
 export default async function JamTeamDetailPage({
   params,
@@ -18,7 +19,9 @@ export default async function JamTeamDetailPage({
   params: Promise<{ id: string; teamId: string }>;
 }) {
   const session = await auth();
-  const { id: activityId, teamId } = await params;
+  const { id: activityKey, teamId } = await params;
+  const activityId = await resolveActivityId(activityKey);
+  if (!activityId) notFound();
 
   const team = await prisma.jamTeam.findUnique({
     where: { id: teamId, activityId },

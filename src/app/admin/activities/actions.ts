@@ -122,7 +122,7 @@ export async function createActivity(formData: FormData) {
     if (session?.user) {
       await notifyMentions(description, session.user.name || "未知用户", session.user.id, {
         type: "Activity",
-        id: slug,
+        id: activity.id,
         title: finalTitle,
       });
     }
@@ -191,7 +191,7 @@ export async function updateActivity(id: string, formData: FormData) {
     if (session?.user) {
       await notifyMentions(description, session.user.name || "未知用户", session.user.id, {
         type: "Activity",
-        id: slug,
+        id,
         title,
       });
     }
