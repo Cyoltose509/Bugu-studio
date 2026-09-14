@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default function MemberDetailPage({ params }: PageProps) {
   return (
-    <Suspense fallback={<LogoLoading text="正在加载成员信息..." />}>
+    <Suspense fallback={<LogoLoading text="正在加载成员信息..." compact />}>
       <MemberDetailContent params={params} />
     </Suspense>
   );
@@ -70,6 +70,11 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
             project: {
               include: {
                 tags: { include: { tag: true } },
+                images: {
+                  orderBy: { sortOrder: "asc" },
+                  take: 4,
+                  select: { url: true, altText: true },
+                },
                 members: {
                   orderBy: { sortOrder: "asc" },
                   include: {
@@ -107,6 +112,11 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
             description: true, type: true, coverImage: true, developYear: true,
             awards: true, aiUsages: true,
             tags: {include: {tag: true}},
+            images: {
+              orderBy: { sortOrder: "asc" },
+              take: 4,
+              select: { url: true, altText: true },
+            },
             members: {
               orderBy: {sortOrder: "asc"},
               include: {
@@ -235,7 +245,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
               <h2 className="text-xl font-semibold mb-4 text-brand-navy">
                 参与项目 <span className="text-sm font-normal text-brand-text-muted">共 {member.projectMembers.length} 个</span>
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
                 {member.projectMembers.map(({ project }) => (
                   <ProjectCard
                     key={project.id}

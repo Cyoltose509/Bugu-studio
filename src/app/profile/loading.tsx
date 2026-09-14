@@ -1,5 +1,5 @@
-import LogoLoading from "@/components/ui/LogoLoading";
+import MascotLoading from "@/components/ui/MascotLoading";
 
 export default function ProfileLoading() {
-  return <LogoLoading />;
+  return <MascotLoading />;
 }

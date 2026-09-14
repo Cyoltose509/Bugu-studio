@@ -129,6 +129,340 @@ select:focus-visible {
 .animate-fade-in { animation: fade-in 0.4s ease-out; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+/* 全屏加载层：永远窗口正中、最上层；布谷娘 > Logo */
+.loading-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.loading-screen-overlay[data-loading-screen="mascot"] {
+  z-index: 10000;
+  /* 允许呆毛/拉伸略超出轨道时不被整层裁掉左右以外的部分 */
+  overflow: visible;
+}
+.loading-screen-overlay[data-loading-screen="logo"] {
+  z-index: 9998;
+}
+.loading-screen-text {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--brand-text-muted, #6a7888);
+}
+.dark .loading-screen-text {
+  color: #6a7888;
+}
+
+/* Logo：游戏感周期转转转（绕眼睛视觉中心翻面） */
+.logo-spin-stage {
+  perspective: 480px;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+}
+.logo-spin-stage--sm {
+  width: 48px;
+  height: 48px;
+}
+.logo-spin-cycle {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  transform-style: preserve-3d;
+  /* 对准大眼睛/瞳孔视觉中心（非方框几何中心） */
+  transform-origin: 44.4% 47.4%;
+  animation: logo-spin-cycle 2.6s ease-in-out infinite;
+}
+.logo-spin-cycle > img,
+.logo-spin-cycle > span {
+  width: 100% !important;
+  height: 100% !important;
+}
+@keyframes logo-spin-cycle {
+  0%, 18% { transform: rotateY(0deg) scale(1); }
+  42% { transform: rotateY(360deg) scale(1.06); }
+  50%, 68% { transform: rotateY(360deg) scale(1); }
+  92% { transform: rotateY(720deg) scale(1.06); }
+  100% { transform: rotateY(720deg) scale(1); }
+}
+
+/* 看板娘：左右来回跑 + Q 弹（脚钉地；轨道留头顶空间，避免呆毛被裁） */
+.mascot-run-track {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  /* 高于角色，给拉伸/呆毛留空；仅裁切左右，上下不切 */
+  height: min(48vw, 210px);
+  overflow-x: hidden;
+  overflow-y: visible;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-top: 1.25rem;
+  box-sizing: border-box;
+}
+.mascot-run {
+  position: relative;
+  transform: translate(72vw, 0) scaleX(1);
+  animation: mascot-run-path 1.7s linear infinite both;
+  will-change: transform;
+}
+.mascot-sprite {
+  display: block;
+  transform-origin: 50% 100%;
+  animation: mascot-sprite-bounce 1.7s linear infinite both;
+  will-change: transform;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.mascot-sprite img {
+  width: min(34vw, 140px);
+  height: auto;
+  max-width: none;
+  display: block;
+  pointer-events: none;
+}
+/* 脚底兔子洞：默认收起，遁地时 WAAPI 撑开 */
+.mascot-rabbit-hole {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: min(28vw, 110px);
+  height: min(7vw, 24px);
+  margin: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 50% 35%, #1a1210 0%, #0a0706 55%, #000 100%);
+  box-shadow:
+    inset 0 8px 14px rgba(0, 0, 0, 0.85),
+    0 0 0 2px rgba(40, 28, 22, 0.55),
+    0 4px 10px rgba(0, 0, 0, 0.35);
+  transform: translateX(-50%) scaleX(0.05) scaleY(0.2);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, opacity;
+}
+.dark .mascot-rabbit-hole {
+  box-shadow:
+    inset 0 10px 16px rgba(0, 0, 0, 0.95),
+    0 0 0 2px rgba(80, 60, 50, 0.35),
+    0 0 18px rgba(0, 0, 0, 0.5);
+}
+/* 位移：卡通节奏 —— 两侧快冲，中心刹停顿一下再对称冲出 */
+@keyframes mascot-run-path {
+  0%     { transform: translate(72vw, 0) scaleX(1); }
+  7%     { transform: translate(28vw, 0) scaleX(1); }
+  14%    { transform: translate(8vw, 0) scaleX(1); }
+  20%    { transform: translate(1.5vw, 0) scaleX(1); }
+  24%    { transform: translate(-1.2vw, 0) scaleX(1); }
+  28%    { transform: translate(0.4vw, 0) scaleX(1); }
+  34%    { transform: translate(0, 0) scaleX(1); }
+  40%    { transform: translate(-0.6vw, 0) scaleX(1); }
+  46%    { transform: translate(-4vw, 0) scaleX(1); }
+  54%    { transform: translate(-14vw, 0) scaleX(1); }
+  62%    { transform: translate(-34vw, 0) scaleX(1); }
+  70%    { transform: translate(-56vw, 0) scaleX(1); }
+  74%    { transform: translate(-72vw, 0) scaleX(1); }
+
+  74.01% { transform: translate(-72vw, 0) scaleX(-1); }
+  76.5%  { transform: translate(-28vw, 0) scaleX(-1); }
+  79%    { transform: translate(-8vw, 0) scaleX(-1); }
+  81%    { transform: translate(-1.5vw, 0) scaleX(-1); }
+  82.5%  { transform: translate(1.2vw, 0) scaleX(-1); }
+  84%    { transform: translate(-0.4vw, 0) scaleX(-1); }
+  86%    { transform: translate(0, 0) scaleX(-1); }
+  88%    { transform: translate(0.6vw, 0) scaleX(-1); }
+  90%    { transform: translate(4vw, 0) scaleX(-1); }
+  93%    { transform: translate(14vw, 0) scaleX(-1); }
+  96%    { transform: translate(34vw, 0) scaleX(-1); }
+  98.5%  { transform: translate(56vw, 0) scaleX(-1); }
+  100%   { transform: translate(72vw, 0) scaleX(-1); }
+}
+/* 贴图 Q 弹：脚钉地，频率大致跟速度 */
+@keyframes mascot-sprite-bounce {
+  0%     { transform: scale(1.14, 0.84); }
+  7%     { transform: scale(0.86, 1.16); }
+  14%    { transform: scale(1.12, 0.86); }
+  20%    { transform: scale(0.9, 1.12); }
+  24%    { transform: scale(1.24, 0.74); }
+  28%    { transform: scale(0.92, 1.1); }
+  34%    { transform: scale(1.16, 0.82); }
+  40%    { transform: scale(0.84, 1.18); }
+  46%    { transform: scale(1.12, 0.86); }
+  54%    { transform: scale(0.86, 1.16); }
+  62%    { transform: scale(1.14, 0.84); }
+  70%    { transform: scale(0.88, 1.14); }
+  74%    { transform: scale(1, 1); }
+
+  74.01% { transform: scale(1.14, 0.84); }
+  76.5%  { transform: scale(0.86, 1.16); }
+  79%    { transform: scale(1.12, 0.86); }
+  81%    { transform: scale(0.9, 1.12); }
+  82.5%  { transform: scale(1.24, 0.74); }
+  84%    { transform: scale(0.92, 1.1); }
+  86%    { transform: scale(1.16, 0.82); }
+  88%    { transform: scale(0.84, 1.18); }
+  90%    { transform: scale(1.12, 0.86); }
+  93%    { transform: scale(0.86, 1.16); }
+  96%    { transform: scale(1.14, 0.84); }
+  98.5%  { transform: scale(0.88, 1.14); }
+  100%   { transform: scale(1.06, 0.94); }
+}
+
+.mascot-finish-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mascot-knockout { mix-blend-mode: screen; }
+.dark .mascot-knockout { mix-blend-mode: normal; }
+
+/* 点击布谷娘掉落光盘 —— 七芒星光 + 银灰背面 */
+.mascot-cd-drop {
+  position: fixed;
+  z-index: 10050;
+  width: min(26vw, 132px);
+  height: min(26vw, 132px);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  perspective: 520px;
+  will-change: transform, opacity;
+}
+.mascot-cd-drop-aura {
+  position: absolute;
+  inset: -48%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.mascot-cd-drop-star {
+  width: 100%;
+  height: 100%;
+  filter: blur(3.5px);
+  transform-origin: 50% 50%;
+  animation: mascot-cd-star 1.4s linear infinite;
+}
+.mascot-cd-drop-bob {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: mascot-cd-bob 0.9s ease-in-out infinite;
+  animation-delay: 1.55s;
+}
+.mascot-cd-drop-spin {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: mascot-cd-flip 1.05s linear infinite;
+}
+.mascot-cd-drop-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(200, 205, 210, 0.55);
+}
+.mascot-cd-drop-front img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  user-select: none;
+}
+/* 背面：银灰色纯色 */
+.mascot-cd-drop-back {
+  background: #c5c9ce;
+  transform: rotateY(180deg);
+}
+@keyframes mascot-cd-flip {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+@keyframes mascot-cd-star {
+  0%   { transform: rotate(0deg) scale(0.88); opacity: 0.75; }
+  50%  { transform: rotate(180deg) scale(1.12); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0.88); opacity: 0.75; }
+}
+@keyframes mascot-cd-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* 遁地时轨道裁切，人跳进洞被遮住 */
+.loading-screen-overlay.is-finishing .mascot-run-track {
+  overflow: hidden;
+}
+
+/* 首页彩蛋：社团历史 n年 ↔ m天 翻面 */
+.club-age-stage {
+  perspective: 640px;
+}
+.club-age-flip {
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.group:hover .club-age-flip,
+.club-age-flip.is-flipped {
+  transform: rotateX(180deg);
+}
+.club-age-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.club-age-back {
+  transform: rotateX(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .club-age-flip {
+    transition: none;
+  }
+  .logo-spin-cycle,
+  .mascot-run,
+  .mascot-sprite {
+    animation: none;
+  }
+  .mascot-run,
+  .mascot-sprite {
+    transform: none;
+  }
+  .mascot-rabbit-hole,
+  .mascot-cd-drop,
+  .mascot-finish-overlay,
+  .loading-screen-overlay {
+    display: none;
+  }
+}
+
 .game-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .game-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37,84,122,0.12); }
 .dark .game-card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
@@ -252,3 +586,83 @@ select:focus-visible {
 /* 输入框 placeholder 暗色适配（使用标准 ::placeholder 伪元素，IDE 友好） */
 .dark input::placeholder,
 .dark textarea::placeholder { color: #6b7280; opacity: 0.6; }
+
+/* ── 引擎标签色（Unity 暗色需提亮，否则 #222 几乎看不见）──────────── */
+.engine-chip-godot { color: #478CBF; background-color: rgba(71, 140, 191, 0.1); }
+.engine-chip-unity { color: #222222; background-color: rgba(34, 34, 34, 0.08); }
+.engine-chip-gamemaker { color: #69C93C; background-color: rgba(105, 201, 60, 0.12); }
+.engine-chip-unreal { color: #0E4C92; background-color: rgba(14, 76, 146, 0.1); }
+
+.dark .engine-chip-godot { color: #6eb0e0; background-color: rgba(110, 176, 224, 0.14); }
+.dark .engine-chip-unity { color: #e8e8e8; background-color: rgba(232, 232, 232, 0.14); }
+.dark .engine-chip-gamemaker { color: #8fd65a; background-color: rgba(143, 214, 90, 0.14); }
+.dark .engine-chip-unreal { color: #5b9ad8; background-color: rgba(91, 154, 216, 0.14); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   主题切换：「阴阳割昏晓」— 斜向分界线扫过
+   依赖 View Transitions API；无支持时 ThemeToggle 会瞬时切换。
+   ═══════════════════════════════════════════════════════════════════ */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* 新主题以对角线为刃口逐渐铺开；drop-shadow 让「割」线带光 */
+html.theme-cutting[data-theme-cut="to-dark"]::view-transition-old(root) {
+  z-index: 1;
+}
+html.theme-cutting[data-theme-cut="to-dark"]::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-cut-diagonal 0.85s cubic-bezier(0.65, 0.05, 0.36, 1) both;
+  /* 入夜：冷色刃口 */
+  filter:
+    drop-shadow(0 0 1px rgba(180, 210, 255, 0.95))
+    drop-shadow(2px 2px 0 rgba(120, 160, 230, 0.55))
+    drop-shadow(0 0 18px rgba(90, 130, 220, 0.35));
+}
+
+html.theme-cutting[data-theme-cut="to-light"]::view-transition-old(root) {
+  z-index: 1;
+}
+html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-cut-diagonal-rev 0.85s cubic-bezier(0.65, 0.05, 0.36, 1) both;
+  /* 破晓：暖色刃口 */
+  filter:
+    drop-shadow(0 0 1px rgba(255, 236, 190, 0.95))
+    drop-shadow(-2px -2px 0 rgba(255, 200, 120, 0.55))
+    drop-shadow(0 0 20px rgba(255, 180, 90, 0.4));
+}
+
+/*
+ * 斜向半平面展开：斜边即「阴阳」分界线，从一角扫到对角。
+ * 关键角三角形最终覆盖整屏（含溢出余量）。
+ */
+@keyframes theme-cut-diagonal {
+  from {
+    clip-path: polygon(-8% -8%, 0% -8%, -8% 0%);
+  }
+  to {
+    clip-path: polygon(-8% -8%, 220% -8%, -8% 220%);
+  }
+}
+
+/* 破晓从对角反向扫回 */
+@keyframes theme-cut-diagonal-rev {
+  from {
+    clip-path: polygon(108% 108%, 100% 108%, 108% 100%);
+  }
+  to {
+    clip-path: polygon(108% 108%, -120% 108%, 108% -120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-cutting::view-transition-old(root),
+  html.theme-cutting::view-transition-new(root) {
+    animation: none !important;
+    filter: none !important;
+  }
+}

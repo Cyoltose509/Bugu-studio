@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
-import { ActivityType, ActivityStatus } from "@prisma/client";
+import { ActivityStatus } from "@prisma/client";
 
 const DEFAULT_COVER = "/images/default_pic.png";
 

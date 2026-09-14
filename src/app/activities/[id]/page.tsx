@@ -106,7 +106,7 @@ const getActivity = cache(async (id: string) => {
 
 export default function ActivityDetailPage({ params }: PageProps) {
   return (
-    <Suspense fallback={<LogoLoading text="正在加载活动..." />}>
+    <Suspense fallback={<LogoLoading text="正在加载活动..." compact />}>
       <ActivityDetailContent params={params} />
     </Suspense>
   );

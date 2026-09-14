@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default function EditProfilePage() {
   return (
-    <Suspense fallback={<LogoLoading text="正在加载编辑资料..." />}>
+    <Suspense fallback={<LogoLoading text="正在加载编辑资料..." compact />}>
       <EditProfileContent />
     </Suspense>
   );

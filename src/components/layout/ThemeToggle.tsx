@@ -1,11 +1,17 @@
 "use client";
 
+/**
+ * 日夜主题切换 — 「阴阳割昏晓」对角线扫过过渡
+ * 优先 View Transitions API；不支持或减少动态时则瞬时切换。
+ */
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const busyRef = useRef(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -13,18 +19,58 @@ export default function ThemeToggle() {
     return <div className="w-8 h-8" />;
   }
 
-  const isDark = theme === "dark";
+  const isDark = resolvedTheme === "dark";
+
+  const toggleTheme = async () => {
+    if (busyRef.current) return;
+
+    const next = isDark ? "light" : "dark";
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const apply = () => {
+      flushSync(() => setTheme(next));
+    };
+
+    // 无 VT 或不希望动效：直接切
+    if (
+      reduceMotion ||
+      typeof document === "undefined" ||
+      !("startViewTransition" in document)
+    ) {
+      apply();
+      return;
+    }
+
+    busyRef.current = true;
+    const root = document.documentElement;
+    root.dataset.themeCut = next === "dark" ? "to-dark" : "to-light";
+    root.classList.add("theme-cutting");
+
+    try {
+      const transition = document.startViewTransition(apply);
+      await transition.finished;
+    } catch {
+      // 用户快速切页等导致 VT 中断时，保证主题已落定
+      apply();
+    } finally {
+      root.classList.remove("theme-cutting");
+      delete root.dataset.themeCut;
+      busyRef.current = false;
+    }
+  };
 
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={toggleTheme}
       className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
       title={isDark ? "切换日间模式" : "切换夜间模式"}
-      aria-label="切换主题"
+      aria-label={isDark ? "切换日间模式" : "切换夜间模式"}
     >
       {isDark ? (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <circle cx="12" cy="12" r="5" />
           <line x1="12" y1="1" x2="12" y2="3" />
           <line x1="12" y1="21" x2="12" y2="23" />
@@ -36,7 +82,7 @@ export default function ThemeToggle() {
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
         </svg>
       ) : (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
       )}

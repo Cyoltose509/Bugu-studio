@@ -5,10 +5,20 @@
 import {Suspense} from "react";
 import Link from "next/link";
 import Image from "next/image";
+import localFont from "next/font/local";
 import HomeStats from "@/components/home/HomeStats";
 import LatestProjects from "@/components/home/LatestProjects";
 import HomeActivities from "@/components/home/HomeActivities";
 import LogoLoading from "@/components/ui/LogoLoading";
+
+/** 寒蝉半圆体 — Hero 子集（「布谷工作室」+ official） */
+const chillRoundBold = localFont({
+    src: "../fonts/ChillRoundM-hero.woff2",
+    weight: "700",
+    display: "swap",
+    preload: true,
+    fallback: ["system-ui", "sans-serif"],
+});
 
 export const metadata = {title: "布谷工作室"};
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -21,8 +31,16 @@ export default function HomePage() {
                 <div className="container mx-auto max-w-3xl relative">
                     <Image src="/images/logo.png" alt="布谷工作室" width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg"
                            priority/>
-                    <h1 className="text-4xl md:text-6xl font-bold mb-4 text-brand-navy">布谷工作室</h1>
-                    <p className="text-xl mb-3 text-brand-text-body">官方网站</p>
+                    <h1
+                        className={`${chillRoundBold.className} text-4xl md:text-6xl font-bold mb-4 tracking-wide text-brand-navy`}
+                    >
+                        布谷工作室
+                    </h1>
+                    <p
+                        className={`${chillRoundBold.className} text-2xl md:text-3xl font-bold mb-3 tracking-wide text-brand-text-body`}
+                    >
+                        official
+                    </p>
                     <p className="mb-8 max-w-xl mx-auto text-brand-text-secondary">
                         我们是一群热爱游戏开发的同学，这里存档了社团的点点滴滴。
                     </p>
@@ -38,13 +56,13 @@ export default function HomePage() {
                 <HomeStats/>
             </Suspense>
 
-            {/* 最新作品 — 流式加载（展示 6 个） */}
+            {/* 最新作品 — 流式加载（8 个 = 桌面 4 列两整行） */}
             <section className="py-16 container mx-auto px-4">
                 <div className="flex items-center justify-between mb-8">
                     <h2 className="text-2xl font-bold text-brand-navy">最新作品</h2>
                     <Link href="/works" className="text-sm hover:underline text-brand-blue">查看全部 →</Link>
                 </div>
-                <Suspense fallback={<LogoLoading text="正在加载最新作品..." />}>
+                <Suspense fallback={<LogoLoading text="正在加载最新作品..." compact />}>
                     <LatestProjects/>
                 </Suspense>
             </section>

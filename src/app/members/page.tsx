@@ -18,7 +18,7 @@ export default async function MembersPage() {
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-10">
                 <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
-                <Suspense fallback={<LogoLoading text="正在加载成员..." />}>
+                <Suspense fallback={<LogoLoading text="正在加载成员..." compact />}>
                     <MembersData />
                 </Suspense>
             </div>

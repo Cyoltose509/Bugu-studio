@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 export default function ProfilePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   return (
-    <Suspense fallback={<LogoLoading text="正在加载个人中心..." />}>
+    <Suspense fallback={<LogoLoading text="正在加载个人中心..." compact />}>
       <ProfileContent searchParams={searchParams} />
     </Suspense>
   );
@@ -77,6 +77,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
         orderBy: [{ developYear: "desc" }, { createdAt: "desc" }],
         include: {
           tags: { include: { tag: true } },
+          images: {
+            orderBy: { sortOrder: "asc" },
+            take: 4,
+            select: { url: true, altText: true },
+          },
           members: {
             orderBy: { sortOrder: "asc" },
             include: {
@@ -104,6 +109,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
         orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }],
         include: {
           tags: { include: { tag: true } },
+          images: {
+            orderBy: { sortOrder: "asc" },
+            take: 4,
+            select: { url: true, altText: true },
+          },
           members: {
             orderBy: { sortOrder: "asc" },
             include: {
@@ -374,7 +384,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
             暂无作品
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
             {userProjects.map((p, i) => (
               <ProjectCard
                 key={p.id}
@@ -391,7 +401,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       {likedProjects.length > 0 && (
         <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
           <h2 className="font-semibold mb-4 text-brand-orange">❤️ 我喜欢的作品</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
             {likedProjects.map((p, i) => (
               <ProjectCard
                 key={p.id}

@@ -53,3 +53,11 @@ nul
 /backups/
 /playwright-report/
 /test-results/
+
+# 全量寒蝉半圆体体积大，仓库只保留 Hero 子集 woff2
+/public/fonts/ChillRoundM.ttf
+
+# 本地前端 mock（勿提交）
+/fixtures/
+/scripts/fetch-mock-from-prod.mjs
+/src/lib/mock/

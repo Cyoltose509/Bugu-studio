@@ -218,5 +218,17 @@ export function extractMentionName(raw: string): string {
   return raw.replace(/^@/, "").replace(/[,，。.!！?？;；:：、)]+$/, "").trim();
 }
 
+/**
+ * 卡片列表用的简介摘录：去掉 mention 里的 memberId、压平空白，
+ * 避免卡片上露出 @名字(cm_xxx) 或换行把 line-clamp 高度搞乱。
+ */
+export function toPlainCardText(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/@([^(@\s]+)\([a-zA-Z0-9_]+\)/g, "@$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** 导出 TLD 常量，供 MentionEditor 复用 */
 export { COMMON_TLDS };

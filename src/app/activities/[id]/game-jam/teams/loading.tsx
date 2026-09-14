@@ -1,5 +1,5 @@
-import LogoLoading from "@/components/ui/LogoLoading";
+import MascotLoading from "@/components/ui/MascotLoading";
 
 export default function JamTeamsLoading() {
-  return <LogoLoading text="正在加载队伍列表..." />;
+  return <MascotLoading text="正在加载队伍列表..." />;
 }
