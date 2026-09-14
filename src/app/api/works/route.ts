@@ -7,6 +7,7 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { isMockDataEnabled, mockListProjects } from "@/lib/mock/frontend-data";
 
 const PAGE_SIZE = 16; // 4x4
 
@@ -37,6 +38,25 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "无效的排序参数" }, { status: 400 });
     }
 
+    if (isMockDataEnabled()) {
+        const wantTotal = !cursor && searchParams.get("total") === "1";
+        const result = mockListProjects({
+            types,
+            year,
+            tag,
+            q,
+            sort,
+            cursor,
+            take: PAGE_SIZE,
+        });
+        return NextResponse.json({
+            items: result.items.map((p) => ({ ...p, liked: false })),
+            nextCursor: result.nextCursor,
+            hasMore: result.hasMore,
+            ...(wantTotal ? { total: result.total } : {}),
+        });
+    }
+
     // 构建筛选条件
     const where: any = { status: ProjectStatus.PUBLISHED };
     if (types) {
@@ -55,44 +75,54 @@ export async function GET(request: NextRequest) {
     ];
     if (tag) where.tags = { some: { tag: { slug: tag } } };
 
-    // 排序（id 作为 tiebreaker 确保确定性分页）
+    // 排序：时间/名称走索引友好字段；喜欢用 _count，并用 id 保底保证分页稳定
     const orderBy: any = sort === "name"
         ? [{ title: "asc" }, { id: "desc" }]
         : sort === "likes"
-            ? [{ likes: { _count: "desc" } }, { publishedAt: "desc" }, { id: "desc" }]
+            ? [{ likes: { _count: "desc" } }, { id: "desc" }]
             : [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
 
-    // cursor-based 分页：skip:1 跳过 cursor 本身，取之后的 PAGE_SIZE+1 条
-    const projects = await prisma.project.findMany({
-        where,
-        orderBy,
-        take: PAGE_SIZE + 1,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        select: {
-            id: true,
-            slug: true,
-            title: true,
-            subtitle: true,
-            description: true,
-            coverImage: true,
-            type: true,
-            developYear: true,
-            publishedAt: true,
-            tags: { include: { tag: true } },
-            awards: true,
-            aiUsages: true,
-            _count: { select: { likes: true } },
-            members: {
-                orderBy: { sortOrder: "asc" },
-                include: {
-                    member: {
-                        select: { displayName: true, avatar: true, user: { select: { image: true } } },
+    const wantTotal = !cursor && searchParams.get("total") === "1";
+
+    // 首屏带 total 时并行；翻页只查列表
+    const [projects, total] = await Promise.all([
+        prisma.project.findMany({
+            where,
+            orderBy,
+            take: PAGE_SIZE + 1,
+            ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            select: {
+                id: true,
+                slug: true,
+                title: true,
+                subtitle: true,
+                description: true,
+                coverImage: true,
+                type: true,
+                developYear: true,
+                publishedAt: true,
+                tags: { include: { tag: true } },
+                awards: true,
+                aiUsages: true,
+                _count: { select: { likes: true } },
+                images: {
+                    orderBy: { sortOrder: "asc" },
+                    take: 4,
+                    select: { url: true, altText: true },
+                },
+                members: {
+                    orderBy: { sortOrder: "asc" },
+                    include: {
+                        member: {
+                            select: { displayName: true, avatar: true, user: { select: { image: true } } },
+                        },
+                        user: { select: { id: true, name: true, image: true } },
                     },
-                    user: { select: { id: true, name: true, image: true } },
                 },
             },
-        },
-    });
+        }),
+        wantTotal ? prisma.project.count({ where }) : Promise.resolve(null),
+    ]);
 
     const hasMore = projects.length > PAGE_SIZE;
     const items = hasMore ? projects.slice(0, PAGE_SIZE) : projects;
@@ -118,5 +148,6 @@ export async function GET(request: NextRequest) {
         items: items.map((p) => ({ ...p, liked: likedSet.has(p.id) })),
         nextCursor,
         hasMore,
+        ...(typeof total === "number" ? { total } : {}),
     });
 }

@@ -1,9 +1,11 @@
 ﻿import Link from "next/link";
 import Image from "next/image";
 
+import { getClubFoundedYear } from "@/lib/club";
+
 export function Footer() {
     const currentYear = new Date().getFullYear();
-    const foundedYear = parseInt(process.env.NEXT_PUBLIC_CLUB_FOUNDED_YEAR || "2018");
+    const foundedYear = getClubFoundedYear();
 
     return (
         <footer className="border-t border-[#D0DEE8] dark:border-[#2a3045] bg-[#F0F5F9] dark:bg-[#141822]">

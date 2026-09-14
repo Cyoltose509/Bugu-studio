@@ -23,6 +23,14 @@ import ProjectLikeButton from "@/components/projects/ProjectLikeButton";
 import { RichContent } from "@/components/ui/RichContent";
 import LogoLoading from "@/components/ui/LogoLoading";
 import PrefetchNav from "@/components/works/PrefetchNav";
+import { TagChipLink } from "@/components/tags/TagChip";
+import { sortProjectTagsEngineFirst } from "@/lib/tags/engine-tags";
+import {
+  isMockDataEnabled,
+  mockAdjacentProjects,
+  mockProjectBySlug,
+  getMockSnapshot,
+} from "@/lib/mock/frontend-data";
 
 const ImageGallery = nextDynamic(() => import("@/components/projects/ImageGallery"), {
   loading: () => (
@@ -40,6 +48,16 @@ interface PageProps {
 /* ── 极轻量 metadata 查询（仅 select，无 join，不阻塞首字节） ── */
 
 const getProjectMeta = cache(async (slug: string) => {
+  if (isMockDataEnabled()) {
+    const p = mockProjectBySlug(slug);
+    if (!p) return null;
+    return {
+      title: p.title,
+      description: p.description || "",
+      coverImage: p.coverImage,
+      status: p.status || ProjectStatus.PUBLISHED,
+    };
+  }
   return prisma.project.findUnique({
     where: { slug },
     select: { title: true, description: true, coverImage: true, status: true },
@@ -63,6 +81,9 @@ export async function generateMetadata(
 /* ── 页面内容查询（React.cache + cachedQuery，含所有 join） ── */
 
 const getProject = cache(async (slug: string) => {
+  if (isMockDataEnabled()) {
+    return mockProjectBySlug(slug);
+  }
   return cachedQuery(`project:detail:${slug}`, () =>
     prisma.project.findUnique({
       where: { slug },
@@ -97,6 +118,11 @@ async function getAdjacentProjects(
   id: string,
   sort: string,
 ) {
+  if (isMockDataEnabled()) {
+    const current = getMockSnapshot().projects.find((p) => p.id === id);
+    if (!current) return { prev: null, next: null };
+    return mockAdjacentProjects(current.slug, sort);
+  }
   if (sort === "likes") {
     // likes 排序是动态的（点赞数随时变），prev/next 无意义
     return { prev: null, next: null };
@@ -202,7 +228,7 @@ async function getAdjacentProjects(
 export default function WorkDetailPage({ params, searchParams }: PageProps) {
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
-      <Suspense fallback={<LogoLoading text="正在加载作品详情..." />}>
+      <Suspense fallback={<LogoLoading text="正在加载作品详情..." compact />}>
         <WorkDetailContent params={params} searchParams={searchParams} />
       </Suspense>
     </div>
@@ -256,11 +282,11 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
 
   // ── 并行：点赞状态 + 相邻导航 ──
   const [likeResult, navResult] = await Promise.all([
-    session?.user?.id
+    session?.user?.id && !isMockDataEnabled()
       ? prisma.projectLike.findUnique({
           where: { projectId_userId: { projectId: project.id, userId: session.user.id } },
           select: { id: true },
-        })
+        }).catch(() => null)
       : Promise.resolve(null),
     getAdjacentProjects(project.title, project.developYear, project.publishedAt, project.id, sort)
       .catch((err) => {
@@ -367,8 +393,13 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">
-            {project.tags.map(({ tag }) => (
-              <Link key={tag.slug} href={`/works?tag=${tag.slug}`} className="text-sm px-2.5 py-1 rounded-full transition-opacity hover:opacity-80" style={{ backgroundColor: `${tag.color}22`, color: tag.color }}>{tag.name}</Link>
+            {sortProjectTagsEngineFirst(project.tags).map(({ tag }) => (
+              <TagChipLink
+                key={tag.slug}
+                tag={tag}
+                href={`/works?tag=${tag.slug}`}
+                className="text-sm px-2.5 py-1 rounded-full"
+              />
             ))}
           </div>
 

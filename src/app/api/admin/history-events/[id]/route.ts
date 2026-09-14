@@ -70,7 +70,7 @@ export async function PATCH(
     }
 
     revalidatePath("/history");
-    invalidateCache("history:events"); // 非阻塞
+    invalidateCache("history:"); // 覆盖 history:allEvents / eventYears 等
 
     // ── 清理 R2 旧图片（best-effort）──
     if (oldImageUrls.length > 0) {
@@ -103,7 +103,7 @@ export async function DELETE(
   await prisma.yearEvent.delete({ where: { id } });
 
   revalidatePath("/history");
-  await invalidateCache("history:events");
+  await invalidateCache("history:");
 
   // ── 清理 R2 旧图片（best-effort）──
   if (oldImageUrls.length > 0) {

@@ -4,11 +4,29 @@ import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
 import {batchRenderRichContent} from "@/lib/renderRichContent";
 import {ProjectStatus, ActivityStatus} from "@prisma/client";
+import {isMockDataEnabled, mockHistoryYearDetails} from "@/lib/mock/frontend-data";
 
 export const metadata: Metadata = {title: "社团历史", description: "记录布谷工作室每一年的成长与创作"};
 export const dynamic = "force-dynamic"; // 避免构建时并发连接池耗尽
 
 export default async function HistoryPage() {
+    if (isMockDataEnabled()) {
+        const {yearDetails, startYear} = mockHistoryYearDetails();
+        return (
+            <div className="container mx-auto px-4 py-10 animate-fade-in">
+                <div className="mb-8 text-center">
+                    <h1 className="text-3xl font-bold text-brand-navy">社团历史</h1>
+                    <p className="mt-2 text-brand-text-secondary">记录每一届成员的努力与成果</p>
+                </div>
+                <HistoryClient
+                    yearDetails={yearDetails}
+                    startYear={startYear}
+                    yearCount={yearDetails.length}
+                />
+            </div>
+        );
+    }
+
     const currentYear = new Date().getFullYear();
 
     // 从四个数据源收集所有有数据的年份（历史数据几乎不变，缓存1小时）

@@ -1,5 +1,5 @@
-import LogoLoading from "@/components/ui/LogoLoading";
+import MascotLoading from "@/components/ui/MascotLoading";
 
 export default function ProjectEditLoading() {
-  return <LogoLoading text="正在加载编辑页面..." />;
+  return <MascotLoading text="正在加载编辑页面..." />;
 }

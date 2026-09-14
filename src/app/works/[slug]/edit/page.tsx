@@ -36,7 +36,7 @@ interface PageProps {
 
 export default function ProjectEditPage({ params }: PageProps) {
   return (
-    <Suspense fallback={<LogoLoading text="正在加载编辑页面..." />}>
+    <Suspense fallback={<LogoLoading text="正在加载编辑页面..." compact />}>
       <EditContent params={params} />
     </Suspense>
   );
@@ -70,7 +70,7 @@ async function EditContent({ params }: { params: Promise<{ slug: string }> }) {
     }),
     prisma.tag.findMany({
       orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, slug: true },
+      select: { id: true, name: true, slug: true, group: true, color: true, sortOrder: true },
     }),
   ]);
 

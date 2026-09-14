@@ -8,6 +8,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityType, ActivityStatus } from "@prisma/client";
+import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-data";
 
 export const metadata: Metadata = { title: "活动 - 布谷工作室" };
 export const dynamic = "force-dynamic";
@@ -193,7 +194,7 @@ function UpcomingItem({ a }: { a: any }) {
 function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
   return (
     <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-brand-navy">
-      <span>{emoji}</span> {title}
+      {emoji ? <span>{emoji}</span> : null} {title}
     </h2>
   );
 }
@@ -201,7 +202,9 @@ function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
 export default async function ActivitiesPage() {
   const now = new Date();
 
-  const raw = await cachedQuery(
+  const raw = isMockDataEnabled()
+    ? mockActivitiesBuckets()
+    : await cachedQuery(
     "activities:list",
     () =>
       Promise.all([
@@ -230,7 +233,7 @@ export default async function ActivitiesPage() {
         }),
       ]),
     60,
-  );
+  ).catch(() => mockActivitiesBuckets());
   const [ongoing, upcoming, past] = Array.isArray(raw) ? raw : [[], [], []];
   // 每个子元素也做守卫，防止缓存返回异常数据
   const safeOngoing  = Array.isArray(ongoing)  ? ongoing  : [];
@@ -252,6 +255,12 @@ export default async function ActivitiesPage() {
       hero && safeUpcoming[0]?.id === hero.id
           ? safeUpcoming.slice(1)
           : safeUpcoming;
+  const hasAny = !!(hero || safePast.length || safeOngoing.length || safeUpcoming.length);
+  const otherOngoing =
+      hero && heroStatus === "ongoing"
+          ? safeOngoing.filter((a) => a.id !== hero.id)
+          : safeOngoing;
+
   return (
       <div className="container mx-auto px-4 py-10 animate-fade-in">
 
@@ -261,8 +270,17 @@ export default async function ActivitiesPage() {
           <p className="mt-2 text-brand-text-secondary">布谷工作室的例会、公开课、比赛与各类活动</p>
         </div>
 
+        {!hasAny && (
+          <div className="rounded-xl border border-brand-border-subtle bg-card px-6 py-16 text-center">
+            <p className="text-lg font-medium text-brand-navy">暂无公开活动</p>
+            <p className="mt-2 text-sm text-brand-text-secondary">
+              新的例会、公开课与比赛发布后会出现在这里。
+            </p>
+          </div>
+        )}
+
         {hero && (
-            <section>
+            <section className="mb-12">
               <div className="grid lg:grid-cols-5 gap-10">
 
                 <div className="lg:col-span-3">
@@ -273,13 +291,19 @@ export default async function ActivitiesPage() {
                   <h2
                       className="text-lg font-semibold mb-3 text-brand-navy"
                   >
-                    ⏰ 即将开始
+                    即将开始
                   </h2>
 
                   <div className="space-y-3">
-                    {upcomingList.slice(0, 5).map(a => (
+                    {upcomingList.length === 0 ? (
+                      <p className="text-sm text-brand-text-muted py-6 text-center border border-dashed border-brand-border-subtle rounded-xl">
+                        暂无即将开始的活动
+                      </p>
+                    ) : (
+                      upcomingList.slice(0, 5).map(a => (
                         <UpcomingItem key={a.id} a={a} />
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -287,10 +311,21 @@ export default async function ActivitiesPage() {
             </section>
         )}
 
+        {otherOngoing.length > 0 && (
+          <section className="mb-12">
+            <SectionTitle emoji="" title="进行中" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {otherOngoing.map((a) => (
+                <ActivityCard key={a.id} a={a} badge="进行中" />
+              ))}
+            </div>
+          </section>
+        )}
+
         {safePast.length > 0 && (
             <section>
               <SectionTitle
-                  emoji="📦"
+                  emoji=""
                   title="活动档案"
               />
 

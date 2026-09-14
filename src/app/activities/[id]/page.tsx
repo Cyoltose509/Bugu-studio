@@ -25,6 +25,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import UserAvatar from "@/components/ui/UserAvatar";
 import LogoLoading from "@/components/ui/LogoLoading";
 import { resolveActivityId } from "@/lib/activities/resolve";
+import { isMockDataEnabled, mockActivityByKey } from "@/lib/mock/frontend-data";
 
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",
@@ -51,9 +52,13 @@ interface PageProps {
 const getActivityMeta = cache(async (key: string) => {
   const id = await resolveActivityId(key);
   if (!id) return null;
+  if (isMockDataEnabled()) {
+    const a = mockActivityByKey(id);
+    return a ? { title: a.title, summary: a.summary, status: a.status } : null;
+  }
   return prisma.activity.findUnique({
     where: { id },
-    select: { title: true, summary: true },
+    select: { title: true, summary: true, status: true },
   });
 });
 
@@ -63,7 +68,7 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { id: key } = await params;
   const a = await getActivityMeta(key);
-  if (!a) return { title: "活动不存在" };
+  if (!a || a.status === "DRAFT") return { title: "活动不存在" };
   return {
     title: `${a.title} - 活动 - 布谷工作室`,
     description: (a as any).summary || a.title,
@@ -73,6 +78,9 @@ export async function generateMetadata(
 /* ── 主页面数据查询（React.cache + cachedQuery，含全部 include）── */
 
 const getActivity = cache(async (id: string) => {
+  if (isMockDataEnabled()) {
+    return mockActivityByKey(id);
+  }
   return cachedQuery(
     `activity:detail:${id}`,
     () =>
@@ -92,6 +100,7 @@ const getActivity = cache(async (id: string) => {
               id: true,
               title: true,
               projectId: true,
+              teamId: true,
               team: { select: { name: true } },
               scores: { select: { totalScore: true } },
             },
@@ -106,7 +115,7 @@ const getActivity = cache(async (id: string) => {
 
 export default function ActivityDetailPage({ params }: PageProps) {
   return (
-    <Suspense fallback={<LogoLoading text="正在加载活动..." />}>
+    <Suspense fallback={<LogoLoading text="正在加载活动..." compact />}>
       <ActivityDetailContent params={params} />
     </Suspense>
   );
@@ -124,6 +133,12 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   const activity = await getActivity(id);
 
   if (!activity) notFound();
+
+  // 草稿仅管理员可见
+  if (activity.status === "DRAFT") {
+    const role = session?.user?.role;
+    if (role !== "ADMIN") notFound();
+  }
 
   const isOngoing   = now >= activity.startTime && now <= activity.endTime;
   const isUpcoming  = now < activity.startTime;

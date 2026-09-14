@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default function SubmitPage() {
   return (
-    <Suspense fallback={<LogoLoading text="正在加载提交页面..." />}>
+    <Suspense fallback={<LogoLoading text="正在加载提交页面..." compact />}>
       <SubmitContent />
     </Suspense>
   );
@@ -28,7 +28,7 @@ async function SubmitContent() {
   await ensureDefaultTags();
   const tags = await prisma.tag.findMany({
     orderBy: { sortOrder: "asc" },
-    select: { id: true, name: true, slug: true },
+    select: { id: true, name: true, slug: true, group: true, color: true, sortOrder: true },
   });
 
   return (

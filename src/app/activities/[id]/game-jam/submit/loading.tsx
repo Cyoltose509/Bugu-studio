@@ -1,5 +1,5 @@
-import LogoLoading from "@/components/ui/LogoLoading";
+import MascotLoading from "@/components/ui/MascotLoading";
 
 export default function JamSubmitLoading() {
-  return <LogoLoading text="正在加载提交页面..." />;
+  return <MascotLoading text="正在加载提交页面..." />;
 }

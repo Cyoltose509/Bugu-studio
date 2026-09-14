@@ -333,14 +333,24 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
     revalidatePath("/admin/projects");
 
     // ── 清理 R2 旧文件（best-effort）──
+    // 只删「真正被替换掉」的文件；保留下来的 URL 绝不能删，否则库里还有记录、CDN 已 404
     const oldCover = project.coverImage;
     const newCover = projectData.coverImage;
     if (oldCover && newCover !== undefined && oldCover !== newCover) {
       deleteFromR2(oldCover).catch(() => {});
     }
     if (images !== undefined && project.images.length > 0) {
-      const oldUrls = project.images.map((img) => img.url).filter(Boolean);
-      deleteManyFromR2(oldUrls).catch(() => {});
+      const keep = new Set(
+        (images as { url?: string }[])
+          .map((img) => img?.url)
+          .filter((u): u is string => !!u),
+      );
+      const removedUrls = project.images
+        .map((img) => img.url)
+        .filter((url): url is string => !!url && !keep.has(url));
+      if (removedUrls.length > 0) {
+        deleteManyFromR2(removedUrls).catch(() => {});
+      }
     }
 
     return apiResponse(updated);

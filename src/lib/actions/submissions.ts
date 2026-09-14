@@ -210,11 +210,17 @@ export async function submitJamWork(activityId: string, formData: FormData) {
     });
 
     // ── 清理 R2 旧文件（best-effort）──
-    const oldUrls: (string | null)[] = [...oldFiles];
+    // 只删被替换掉的截图；仍在用的 URL 必须保留
+    const keepFiles = new Set(screenshots.filter(Boolean));
+    const oldUrls: (string | null)[] = oldFiles.filter(
+      (u) => typeof u === "string" && u && !keepFiles.has(u),
+    );
     if (oldCoverImage && oldCoverImage !== metadata.coverImage) {
       oldUrls.push(oldCoverImage);
     }
-    deleteManyFromR2(oldUrls).catch(() => {});
+    if (oldUrls.length > 0) {
+      deleteManyFromR2(oldUrls).catch(() => {});
+    }
   } else {
     await prisma.jamSubmission.create({
       data: {

@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { compressImage } from "@/lib/utils/imageCrop";
 import MentionEditor from "@/components/ui/MentionEditor";
+import EngineTagIcon from "@/components/tags/EngineTagIcon";
+import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
 
 // ── 作品类型 ──
 const PROJECT_TYPES = [
@@ -17,7 +19,7 @@ const ROLE_PRESETS = ["程序", "策划", "美术", "音效", "音乐", "测试"
 const LINK_LABEL_PRESETS = ["Steam", "itch.io", "官网", "百度网盘", "Google Drive", "GitHub", "B站"];
 
 // ── 通用类型 ──
-interface Tag { id: string; name: string; slug: string; group?: string | null; }
+interface Tag { id: string; name: string; slug: string; group?: string | null; color?: string | null; sortOrder?: number; }
 
 interface LinkEntry { label: string; url: string; }
 
@@ -815,12 +817,24 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
             if (sortedKeys.length === 1 && sortedKeys[0] === "其他") {
               return (
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => {
+                  {sortTagsEngineFirst(tags).map((tag) => {
                     const active = selectedTags.includes(tag.id);
+                    const engine = isEngineTagSlug(tag.slug);
+                    const color = getEngineColor(tag.slug) || tag.color || "#88C232";
                     return (
                       <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                        className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-brand-green" : "opacity-60 hover:opacity-100"} bg-brand-green/15 text-brand-green`}
+                        className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer ${
+                          engine
+                            ? `rounded-full font-medium ${getEngineChipClass(tag.slug)}`
+                            : "rounded-full"
+                        } ${active ? "ring-2 ring-offset-1 opacity-100" : "opacity-60 hover:opacity-100"}`}
+                        style={
+                          engine
+                            ? { ["--tw-ring-color" as string]: "currentColor" }
+                            : { color, backgroundColor: `${color}18`, ["--tw-ring-color" as string]: color }
+                        }
                         >
+                        {engine && <EngineTagIcon slug={tag.slug} />}
                         {tag.name}
                       </button>
                     );
@@ -834,12 +848,24 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                   <div key={group}>
                     <h3 className="text-xs font-medium mb-1.5 text-brand-text-muted">{group}</h3>
                     <div className="flex flex-wrap gap-2">
-                      {grouped[group].map((tag) => {
+                      {sortTagsEngineFirst(grouped[group]).map((tag) => {
                         const active = selectedTags.includes(tag.id);
+                        const engine = isEngineTagSlug(tag.slug);
+                        const color = getEngineColor(tag.slug) || tag.color || "#88C232";
                         return (
                           <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                            className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${active ? "ring-2 ring-offset-1 ring-brand-green" : "opacity-60 hover:opacity-100"} text-brand-green ${active ? "bg-brand-green/15" : "bg-brand-green/10"}`}
+                            className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer ${
+                              engine
+                                ? `rounded-full font-medium ${getEngineChipClass(tag.slug)}`
+                                : "rounded-full"
+                            } ${active ? "ring-2 ring-offset-1 opacity-100" : "opacity-60 hover:opacity-100"}`}
+                            style={
+                              engine
+                                ? { ["--tw-ring-color" as string]: "currentColor" }
+                                : { color, backgroundColor: `${color}18`, ["--tw-ring-color" as string]: color }
+                            }
                           >
+                            {engine && <EngineTagIcon slug={tag.slug} />}
                             {tag.name}
                           </button>
                         );

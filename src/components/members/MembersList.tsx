@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { positionLabel, positionColor } from "@/lib/position";
@@ -131,9 +132,19 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {groupedFiltered[key].map(m => (
-                <Link key={m.id} href={`/members/${m.id}`} className="group text-center p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-all border-brand-border-subtle">
-                  <div className="w-16 h-16 mx-auto  overflow-hidden">
+                <Link key={m.id} href={`/members/${m.id}`} className="group text-center p-4 pt-5 rounded-xl bg-card border shadow-sm hover:shadow-md transition-all border-brand-border-subtle">
+                  <div className="relative w-12 h-12 mx-auto">
                     <UserAvatar src={m.user?.image || m.avatar} name={m.displayName} size={48} className="mx-auto" />
+                    {m.graduated && (
+                      <Image
+                        src="/images/graduation-cap.png"
+                        alt=""
+                        width={40}
+                        height={40}
+                        className="pointer-events-none absolute -top-3 left-1/2 z-10 w-10 h-10 -translate-x-1/2 object-contain drop-shadow-sm select-none"
+                        aria-hidden
+                      />
+                    )}
                   </div>
                   <div className="text-sm mt-0.5 mx-auto font-medium group-hover:text-brand-blue transition-colors line-clamp-1 flex items-center gap-1 justify-center text-brand-text-heading">
                     {m.displayName}

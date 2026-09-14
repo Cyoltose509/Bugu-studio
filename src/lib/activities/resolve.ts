@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { isMockDataEnabled, mockResolveActivityId } from "@/lib/mock/frontend-data";
 
 /**
  * 活动详情路由 `/activities/[id]` 的参数历史上混用了两种值：
@@ -10,15 +11,23 @@ import { prisma } from "@/lib/db/prisma";
 export async function resolveActivityId(key: string): Promise<string | null> {
   if (!key) return null;
 
-  const byId = await prisma.activity.findUnique({
-    where: { id: key },
-    select: { id: true },
-  });
-  if (byId) return byId.id;
+  if (isMockDataEnabled()) {
+    return mockResolveActivityId(key);
+  }
 
-  const bySlug = await prisma.activity.findUnique({
-    where: { slug: key },
-    select: { id: true },
-  });
-  return bySlug?.id ?? null;
+  try {
+    const byId = await prisma.activity.findUnique({
+      where: { id: key },
+      select: { id: true },
+    });
+    if (byId) return byId.id;
+
+    const bySlug = await prisma.activity.findUnique({
+      where: { slug: key },
+      select: { id: true },
+    });
+    return bySlug?.id ?? null;
+  } catch {
+    return mockResolveActivityId(key);
+  }
 }

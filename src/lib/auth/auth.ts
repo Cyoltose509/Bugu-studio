@@ -84,6 +84,27 @@ export const authConfig = {
 
         const { email, password } = parsed.data;
         const normalizedEmail = email.toLowerCase();
+
+        // ── 本地 mock：DB 不可达时用 .env.local 的 MOCK_USER_* 登录（密码绝不入库）──
+        try {
+          const { isMockDataEnabled, verifyMockLogin } = await import("@/lib/mock/frontend-data");
+          if (isMockDataEnabled()) {
+            const mockUser = verifyMockLogin(normalizedEmail, password);
+            if (!mockUser) throw new AuthFailed();
+            return {
+              id: mockUser.id,
+              email: mockUser.email,
+              name: mockUser.name,
+              image: mockUser.image,
+              role: mockUser.role,
+              memberId: mockUser.memberId,
+            } as any;
+          }
+        } catch (e) {
+          if (e instanceof AuthFailed || e instanceof RateLimited) throw e;
+          // mock 模块异常时继续走真实鉴权
+        }
+
         const { prisma } = await import("@/lib/db/prisma");
 
         // ── 登录速率限制：检查是否已被锁定 ──
@@ -149,6 +170,25 @@ export const authConfig = {
         token.email = user.email!;
         token.picture = user.image ?? undefined;
         token.name = user.name ?? undefined;
+        if ((user as any).memberId) token.memberId = (user as any).memberId;
+      }
+
+      let mockOn = false;
+      try {
+        const { isMockDataEnabled } = await import("@/lib/mock/frontend-data");
+        mockOn = isMockDataEnabled();
+      } catch { /* ignore */ }
+
+      // mock 模式：不打 DB，保留 JWT / mock 用户信息
+      if (mockOn) {
+        if (!token.memberId) {
+          try {
+            const { getMockAuthUser } = await import("@/lib/mock/frontend-data");
+            const mu = getMockAuthUser();
+            if (mu?.memberId && mu.id === token.id) token.memberId = mu.memberId;
+          } catch { /* ignore */ }
+        }
+        return token;
       }
 
       // trigger === "update" 时（client 端 useSession().update()），从 DB 刷新
@@ -203,6 +243,22 @@ export const authConfig = {
         (session.user as any).memberId = (token as any).memberId || undefined;
 
         const userId = token.id as string;
+
+        let mockOn = false;
+        try {
+          const { isMockDataEnabled } = await import("@/lib/mock/frontend-data");
+          mockOn = isMockDataEnabled();
+        } catch { /* ignore */ }
+
+        if (mockOn) {
+          _setSessionCache(userId, {
+            isActive: true,
+            image: session.user.image ?? null,
+            name: session.user.name ?? null,
+            role: String(session.user.role || "MEMBER"),
+          });
+          return session;
+        }
 
         // 30 秒内有缓存 → 跳过 DB 查询（消除每次导航的 ~300ms 延迟）
         const cached = _getSessionCache(userId);
