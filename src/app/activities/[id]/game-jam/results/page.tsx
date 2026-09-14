@@ -2,9 +2,11 @@ import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { resolveActivityId } from "@/lib/activities/resolve";
 
 export default async function JamResultsPage({ params }: { params: Promise<{ id: string }> }) {
-  const activityId = (await params).id;
+  const activityId = await resolveActivityId((await params).id);
+  if (!activityId) notFound();
 
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },

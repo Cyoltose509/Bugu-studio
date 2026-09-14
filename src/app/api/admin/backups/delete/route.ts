@@ -1,12 +1,11 @@
 /**
- * POST /api/admin/backups/delete — 删除指定大版本备份
- * 删除数据库 BackupVersion 记录 + 对应的文件目录
+ * POST /api/admin/backups/delete — 删除大版本记录（及 R2 备份文件，尽力删除）
  */
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
-import fs from "fs";
-import path from "path";
+import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { backupObjectKey } from "@/lib/backup/storage";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -15,41 +14,42 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const versionId = body.versionId as string;
-
     if (!versionId) return apiError("缺少 versionId", 400);
 
-    // 1. 查找版本记录
     const version = await prisma.backupVersion.findUnique({ where: { id: versionId } });
     if (!version) return apiError("大版本不存在", 404);
 
-    // 2. 找到对应的备份日期目录
-    const dateStr = new Date(version.createdAt).toISOString().slice(0, 10);
-    const backupDir = path.join(process.cwd(), "backups", dateStr);
-
-    // 3. 检查是否有其他版本在同一天（防止误删别的版本的备份文件）
-    const sameDayVersions = await prisma.backupVersion.count({
-      where: {
-        id: { not: versionId },
-        createdAt: {
-          gte: new Date(`${dateStr}T00:00:00.000Z`),
-          lt:  new Date(`${dateStr}T23:59:59.999Z`),
-        },
-      },
-    });
-
-    // 4. 删除数据库记录
     await prisma.backupVersion.delete({ where: { id: versionId } });
 
-    // 5. 删除文件目录（只有当天没有其他版本时才删）
-    if (sameDayVersions === 0 && fs.existsSync(backupDir)) {
-      fs.rmSync(backupDir, { recursive: true, force: true });
+    let cloudDeleted = false;
+    try {
+      const accountId = process.env.R2_ACCOUNT_ID;
+      const bucket = process.env.R2_BUCKET_NAME;
+      const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+      const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+      if (accountId && bucket && accessKeyId && secretAccessKey) {
+        const client = new S3Client({
+          region: "auto",
+          endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+          credentials: { accessKeyId, secretAccessKey },
+          forcePathStyle: true,
+        });
+        await client.send(
+          new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: backupObjectKey(version.version),
+          })
+        );
+        cloudDeleted = true;
+      }
+    } catch (e) {
+      console.warn("[Backup delete] R2 delete failed:", e);
     }
 
     return apiResponse({
       deleted: true,
       version: version.version,
-      date: dateStr,
-      filesDeleted: sameDayVersions === 0,
+      cloudDeleted,
     });
   } catch (e: any) {
     console.error("[Backup delete] failed:", e);

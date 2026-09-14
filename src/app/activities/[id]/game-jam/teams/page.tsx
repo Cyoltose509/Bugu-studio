@@ -2,10 +2,13 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { resolveActivityId } from "@/lib/activities/resolve";
+import { notFound } from "next/navigation";
 
 export default async function JamTeamsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const activityId = (await params).id;
+  const activityId = await resolveActivityId((await params).id);
+  if (!activityId) notFound();
 
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },

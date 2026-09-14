@@ -5,12 +5,14 @@ import { notFound, redirect } from "next/navigation";
 import { JamSubmitForm } from "@/components/activities/submit/JamSubmitForm";
 import DeleteSubmissionButton from "@/components/activities/submit/DeleteSubmissionButton";
 import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksButton";
+import { resolveActivityId } from "@/lib/activities/resolve";
 
 export default async function JamSubmitPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/login");
 
-  const activityId = (await params).id;
+  const activityId = await resolveActivityId((await params).id);
+  if (!activityId) notFound();
 
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },

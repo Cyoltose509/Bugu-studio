@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import { ProjectStatus } from "@prisma/client";
+import MonitoringPasswordCard from "@/components/admin/MonitoringPasswordCard";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,8 @@ export default async function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <MonitoringPasswordCard />
 
       {/* 快捷操作 */}
       <div className="bg-card rounded-xl border p-5 shadow-sm border-brand-border-subtle">

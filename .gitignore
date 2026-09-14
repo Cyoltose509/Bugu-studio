@@ -17,6 +17,7 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+necessary.env
 
 # 运行时
 *.pid

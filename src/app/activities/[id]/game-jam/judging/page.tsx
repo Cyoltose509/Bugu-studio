@@ -8,6 +8,7 @@ import { RemoveJudgeButton } from "@/components/activities/judging/RemoveJudgeBu
 import { SubmitScoreForm } from "@/components/activities/judging/SubmitScoreForm";
 import { Suspense } from "react";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { resolveActivityId } from "@/lib/activities/resolve";
 
 /* ── 图片灯箱 (客户端) ── */
 function LightboxLink({ src, children, className }: { src: string; children: React.ReactNode; className?: string }) {
@@ -49,7 +50,8 @@ async function ensureAdminJudges(activityId: string) {
 
 export default async function JamJudgingPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const activityId = (await params).id;
+  const activityId = await resolveActivityId((await params).id);
+  if (!activityId) notFound();
 
   // 自动将非毕业管理员加入评委团
   if (session?.user) {
