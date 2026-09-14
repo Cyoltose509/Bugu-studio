@@ -14,6 +14,7 @@ import { RichContent } from "@/components/ui/RichContent";
 import { positionLabel, positionColor } from "@/lib/position";
 import ProjectCard from "@/components/projects/ProjectCard";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { isMockDataEnabled, mockMemberById } from "@/lib/mock/frontend-data";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -25,6 +26,10 @@ interface PageProps {
 /* ── 极轻量 metadata 查询（React.cache 去重，仅 2 字段）── */
 
 const getMemberMeta = cache(async (id: string) => {
+  if (isMockDataEnabled()) {
+    const m = mockMemberById(id);
+    return m ? { displayName: m.displayName, bio: m.bio } : null;
+  }
   return prisma.clubMember.findUnique({
     where: { id },
     select: { displayName: true, bio: true },
@@ -56,7 +61,9 @@ export default function MemberDetailPage({ params }: PageProps) {
 async function MemberDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const member = await cachedQuery(`member:detail:${id}`, async () => {
+  const member = isMockDataEnabled()
+    ? mockMemberById(id)
+    : await cachedQuery(`member:detail:${id}`, async () => {
     const m = await prisma.clubMember.findUnique({
       where: { id },
       include: {

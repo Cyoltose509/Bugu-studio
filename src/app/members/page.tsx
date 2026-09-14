@@ -4,6 +4,7 @@ import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
 import MembersList from "@/components/members/MembersList";
 import LogoLoading from "@/components/ui/LogoLoading";
+import {isMockDataEnabled, mockMembersList} from "@/lib/mock/frontend-data";
 
 export const metadata: Metadata = {title: "成员", description: "认识历届布谷工作室成员"};
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -28,7 +29,9 @@ export default async function MembersPage() {
 
 /** 成员数据 — 异步组件（Suspense 包裹，流式加载） */
 async function MembersData() {
-    const members = await cachedQuery('members:all', async () => {
+    const members = isMockDataEnabled()
+        ? mockMembersList()
+        : await cachedQuery('members:all', async () => {
         const list = await prisma.clubMember.findMany({
             orderBy: [{sortOrder: "asc"}],
             select: {
@@ -58,7 +61,7 @@ async function MembersData() {
                 submitterMap.get(m.userId) ?? 0,
             ),
         }));
-    }, 300);
+    }, 300).catch(() => mockMembersList());
 
     // 按 grade（如 2024 → "2024级"）分组，无 grade 时按 joinYear 分组
     const grouped = members.reduce<Record<string, typeof members>>((acc, m: any) => {

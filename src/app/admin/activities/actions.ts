@@ -60,10 +60,13 @@ async function invalidateActivityCaches(id?: string) {
     invalidateCache("activities:list"),
     invalidateCache("home:activities"),
     invalidateCache("admin:activities:"),
+    // 年报聚合依赖活动/参赛数据
+    invalidateCache("history:"),
     ...(id ? [invalidateCache(`activity:detail:${id}`)] : []),
   ]);
   revalidatePath("/activities");
   revalidatePath("/admin/activities");
+  revalidatePath("/history");
   if (id) revalidatePath(`/activities/${id}`);
 }
 

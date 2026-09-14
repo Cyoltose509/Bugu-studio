@@ -7,6 +7,7 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
+import { isMockDataEnabled, mockListProjects } from "@/lib/mock/frontend-data";
 
 const PAGE_SIZE = 16; // 4x4
 
@@ -35,6 +36,25 @@ export async function GET(request: NextRequest) {
     // 输入验证：sort 必须是指定值之一
     if (!["date", "name", "likes"].includes(sort)) {
         return NextResponse.json({ error: "无效的排序参数" }, { status: 400 });
+    }
+
+    if (isMockDataEnabled()) {
+        const wantTotal = !cursor && searchParams.get("total") === "1";
+        const result = mockListProjects({
+            types,
+            year,
+            tag,
+            q,
+            sort,
+            cursor,
+            take: PAGE_SIZE,
+        });
+        return NextResponse.json({
+            items: result.items.map((p) => ({ ...p, liked: false })),
+            nextCursor: result.nextCursor,
+            hasMore: result.hasMore,
+            ...(wantTotal ? { total: result.total } : {}),
+        });
     }
 
     // 构建筛选条件

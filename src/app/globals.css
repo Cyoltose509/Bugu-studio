@@ -215,6 +215,12 @@ select:focus-visible {
   animation: mascot-run-path 1.7s linear infinite both;
   will-change: transform;
 }
+/* 仅身体纵向跳；脚下洞/阴影留在 runner 地面层 */
+.mascot-jump {
+  position: relative;
+  z-index: 1;
+  will-change: transform;
+}
 .mascot-sprite {
   display: block;
   transform-origin: 50% 100%;
@@ -411,9 +417,16 @@ select:focus-visible {
   50% { transform: translateY(-5px); }
 }
 
-/* 遁地时轨道裁切，人跳进洞被遮住 */
+/* 遁地：不锁死整轨 overflow；用向上张开的 clip，脚底地面仍裁切没入 */
 .loading-screen-overlay.is-finishing .mascot-run-track {
+  overflow: visible;
+  /* 上/左右留出雷霆大跳 + 呆毛空间，只保留底边作为地面遮罩 */
+  clip-path: inset(-280px -48px 0 -48px);
+}
+.loading-screen-overlay.is-finishing.is-diving .mascot-run-track {
+  /* 下落没入阶段仍保持上方开口，底边继续裁 */
   overflow: hidden;
+  clip-path: inset(-280px -48px 0 -48px);
 }
 
 /* 首页彩蛋：社团历史 n年 ↔ m天 翻面 */

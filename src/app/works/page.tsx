@@ -12,6 +12,12 @@ import WorksToolbar from "@/components/works/WorksToolbar";
 import WorksInfiniteGrid from "@/components/works/WorksInfiniteGrid";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
 import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
+import {
+    isMockDataEnabled,
+    mockListProjects,
+    mockSidebarTags,
+    mockSidebarYears,
+} from "@/lib/mock/frontend-data";
 
 export const metadata: Metadata = {title: "作品库", description: "浏览历届社员创作的所有游戏作品"};
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -114,7 +120,9 @@ function buildActiveChips(
 
 /** 主区工具栏 — 解析标签名后渲染桌面端已选胶囊 */
 async function WorksToolbarData({ params }: { params: Record<string, any> }) {
-    const tags = await cachedQuery(
+    const tags = isMockDataEnabled()
+        ? mockSidebarTags()
+        : await cachedQuery(
         "works:sidebar:tags",
         () =>
             prisma.tag.findMany({
@@ -155,18 +163,22 @@ async function WorksToolbarData({ params }: { params: Record<string, any> }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 async function WorksSidebarData({ params }: { params: Record<string, any> }) {
-    await ensureDefaultTags();
-    const [tags, years] = await Promise.all([
-        cachedQuery('works:sidebar:tags', () =>
-                prisma.tag.findMany({
-                    orderBy: {sortOrder: "asc"},
-                    include: {_count: {select: {projects: {where: {project: {status: "PUBLISHED"}}}}}}
-                })
-            , 120),
-        cachedQuery('works:sidebar:years', () =>
-                prisma.project.groupBy({by: ["developYear"], where: {status: ProjectStatus.PUBLISHED}, orderBy: {developYear: "desc"}})
-            , 120),
-    ]);
+    const [tags, years] = isMockDataEnabled()
+        ? [mockSidebarTags(), mockSidebarYears()]
+        : await (async () => {
+            await ensureDefaultTags();
+            return Promise.all([
+                cachedQuery('works:sidebar:tags', () =>
+                        prisma.tag.findMany({
+                            orderBy: {sortOrder: "asc"},
+                            include: {_count: {select: {projects: {where: {project: {status: "PUBLISHED"}}}}}}
+                        })
+                    , 120),
+                cachedQuery('works:sidebar:years', () =>
+                        prisma.project.groupBy({by: ["developYear"], where: {status: ProjectStatus.PUBLISHED}, orderBy: {developYear: "desc"}})
+                    , 120),
+            ]);
+        })();
 
     // 按 group 分组
     const tagGroups = tags.reduce<Record<string, typeof tags>>((acc, tag) => {
@@ -282,6 +294,33 @@ async function WorksSidebarData({ params }: { params: Record<string, any> }) {
 
 async function WorksFirstPage({ params }: { params: Record<string, any> }) {
     const sort = params.sort || "date";
+
+    if (isMockDataEnabled()) {
+        const result = mockListProjects({
+            types: params.types,
+            year: params.year,
+            tag: params.tag,
+            q: params.q,
+            sort,
+            take: PAGE_SIZE,
+        });
+        const initialItems = result.items.map((p: any) => ({ ...p, liked: false }));
+        return (
+            <WorksInfiniteGrid
+                initialItems={initialItems}
+                initialNextCursor={result.nextCursor}
+                initialHasMore={result.hasMore}
+                filters={{
+                    types: params.types,
+                    year: params.year,
+                    tag: params.tag,
+                    q: params.q,
+                    sort: params.sort,
+                }}
+                total={result.total}
+            />
+        );
+    }
 
     // 与 /api/works 保持一致：喜欢排序用 id 保底，分页更稳
     const orderBy: any = sort === "name"

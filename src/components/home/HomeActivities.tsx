@@ -8,6 +8,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityStatus } from "@prisma/client";
+import { isMockDataEnabled, mockHomeActivities } from "@/lib/mock/frontend-data";
 
 const DEFAULT_COVER = "/images/default_pic.png";
 
@@ -19,20 +20,27 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 async function getHomeActivities() {
+  if (isMockDataEnabled()) {
+    return mockHomeActivities(3);
+  }
   const now = new Date();
-  return cachedQuery(
-    "home:activities",
-    () =>
-      prisma.activity.findMany({
-        where: {
-          status: ActivityStatus.PUBLISHED,
-          OR: [{ endTime: { gte: now } }, { startTime: { gte: now } }],
-        },
-        orderBy: [{ startTime: "asc" }],
-        take: 3,
-      }),
-    300,
-  );
+  try {
+    return await cachedQuery(
+      "home:activities",
+      () =>
+        prisma.activity.findMany({
+          where: {
+            status: ActivityStatus.PUBLISHED,
+            OR: [{ endTime: { gte: now } }, { startTime: { gte: now } }],
+          },
+          orderBy: [{ startTime: "asc" }],
+          take: 3,
+        }),
+      300,
+    );
+  } catch {
+    return [];
+  }
 }
 
 export default async function HomeActivities() {

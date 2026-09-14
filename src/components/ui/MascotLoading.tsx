@@ -22,6 +22,7 @@ const CD_DROP_COOLDOWN_MS = 480;
 type Layer = {
   root: HTMLDivElement;
   runner: HTMLDivElement;
+  jumper: HTMLDivElement;
   sprite: HTMLDivElement;
   hole: HTMLDivElement;
   textEl: HTMLParagraphElement;
@@ -50,15 +51,17 @@ function ensureLayer(): Layer {
     <div class="mascot-run-track" style="width:100%;max-width:100vw">
       <div class="mascot-run" data-mascot-runner style="transform:translate(72vw,0) scaleX(1)">
         <div class="mascot-rabbit-hole" data-mascot-hole aria-hidden="true"></div>
-        <div class="mascot-sprite" data-mascot-sprite role="button" tabindex="-1" aria-label="抛出光盘" title="点我掉光盘">
-          <img
-            src="/images/mascot-loading.png"
-            alt=""
-            width="140"
-            height="140"
-            class="mascot-knockout"
-            draggable="false"
-          />
+        <div class="mascot-jump" data-mascot-jump>
+          <div class="mascot-sprite" data-mascot-sprite role="button" tabindex="-1" aria-label="抛出光盘" title="点我掉光盘">
+            <img
+              src="/images/mascot-loading.png"
+              alt=""
+              width="140"
+              height="140"
+              class="mascot-knockout"
+              draggable="false"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -66,12 +69,14 @@ function ensureLayer(): Layer {
   `;
   document.body.appendChild(root);
   const runner = root.querySelector("[data-mascot-runner]") as HTMLDivElement;
+  const jumper = root.querySelector("[data-mascot-jump]") as HTMLDivElement;
   const sprite = root.querySelector("[data-mascot-sprite]") as HTMLDivElement;
   const hole = root.querySelector("[data-mascot-hole]") as HTMLDivElement;
   const textEl = root.querySelector("[data-mascot-text]") as HTMLParagraphElement;
   layer = {
     root,
     runner,
+    jumper,
     sprite,
     hole,
     textEl,
@@ -198,6 +203,7 @@ function destroyLayer() {
 
 function restartRunAnimation(L: Layer) {
   L.runner.getAnimations().forEach((a) => a.cancel());
+  L.jumper.getAnimations().forEach((a) => a.cancel());
   L.sprite.getAnimations().forEach((a) => a.cancel());
   L.hole.getAnimations().forEach((a) => a.cancel());
 
@@ -207,6 +213,7 @@ function restartRunAnimation(L: Layer) {
   L.sprite.style.transform = "";
   L.sprite.style.opacity = "";
   L.sprite.style.clipPath = "";
+  L.jumper.style.transform = "";
   L.hole.style.opacity = "";
   L.hole.style.transform = "";
   L.hole.classList.remove("is-open");
@@ -249,22 +256,27 @@ function retainMascot(text: string) {
   // 收尾被打断：停在当前位置继续跑，不从右边重新入场
   if (L.finishing) {
     L.runner.getAnimations().forEach((a) => a.cancel());
+    L.jumper.getAnimations().forEach((a) => a.cancel());
     L.sprite.getAnimations().forEach((a) => a.cancel());
     L.hole.getAnimations().forEach((a) => a.cancel());
     L.textEl.getAnimations().forEach((a) => a.cancel());
     L.root.getAnimations().forEach((a) => a.cancel());
     L.finishing = false;
     const { x, facing, y } = readPose(L.runner);
+    const jumpY = readPose(L.jumper).y;
     L.sprite.style.animation = "";
     L.sprite.style.transform = "";
     L.sprite.style.opacity = "";
+    L.jumper.style.transform = "";
     L.hole.style.opacity = "";
     L.hole.style.transform = "";
     L.hole.classList.remove("is-open");
     L.root.classList.remove("is-finishing");
+    L.root.classList.remove("is-diving");
     L.root.style.opacity = "";
     L.textEl.style.opacity = "";
-    L.runner.style.transform = `translate(${x}px, ${y}px) scaleX(${facing})`;
+    // 把跳起位移折回水平位移上，避免打断后悬空
+    L.runner.style.transform = `translate(${x}px, ${y + jumpY}px) scaleX(${facing})`;
     L.runner.classList.add("mascot-run");
     L.sprite.classList.add("mascot-sprite");
     requestAnimationFrame(() => {
@@ -310,35 +322,44 @@ function afterFinishCleanup(L: Layer) {
 }
 
 /**
- * 遁地：PVZ 倭瓜式 — 一次深蹲蓄力 → 高抛 → 大 g 砸进洞（不降透明度）
+ * 遁地：倭瓜式蓄力 → 高跳 → 砸洞
+ * 水平位 + 朝向在 runner；纵向跳跃在 jumper；洞留在地面不跟着跳
  */
 function finishRabbitHole(L: Layer) {
   const { x, facing, y } = readPose(L.runner);
   L.runner.classList.remove("mascot-run");
   L.sprite.classList.remove("mascot-sprite");
   L.runner.getAnimations().forEach((a) => a.cancel());
+  L.jumper.getAnimations().forEach((a) => a.cancel());
   L.sprite.getAnimations().forEach((a) => a.cancel());
   L.sprite.style.animation = "none";
   L.hole.classList.add("is-open");
   L.root.classList.add("is-finishing");
+  L.root.classList.remove("is-diving");
 
+  // 地面层：只锁水平位置；脚底阴影/洞不参与纵向跳
   L.runner.style.transform = `translate(${x}px, ${y}px) scaleX(${facing})`;
+  L.jumper.style.transform = "translateY(0)";
 
-  const crouch = y + 18;
-  const peak = y - 168;
-  const into = y + 240;
+  const crouch = 18;
+  const peak = -168;
+  const into = 240;
   const fall = into - peak;
-
   const at = (u: number) => peak + fall * u * u * u;
 
-  const pathAnim = L.runner.animate(
+  const diveAt = Math.round(HOLE_MS * 0.4);
+  window.setTimeout(() => {
+    if (layer === L && L.finishing) L.root.classList.add("is-diving");
+  }, diveAt);
+
+  const jumpAnim = L.jumper.animate(
     [
-      { transform: `translate(${x}px, ${y}px) scaleX(${facing})`, offset: 0 },
-      { transform: `translate(${x}px, ${crouch}px) scaleX(${facing})`, offset: 0.16 },
-      { transform: `translate(${x}px, ${peak}px) scaleX(${facing})`, offset: 0.36 },
-      { transform: `translate(${x}px, ${at(0.4)}px) scaleX(${facing})`, offset: 0.52 },
-      { transform: `translate(${x}px, ${at(0.7)}px) scaleX(${facing})`, offset: 0.72 },
-      { transform: `translate(${x}px, ${into}px) scaleX(${facing})`, offset: 1 },
+      { transform: "translateY(0)", offset: 0 },
+      { transform: `translateY(${crouch}px)`, offset: 0.16 },
+      { transform: `translateY(${peak}px)`, offset: 0.36 },
+      { transform: `translateY(${at(0.4)}px)`, offset: 0.52 },
+      { transform: `translateY(${at(0.7)}px)`, offset: 0.72 },
+      { transform: `translateY(${into}px)`, offset: 1 },
     ],
     {
       duration: HOLE_MS,
@@ -363,25 +384,43 @@ function finishRabbitHole(L: Layer) {
     },
   );
 
+  // 洞钉在地面：蓄力可见；跳起后切掉；落地砸入再合上
   const holeAnim = L.hole.animate(
     [
       {
-        transform: "translateX(-50%) scaleX(0.05) scaleY(0.2)",
+        transform: "translateX(-50%) scale(0.05, 0.2)",
         opacity: 0,
         offset: 0,
       },
       {
-        transform: "translateX(-50%) scaleX(1.08) scaleY(1)",
+        transform: "translateX(-50%) scale(1.22, 0.8)",
         opacity: 1,
-        offset: 0.12,
+        offset: 0.16,
+      },
+      // 起跳离地：脚下阴影切掉，不跟着飞
+      {
+        transform: "translateX(-50%) scale(1, 1)",
+        opacity: 0,
+        offset: 0.28,
       },
       {
-        transform: "translateX(-50%) scaleX(1) scaleY(1)",
+        transform: "translateX(-50%) scale(1, 1)",
+        opacity: 0,
+        offset: 0.48,
+      },
+      // 落地瞬间阴影回来再吞人
+      {
+        transform: "translateX(-50%) scale(1.12, 1)",
         opacity: 1,
-        offset: 0.78,
+        offset: 0.58,
       },
       {
-        transform: "translateX(-50%) scaleX(0.05) scaleY(0.1)",
+        transform: "translateX(-50%) scale(1.08, 0.9)",
+        opacity: 1,
+        offset: 0.72,
+      },
+      {
+        transform: "translateX(-50%) scale(0.05, 0.1)",
         opacity: 0,
         offset: 1,
       },
@@ -393,7 +432,7 @@ function finishRabbitHole(L: Layer) {
     },
   );
 
-  Promise.all([pathAnim.finished, spriteAnim.finished, holeAnim.finished])
+  Promise.all([jumpAnim.finished, spriteAnim.finished, holeAnim.finished])
     .catch(() => undefined)
     .finally(() => afterFinishCleanup(L));
 }

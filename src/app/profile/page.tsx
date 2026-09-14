@@ -14,6 +14,12 @@ import { RichContent } from "@/components/ui/RichContent";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
 import LogoLoading from "@/components/ui/LogoLoading";
+import {
+  getMockAuthUser,
+  isMockDataEnabled,
+  mockMemberById,
+  mockLatestProjects,
+} from "@/lib/mock/frontend-data";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +53,53 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
   const isAdminView = session.user.role === "ADMIN" && !!targetId && targetId !== session.user.id;
   const userId = isAdminView ? targetId! : session.user.id;
 
-  const [user, member, userProjects, likedProjects] = await Promise.all([
+  let user: any;
+  let member: any;
+  let userProjects: any[];
+  let likedProjects: any[];
+
+  if (isMockDataEnabled() && !isAdminView) {
+    const mockUser = getMockAuthUser();
+    const mockMember = mockUser?.memberId ? mockMemberById(mockUser.memberId) : null;
+    user = {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      bio: mockMember?.bio ?? null,
+      role: session.user.role,
+      image: session.user.image ?? null,
+      emailVerified: new Date(),
+      isActive: true,
+      lastLoginAt: new Date(),
+      createdAt: new Date(),
+    };
+    member = mockMember
+      ? {
+          id: mockMember.id,
+          displayName: mockMember.displayName,
+          bio: mockMember.bio,
+          grade: mockMember.grade,
+          graduated: mockMember.graduated,
+          realName: null,
+          joinYear: mockMember.joinYear,
+          college: null,
+          major: null,
+          workLocation: null,
+          workPosition: null,
+          skills: mockMember.skills || [],
+          position: mockMember.position || "MEMBER",
+          location: null,
+          phone: null,
+          wechat: null,
+          qq: null,
+          socialLinks: mockMember.socialLinks || [],
+        }
+      : null;
+    userProjects = (mockMember?.projectMembers || []).map((pm: any) => pm.project);
+    if (!userProjects.length) userProjects = mockLatestProjects(4);
+    likedProjects = [];
+  } else {
+  [user, member, userProjects, likedProjects] = await Promise.all([
     cachedQuery(`profile:user:${userId}`, () =>
       prisma.user.findUnique({
         where: { id: userId },
@@ -133,6 +185,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       })
     , 30),
   ]);
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in space-y-8">

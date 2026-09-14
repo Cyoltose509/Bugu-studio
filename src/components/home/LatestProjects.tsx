@@ -8,43 +8,51 @@ import ProjectCard, { ProjectCardProject } from "@/components/projects/ProjectCa
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
+import { isMockDataEnabled, mockLatestProjects } from "@/lib/mock/frontend-data";
 
 /** 与下方 grid 的 lg:grid-cols-4 对齐：两整行 */
 const LATEST_COUNT = 8;
 
 async function getProjects() {
-  return cachedQuery(
-    "projects:latest:v3",
-    () =>
-      prisma.project.findMany({
-        where: { status: ProjectStatus.PUBLISHED },
-        orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }],
-        take: LATEST_COUNT,
-        include: {
-          tags: { include: { tag: true } },
-          images: {
-            orderBy: { sortOrder: "asc" },
-            take: 4,
-            select: { url: true, altText: true },
-          },
-          members: {
-            orderBy: { sortOrder: "asc" },
-            include: {
-              member: {
-                select: {
-                  displayName: true,
-                  avatar: true,
-                  user: { select: { image: true } },
-                },
-              },
-              user: { select: { name: true, image: true } },
+  if (isMockDataEnabled()) {
+    return mockLatestProjects(LATEST_COUNT);
+  }
+  try {
+    return await cachedQuery(
+      "projects:latest:v3",
+      () =>
+        prisma.project.findMany({
+          where: { status: ProjectStatus.PUBLISHED },
+          orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }],
+          take: LATEST_COUNT,
+          include: {
+            tags: { include: { tag: true } },
+            images: {
+              orderBy: { sortOrder: "asc" },
+              take: 4,
+              select: { url: true, altText: true },
             },
+            members: {
+              orderBy: { sortOrder: "asc" },
+              include: {
+                member: {
+                  select: {
+                    displayName: true,
+                    avatar: true,
+                    user: { select: { image: true } },
+                  },
+                },
+                user: { select: { name: true, image: true } },
+              },
+            },
+            _count: { select: { likes: true } },
           },
-          _count: { select: { likes: true } },
-        },
-      }),
-    60,
-  );
+        }),
+      60,
+    );
+  } catch {
+    return [];
+  }
 }
 
 export default async function LatestProjects() {

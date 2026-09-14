@@ -186,7 +186,7 @@ export default function HistoryClient({
 
       <div className="flex gap-0 lg:gap-8 items-start">
         {/* ═══ 左侧栏目筛选边栏 ═══ */}
-        {mounted && (
+        {mounted && yearDetails.length > 0 && (
           <aside data-history-sidebar className={`
             shrink-0 transition-all duration-300
             ${sidebarOpen
@@ -269,7 +269,7 @@ export default function HistoryClient({
         {/* ═══ 主内容区 ═══ */}
         <div className="flex-1 min-w-0">
           {/* ═══ 顶部工具栏 ═══ */}
-          {mounted && (
+          {mounted && yearDetails.length > 0 && (
             <div data-toolbar className="flex flex-wrap items-center justify-center gap-4 mb-6">
               <span className="text-sm mr-2 text-brand-text-secondary">
                 共 {yearCount} 年年报（{startYear}年至今）
@@ -295,6 +295,14 @@ export default function HistoryClient({
           )}
 
           {/* ═══ 报纸列表 ═══ */}
+          {yearDetails.length === 0 ? (
+            <div className="rounded-xl border border-brand-border-subtle bg-card px-6 py-16 text-center">
+              <p className="text-lg font-medium text-brand-navy">暂无年报内容</p>
+              <p className="mt-2 text-sm text-brand-text-secondary">
+                发布作品、大事记或活动后，这里会按年份自动生成回顾。
+              </p>
+            </div>
+          ) : (
           <div className="space-y-8">
             {yearDetails.map(({ year, members, projects, events, activities, activeMembers, presidents }) => (
               <div key={year} className="history-scroll-wrapper">
@@ -313,6 +321,7 @@ export default function HistoryClient({
               </div>
             ))}
           </div>
+          )}
         </div>
       </div>
     </>

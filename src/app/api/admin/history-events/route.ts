@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     revalidatePath("/history");
-    invalidateCache("history:events"); // 非阻塞
+    invalidateCache("history:"); // 覆盖 history:allEvents / eventYears 等
     return apiResponse(event, 201);
   } catch (err: any) {
     console.error("创建历史事件失败:", err);
