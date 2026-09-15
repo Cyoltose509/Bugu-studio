@@ -1,92 +1,37 @@
 # 布谷工作室官网
 
-Next.js 15 社团官网：作品库、成员、活动 / Game Jam、招新、管理后台。
+武汉大学游戏开发社团「布谷工作室」官方网站：作品展示、成员介绍、活动与招新。
 
-线上站点：https://bugoostudio.com  
-代码仓库：https://github.com/Cyoltose509/Bugu-studio
+- 线上：https://www.bugoostudio.com
+- 仓库：https://github.com/Cyoltose509/Bugu-studio
 
-## 实际技术栈（以现网为准）
+## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 框架 | Next.js 15（App Router）+ React 19 + TypeScript |
-| 样式 | Tailwind CSS |
-| 数据库 | Supabase PostgreSQL + Prisma |
-| 认证 | Auth.js v5（**JWT Session**，不是数据库 Session） |
-| 存储 | Cloudflare R2 |
-| 邮件 | Resend |
-| 部署 | **Vercel**（主路径）；仓库里仍有 Docker / Nginx 文档，供可选自建 |
+Next.js 15 · React 19 · TypeScript · Tailwind CSS · Prisma · Supabase PostgreSQL · Auth.js · Cloudflare R2 · Resend · Vercel
 
-## 角色权限
-
-| 角色 | 浏览 | 提交作品 | 管理后台 |
-|------|------|----------|----------|
-| Guest / User | ✅ | ❌ | ❌ |
-| Member | ✅ | ✅ | ❌ |
-| Admin | ✅ | ✅ | ✅ |
-
-管理员可通过邀请码直接授予 Admin（这是有意设计）。Member 身份通常需审批。
-
-## 本地开发
+## 本地运行
 
 ```bash
-# 1. 环境变量
-cp .env.example .env.local
-# 填入 DATABASE_URL / AUTH_SECRET / R2 / Resend 等
-
-# 2. 安装依赖
+cp .env.example .env.local   # 按模板填写环境变量
 npm install
-
-# 3. 生成 Prisma Client 并启动
 npm run db:generate
 npm run dev
 ```
 
-访问 http://localhost:3000
+浏览器打开 http://localhost:3000
 
-> 生产库不要随便跑 `prisma migrate reset`、`db push --accept-data-loss` 或 seed。  
-> 本地试验请用独立数据库。
+环境变量说明见 `.env.example`。更细的设计与运维文档在 `docs/`。
 
-常用脚本：
+## 功能概览
 
-- `npm run db:migrate` — 生产迁移（`prisma migrate deploy`）
-- `npm run db:push` — 本地安全推送（有确认脚本）
-- `npm test` / `npm run test:e2e` — 测试
+| 模块 | 说明 |
+|------|------|
+| 作品库 | 浏览、筛选、点赞与详情 |
+| 成员 | 成员主页与作品关联 |
+| 活动 | 例会 / 公开课 / Game Jam 等 |
+| 招新 | 招新信息与联系方式 |
+| 管理后台 | 作品、成员、活动与系统管理（需管理员） |
 
-## 备份与恢复（管理后台）
+## 开源协议
 
-路径：`/admin/backups`
-
-1. **一键备份大版本**：导出完整表数据（含登录密码哈希、活动 / Game Jam 等）→ **AES-256-GCM 加密** → 压缩后存到 Cloudflare R2（`admin-backups/v{n}.json.gz`）。
-2. **恢复到此版本**：按版本号下载 → 解密 → **单个数据库事务**整库替换；失败回滚。
-
-安全说明：
-
-- 图床 R2 桶往往对公网可读，因此**禁止明文上传**库快照。加密密钥默认由 `AUTH_SECRET` 派生；也可单独配置 `BACKUP_ENCRYPTION_KEY`（推荐生产单独设置，轮换 AUTH_SECRET 时备份仍可解）。
-- 旧版「按日期写本地 `backups/`」明文方案已废弃。
-- 接手后请立刻做一次新备份；恢复需在确认框输入「确认恢复」。
-- 恢复后可能需要重新登录。
-
-## 监控页密码
-
-`/admin/monitoring/*` 有第二道门锁。密码存在数据库 `siteSetting.monitoring_password`（bcrypt），**不在 `.env` 明文里**。
-
-接手后若不知道旧密码：登录管理后台仪表盘 →「监控页密码」卡片 → 直接设置新密码。
-
-## 目录结构（摘要）
-
-```
-src/app/           # 页面与 API（App Router）
-src/components/    # UI 组件
-src/lib/           # auth / db / backup / 业务逻辑
-prisma/            # schema 与 migrations
-scripts/           # 运维与测试脚本
-docs/              # 设计与运维文档（部分可能滞后，以本 README 为准）
-```
-
-## 接手维护建议
-
-1. 从 `main` 拉功能分支，用 Pull Request 合并；不要 force-push `main`。
-2. 请仓库主人开启 `main` 分支保护（禁强推、必须 PR）。
-3. 密钥放在 `.env.local` / 部署平台环境变量，文件名 `necessary.env` 也需忽略，勿提交。
-4. 接手快照标签：`handover-2026-09-12`。
+私有仓库，版权归布谷工作室所有。
