@@ -17,7 +17,7 @@ export default function NavLink({
     <Link
       href={href}
       prefetch={true}
-      className={`hover:text-white transition-colors nav-link relative ${
+      className={`hover:text-white transition-colors nav-link relative whitespace-nowrap shrink-0 ${
         isActive ? "text-white font-medium" : "text-white/80"
       }`}
     >

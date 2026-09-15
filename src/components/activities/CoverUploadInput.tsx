@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 
-const DEFAULT_COVER = "/images/default_pic.png";
+import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+
+const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
 interface Props {
   defaultValue?: string;

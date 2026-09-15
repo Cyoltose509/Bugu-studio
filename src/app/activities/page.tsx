@@ -9,11 +9,12 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityType, ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-data";
+import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 
 export const metadata: Metadata = { title: "活动 - 布谷工作室" };
 export const dynamic = "force-dynamic";
 
-const DEFAULT_COVER = "/images/default_pic.png";
+const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",
@@ -281,33 +282,25 @@ export default async function ActivitiesPage() {
 
         {hero && (
             <section className="mb-12">
+              {upcomingList.length > 0 ? (
               <div className="grid lg:grid-cols-5 gap-10">
-
                 <div className="lg:col-span-3">
                   <HeroCard a={hero} status={heroStatus} />
                 </div>
-
                 <div className="lg:col-span-2">
-                  <h2
-                      className="text-lg font-semibold mb-3 text-brand-navy"
-                  >
-                    即将开始
-                  </h2>
-
+                  <h2 className="text-lg font-semibold mb-3 text-brand-navy">即将开始</h2>
                   <div className="space-y-3">
-                    {upcomingList.length === 0 ? (
-                      <p className="text-sm text-brand-text-muted py-6 text-center border border-dashed border-brand-border-subtle rounded-xl">
-                        暂无即将开始的活动
-                      </p>
-                    ) : (
-                      upcomingList.slice(0, 5).map(a => (
-                        <UpcomingItem key={a.id} a={a} />
-                      ))
-                    )}
+                    {upcomingList.slice(0, 5).map(a => (
+                      <UpcomingItem key={a.id} a={a} />
+                    ))}
                   </div>
                 </div>
-
               </div>
+              ) : (
+                <div className="max-w-4xl">
+                  <HeroCard a={hero} status={heroStatus} />
+                </div>
+              )}
             </section>
         )}
 

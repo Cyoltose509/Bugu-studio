@@ -1,5 +1,5 @@
 import LogoLoading from "@/components/ui/LogoLoading";
 
 export default function MembersAdminLoading() {
-  return <LogoLoading text="加载成员管理..." />;
+  return <LogoLoading text="正在加载成员管理..." />;
 }

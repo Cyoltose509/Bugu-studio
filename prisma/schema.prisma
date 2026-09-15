@@ -125,6 +125,7 @@ model User {
   errorReports           ErrorReport[]
   projectLikes           ProjectLike[]
   meetingProposals       MeetingProposal[]
+  meetingTalks           MeetingTalk[]
 
   // Game Jam
   jamLedTeams           JamTeam[]
@@ -686,6 +687,7 @@ model Activity {
   updatedAt        DateTime       @updatedAt
 
   proposals   MeetingProposal[]
+  talks       MeetingTalk[]
 
   // Game Jam
   jamTeams       JamTeam[]
@@ -699,6 +701,27 @@ model Activity {
   @@index([endTime])
   @@index([status, startTime])
   @@index([status, endTime])
+}
+
+// 例会 — 结构化分享条目（主讲 + 标题 + BV）
+// speaker 为展示名；userId 可选，关联站内用户后前台可链到成员页/个人中心
+model MeetingTalk {
+  id         String   @id @default(cuid())
+  activityId String
+  speaker    String
+  userId     String? // 可选：关联 User；有 ClubMember 时前台链 /members/[id]
+  title      String
+  bvId       String? // 如 BV1xxxxxxxx，可选（剪辑发布后补录）
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([activityId])
+  @@index([activityId, sortOrder])
+  @@index([userId])
 }
 
 // 例会 — 分享/展示申请

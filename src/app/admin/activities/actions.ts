@@ -8,6 +8,7 @@ import { createNotification, notifyMentions } from "@/lib/services/notification"
 import { revalidatePath } from "next/cache";
 import { ActivityStatus, ProposalStatus } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/utils/upload";
+import { DEFAULT_ACTIVITY_LOCATION, parseBvId } from "@/lib/activities/constants";
 
 const TYPE_LABEL: Record<string, string> = {
   MEETING: "例会", COURSE: "公开课", COMPETITION: "比赛", GENERAL: "活动",
@@ -78,7 +79,7 @@ export async function createActivity(formData: FormData) {
   const type        = (formData.get("type") as string || "GENERAL");
   const summary     = (formData.get("summary") as string || "").trim();
   const description = (formData.get("description") as string || "").trim();
-  const location    = (formData.get("location") as string || "").trim() || "总图书馆未来学习中心";
+  const location    = (formData.get("location") as string || "").trim() || DEFAULT_ACTIVITY_LOCATION;
   const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
   const coverImage   = (formData.get("coverImage") as string || "").trim();
   const startTime   = formData.get("startTime") as string;
@@ -144,7 +145,7 @@ export async function updateActivity(id: string, formData: FormData) {
   const type        = (formData.get("type") as string || "GENERAL");
   const summary     = (formData.get("summary") as string || "").trim();
   const description = (formData.get("description") as string || "").trim();
-  const location    = (formData.get("location") as string || "").trim() || "总图书馆未来学习中心";
+  const location    = (formData.get("location") as string || "").trim() || DEFAULT_ACTIVITY_LOCATION;
   const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
   const coverImage   = (formData.get("coverImage") as string || "").trim();
   const startTime   = formData.get("startTime") as string;
@@ -363,4 +364,100 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
 
   revalidatePath(`/activities/${proposal.activityId}`);
   revalidatePath(`/admin/activities/${proposal.activityId}/edit`);
+}
+
+// ── 例会：整表保存分享条目（主讲 + 标题 + BV）────────────────
+export async function saveMeetingTalks(
+  activityId: string,
+  talks: Array<{ speaker: string; title: string; bvId?: string; userId?: string | null }>,
+) {
+  await requireAdmin();
+  if (!activityId) return { error: "无效的活动" };
+
+  const activity = await prisma.activity.findUnique({
+    where: { id: activityId },
+    select: { id: true, type: true },
+  });
+  if (!activity) return { error: "活动不存在" };
+
+  const rawUserIds = [
+    ...new Set(
+      talks
+        .map((t) => (t.userId || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  const validUserIds = new Set<string>();
+  if (rawUserIds.length > 0) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: rawUserIds } },
+      select: { id: true },
+    });
+    for (const u of users) validUserIds.add(u.id);
+  }
+
+  const normalized = talks
+    .map((t, i) => {
+      const userId = (t.userId || "").trim();
+      return {
+        speaker: (t.speaker || "").trim(),
+        title: (t.title || "").trim(),
+        bvId: parseBvId(t.bvId) || null,
+        userId: userId && validUserIds.has(userId) ? userId : null,
+        sortOrder: i,
+      };
+    })
+    .filter((t) => t.speaker && t.title);
+
+  for (const t of talks) {
+    const speaker = (t.speaker || "").trim();
+    const title = (t.title || "").trim();
+    if ((speaker && !title) || (!speaker && title)) {
+      return { error: "每条分享需同时填写主讲与标题" };
+    }
+    if (t.bvId && !parseBvId(t.bvId)) {
+      return { error: `无法识别 BV 号：${t.bvId}` };
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.meetingTalk.deleteMany({ where: { activityId } }),
+    ...(normalized.length
+      ? [
+          prisma.meetingTalk.createMany({
+            data: normalized.map((t) => ({
+              activityId,
+              speaker: t.speaker,
+              title: t.title,
+              bvId: t.bvId,
+              userId: t.userId,
+              sortOrder: t.sortOrder,
+            })),
+          }),
+        ]
+      : []),
+  ]);
+
+  const saved = await prisma.meetingTalk.findMany({
+    where: { activityId },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      speaker: true,
+      title: true,
+      bvId: true,
+      sortOrder: true,
+      userId: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          member: { select: { id: true, displayName: true } },
+        },
+      },
+    },
+  });
+
+  await invalidateActivityCaches(activityId);
+  return { success: true, talks: saved };
 }

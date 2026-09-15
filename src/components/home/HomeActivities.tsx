@@ -10,7 +10,9 @@ import { cachedQuery } from "@/lib/db/cache";
 import { ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockHomeActivities } from "@/lib/mock/frontend-data";
 
-const DEFAULT_COVER = "/images/default_pic.png";
+import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+
+const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",

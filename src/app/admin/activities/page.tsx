@@ -35,7 +35,9 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVED:  "已归档",
 };
 
-const DEFAULT_COVER = "/images/default_pic.png";
+import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+
+const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
 interface PageProps {
   searchParams: Promise<{ status?: string; page?: string }>;

@@ -15,6 +15,7 @@ import SubmitProposalForm from "@/components/activities/meeting/SubmitProposalFo
 import DeleteProposalButton from "@/components/activities/meeting/DeleteProposalButton";
 import { RichContent } from "@/components/ui/RichContent";
 import ReviewProposalForm from "@/components/activities/meeting/ReviewProposalForm";
+import BilibiliTvLink from "@/components/activities/meeting/BilibiliTvLink";
 import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
 import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
 import { InvitationButtons } from "@/components/activities/teams/InvitationButtons";
@@ -25,6 +26,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import UserAvatar from "@/components/ui/UserAvatar";
 import LogoLoading from "@/components/ui/LogoLoading";
 import { resolveActivityId } from "@/lib/activities/resolve";
+import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { isMockDataEnabled, mockActivityByKey } from "@/lib/mock/frontend-data";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -34,7 +36,7 @@ const TYPE_LABELS: Record<string, string> = {
   GENERAL:    "普通活动",
 };
 
-const DEFAULT_COVER = "/images/default_pic.png";
+const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT:     "草稿",
@@ -77,6 +79,20 @@ export async function generateMetadata(
 
 /* ── 主页面数据查询（React.cache + cachedQuery，含全部 include）── */
 
+const talkInclude = {
+  orderBy: { sortOrder: "asc" as const },
+  include: {
+    user: {
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        member: { select: { id: true, displayName: true } },
+      },
+    },
+  },
+};
+
 const getActivity = cache(async (id: string) => {
   if (isMockDataEnabled()) {
     return mockActivityByKey(id);
@@ -88,6 +104,7 @@ const getActivity = cache(async (id: string) => {
         where:  { id },
         include: {
           proposals:   { where: { status: ProposalStatus.APPROVED }, include: { user: { select: { id: true, name: true, image: true } } } },
+          talks:       talkInclude,
           jamTeams: {
             include: {
               members: { include: { user: { select: { id: true, name: true, image: true } } } },
@@ -145,11 +162,12 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   const isPast       = now > activity.endTime;
 
   // 查询当前用户在此活动的分享申请（用于限制重复提交）
-  const userProposal = activity.type === "MEETING" && session?.user
-    ? await prisma.meetingProposal.findFirst({
-        where: { activityId: id, userId: session.user.id },
-      })
-    : null;
+  const userProposal =
+    activity.type === "MEETING" && session?.user
+      ? await prisma.meetingProposal.findFirst({
+          where: { activityId: id, userId: session.user.id },
+        })
+      : null;
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in">
@@ -221,10 +239,38 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   );
 }
 
+// ── 例会主讲人：有成员档案 → /members；仅站内用户 → /profile?id=；否则纯文本 ──
+function TalkSpeaker({ talk }: { talk: any }) {
+  const name =
+    talk.speaker ||
+    talk.user?.member?.displayName ||
+    talk.user?.name ||
+    "主讲";
+  const memberId = talk.user?.member?.id as string | undefined;
+  const userId = (talk.userId || talk.user?.id) as string | undefined;
+
+  if (memberId) {
+    return (
+      <Link href={`/members/${memberId}`} className="text-brand-navy/80 hover:underline">
+        {name}
+      </Link>
+    );
+  }
+  if (userId) {
+    return (
+      <Link href={`/profile?id=${userId}`} className="text-brand-navy/80 hover:underline">
+        {name}
+      </Link>
+    );
+  }
+  return <span className="text-brand-navy/80">{name}</span>;
+}
+
 // ── 例会 ───────────────────────────────────────────────────
 async function MeetingSection({
   activity, session, isOngoing, isUpcoming, userProposal,
 }: { activity: any; session: any; isOngoing: boolean; isUpcoming: boolean; userProposal: any }) {
+  const talks = activity.talks || [];
   const proposals = activity.proposals || [];
   const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
 
@@ -243,7 +289,7 @@ async function MeetingSection({
       {/* ── 管理员审核待处理的申请 ──────────────── */}
       {isAdmin && pendingProposals.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-3 text-brand-orange">⏳ 待审核分享申请</h2>
+          <h2 className="text-xl font-semibold mb-3 text-brand-orange">待审核分享申请</h2>
           <div className="space-y-3">
             {pendingProposals.map((p: any) => (
               <ReviewProposalForm
@@ -259,9 +305,41 @@ async function MeetingSection({
         </section>
       )}
 
-      {proposals.length > 0 && (
+      {/* ── 结构化分享条目（主讲 + 标题 + BV）── */}
+      {talks.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-3 text-brand-navy">📋 议程</h2>
+          <h2 className="text-xl font-semibold mb-3 text-brand-navy">本期分享</h2>
+          <ol className="space-y-2">
+            {talks.map((t: any, i: number) => (
+              <li
+                key={t.id}
+                className="bg-card rounded-xl border border-brand-border-subtle px-4 py-3 flex items-center gap-3"
+              >
+                <span className="w-7 h-7 rounded-full bg-brand-surface text-brand-blue text-xs font-semibold flex items-center justify-center shrink-0">
+                  {i + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-brand-text-heading truncate">{t.title}</p>
+                  <p className="text-sm text-brand-text-secondary mt-0.5">
+                    <TalkSpeaker talk={t} />
+                    {t.bvId ? (
+                      <span className="text-brand-text-muted"> · {t.bvId}</span>
+                    ) : null}
+                  </p>
+                </div>
+                {t.bvId ? <BilibiliTvLink bvId={t.bvId} /> : (
+                  <span className="text-xs text-brand-text-muted shrink-0 px-2">待上传</span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* 兼容：尚无结构化条目时，仍展示已通过的报名议程 */}
+      {talks.length === 0 && proposals.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold mb-3 text-brand-navy">议程</h2>
           <div className="space-y-3">
             {proposals.map((p: any) => (
               <div key={p.id} className="bg-card rounded-xl border p-4 border-brand-border-subtle">
@@ -288,7 +366,7 @@ async function MeetingSection({
 
       {(isOngoing || isUpcoming) && (
         <section className="bg-card rounded-xl border p-6 border-brand-border-subtle">
-          <h3 className="font-semibold mb-3 text-brand-navy">📢 报名分享</h3>
+          <h3 className="font-semibold mb-3 text-brand-navy">报名分享</h3>
           {userProposal ? (
             /* 已提交申请 — 显示状态 */
             <div className="rounded-lg p-4 bg-[#F0F6FA]">

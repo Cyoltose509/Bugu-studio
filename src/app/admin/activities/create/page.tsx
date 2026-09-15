@@ -10,8 +10,10 @@ import Link from "next/link";
 import { createActivity } from "../actions";
 import { ActivityType } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
+import LocationPresetInput from "@/components/activities/LocationPresetInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import MentionEditor from "@/components/ui/MentionEditor";
+import { DEFAULT_ACTIVITY_LOCATION } from "@/lib/activities/constants";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",    label: "例会" },
@@ -66,15 +68,20 @@ export default function CreateActivityPage() {
     if (!(formData.get("title") as string).trim() && startTime) {
       formData.set("title", getDefaultTitle());
     }
-    // 地点默认为"总图书馆未来学习中心"
+    // 地点默认为预设值
     if (!(formData.get("location") as string).trim()) {
-      formData.set("location", "总图书馆未来学习中心");
+      formData.set("location", DEFAULT_ACTIVITY_LOCATION);
     }
     const result = await createActivity(formData);
     if (result && "error" in result && result.error) {
       setError(result.error);
-    } else if (result && "success" in result) {
-      router.push("/admin/activities");
+    } else if (result && "success" in result && result.id) {
+      // 例会创建后进入编辑页，方便录入分享条目
+      router.push(
+        type === "MEETING"
+          ? `/admin/activities/${result.id}/edit`
+          : "/admin/activities",
+      );
       router.refresh();
     }
   }
@@ -156,11 +163,7 @@ export default function CreateActivityPage() {
         </div>
 
         {/* 地点 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="location">线下地点</label>
-          <input id="location" name="location" defaultValue="总图书馆未来学习中心" placeholder="线下活动地点"
-            className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-        </div>
+        <LocationPresetInput defaultValue={DEFAULT_ACTIVITY_LOCATION} />
 
         {/* 线上链接 */}
         <div>

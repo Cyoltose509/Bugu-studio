@@ -239,6 +239,7 @@ export function mockActivityByKey(key: string) {
     {
       ...raw,
       proposals: raw.proposals || [],
+      talks: raw.talks || [],
       jamTeams: raw.jamTeams || [],
       jamJudges: raw.jamJudges || [],
       jamSubmissions: raw.jamSubmissions || [],

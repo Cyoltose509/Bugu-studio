@@ -9,8 +9,11 @@ import { notFound, redirect } from "next/navigation";
 import { updateActivity } from "../../actions";
 import { ActivityType, ActivityStatus } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
+import LocationPresetInput from "@/components/activities/LocationPresetInput";
+import MeetingTalksEditor from "@/components/activities/meeting/MeetingTalksEditor";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import DescriptionEditor from "@/components/admin/DescriptionEditor";
+import { DEFAULT_ACTIVITY_LOCATION } from "@/lib/activities/constants";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -18,7 +21,23 @@ interface PageProps {
 
 /* React.cache 去重：generateMetadata 和页面共享同一查询 */
 const getActivity = cache(async (id: string) => {
-  return prisma.activity.findUnique({ where: { id } });
+  return prisma.activity.findUnique({
+    where: { id },
+    include: {
+      talks: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              member: { select: { id: true, displayName: true } },
+            },
+          },
+        },
+      },
+    },
+  });
 });
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -99,11 +118,7 @@ export default async function EditActivityPage({ params }: PageProps) {
         </div>
 
         {/* 地点 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">线下地点</label>
-          <input name="location" defaultValue={activity.location || "总图书馆未来学习中心"}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-        </div>
+        <LocationPresetInput defaultValue={activity.location || DEFAULT_ACTIVITY_LOCATION} />
 
         {/* 线上链接 */}
         <div>
@@ -169,6 +184,24 @@ export default async function EditActivityPage({ params }: PageProps) {
           <a href="/admin/activities" className="btn-secondary px-6 py-2.5 rounded-lg text-sm">取消</a>
         </div>
       </form>
+
+      {activity.type === "MEETING" && (
+        <MeetingTalksEditor
+          activityId={activity.id}
+          initialTalks={activity.talks.map((t) => ({
+            id: t.id,
+            speaker: t.speaker,
+            title: t.title,
+            bvId: t.bvId || "",
+            userId: t.userId || null,
+            linkedLabel: t.userId
+              ? (t as any).user?.member
+                ? `已关联成员 · ${(t as any).user.member.displayName}`
+                : `已关联用户 · ${(t as any).user?.name || t.userId}`
+              : null,
+          }))}
+        />
+      )}
     </div>
   );
 }

@@ -251,20 +251,27 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
             </div>
           </div>
 
-          {/* 操作按钮 */}
-          <div className="flex gap-2">
+          {/* 操作按钮 — 窄屏 2×2，避免 3+1 折行 */}
+          <div className="w-full sm:w-auto">
             {isAdminView ? (
-              <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">← 返回用户管理</Link>
+              <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium inline-flex">← 返回用户管理</Link>
             ) : (
-              <>
+              <div className="grid grid-cols-2 gap-2 w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:flex sm:flex-wrap sm:justify-end">
                 {user?.role === "ADMIN" && (
-                  <Link href="/admin" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">管理后台</Link>
+                  <Link href="/admin" className="btn-primary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">管理后台</Link>
                 )}
-                <Link href="/profile/edit" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">编辑资料</Link>
-                <Link href="/profile/settings" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">通知设置</Link>
-                <Link href="/profile/privacy" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">隐私设置</Link>
-                <Link href="/auth/signout" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">退出登录</Link>
-              </>
+                <Link href="/profile/edit" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">编辑资料</Link>
+                <Link href="/profile/settings" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">通知设置</Link>
+                <Link href="/profile/privacy" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">隐私设置</Link>
+                <Link
+                  href="/auth/signout"
+                  className={`px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2 border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-400/50 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors ${
+                    user?.role === "ADMIN" ? "col-span-2 sm:col-span-1" : ""
+                  }`}
+                >
+                  退出登录
+                </Link>
+              </div>
             )}
           </div>
         </div>
