@@ -18,7 +18,7 @@ npm run db:generate
 npm run dev
 ```
 
-浏览器打开 http://localhost:3000
+浏览器打开 http://localhost:1145
 
 环境变量说明见 `.env.example`。更细的设计与运维文档在 `docs/`。
 

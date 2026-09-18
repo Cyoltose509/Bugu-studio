@@ -201,20 +201,6 @@ function narrateActivity(act: Activity): string {
 }
 
 // ═══════════════════════════════════════════════════════
-//  颜色常量
-// ═══════════════════════════════════════════════════════
-const A = "#25547A";
-const B = "#E38043";
-const C = "#88C232";
-const PAPER = "#faf8f5";
-const INK = "#2c1810";
-const INK2 = "#4a3728";
-const INK3 = "#6b5d4f";
-const LINE = "#d4c5b2";
-const LINEL = "#e8ddd0";
-const GOLD = "#c4a86a";
-
-// ═══════════════════════════════════════════════════════
 //  字体样式（无法用 Tailwind 表达的多 fallback 字体栈）
 // ═══════════════════════════════════════════════════════
 const F_SERIF: React.CSSProperties = {fontFamily: "'Noto Serif SC','STSong','SimSun',Georgia,serif"};
@@ -224,13 +210,12 @@ const F_GEORGIA: React.CSSProperties = {fontFamily: "Georgia,serif"};
 const F_GEORGIA_TNR: React.CSSProperties = {fontFamily: "Georgia,'Times New Roman',serif"};
 
 // ═══════════════════════════════════════════════════════
-//  静态样式 (Tailwind className)
+//  静态样式 — 配色走 .newspaper-paper CSS 变量，自适应昼/夜
 // ═══════════════════════════════════════════════════════
 const Q: Record<string, string> = {
     outer: "max-w-[880px] mx-auto mb-12",
     saveRow: "flex justify-end mb-2",
-    paper: "bg-[#faf8f5] border border-[#d4c5b2] shadow-[0_2px_20px_rgba(100,80,60,0.07)] text-[#2c1810]",
-    // 报头
+    paper: "text-[color:var(--np-ink)]",
     masthead: "text-center px-10 pt-[22px] pb-[14px]",
     mastTop: "h-[3px] mb-4",
     mastBot: "h-[3px] mt-4",
@@ -238,103 +223,84 @@ const Q: Record<string, string> = {
     mastLeft: "text-left flex-[0_0_120px]",
     mastRight: "text-right flex-[0_0_120px]",
     mastCenter: "text-center flex-1",
-    clubName: "text-lg font-bold text-[#25547A] tracking-[5px]",
-    clubSub: "text-[9px] text-[#c4a86a] tracking-[3px] mt-[1px]",
-    mastLabel: "text-xs text-[#c4a86a] tracking-[10px] mb-[2px]",
-    mastYear: "text-[78px] font-black leading-[0.95] text-[#25547A]",
-    mastIssue: "text-xs text-[#6b5d4f]",
-    mastDate: "text-[10px] text-[#d4c5b2] mt-[3px]",
-    // 正文
+    clubName: "text-lg font-bold np-club tracking-[5px]",
+    clubSub: "text-[9px] np-gold tracking-[3px] mt-[1px]",
+    mastLabel: "text-xs np-gold tracking-[10px] mb-[2px]",
+    mastYear: "text-[78px] font-black leading-[0.95] np-club",
+    mastIssue: "text-xs np-ink3",
+    mastDate: "text-[10px] np-line-fg mt-[3px]",
     body: "px-[44px] pt-6 pb-8",
-    // 卷首语
     lead: "flex gap-0 mb-5 leading-loose",
-    dropCap: "text-[42px] font-black text-[#25547A] leading-[0.8] mr-[6px] shrink-0 -mt-[2px]",
-    leadText: "text-sm text-[#4a3728] text-justify tracking-[0.3px]",
-    // 分隔线
+    dropCap: "text-[42px] font-black np-club leading-[0.8] mr-[6px] shrink-0 -mt-[2px]",
+    leadText: "text-sm np-ink2 text-justify tracking-[0.3px]",
     rule: "h-px mt-[14px] mb-[18px]",
     thickRule: "h-[2px] my-5",
-    // 双栏数字面板
     twoCol: "grid grid-cols-2 gap-6 mb-[6px]",
-    statPanel: "px-5 py-[14px] border border-[#e8ddd0]",
-    panelLabel: "text-[11px] text-[#c4a86a] tracking-[6px] mb-3 text-center",
+    statPanel: "px-5 py-[14px] np-panel",
+    panelLabel: "text-[11px] np-gold tracking-[6px] mb-3 text-center",
     statGrid: "flex justify-center gap-8",
     actStatList: "flex flex-col gap-2",
     actStatRow: "flex items-center gap-[10px]",
-    actStatName: "text-[13px] text-[#4a3728] flex-1",
-    actStatNum: "text-[15px] font-bold text-[#25547A]",
-    // 章节标题
-    sectionTitle: "text-[15px] font-bold text-[#c4a86a] tracking-[8px] text-center mb-4",
-    // ─── 作品巡礼：代表作 ───
+    actStatName: "text-[13px] np-ink2 flex-1",
+    actStatNum: "text-[15px] font-bold np-club",
+    sectionTitle: "text-[15px] font-bold np-gold tracking-[8px] text-center mb-4",
     featuredWrap: "grid grid-cols-2 gap-7 mb-6",
-    featuredImgArea: "w-full aspect-[16/10] overflow-hidden border border-[#d4c5b2]",
-    featuredImgPH: "w-full h-full flex items-center justify-center",
+    featuredImgArea: "w-full aspect-[16/10] overflow-hidden border np-border",
+    featuredImgPH: "w-full h-full flex items-center justify-center np-ph",
     featuredInfo: "flex flex-col gap-[10px] pt-1",
-    featuredTitle: "text-2xl font-extrabold text-[#2c1810] leading-[1.3]",
-    featuredSubtitle: "text-sm text-[#6b5d4f] leading-[1.6] italic",
+    featuredTitle: "text-2xl font-extrabold np-ink leading-[1.3]",
+    featuredSubtitle: "text-sm np-ink3 leading-[1.6] italic",
     featuredMeta: "flex items-center gap-[14px]",
-    featuredTypeTag: "text-[11px] text-white bg-[#c4a86a] px-[10px] py-[3px] font-semibold tracking-[2px]",
-    featuredLikes: "text-[13px] text-[#E38043] font-bold",
-    featuredPeople: "text-xs text-[#6b5d4f] leading-[1.7]",
-    // ─── 奖项标签 ───
-    awardTag: "text-[10px] text-[#8B7355] bg-[rgba(196,168,106,0.12)] px-2 py-[2px] inline-block mr-1 mb-1",
-    // ─── 其余作品网格 ───
+    featuredTypeTag: "text-[11px] np-type-tag px-[10px] py-[3px] font-semibold tracking-[2px]",
+    featuredLikes: "text-[13px] np-orange font-bold",
+    featuredPeople: "text-xs np-ink3 leading-[1.7]",
+    awardTag: "text-[10px] np-award-tag px-2 py-[2px] inline-block mr-1 mb-1",
     worksSpread: "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-y-5 gap-x-[14px] mb-2",
     workItem: "flex flex-col",
-    workImgWrapSm: "w-full aspect-[16/10] overflow-hidden mb-[6px] border border-[#e8ddd0]",
-    workImgPH: "w-full h-full flex items-center justify-center",
+    workImgWrapSm: "w-full aspect-[16/10] overflow-hidden mb-[6px] border np-border-l",
+    workImgPH: "w-full h-full flex items-center justify-center np-ph",
     workPHIcon: "text-2xl opacity-40",
     workCaption: "flex flex-col gap-[2px]",
-    workName: "text-[13px] font-bold text-[#2c1810] flex items-baseline gap-[6px]",
-    workType: "text-[9px] font-normal text-[#c4a86a] italic",
+    workName: "text-[13px] font-bold np-ink flex items-baseline gap-[6px]",
+    workType: "text-[9px] font-normal np-gold italic",
     workTagLine: "flex flex-wrap gap-1 mt-[2px]",
-    workTag: "text-[9px] px-[6px] py-[1px] text-[#88C232] bg-[rgba(136,194,50,0.08)]",
-    workCredit: "text-[10px] text-[#6b5d4f] mt-[1px]",
-    // ─── 这一年的新血液 ───
+    workTag: "text-[9px] px-[6px] py-[1px] np-work-tag",
+    workCredit: "text-[10px] np-ink3 mt-[1px]",
     roster: "flex flex-wrap gap-[14px]",
     rosterItem: "flex items-center gap-[7px]",
-    rosterAvatar: "w-[34px] h-[34px] rounded-full overflow-hidden flex items-center justify-center shrink-0",
+    rosterAvatar: "w-[34px] h-[34px] rounded-full overflow-hidden flex items-center justify-center shrink-0 np-avatar",
     rosterInitial: "text-white text-sm font-bold",
-    rosterName: "text-[13px] text-[#4a3728]",
-    // ─── 代表人物（Top3 叙事） ───
+    rosterName: "text-[13px] np-ink2",
     highlightList: "flex flex-col gap-[14px] mb-6",
-    highlightItem: "text-[13px] leading-[1.9] text-[#4a3728] m-0 flex items-start gap-3 text-justify",
-    // ─── 活动回顾 ───
+    highlightItem: "text-[13px] leading-[1.9] np-ink2 m-0 flex items-start gap-3 text-justify",
     activityList: "flex flex-col gap-[14px] mt-1",
     activityItem: "",
     activityHeader: "flex items-baseline gap-[10px] flex-wrap mb-1",
-    activityTitle: "text-sm font-bold text-[#2c1810]",
-    activityDate: "text-[11px] text-[#c4a86a] italic ml-[10px]",
-    activityDesc: "text-[13px] text-[#6b5d4f] leading-loose whitespace-pre-wrap text-justify",
-    // ─── 大事记 ───
+    activityTitle: "text-sm font-bold np-ink",
+    activityDate: "text-[11px] np-gold italic ml-[10px]",
+    activityDesc: "text-[13px] np-ink3 leading-loose whitespace-pre-wrap text-justify np-rich",
     timeline: "flex flex-col gap-0",
     tlItem: "flex gap-4 relative",
     tlMarker: "flex flex-col items-center w-[14px] shrink-0 relative",
-    tlDot: "w-[10px] h-[10px] rounded-full bg-[#88C232] mt-2 shrink-0 relative z-[1]",
-    tlStem: "absolute top-[18px] bottom-[-4px] left-[6.5px] w-px bg-[#e8ddd0]",
+    tlDot: "w-[10px] h-[10px] rounded-full bg-[var(--np-green)] mt-2 shrink-0 relative z-[1]",
+    tlStem: "absolute top-[18px] bottom-[-4px] left-[6.5px] w-px bg-[var(--np-linel)]",
     tlContent: "flex-1 pt-2 pb-4",
     tlHeader: "flex items-baseline gap-[10px] flex-wrap",
-    tlTitle: "text-sm font-bold text-[#2c1810]",
-    tlDate: "text-[11px] text-[#c4a86a] italic",
-    tlBody: "text-xs text-[#6b5d4f] leading-[1.8] mt-1 whitespace-pre-wrap",
+    tlTitle: "text-sm font-bold np-ink",
+    tlDate: "text-[11px] np-gold italic",
+    tlBody: "text-xs np-ink3 leading-[1.8] mt-1 whitespace-pre-wrap np-rich",
     tlImages: "flex gap-2 mt-2 flex-wrap",
-    tlImgWrap: "relative w-[120px] h-[80px] rounded-[2px] overflow-hidden border border-[#e8ddd0] cursor-zoom-in shrink-0",
-    // 底栏
-    colophon: "text-center text-[11px] text-[#d4c5b2] leading-[1.8] tracking-[3px]",
-    colophonUrl: "text-[9px] tracking-[1px] text-[#e8ddd0]",
+    tlImgWrap: "relative w-[120px] h-[80px] rounded-[2px] overflow-hidden border np-border-l cursor-zoom-in shrink-0",
+    colophon: "text-center text-[11px] np-line-fg leading-[1.8] tracking-[3px]",
+    colophonUrl: "text-[9px] tracking-[1px] opacity-70",
 };
 
-// ─── Q 条目中仍需 inline style 的属性（渐变背景、字体栈等） ───
 const QS: Record<string, React.CSSProperties> = {
-    mastTop: {background: `linear-gradient(90deg,transparent 8%,${GOLD} 20%,${A} 35%,${A} 65%,${GOLD} 80%,transparent 92%)`},
-    mastBot: {background: `linear-gradient(90deg,transparent 8%,${GOLD} 20%,${A} 35%,${A} 65%,${GOLD} 80%,transparent 92%)`},
-    rule: {background: `linear-gradient(90deg,transparent 15%,${LINEL} 35%,${GOLD} 50%,${LINEL} 65%,transparent 85%)`},
-    thickRule: {background: `linear-gradient(90deg,transparent 10%,${LINE} 30%,${GOLD} 50%,${LINE} 70%,transparent 90%)`},
-    statPanel: {background: "linear-gradient(135deg,rgba(255,255,255,0.5),rgba(232,221,208,0.2))"},
-    featuredImgPH: {background: `linear-gradient(135deg,${A},#4488aa)`},
-    workImgPH: {background: `linear-gradient(135deg,${A},#4488aa)`},
-    rosterAvatar: {background: `linear-gradient(135deg,${A},#4477aa)`},
+    mastTop: {background: "linear-gradient(90deg,transparent 8%,var(--np-gold) 20%,var(--np-navy) 35%,var(--np-navy) 65%,var(--np-gold) 80%,transparent 92%)"},
+    mastBot: {background: "linear-gradient(90deg,transparent 8%,var(--np-gold) 20%,var(--np-navy) 35%,var(--np-navy) 65%,var(--np-gold) 80%,transparent 92%)"},
+    rule: {background: "linear-gradient(90deg,transparent 15%,var(--np-linel) 35%,var(--np-gold) 50%,var(--np-linel) 65%,transparent 85%)"},
+    thickRule: {background: "linear-gradient(90deg,transparent 10%,var(--np-line) 30%,var(--np-gold) 50%,var(--np-line) 70%,transparent 90%)"},
     mastYear: {textRendering: "geometricPrecision"},
-    // fontFamily 条目
     clubName: F_SANS,
     clubSub: F_GEORGIA,
     mastLabel: F_SANS,
@@ -362,9 +328,6 @@ const QS: Record<string, React.CSSProperties> = {
     colophonUrl: F_GEORGIA,
 };
 
-// ═══════════════════════════════════════════════════════
-//  动态样式函数
-// ═══════════════════════════════════════════════════════
 function saveBtnClass(loading: boolean): string {
     return `inline-flex items-center gap-1.5 px-[18px] py-2 rounded-lg border-[1.5px] border-brand-navy text-[13px] font-semibold transition-all duration-200 ${loading ? "bg-brand-navy text-white cursor-default" : "bg-transparent text-brand-navy cursor-pointer"}`;
 }
@@ -372,15 +335,20 @@ function saveBtnClass(loading: boolean): string {
 const pdfBtnClass = "inline-flex items-center gap-1.5 px-[18px] py-2 rounded-lg border-[1.5px] border-brand-green bg-transparent text-brand-green text-[13px] font-semibold cursor-pointer transition-all duration-200";
 
 function actDotClass(t: string): string {
-    const bgMap: Record<string, string> = {COMPETITION: "bg-[#E38043]", COURSE: "bg-[#25547A]", GENERAL: "bg-[#88C232]", MEETING: "bg-[#d4c5b2]"};
-    return `w-2 h-2 rounded-full shrink-0 ${bgMap[t] || "bg-[#d4c5b2]"}`;
+    const map: Record<string, string> = {
+        COMPETITION: "np-act-dot-competition",
+        COURSE: "np-act-dot-course",
+        GENERAL: "np-act-dot-general",
+        MEETING: "np-act-dot-meeting",
+    };
+    return `w-2 h-2 rounded-full shrink-0 ${map[t] || "np-act-dot-meeting"}`;
 }
 
 function highlightDropClass(i: number): string {
     return "w-[var(--drop-size)] h-[var(--drop-size)] rounded-full shrink-0 flex items-center justify-center text-white text-[15px] font-bold overflow-hidden";
 }
 function highlightDropStyle(i: number): React.CSSProperties {
-    const colors = [GOLD, "#a0a0a0", "#c4885a"];
+    const colors = ["var(--np-gold)", "#a0a0a0", "#c4885a"];
     const sizes = [38, 34, 34];
     return {
         "--drop-size": `${sizes[i] || 34}px`,
@@ -389,15 +357,19 @@ function highlightDropStyle(i: number): React.CSSProperties {
 }
 
 function activityTypeTagClass(t: string): string {
-    const bgMap: Record<string, string> = {COMPETITION: "bg-[#E38043]", COURSE: "bg-[#25547A]", GENERAL: "bg-[#88C232]", MEETING: "bg-[#d4c5b2]"};
-    return `text-[10px] font-semibold text-white ${bgMap[t] || "bg-[#d4c5b2]"} px-2 py-[2px] tracking-[1px] shrink-0`;
+    const map: Record<string, string> = {
+        COMPETITION: "np-act-tag-competition",
+        COURSE: "np-act-tag-course",
+        GENERAL: "np-act-tag-general",
+        MEETING: "np-act-tag-meeting",
+    };
+    return `text-[10px] font-semibold text-white ${map[t] || "np-act-tag-meeting"} px-2 py-[2px] tracking-[1px] shrink-0`;
 }
 
-// StatBox 样式
 const STAT_Q: Record<string, string> = {
     statBox: "flex flex-col items-center gap-1",
-    statNum: "text-[36px] font-black text-[#25547A] leading-none",
-    statLabel: "text-xs text-[#6b5d4f] tracking-[1px]",
+    statNum: "text-[36px] font-black np-club leading-none",
+    statLabel: "text-xs np-ink3 tracking-[1px]",
 };
 const STAT_S: Record<string, React.CSSProperties> = {
     statNum: F_GEORGIA,
@@ -522,7 +494,7 @@ function YearNewspaper({
                         {/* ─── 数字面板 ─── */}
                         {sections.stats && (
                         <div className={Q.twoCol}>
-                            <div className={Q.statPanel} style={QS.statPanel}>
+                            <div className={Q.statPanel}>
                                 <div className={Q.panelLabel} style={F_SANS}>{yearIndex <= 1 ? "创社元年" : `第 ${yearIndex} 年`} 数字</div>
                                 <div className={Q.statGrid}>
                                     {members.length > 0 && <StatBox num={members.length} label="新成员"/>}
@@ -544,7 +516,7 @@ function YearNewspaper({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div style={{textAlign: "center", color: INK3, fontSize: 13, paddingTop: 8}}>暂无活动记录</div>
+                                    <div className="text-center np-ink3 text-[13px] pt-2">暂无活动记录</div>
                                 )}
                             </div>
                         </div>
@@ -553,7 +525,7 @@ function YearNewspaper({
                         {/* ═══ 作品巡礼（代表作 + 其余作品） ═══ */}
                         {sections.projects && projects.length > 0 && (
                             <>
-                                <div className={Q.thickRule}/>
+                                <div className={Q.thickRule} style={QS.thickRule}/>
                                 <div className={Q.sectionTitle}>作 品 巡 礼</div>
 
                                 {/* 年度代表作（大头） */}
@@ -565,7 +537,7 @@ function YearNewspaper({
                                                     <SafeImage src={featuredWork.coverImage} alt={featuredWork.title}
                                                                className="w-full h-full object-cover"/>
                                                 ) : (
-                                                    <div className={Q.featuredImgPH} style={QS.featuredImgPH}><span className="text-4xl opacity-40">🎮</span></div>
+                                                    <div className={Q.featuredImgPH}><span className="text-4xl opacity-40">🎮</span></div>
                                                 )}
                                             </div>
                                         </Link>
@@ -613,7 +585,7 @@ function YearNewspaper({
                                                             <SafeImage src={p.coverImage} alt={p.title}
                                                                        className="w-full h-full object-cover"/>
                                                         ) : (
-                                                            <div className={Q.workImgPH} style={QS.workImgPH}><span className={Q.workPHIcon}>🎮</span></div>
+                                                            <div className={Q.workImgPH}><span className={Q.workPHIcon}>🎮</span></div>
                                                         )}
                                                     </div>
                                                 </Link>
@@ -652,15 +624,15 @@ function YearNewspaper({
                                     {projects
                                         .filter(p => (p.awards || []).length > 0)
                                         .map(p => (
-                                            <div key={p.id} className="py-2 border-b border-[#e8ddd0] last:border-b-0">
+                                            <div key={p.id} className="py-2 border-b np-border-l last:border-b-0">
                                                 <Link href={`/works/${p.slug}`}
-                                                      className="text-sm no-underline hover:text-[#25547A] transition-colors italic text-[#8B7D6B]">
+                                                      className="text-sm no-underline hover:text-[var(--np-navy)] transition-colors italic np-ink3">
                                                     {p.title}
                                                 </Link>
                                                 <div className="flex flex-wrap gap-1.5 mt-2">
                                                     {(p.awards || []).map((award, i) => (
                                                         <span key={i}
-                                                              className="text-xs px-2.5 py-1 rounded font-medium bg-[rgba(196,168,106,0.12)] text-[#8B7355]">
+                                                              className="text-xs px-2.5 py-1 rounded font-medium np-award-tag">
                                                             🏆 {award}
                                                         </span>
                                                     ))}
@@ -683,7 +655,7 @@ function YearNewspaper({
                                                 return (
                                                     <div key={m.id} className={Q.rosterItem}>
                                                         <Link href={`/members/${m.id}`} className="block shrink-0">
-                                                            <div className={Q.rosterAvatar} style={QS.rosterAvatar}>
+                                                            <div className={Q.rosterAvatar}>
                                                                 {avatarUrl ? (
                                                                     <SafeImage src={avatarUrl} alt={m.displayName}
                                                                                className="w-full h-full object-cover"/>
@@ -718,8 +690,8 @@ function YearNewspaper({
                       )}
                     </span>
                                                 <span>
-                      <strong className="text-[#2c1810] text-[14px]">{m.displayName}</strong>
-                      <span className="text-[#6b5d4f] ml-2">{topNarrative[i] || ""}</span>
+                      <strong className="np-ink text-[14px]">{m.displayName}</strong>
+                      <span className="np-ink3 ml-2">{topNarrative[i] || ""}</span>
                     </span>
                                             </div>
                                         ))}
@@ -729,7 +701,7 @@ function YearNewspaper({
                                 {/* 当年社长（grade == year - 2 的 PRESIDENT / VICE_PRESIDENT） */}
                                 {presidents.length > 0 && (
                                     <div className={activeMembers.length > 0 ? "mt-4" : ""}>
-                                        <div className="text-[12px] text-[#c4a86a] uppercase tracking-[4px] mb-2" style={F_SANS}>
+                                        <div className="text-[12px] np-gold uppercase tracking-[4px] mb-2" style={F_SANS}>
                                             ◆ 当年社长
                                         </div>
                                         <div className={Q.roster}>
@@ -739,7 +711,7 @@ function YearNewspaper({
                                                 return (
                                                     <div key={m.id} className={Q.rosterItem}>
                                                         <Link href={`/members/${m.id}`} className="block shrink-0">
-                                                            <div className={Q.rosterAvatar} style={QS.rosterAvatar}>
+                                                            <div className={Q.rosterAvatar}>
                                                                 {avatarUrl ? (
                                                                     <SafeImage src={avatarUrl} alt={m.displayName}
                                                                                className="w-full h-full object-cover"/>
@@ -751,7 +723,7 @@ function YearNewspaper({
                                                         <div>
                                                             <span className={Q.rosterName} style={F_SANS}>{m.displayName}</span>
                                                             {posLabel && (
-                                                                <span className="text-[10px] text-[#c4a86a] block mt-[1px]" style={F_SANS_SM}>
+                                                                <span className="text-[10px] np-gold block mt-[1px]" style={F_SANS_SM}>
                                                                     {posLabel}
                                                                 </span>
                                                             )}
@@ -772,7 +744,7 @@ function YearNewspaper({
                                 <div className={Q.sectionTitle} style={QS.sectionTitle}>活 动 回 顾</div>
 
                                 {meetingCount > 0 && (
-                                    <p className="text-[13px] text-[#4a3728] leading-loose text-justify mb-4">
+                                    <p className="text-[13px] np-ink2 leading-loose text-justify mb-4">
                                         全年共举办了 {meetingCount} 场例会。
                                     </p>
                                 )}
@@ -792,7 +764,7 @@ function YearNewspaper({
                                                             <span className={Q.activityTitle} style={QS.activityTitle}>{a.title}</span>
                                                         </Link>
                                                         {a.status === "ARCHIVED" &&
-                                                            <span className="text-[10px] text-[#6b5d4f] italic">(已归档)</span>}
+                                                            <span className="text-[10px] np-ink3 italic">(已归档)</span>}
                                                         <span
                                                             className={Q.activityDate} style={QS.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
                                                     </div>

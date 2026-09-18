@@ -306,7 +306,11 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
     steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📁", drive: "📁", 官网: "🌐",
   };
   const externalLinks = [
-    ...project.links.map((l) => ({ label: l.label, url: l.url, icon: LINK_ICONS[l.label.toLowerCase()] || "🔗" })),
+    ...project.links.map((l: { label: string; url: string }) => ({
+      label: l.label,
+      url: l.url,
+      icon: LINK_ICONS[l.label.toLowerCase()] || "🔗",
+    })),
   ];
 
   return (
@@ -393,10 +397,10 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">
-            {sortProjectTagsEngineFirst(project.tags).map(({ tag }) => (
+            {sortProjectTagsEngineFirst(project.tags).map(({ tag }: { tag: { slug: string; name?: string; color?: string | null; group?: string | null } }) => (
               <TagChipLink
                 key={tag.slug}
-                tag={tag}
+                tag={{ slug: tag.slug, name: tag.name || tag.slug, color: tag.color, group: tag.group }}
                 href={`/works?tag=${tag.slug}`}
                 className="text-sm px-2.5 py-1 rounded-full"
               />
@@ -440,7 +444,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                 <div>
                   <dt className="mb-1 text-brand-text-secondary">技术栈</dt>
                   <dd className="flex flex-wrap gap-1.5">
-                    {project.techStack.map((tech) => (
+                    {project.techStack.map((tech: string) => (
                       <span key={tech} className="text-xs px-2 py-0.5 rounded bg-brand-surface text-brand-blue">{tech}</span>
                     ))}
                   </dd>
@@ -450,7 +454,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                 <div>
                   <dt className="mb-1 text-brand-text-secondary">🏆 所获奖项</dt>
                   <dd className="space-y-1">
-                    {project.awards.map((award, i) => (
+                    {project.awards.map((award: string, i: number) => (
                       <span key={i} className="text-xs px-2 py-0.5 rounded block bg-[#c4a86a]/[0.12] text-[#8B7355]">{award}</span>
                     ))}
                   </dd>
@@ -460,7 +464,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                 <div>
                   <dt className="mb-1 text-brand-text-secondary">🤖 AI 使用</dt>
                   <dd className="flex flex-wrap gap-1.5">
-                    {project.aiUsages.map((u) => (
+                    {project.aiUsages.map((u: string) => (
                       <span key={u} className="text-xs px-2 py-0.5 rounded bg-brand-purple/10 text-brand-purple">
                         {AI_USAGE_LABELS[u] || u}
                       </span>
@@ -472,7 +476,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                 <div>
                   <dt className="mb-1 text-brand-text-secondary">💻 支持平台</dt>
                   <dd className="flex flex-wrap gap-1.5">
-                    {project.platforms.map((p) => (
+                    {project.platforms.map((p: string) => (
                       <span key={p} className="text-xs px-2 py-0.5 rounded bg-brand-blue/10 text-brand-blue">
                         {PLATFORM_LABELS[p] || p}
                       </span>
@@ -487,7 +491,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
             <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
               <h3 className="font-semibold mb-3 text-brand-navy">开发团队</h3>
               <div className="space-y-3">
-                {project.members.map((pm) => {
+                {project.members.map((pm: any) => {
                   const isExternal = !pm.member && !pm.user;
                   const displayName = pm.member?.displayName || (pm as any).user?.name || pm.externalName || "未知";
                   const avatarUrl =
