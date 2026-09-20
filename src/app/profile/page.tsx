@@ -411,7 +411,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="text-xs mb-2 text-brand-text-muted">职能标签</div>
               <div className="flex flex-wrap gap-1.5">
-                {member.skills.map((s, i) => (
+                {member.skills.map((s: string, i: number) => (
                   <span key={i} className="text-xs px-2 py-0.5 rounded bg-green-50 text-brand-green">
                     {s}
                   </span>
@@ -424,7 +424,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="text-xs mb-2 text-brand-text-muted">个人链接</div>
               <div className="flex flex-wrap gap-3">
-                {member.socialLinks!.map((l) => (
+                {member.socialLinks!.map((l: { id: string; url: string; label: string }) => (
                   <Link key={l.id} href={l.url} target="_blank" className="text-sm hover:underline flex items-center gap-1 text-brand-blue">
                     {LINK_ICONS[l.label] || "🔗"} {l.label}
                   </Link>

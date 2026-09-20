@@ -164,7 +164,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
     "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
   };
 
-  const links = (member.socialLinks ?? []).map((l) => ({
+  const links = (member.socialLinks ?? []).map((l: { label: string; url: string | null }) => ({
     label: l.label,
     url: l.url,
     icon: LINK_ICONS[l.label] || "🔗",
@@ -222,7 +222,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
               {/* 职能标签 */}
               {member.skills.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {member.skills.map((skill) => (
+                  {member.skills.map((skill: string) => (
                     <span key={skill} className="text-xs px-2 py-0.5 rounded bg-brand-surface text-brand-blue">
                       {skill}
                     </span>
@@ -253,7 +253,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
                 参与项目 <span className="text-sm font-normal text-brand-text-muted">共 {member.projectMembers.length} 个</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-                {member.projectMembers.map(({ project }) => (
+                {member.projectMembers.map(({ project }: { project: { id: string } }) => (
                   <ProjectCard
                     key={project.id}
                     project={project as any}
@@ -300,7 +300,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
             <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
               <h3 className="font-semibold mb-3 text-brand-navy">外部链接</h3>
               <div className="space-y-2">
-                {links.map((link) => (
+                {links.map((link: { label: string; url: string | null; icon: string }) => (
                   <a
                     key={link.label}
                     href={link.url!}

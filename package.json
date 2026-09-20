@@ -3,9 +3,9 @@
   "version": "0.2.6",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbo",
+    "dev": "next dev --turbo -p 1145",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "next start -p 1145",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",

@@ -80,7 +80,7 @@ export default function HistoryClient({
   const [savingAllPdf, setSavingAllPdf] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [sections, setSections] = useState<SectionVisibility>(allSections(true));
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // 等待客户端挂载后再显示按钮（避免 SSR 水合不匹配）
   useEffect(() => { setMounted(true); }, []);
@@ -147,14 +147,16 @@ export default function HistoryClient({
             display: none !important;
           }
           body {
-            background: #faf8f5 !important;
+            background: var(--np-paper, #faf8f5) !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+          .dark body {
+            background: #1a1f28 !important;
           }
           .newspaper-paper {
             break-inside: avoid-page !important;
             page-break-inside: avoid !important;
-            border: none !important;
             box-shadow: none !important;
             max-width: 100% !important;
             margin: 0 auto 16px !important;
@@ -167,107 +169,98 @@ export default function HistoryClient({
             size: A4;
           }
         }
-        /* ─── 手机端：横向滚动保持桌面级渲染 ─── */
-        @media (max-width: 920px) {
-          .history-scroll-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 8px;
-          }
-          .history-scroll-wrapper::-webkit-scrollbar {
-            height: 4px;
-          }
-          .history-scroll-wrapper::-webkit-scrollbar-thumb {
-            background: #d4c5b2;
-            border-radius: 2px;
-          }
-        }
       `}</style>
 
-      <div className="flex gap-0 lg:gap-8 items-start">
-        {/* ═══ 左侧栏目筛选边栏 ═══ */}
+      <div className="relative">
+        {/* ═══ 浮层栏目筛选（默认收起，展开不挤占年报宽度） ═══ */}
         {mounted && yearDetails.length > 0 && (
-          <aside data-history-sidebar className={`
-            shrink-0 transition-all duration-300
-            ${sidebarOpen
-              ? "w-[200px] bg-card border border-brand-border-subtle rounded-lg p-4"
-              : "w-10"}
-            sticky top-24
-          `}>
-            {sidebarOpen ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-brand-navy">栏目筛选</span>
-                  <button
-                    type="button"
-                    onClick={() => setSidebarOpen(false)}
-                    className="text-brand-text-muted hover:text-brand-text-heading text-xs p-0.5"
-                    title="收起"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="15 18 9 12 15 6"/>
-                    </svg>
-                  </button>
-                </div>
-
-                {/* 全选 / 取消全选 */}
-                <div className="flex gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setSections(allSections(true))}
-                    className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 8 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
-                  >
-                    全选
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSections(allSections(false))}
-                    className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 0 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
-                  >
-                    清空
-                  </button>
-                </div>
-
-                {/* 栏目列表 */}
-                <div className="flex flex-col gap-1">
-                  {SECTION_LABELS.map(({ key, label }) => (
-                    <label
-                      key={key}
-                      className="flex items-center gap-2 py-1 px-1.5 rounded cursor-pointer hover:bg-brand-surface transition-colors text-sm text-brand-text-body"
+          <div
+            data-history-sidebar
+            className="sticky top-24 z-30 h-0 pointer-events-none"
+          >
+            <aside
+              className={`
+                pointer-events-auto absolute left-0 top-0
+                shadow-lg backdrop-blur-md
+                transition-[width,opacity] duration-200
+                ${sidebarOpen
+                  ? "w-[200px] bg-card/95 border border-brand-border-subtle rounded-lg p-4"
+                  : "w-9"}
+              `}
+            >
+              {sidebarOpen ? (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-brand-navy">栏目筛选</span>
+                    <button
+                      type="button"
+                      onClick={() => setSidebarOpen(false)}
+                      className="text-brand-text-muted hover:text-brand-text-heading text-xs p-0.5"
+                      title="收起"
                     >
-                      <input
-                        type="checkbox"
-                        checked={sections[key]}
-                        onChange={() => setSections(prev => ({ ...prev, [key]: !prev[key] }))}
-                        className="w-3.5 h-3.5 rounded accent-brand-navy cursor-pointer"
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="15 18 9 12 15 6"/>
+                      </svg>
+                    </button>
+                  </div>
 
-                <div className="mt-3 pt-2 border-t border-brand-border-subtle text-[11px] text-brand-text-muted">
-                  显示 {visibleCount}/8 个栏目
-                </div>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                className="w-full h-full flex flex-col items-center justify-center gap-1 text-brand-text-muted hover:text-brand-text-heading"
-                title="展开栏目筛选"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="9 18 15 12 9 6"/>
-                </svg>
-                <span className="text-[10px] leading-tight" style={{ writingMode: "vertical-rl" }}>栏目</span>
-              </button>
-            )}
-          </aside>
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setSections(allSections(true))}
+                      className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 8 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
+                    >
+                      全选
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSections(allSections(false))}
+                      className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 0 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
+                    >
+                      清空
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    {SECTION_LABELS.map(({ key, label }) => (
+                      <label
+                        key={key}
+                        className="flex items-center gap-2 py-1 px-1.5 rounded cursor-pointer hover:bg-brand-surface transition-colors text-sm text-brand-text-body"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={sections[key]}
+                          onChange={() => setSections(prev => ({ ...prev, [key]: !prev[key] }))}
+                          className="w-3.5 h-3.5 rounded accent-brand-navy cursor-pointer"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-brand-border-subtle text-[11px] text-brand-text-muted">
+                    显示 {visibleCount}/8 个栏目
+                  </div>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="w-9 h-20 flex flex-col items-center justify-center gap-1 rounded-lg border border-brand-border-subtle bg-card/95 text-brand-text-muted hover:text-brand-text-heading shadow-md"
+                  title="展开栏目筛选"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                  <span className="text-[10px] leading-tight" style={{ writingMode: "vertical-rl" }}>栏目</span>
+                </button>
+              )}
+            </aside>
+          </div>
         )}
 
         {/* ═══ 主内容区 ═══ */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           {/* ═══ 顶部工具栏 ═══ */}
           {mounted && yearDetails.length > 0 && (
             <div data-toolbar className="flex flex-wrap items-center justify-center gap-4 mb-6">
