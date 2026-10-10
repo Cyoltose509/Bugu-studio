@@ -171,19 +171,19 @@ describe("NotFound", () => {
 // ================================================================
 describe("RouteError", () => {
   it("渲染错误标题", () => {
-    render(<ErrorPage error={new Error("测试错误")} />);
+    render(<ErrorPage error={new Error("测试错误")} reset={() => {}} />);
     const heading = screen.getByRole("heading", { level: 2 });
     expect(heading.textContent).toBe("页面加载失败");
   });
 
   it("包含重新加载按钮", () => {
-    render(<ErrorPage error={new Error("test")} />);
+    render(<ErrorPage error={new Error("test")} reset={() => {}} />);
     const button = screen.getByRole("button", { name: /重新加载/i });
     expect(button).toBeTruthy();
   });
 
   it("有 role=alert 无障碍属性", () => {
-    const { container } = render(<ErrorPage error={new Error("test")} />);
+    const { container } = render(<ErrorPage error={new Error("test")} reset={() => {}} />);
     const alert = container.querySelector('[role="alert"]');
     expect(alert).toBeTruthy();
   });

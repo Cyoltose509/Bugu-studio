@@ -27,6 +27,8 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import LogoLoading from "@/components/ui/LogoLoading";
 import { resolveActivityId } from "@/lib/activities/resolve";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+import { getActivityShowcase } from "@/lib/activities/showcase-data";
+import ActivityShowcasePage from "@/components/activities/showcase/ActivityShowcasePage";
 import { isMockDataEnabled, mockActivityByKey } from "@/lib/mock/frontend-data";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -155,6 +157,11 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   if (activity.status === "DRAFT") {
     const role = session?.user?.role;
     if (role !== "ADMIN") notFound();
+  }
+
+  const showcase = activity.type === "GENERAL" ? await getActivityShowcase(id, activity.slug) : null;
+  if (showcase?.enabled) {
+    return <ActivityShowcasePage activity={activity} config={showcase} isAdmin={session?.user?.role === "ADMIN"} />;
   }
 
   const isOngoing   = now >= activity.startTime && now <= activity.endTime;

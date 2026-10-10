@@ -11,6 +11,7 @@ import { ActivityStatus, ActivityType } from "@prisma/client";
 import { deleteActivity, updateActivityStatus } from "./actions";
 import DeleteButton from "@/components/admin/ActivityDeleteButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import CreateBaituanButton from "@/components/activities/showcase/CreateBaituanButton";
 
 export const metadata: Metadata = { title: "活动管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -77,9 +78,10 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-brand-navy">活动管理</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <CreateBaituanButton />
           <Link href="/admin" className="btn-secondary px-4 py-2 rounded-lg text-sm">← 返回仪表盘</Link>
           <Link href="/admin/activities/create" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">+ 创建活动</Link>
         </div>
