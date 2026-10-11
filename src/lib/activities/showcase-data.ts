@@ -20,6 +20,7 @@ export async function getShowcaseProjects(ids: string[]) {
           id: true, slug: true, title: true, subtitle: true, description: true,
           coverImage: true, type: true, developYear: true,
           tags: { include: { tag: true } },
+          images: { select: { url: true, altText: true }, orderBy: { sortOrder: "asc" } },
         },
       });
   // Respect the administrator's order, and never expose unpublished works.

@@ -1,0 +1,57 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #080b10;
+  color: #fff;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.dialog::backdrop { background: #080b10; }
+
+.shade {
+  background: linear-gradient(to top, rgba(4, 7, 12, .98) 0%, rgba(4, 7, 12, .86) 46%, rgba(4, 7, 12, .45) 76%, transparent 100%);
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 999px;
+  background: rgba(8, 11, 16, .72);
+  color: #fff;
+}
+
+.control:hover { background: rgba(255, 255, 255, .16); }
+.control:disabled { opacity: .4; }
+
+.caption {
+  padding: 5rem max(1.25rem, env(safe-area-inset-right)) max(1.25rem, env(safe-area-inset-bottom));
+}
+
+.thumbnails { scrollbar-width: thin; scrollbar-color: #626670 transparent; }
+.thumbnails::-webkit-scrollbar { height: 4px; }
+.thumbnails::-webkit-scrollbar-track { background: transparent; }
+.thumbnails::-webkit-scrollbar-thumb { background: #626670; border-radius: 4px; }
+
+@media (min-width: 640px) {
+  .caption { padding: 8rem 3rem 2rem; }
+}
+
+@media (max-height: 500px) {
+  .caption { padding-top: 3rem; padding-bottom: .75rem; }
+  .description { -webkit-line-clamp: 1; }
+  .thumbnails { display: none; }
+}
