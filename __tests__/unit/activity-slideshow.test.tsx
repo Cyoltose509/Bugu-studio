@@ -40,15 +40,17 @@ describe("game slideshow", () => {
     expect(screen.getByText("动作")).toBeVisible();
     expect(screen.getByText("高速横版动作游戏")).toBeVisible();
   });
-  it("pauses, wraps using arrow keys and supports thumbnail selection", () => {
+  it("pauses and selects frames directly from the thumbnail drawer", () => {
     render(<GameSlideshow projects={projects} />);
     fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
     fireEvent.click(screen.getByRole("button", { name: "暂停轮播" }));
     act(() => vi.advanceTimersByTime(20000));
     expect(screen.getByAltText("东方魔女夜市 · 封面")).toBeVisible();
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "ArrowLeft" });
-    expect(screen.getByRole("heading", { name: "铅雨2" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "上一张" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "下一张" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "浏览图片" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看 铅雨2 · 封面" }));
+    expect(screen.getByRole("heading", { name: "铅雨2" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "查看 夜市战斗画面" }));
     expect(screen.getByAltText("夜市战斗画面")).toBeVisible();
     expect(screen.getByRole("button", { name: "继续播放" })).toBeVisible();
@@ -95,7 +97,8 @@ describe("game slideshow", () => {
   it("uses the work's cover when a screenshot fails to load", () => {
     render(<GameSlideshow projects={projects} />);
     fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
-    fireEvent.click(screen.getByRole("button", { name: "下一张" }));
+    fireEvent.click(screen.getByRole("button", { name: "浏览图片" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看 夜市战斗画面" }));
     fireEvent.error(screen.getByAltText("夜市战斗画面"));
     expect(screen.getByAltText("夜市战斗画面")).toHaveAttribute("src", "/a-cover.png");
   });

@@ -108,19 +108,19 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
     <dialog ref={dialog} className={styles.dialog} aria-label="游戏作品全屏轮播" onClose={close}
       onCancel={e => { e.preventDefault(); close(); }}
       onKeyDown={e => {
-        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-          e.preventDefault(); step(e.key === "ArrowRight" ? 1 : -1);
-        } else if (e.key === " " && e.target === dialog.current) {
+        if (e.key === " " && e.target === dialog.current) {
           e.preventDefault(); setPlaying(p => !p);
         }
       }}>
-      <div ref={player} className="relative h-full w-full bg-[#080b10]">
+      <div ref={player} className={`relative h-full w-full bg-[#080b10] ${galleryOpen ? styles.galleryExpanded : ""}`}>
       {open && slide && <>
         <SlideshowImage key={slide.src} src={slide.src} cover={slide.project.coverImage} alt={slide.alt}
-          className="absolute inset-0 h-full w-full object-contain" />
+          className={`${styles.coverImage} absolute inset-0 h-full w-full`} />
         <div className={styles.header}>
           <p className={styles.brand}>BUGOO STUDIO <span>作品放映</span></p>
-          <button type="button" onClick={close} className={styles.control} aria-label="退出全屏轮播" autoFocus>退出 ×</button>
+          <button type="button" onClick={close} className={styles.closeButton} aria-label="退出全屏轮播" autoFocus>
+            <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round"><path d="M5 5l14 14M19 5L5 19" /></svg>
+          </button>
         </div>
         <div className={styles.shade} aria-hidden="true" />
         <div className={styles.caption}>
@@ -134,11 +134,9 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
           </div>
           <div className={styles.playback}>
               <p className={styles.frameCount}><span>{String(index + 1).padStart(2, "0")}</span><span>/ {String(slides.length).padStart(2, "0")} · {slide.kind}</span></p>
-              <div className={styles.playbackButtons}>
-                <button type="button" onClick={() => step(-1)} className={styles.control} disabled={slides.length < 2} aria-label="上一张">←</button>
-                <button type="button" onClick={() => setPlaying(p => !p)} className={`${styles.control} ${styles.playButton}`} disabled={slides.length < 2} aria-label={playing ? "暂停轮播" : "继续播放"}>{playing ? "Ⅱ" : "▶"}</button>
-                <button type="button" onClick={() => step(1)} className={styles.control} disabled={slides.length < 2} aria-label="下一张">→</button>
-              </div>
+              <button type="button" onClick={() => setPlaying(p => !p)} className={styles.playButton} disabled={slides.length < 2} aria-label={playing ? "暂停轮播" : "继续播放"}>
+                <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d={playing ? "M6 4h4v16H6zm8 0h4v16h-4z" : "M7 4v16l14-8z"} /></svg>
+              </button>
           </div>
         </div>
         <div className={`${styles.drawer} ${galleryOpen ? styles.drawerOpen : ""}`} aria-label="底边图片浏览区"
