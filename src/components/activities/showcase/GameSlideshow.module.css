@@ -75,7 +75,8 @@
 .eyebrow span { letter-spacing: .06em; font-variant-numeric: tabular-nums; }
 .title { margin: 0 0 24px; color: #fff; font-size: clamp(40px, 5.3vw, 88px); font-weight: 650; line-height: 1.1; letter-spacing: -.035em; text-wrap: balance; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; max-height: 76px; overflow-y: auto; margin-bottom: 22px; }
-.tags span { padding: 6px 12px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 4px; font-size: 12px; line-height: 1.2; color: rgba(255, 255, 255, .8); }
+.tags span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 4px; font-size: 12px; line-height: 1.2; color: rgba(255, 255, 255, .8); }
+.engineIcon { width: 14px; height: 14px; flex-shrink: 0; }
 .description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; max-width: 56ch; margin: 0; font-size: clamp(15px, 1.2vw, 18px); line-height: 1.85; color: rgba(255, 255, 255, .68); }
 .playback { display: grid; gap: 28px; }
 .frameCount { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; margin: 0; font-size: 12px; color: rgba(255, 255, 255, .5); font-variant-numeric: tabular-nums; }
@@ -117,6 +118,7 @@
   .title { margin-bottom: 18px; font-size: clamp(32px, 8.5vw, 54px); }
   .tags { gap: 6px; margin-bottom: 16px; max-height: 64px; }
   .tags span { padding: 5px 9px; font-size: 10px; }
+  .engineIcon { width: 12px; height: 12px; }
   .description { font-size: 14px; line-height: 1.75; -webkit-line-clamp: 2; }
   .playback { display: flex; align-items: center; justify-content: space-between; }
   .frameCount { justify-content: flex-start; }

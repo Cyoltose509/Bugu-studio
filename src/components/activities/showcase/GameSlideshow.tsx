@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildShowcaseSlides, type ShowcaseSlideshowProject } from "@/lib/activities/slideshow";
+import EngineTagIcon from "@/components/tags/EngineTagIcon";
 import styles from "./GameSlideshow.module.css";
 
 const SLIDE_DURATION = 6500;
@@ -127,7 +128,7 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
             <p className={styles.eyebrow}>现场试玩作品 <span>{String(projects.findIndex(p => p.id === slide.project.id) + 1).padStart(2, "0")} / {String(projects.length).padStart(2, "0")}</span></p>
             <h2 className={styles.title}>{slide.project.title}</h2>
             <div className={styles.tags} aria-label="作品标签">
-              {slide.project.tags.map(tag => <span key={tag.slug}>{tag.name}</span>)}
+              {slide.project.tags.map(tag => <span key={tag.slug}><EngineTagIcon slug={tag.slug} className={styles.engineIcon} />{tag.name}</span>)}
             </div>
             <p className={styles.description}>{slide.project.description || "作品简介待补充，欢迎到现场和创作者交流。"}</p>
           </div>
