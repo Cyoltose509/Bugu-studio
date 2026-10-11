@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useEffect } from "react";
-import { saveAllAsLongImage, saveAllAsPDF } from "@/lib/print-utils";
+import { useState, useEffect } from "react";
 import YearNewspaper, { SectionVisibility } from "@/components/history/YearNewspaper";
 
 const SECTION_LABELS: { key: keyof SectionVisibility; label: string }[] = [
@@ -63,9 +62,7 @@ interface YearDetail {
 }
 
 // ─── 样式工具 ────────────────────────────────────────
-function topBtnClass(loading: boolean): string {
-  return `inline-flex items-center gap-1.5 px-[22px] py-2.5 rounded-lg border-[1.5px] border-brand-navy text-sm font-semibold transition-all duration-200 ${loading ? "bg-brand-navy text-white cursor-default" : "bg-transparent text-brand-navy cursor-pointer"}`;
-}
+// （保存入口已移到每个年报右下角的 SaveMenu，顶部不再放全局保存按钮）
 
 // ═══════════════════════════════════════════════════════
 export default function HistoryClient({
@@ -75,66 +72,12 @@ export default function HistoryClient({
   startYear: number;
   yearCount: number;
 }) {
-  const paperRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const [savingAllImg, setSavingAllImg] = useState(false);
-  const [savingAllPdf, setSavingAllPdf] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [sections, setSections] = useState<SectionVisibility>(allSections(true));
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // 等待客户端挂载后再显示按钮（避免 SSR 水合不匹配）
   useEffect(() => { setMounted(true); }, []);
-
-  const registerPaper = useCallback((year: number, el: HTMLDivElement | null) => {
-    if (el) paperRefs.current.set(year, el);
-    else paperRefs.current.delete(year);
-  }, []);
-
-  // ── 保存全部为长图 ──
-  const saveAllAsImage = useCallback(async () => {
-    if (savingAllImg) return;
-    setSavingAllImg(true);
-    try {
-      const sorted = [...paperRefs.current.entries()]
-        .sort(([a], [b]) => b - a);
-      const els = sorted.map(([, el]) => el).filter(Boolean);
-
-      if (els.length === 0) return;
-
-      await saveAllAsLongImage(
-        els,
-        `布谷工作室·${startYear}-至今·年度回顾.png`,
-        24
-      );
-      // 保存完毕后强制刷新页面，杜绝第二次保存时图片错乱
-      setTimeout(() => window.location.reload(), 300);
-    } catch (e) {
-      console.error("保存全部长图失败", e);
-      setSavingAllImg(false);
-    }
-  }, [savingAllImg, startYear]);
-
-  // ── 保存全部为PDF（新窗口 + 动态 @page 尺寸 → 链接可点击 + 不截页） ──
-  const saveAllPDF = useCallback(async () => {
-    if (savingAllPdf) return;
-    setSavingAllPdf(true);
-    try {
-      const sorted = [...paperRefs.current.entries()]
-        .sort(([a], [b]) => b - a);
-      const els = sorted.map(([, el]) => el).filter(Boolean);
-      if (els.length === 0) return;
-      await saveAllAsPDF(
-        els,
-        `布谷工作室·${startYear}-至今·年度回顾.pdf`,
-        24
-      );
-      // 刷新页面确保下次保存状态干净
-      setTimeout(() => window.location.reload(), 300);
-    } catch (e) {
-      console.error("保存全部PDF失败", e);
-      setSavingAllPdf(false);
-    }
-  }, [savingAllPdf, startYear]);
 
   const visibleCount = Object.values(sections).filter(Boolean).length;
 
@@ -261,29 +204,12 @@ export default function HistoryClient({
 
         {/* ═══ 主内容区 ═══ */}
         <div className="min-w-0">
-          {/* ═══ 顶部工具栏 ═══ */}
+          {/* ═══ 顶部信息行 ═══ */}
           {mounted && yearDetails.length > 0 && (
-            <div data-toolbar className="flex flex-wrap items-center justify-center gap-4 mb-6">
-              <span className="text-sm mr-2 text-brand-text-secondary">
-                共 {yearCount} 年年报（{startYear}年至今）
+            <div data-toolbar className="flex justify-center mb-6">
+              <span className="text-sm text-brand-text-secondary">
+                共 {yearCount} 年年报（{startYear}年至今）· 每份年报右下角可单独保存
               </span>
-              <button type="button" onClick={saveAllPDF} disabled={savingAllPdf} className={topBtnClass(savingAllPdf)} title="可能需要关闭浏览器的窗口拦截">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="12" y1="18" x2="12" y2="12"/>
-                  <polyline points="9 15 12 18 15 15"/>
-                </svg>
-                {savingAllPdf ? "生成中…" : "保存全部为PDF"}
-              </button>
-              <button type="button" onClick={saveAllAsImage} disabled={savingAllImg} className={topBtnClass(savingAllImg)} title="页面左侧上暂时出现图片是正常现象">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                  <polyline points="21 15 16 10 5 21"/>
-                </svg>
-                {savingAllImg ? "生成中…" : "保存全部为长图"}
-              </button>
             </div>
           )}
 
@@ -308,7 +234,6 @@ export default function HistoryClient({
                   activeMembers={activeMembers}
                   presidents={presidents}
                   startYear={startYear}
-                  registerRef={(el) => registerPaper(year, el)}
                   sections={sections}
                 />
               </div>

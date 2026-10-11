@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { RichContent } from "@/components/ui/RichContent";
-import ProjectCard from "@/components/projects/ProjectCard";
 import PosterGallery from "./PosterGallery";
+import ShowcaseRowCard from "./ShowcaseRowCard";
 import { getShowcaseProjects } from "@/lib/activities/showcase-data";
 import { BAITUAN_SLUG, type ActivityShowcase } from "@/lib/activities/showcase";
 import GameSlideshow from "./GameSlideshow";
@@ -60,7 +60,7 @@ export default async function ActivityShowcasePage({ activity, config, isAdmin }
             <a href="#playable-games" className="btn-primary rounded-xl px-5 py-3 text-sm font-semibold">看看试玩游戏 ↓</a>
             <Link href="/join" className="btn-secondary rounded-xl px-5 py-3 text-sm font-semibold">了解如何加入 ↗</Link>
           </div>
-          <p className="mt-5 text-sm text-brand-text-muted">{isBaituan ? "欢迎来 B20 坐坐，下一位游戏创作者也许就是你。" : "从玩游戏开始，认识一起创作的伙伴。"}</p>
+          <p className="mt-5 text-sm text-brand-text-muted">从玩游戏开始，认识一起创作的伙伴。</p>
         </div>
         <PosterGallery posters={config.posters.slice(0, 1)} featured />
       </div>
@@ -77,20 +77,13 @@ export default async function ActivityShowcasePage({ activity, config, isAdmin }
           <Link href="/works" className="text-sm text-brand-blue hover:underline">逛逛全部作品 ↗</Link>
         </div>
       </div>
-      {projects.length ? <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">{projects.map((project, idx) =>
-        <article key={project.id} aria-label={`试玩作品 ${idx + 1}：${project.title}`} className="flex min-w-0 flex-col gap-2">
-          <div className="flex items-center justify-between px-1 text-xs">
-            <span className="font-mono font-bold tracking-widest text-brand-blue">{String(idx + 1).padStart(2, "0")} / PLAY</span>
-            <span className="rounded-full bg-brand-orange/10 px-2 py-1 text-brand-orange">现场试玩</span>
-          </div>
-          <div className="flex-1"><ProjectCard project={project} idx={idx} /></div>
-        </article>
+      {projects.length ? <div className="flex flex-col gap-3">{projects.map((project, idx) =>
+        <ShowcaseRowCard key={project.id} project={project} index={idx} />
       )}</div> : <p className="rounded-2xl border border-dashed border-brand-border-subtle p-8 text-center text-brand-text-secondary">试玩目录正在准备，欢迎到现场看看。</p>}
     </section>
 
     {config.posters.length > 1 && <section className="border-t border-brand-border-subtle py-10">
-      <h2 className="mb-3 text-2xl font-bold text-brand-text-heading">关于我们，还有这些</h2>
-      <p className="mb-6 text-sm text-brand-text-secondary">认识社团与新手村 Project。往期海报中的日期仅作历史介绍，本次活动以页面上方信息为准。</p>
+      <h2 className="mb-6 text-2xl font-bold text-brand-text-heading">关于我们，还有这些</h2>
       <PosterGallery posters={config.posters.slice(1)} />
     </section>}
     {activity.description && <section className="rounded-2xl border border-brand-border-subtle bg-card p-6 text-brand-text-body"><RichContent text={activity.description} /></section>}

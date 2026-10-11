@@ -5,7 +5,8 @@ import { buildShowcaseSlides, type ShowcaseSlideshowProject } from "@/lib/activi
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
 import styles from "./GameSlideshow.module.css";
 
-const SLIDE_DURATION = 6500;
+/** 单张停留时长。原来 6.5s 太拖，缩到 3.2s，看目录更像翻片子 */
+const SLIDE_DURATION = 3200;
 
 function SlideshowImage({ src, cover, alt, className, thumbnail = false }: {
   src: string; cover: string | null; alt: string; className: string; thumbnail?: boolean;

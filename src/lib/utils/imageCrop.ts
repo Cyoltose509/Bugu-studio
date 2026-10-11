@@ -78,45 +78,9 @@ function createImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/**
- * 压缩图片（不裁剪，仅缩小尺寸 + 降低质量）
- * 用于不需要裁剪的场景，或裁剪后的二次压缩
- */
-export async function compressImage(
-  file: File,
-  maxWidth: number,
-  maxHeight: number,
-  quality = 0.8
-): Promise<File> {
-  const img = await createImage(URL.createObjectURL(file));
-  const canvas = document.createElement("canvas");
-
-  let { width, height } = img;
-  const ratio = Math.min(maxWidth / width, maxHeight / height, 1);
-  width = Math.round(width * ratio);
-  height = Math.round(height * ratio);
-
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  ctx?.drawImage(img, 0, 0, width, height);
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return reject(new Error("压缩失败"));
-        resolve(
-          new File([blob], file.name, {
-            type: "image/jpeg",
-            lastModified: Date.now(),
-          })
-        );
-      },
-      "image/jpeg",
-      quality
-    );
-  });
-}
+// 压缩逻辑已统一到 src/lib/utils/clientUpload.ts 的 fitWithinLimit：
+// 那里会优先原图直传，只有超过服务器体积上限时才重编码。
+// 这里只保留裁剪相关的工具。
 
 /**
  * 读取 File 为 data URL（用于 react-easy-crop 的 image prop）

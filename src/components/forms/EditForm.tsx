@@ -8,6 +8,8 @@ import {saveProfile, redeemInviteCode} from "@/app/profile/edit/actions";
 import {SubmitButton} from "@/components/ui/SubmitButton";
 import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
 import MentionEditor from "@/components/ui/MentionEditor";
+import {ImageDropZone} from "@/components/ui/ImageDropZone";
+import {uploadImage, ACCEPT_ATTR, AVATAR_LIMIT_BYTES} from "@/lib/utils/clientUpload";
 
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false }) as any;
 
@@ -239,9 +241,8 @@ export default function EditForm({
     }
   }
 
-    // 文件选择 → 打开裁剪弹窗
-    async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0];
+    // 文件（点选或拖拽）→ 打开裁剪弹窗
+    async function openCropWith(file: File | undefined) {
         if (!file) return;
         setAvatarError("");
         setAvatarSuccess("");
@@ -256,6 +257,10 @@ export default function EditForm({
         }
     }
 
+    function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+        void openCropWith(e.target.files?.[0]);
+    }
+
     // 裁剪确认 → 压缩 → 上传
     async function handleCropConfirm() {
         if (!cropSrc || !croppedPixels) return;
@@ -265,12 +270,12 @@ export default function EditForm({
         setAvatarSuccess("");
         try {
             const {blob} = await getCroppedImg(cropSrc, croppedPixels, 400, 0.85);
-            const fd = new FormData();
-            fd.append("file", new File([blob], "avatar.jpg", {type: "image/jpeg"}));
-            const res = await fetch("/api/upload/avatar", {method: "POST", body: fd});
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || "上传失败");
-            setAvatarPreview(json.url);
+            const file = new File([blob], "avatar.jpg", {type: "image/jpeg"});
+            const {url} = await uploadImage(file, {
+                endpoint: "/api/upload/avatar",
+                limit: AVATAR_LIMIT_BYTES,
+            });
+            setAvatarPreview(url);
             setAvatarSuccess("头像已更新");
             await updateSession();
         } catch (err: any) {
@@ -338,7 +343,14 @@ export default function EditForm({
                 <div className="border-b pb-6 border-brand-border-subtle">
                   <h3 className="text-sm font-semibold mb-4 text-brand-navy">基本信息</h3>
                   {/* 头像 */}
-                  <div className="flex items-center gap-6 mb-5">
+                  <ImageDropZone
+                    className="mb-5 rounded-xl p-1"
+                    hint="松开以更换头像"
+                    disabled={avatarUploading || !avatarCooldown.canEdit}
+                    onFile={(file) => openCropWith(file)}
+                    onInvalid={(msg) => setAvatarError(msg)}
+                  >
+                    <div className="flex items-center gap-6">
                     <div className="shrink-0">
                         {avatarPreview ? (
                             <img
@@ -368,7 +380,7 @@ export default function EditForm({
                         <input
                             ref={fileRef}
                             type="file"
-                            accept="image/jpeg,image/png,image/webp"
+                            accept={ACCEPT_ATTR}
                             className="hidden"
                             onChange={handleFileChange}
                         />
@@ -385,11 +397,15 @@ export default function EditForm({
                                 <span className="text-xs text-brand-green">✓ {avatarSuccess}</span>
                             )}
                         </div>
+                        {avatarCooldown.canEdit && (
+                            <p className="text-xs text-brand-text-muted">也可以把图片直接拖到这里</p>
+                        )}
                         {avatarError && (
                             <p className="text-xs text-brand-orange">{avatarError}</p>
                         )}
                     </div>
-                </div>
+                    </div>
+                  </ImageDropZone>
 
                 {/* 姓名 */}
                 <div>

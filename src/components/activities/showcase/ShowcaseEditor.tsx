@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveActivityShowcase } from "@/app/admin/activities/showcase-actions";
 import type { ActivityShowcase } from "@/lib/activities/showcase";
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
+import { uploadImage, ACCEPT_ATTR, formatMB } from "@/lib/utils/clientUpload";
 
 type ProjectOption = { id: string; title: string; slug: string };
 const buttonClass = "rounded-lg border border-brand-border-subtle px-3 py-1.5 text-sm disabled:opacity-40";
@@ -34,18 +36,21 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
   async function upload(file: File | undefined) {
     if (!file) return;
     markChanged();
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      setError("请选择不超过 5MB 的 JPG、PNG 或 WebP 海报"); return;
-    }
     setUploading(true);
     try {
-      const body = new FormData(); body.append("file", file);
-      const response = await fetch("/api/upload/cover", { method: "POST", body });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "上传失败");
-      setConfig(c => ({ ...c, posters: [...c.posters, { title: file.name.replace(/\.[^.]+$/, ""), url: result.url }] }));
-    } catch (e) { setError(e instanceof Error ? e.message : "上传失败，请重试"); }
-    finally { setUploading(false); }
+      // 原图在限额内直传，超了才压缩；太大/格式不对会给中文提示
+      const result = await uploadImage(file, { endpoint: "/api/upload/cover", type: "cover" });
+      setConfig(c => ({
+        ...c,
+        posters: [...c.posters, { title: file.name.replace(/\.[^.]+$/, ""), url: result.url }],
+      }));
+      if (result.compressed) {
+        setMessage(`海报已压缩：${formatMB(result.originalSize)}MB → ${formatMB(result.uploadedSize)}MB`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "上传失败，请重试");
+      setMessage("");
+    } finally { setUploading(false); }
   }
 
   return <section className="rounded-xl border border-brand-border-subtle bg-card p-6 shadow-sm space-y-5 text-brand-text-body">
@@ -102,8 +107,13 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
             </div>
           </div>
         </div>)}
-        <label className="block text-sm">添加海报（最大 5MB）<input type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled || config.posters.length >= 10}
-          className="mt-2 block w-full text-sm" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
+        <ImageDropZone className="rounded-xl p-1" hint="松开以添加海报"
+          disabled={disabled || config.posters.length >= 10}
+          onFile={file => upload(file)}
+          onInvalid={msg => { markChanged(); setError(msg); }}>
+          <label className="block text-sm">添加海报（可直接拖图片到此处）<input type="file" accept={ACCEPT_ATTR} disabled={disabled || config.posters.length >= 10}
+            className="mt-2 block w-full text-sm" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
+        </ImageDropZone>
       </div>
     </fieldset>
     {uploading && <p role="status" className="text-sm text-brand-blue">海报上传中…</p>}

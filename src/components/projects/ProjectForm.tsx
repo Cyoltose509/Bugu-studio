@@ -2,9 +2,15 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
-import { compressImage } from "@/lib/utils/imageCrop";
 import MentionEditor from "@/components/ui/MentionEditor";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
+import {
+  uploadImage,
+  ACCEPT_ATTR,
+  assertImageFile,
+  compressionNote,
+} from "@/lib/utils/clientUpload";
 import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
 
 // ── 作品类型 ──
@@ -103,6 +109,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const [screenshots, setScreenshots] = useState<ProjectImage[]>(initialData?.images ?? []);
   const [screenshotUploading, setScreenshotUploading] = useState(false);
   const [screenshotError, setScreenshotError] = useState("");
+  const [screenshotNote, setScreenshotNote] = useState("");
   const screenshotFileRef = useRef<HTMLInputElement>(null);
 
   // ── 封面图 ──
@@ -110,6 +117,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const [coverUrl, setCoverUrl] = useState(initialData?.coverImage || "");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverError, setCoverError] = useState("");
+  const [coverNote, setCoverNote] = useState("");
   const coverFileRef = useRef<HTMLInputElement>(null);
 
   // ── 成员搜索 ──
@@ -247,23 +255,56 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
     setSelectedMembers((prev) => prev.filter((_, i) => i !== index));
   }
 
-  // ── 截图 ──
-  async function handleScreenshotUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  // ── 封面 ──
+  async function handleCoverFile(file: File | undefined) {
     if (!file) return;
+    setCoverError("");
+    setCoverNote("");
+    try {
+      assertImageFile(file);
+    } catch (err: any) {
+      setCoverError(err.message);
+      return;
+    }
+    setCoverUploading(true);
+    try {
+      const previewUrl = URL.createObjectURL(file);
+      setCoverPreview(previewUrl);
+      const result = await uploadImage(file, {
+        endpoint: "/api/upload/cover",
+        type: "cover",
+      });
+      setCoverUrl(result.url);
+      setCoverNote(compressionNote(result));
+    } catch (err: any) {
+      setCoverError(err.message || "上传失败");
+      setCoverPreview(null);
+    } finally {
+      setCoverUploading(false);
+      if (coverFileRef.current) coverFileRef.current.value = "";
+    }
+  }
+
+  // ── 截图 ──
+  async function handleScreenshotFile(file: File | undefined) {
+    if (!file) return;
+    if (screenshots.length >= 3) return;
     setScreenshotError("");
+    setScreenshotNote("");
+    try {
+      assertImageFile(file);
+    } catch (err: any) {
+      setScreenshotError(err.message);
+      return;
+    }
     setScreenshotUploading(true);
     try {
-      const compressed = file.size > 300 * 1024
-        ? await compressImage(file, 1920, 1080, 0.8)
-        : file;
-      const fd = new FormData();
-      fd.append("file", compressed, compressed.name || file.name);
-      fd.append("type", "screenshot");
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "上传失败");
-      setScreenshots((prev) => [...prev, { url: json.url }]);
+      const result = await uploadImage(file, {
+        endpoint: "/api/upload",
+        type: "screenshot",
+      });
+      setScreenshots((prev) => [...prev, { url: result.url }]);
+      setScreenshotNote(compressionNote(result));
     } catch (err: any) {
       setScreenshotError(err.message || "上传失败");
     } finally {
@@ -575,34 +616,15 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-brand-navy">🖼️ 封面图</h2>
-        <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            setCoverError("");
-            setCoverUploading(true);
-            try {
-              // 本地预览（用原始文件）
-              const previewUrl = URL.createObjectURL(file);
-              setCoverPreview(previewUrl);
-              // 压缩后上传
-              const compressed = file.size > 300 * 1024
-                ? await compressImage(file, 1920, 1080, 0.8)
-                : file;
-              const fd = new FormData();
-              fd.append("file", compressed, compressed.name || file.name);
-              const res = await fetch("/api/upload/cover", { method: "POST", body: fd });
-              const json = await res.json();
-              if (!res.ok) throw new Error(json.error || "上传失败");
-              setCoverUrl(json.url);
-            } catch (err: any) {
-              setCoverError(err.message || "上传失败");
-              setCoverPreview(null);
-            } finally {
-              setCoverUploading(false);
-              if (coverFileRef.current) coverFileRef.current.value = "";
-            }
-          }} />
+        <input ref={coverFileRef} type="file" accept={ACCEPT_ATTR} className="hidden"
+          onChange={(e) => void handleCoverFile(e.target.files?.[0])} />
+        <ImageDropZone
+          hint="松开以上传封面"
+          disabled={coverUploading}
+          onFile={(file) => handleCoverFile(file)}
+          onInvalid={(msg) => setCoverError(msg)}
+          className="rounded-xl p-1"
+        >
         <div className="flex items-start gap-4">
           <div className="shrink-0">
             {coverPreview ? (
@@ -619,16 +641,26 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
               {coverUploading ? "上传中..." : coverPreview ? "更换封面" : "选择封面图"}
             </button>
             {coverPreview && <span className="text-xs ml-2 text-brand-green">✓ 已上传</span>}
+            <p className="text-xs text-brand-text-muted">也可以把图片直接拖到这里</p>
+            {coverNote && <p className="text-xs text-brand-text-muted">{coverNote}</p>}
             {coverError && <p className="text-xs text-brand-orange">{coverError}</p>}
           </div>
         </div>
+        </ImageDropZone>
       </section>
 
       {/* ═══════════════ 作品截图 ═══════════════ */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-brand-navy">📸 作品截图 ({screenshots.length}/3)</h2>
-        <input ref={screenshotFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
-          onChange={handleScreenshotUpload} />
+        <input ref={screenshotFileRef} type="file" accept={ACCEPT_ATTR} className="hidden"
+          onChange={(e) => void handleScreenshotFile(e.target.files?.[0])} />
+        <ImageDropZone
+          hint="松开以添加截图"
+          disabled={screenshotUploading || screenshots.length >= 3}
+          onFile={(file) => handleScreenshotFile(file)}
+          onInvalid={(msg) => setScreenshotError(msg)}
+          className="rounded-xl p-1"
+        >
         {screenshots.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {screenshots.map((img, i) => (
@@ -648,8 +680,10 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
             {screenshotUploading ? "上传中..." : screenshots.length >= 3 ? "已达到上限" : "+ 添加截图"}
           </button>
           {screenshotError && <p className="text-xs mt-1 text-brand-orange">{screenshotError}</p>}
-          <p className="text-xs mt-1 text-brand-text-muted">最多 3 张，支持 JPG/PNG/WebP 格式</p>
+          {screenshotNote && <p className="text-xs mt-1 text-brand-text-muted">{screenshotNote}</p>}
+          <p className="text-xs mt-1 text-brand-text-muted">最多 3 张，支持 JPG/PNG/WebP 格式，可直接拖拽到此处</p>
         </div>
+        </ImageDropZone>
       </section>
 
       {/* ═══════════════ 制作成员 ═══════════════ */}

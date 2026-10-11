@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: "文件大小不能超过 5MB" }, { status: 400 });
+  if (file.size > 4 * 1024 * 1024) {
+    return NextResponse.json({ error: "文件大小不能超过 4MB" }, { status: 400 });
   }
 
   const bytes = await file.arrayBuffer();

@@ -29,7 +29,7 @@ export const BAITUAN_PROJECT_SLUGS = [
   "project-i3lij3", "2", "step-or-sink-2", "saga-of-deadwood", "active",
 ];
 export const BAITUAN_POSTERS = [
-  { title: "百团大战 · B20 摊位与活动地图", url: "/images/activities/baituan-2026/event.webp" },
+  { title: "摊位与活动地图", url: "/images/activities/baituan-2026/event.webp" },
   { title: "认识珞珈技术俱乐部", url: "/images/activities/baituan-2026/club.webp" },
   { title: "新手村 Project · 往期介绍（2024）", url: "/images/activities/baituan-2026/beginner-2024.webp" },
 ];

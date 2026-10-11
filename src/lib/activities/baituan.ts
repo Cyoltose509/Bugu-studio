@@ -17,8 +17,8 @@ export async function prepareBaituanDraft(tx: Prisma.TransactionClient) {
     create: {
       slug: BAITUAN_SLUG, title: "2026 百团大战 · 珞珈技术俱乐部招新",
       type: "GENERAL", status: "DRAFT",
-      summary: "游戏 × 创作，一起玩出更多可能！来 B20 体验社团原创游戏，和创作者面对面交流。",
-      location: "桂园操场 · 拓新区 B20 摊位",
+      summary: "游戏 × 创作，一起玩出更多可能！来拓新14摊位体验社团原创游戏，和创作者面对面交流。",
+      location: "桂园操场 · 拓新14摊位",
       startTime: new Date("2026-10-11T09:00:00+08:00"),
       endTime: new Date("2026-10-11T17:00:00+08:00"),
       coverImage: BAITUAN_POSTERS[0].url,

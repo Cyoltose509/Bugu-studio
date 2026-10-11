@@ -22,11 +22,18 @@ export const ALLOWED_MIME_TYPES = [
 
 export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
-// 文件大小限制
+/**
+ * 文件大小限制
+ *
+ * 注意：站点部署在 Vercel，Serverless Function 的请求体硬上限是 4.5MB，
+ * 超过后请求根本到不了这里（Vercel 直接返回纯文本 413）。
+ * 所以这里的数字必须全部 ≤ 4.5MB，写更大没有意义，只会让报错信息骗人。
+ * 客户端 src/lib/utils/clientUpload.ts 会在发送前把体积压到 4.2MB 以内。
+ */
 export const MAX_FILE_SIZE = {
   avatar: 2 * 1024 * 1024,    // 2MB
-  cover: 5 * 1024 * 1024,     // 5MB
-  screenshot: 8 * 1024 * 1024, // 8MB
+  cover: 4 * 1024 * 1024,     // 4MB
+  screenshot: 4 * 1024 * 1024, // 4MB
 } as const;
 
 export type UploadType = keyof typeof MAX_FILE_SIZE;

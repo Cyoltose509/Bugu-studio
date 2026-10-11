@@ -15,7 +15,17 @@
 }
 
 .dialog::backdrop { background: #080b10; }
-.coverImage { object-fit: contain; object-position: center; }
+.coverImage {
+  object-fit: contain;
+  object-position: center;
+  /* 切换更快了，给一个短促的淡入，避免生硬跳帧 */
+  animation: slideFadeIn .32s ease both;
+}
+
+@keyframes slideFadeIn {
+  from { opacity: .25; transform: scale(1.015); }
+  to { opacity: 1; transform: none; }
+}
 
 @media (orientation: portrait) {
   .coverImage { object-fit: cover; }
@@ -38,9 +48,28 @@
   justify-content: space-between;
   gap: 24px;
   padding: 28px 5vw 72px;
-  background: linear-gradient(to bottom, rgba(4, 7, 12, .65), transparent);
   pointer-events: none;
 }
+
+/*
+ * 顶边不再压一条黑色渐变条（那条硬边把画面切成了两段）。
+ * 改成一层向上溢出屏幕的弥散毛玻璃：backdrop-filter 直接把画面顶部的颜色
+ * 糊开、向外延伸，再用 mask 让它向下渐渐化掉，和画面无缝衔接。
+ */
+.header::before {
+  content: "";
+  position: absolute;
+  inset: -80px 0 auto;
+  z-index: -1;
+  height: 240px;
+  pointer-events: none;
+  backdrop-filter: blur(34px) saturate(1.6) brightness(.9);
+  -webkit-backdrop-filter: blur(34px) saturate(1.6) brightness(.9);
+  background: linear-gradient(to bottom, rgba(6, 9, 14, .34), rgba(6, 9, 14, .12) 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, .8) 34%, rgba(0, 0, 0, .35) 66%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, .8) 34%, rgba(0, 0, 0, .35) 66%, transparent 100%);
+}
+
 .header button { pointer-events: auto; }
 .brand { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .22em; color: rgba(255, 255, 255, .85); }
 .brand span { margin-left: 28px; font-weight: 400; color: rgba(255, 255, 255, .55); }
@@ -150,4 +179,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .caption, .filmstrip, .thumbnail { transition: none; }
+  .coverImage { animation: none; }
 }
