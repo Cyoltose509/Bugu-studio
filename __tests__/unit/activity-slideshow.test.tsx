@@ -48,6 +48,7 @@ describe("game slideshow", () => {
     expect(screen.getByAltText("东方魔女夜市 · 封面")).toBeVisible();
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "ArrowLeft" });
     expect(screen.getByRole("heading", { name: "铅雨2" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "浏览图片" }));
     fireEvent.click(screen.getByRole("button", { name: "查看 夜市战斗画面" }));
     expect(screen.getByAltText("夜市战斗画面")).toBeVisible();
     expect(screen.getByRole("button", { name: "继续播放" })).toBeVisible();
@@ -73,6 +74,23 @@ describe("game slideshow", () => {
   it("hides playback for an empty catalogue", () => {
     render(<GameSlideshow projects={[]} />);
     expect(screen.queryByRole("button")).toBeNull();
+  });
+  it("keeps thumbnails out of navigation until the bottom drawer is hovered or opened", () => {
+    render(<GameSlideshow projects={projects} />);
+    fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
+    const trigger = screen.getByRole("button", { name: "浏览图片" });
+    const edge = screen.getByLabelText("底边图片浏览区");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "查看 夜市战斗画面" })).toBeNull();
+    fireEvent.pointerEnter(edge, { pointerType: "mouse" });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "查看 夜市战斗画面" })).toBeVisible();
+    fireEvent.pointerLeave(edge, { pointerType: "mouse" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
   it("uses the work's cover when a screenshot fails to load", () => {
     render(<GameSlideshow projects={projects} />);

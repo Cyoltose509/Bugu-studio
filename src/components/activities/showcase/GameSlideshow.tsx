@@ -26,6 +26,7 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
   const [playing, setPlaying] = useState(true);
   const [index, setIndex] = useState(0);
   const [hidden, setHidden] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const slide = slides[index];
 
   const step = useCallback((delta: number) => {
@@ -35,6 +36,7 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
   const close = useCallback(() => {
     setOpen(false);
     setPlaying(false);
+    setGalleryOpen(false);
     dialog.current?.close();
     if (document.fullscreenElement === player.current) {
       void document.exitFullscreen?.().catch(() => {});
@@ -45,6 +47,7 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
   function start() {
     if (!slides.length || !dialog.current) return;
     setIndex(0);
+    setGalleryOpen(false);
     setPlaying(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setHidden(document.hidden);
     dialog.current.showModal();
@@ -83,7 +86,6 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
 
   useEffect(() => {
     if (!open) return;
-    currentThumbnail.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     // Only preload the next frame, keeping the catalogue cheap to open on mobile.
     const next = slides[(index + 1) % slides.length];
     if (next) {
@@ -91,6 +93,10 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
       image.src = next.src;
     }
   }, [open, index, slides]);
+
+  useEffect(() => {
+    if (galleryOpen) currentThumbnail.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [galleryOpen, index]);
 
   if (!slides.length) return null;
   return <>
@@ -111,34 +117,49 @@ export default function GameSlideshow({ projects }: { projects: ShowcaseSlidesho
       {open && slide && <>
         <SlideshowImage key={slide.src} src={slide.src} cover={slide.project.coverImage} alt={slide.alt}
           className="absolute inset-0 h-full w-full object-contain" />
-        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 bg-black/40 px-4 py-3 sm:px-8">
-          <p className="text-xs sm:text-sm text-white/80">BUGOO / 作品放映 <span className="ml-3 tabular-nums">{index + 1} / {slides.length}</span></p>
+        <div className={styles.header}>
+          <p className={styles.brand}>BUGOO STUDIO <span>作品放映</span></p>
           <button type="button" onClick={close} className={styles.control} aria-label="退出全屏轮播" autoFocus>退出 ×</button>
         </div>
-        <div className={`${styles.shade} ${styles.caption} absolute inset-x-0 bottom-0 pt-24`}>
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-xs font-medium tracking-widest text-white/60">{slide.kind} · {projects.findIndex(p => p.id === slide.project.id) + 1} / {projects.length} 款作品</p>
-              <div className="flex gap-2">
+        <div className={styles.shade} aria-hidden="true" />
+        <div className={styles.caption}>
+          <div className={styles.details}>
+            <p className={styles.eyebrow}>现场试玩作品 <span>{String(projects.findIndex(p => p.id === slide.project.id) + 1).padStart(2, "0")} / {String(projects.length).padStart(2, "0")}</span></p>
+            <h2 className={styles.title}>{slide.project.title}</h2>
+            <div className={styles.tags} aria-label="作品标签">
+              {slide.project.tags.map(tag => <span key={tag.slug}>{tag.name}</span>)}
+            </div>
+            <p className={styles.description}>{slide.project.description || "作品简介待补充，欢迎到现场和创作者交流。"}</p>
+          </div>
+          <div className={styles.playback}>
+              <p className={styles.frameCount}><span>{String(index + 1).padStart(2, "0")}</span><span>/ {String(slides.length).padStart(2, "0")} · {slide.kind}</span></p>
+              <div className={styles.playbackButtons}>
                 <button type="button" onClick={() => step(-1)} className={styles.control} disabled={slides.length < 2} aria-label="上一张">←</button>
-                <button type="button" onClick={() => setPlaying(p => !p)} className={styles.control} disabled={slides.length < 2} aria-label={playing ? "暂停轮播" : "继续播放"}>{playing ? "Ⅱ" : "▶"}</button>
+                <button type="button" onClick={() => setPlaying(p => !p)} className={`${styles.control} ${styles.playButton}`} disabled={slides.length < 2} aria-label={playing ? "暂停轮播" : "继续播放"}>{playing ? "Ⅱ" : "▶"}</button>
                 <button type="button" onClick={() => step(1)} className={styles.control} disabled={slides.length < 2} aria-label="下一张">→</button>
               </div>
-            </div>
-            <h2 className="mb-3 text-2xl font-bold leading-tight text-white sm:text-4xl">{slide.project.title}</h2>
-            <div className="mb-3 flex max-h-20 flex-wrap gap-2 overflow-y-auto" aria-label="作品标签">
-              {slide.project.tags.map(tag => <span key={tag.slug} className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs text-white">{tag.name}</span>)}
-            </div>
-            <p className={`${styles.description} max-w-3xl line-clamp-3 text-sm leading-relaxed text-white/85 sm:text-base`}>{slide.project.description || "作品简介待补充，欢迎到现场和创作者交流。"}</p>
-            <div className={`${styles.thumbnails} mt-5 flex gap-2 overflow-x-auto pb-1`} aria-label="轮播缩略图">
+          </div>
+        </div>
+        <div className={`${styles.drawer} ${galleryOpen ? styles.drawerOpen : ""}`} aria-label="底边图片浏览区"
+          onPointerEnter={e => { if (e.pointerType === "mouse") setGalleryOpen(true); }}
+          onPointerLeave={e => { if (e.pointerType === "mouse") setGalleryOpen(false); }}
+          onFocusCapture={e => { if (e.target.matches(":focus-visible")) setGalleryOpen(true); }}
+          onBlurCapture={e => { if (!e.currentTarget.contains(e.relatedTarget)) setGalleryOpen(false); }}>
+            <div id="showcase-filmstrip" className={styles.filmstrip} aria-hidden={!galleryOpen} inert={!galleryOpen}>
+            <div className={styles.thumbnails} aria-label="轮播缩略图">
               {slides.map((item, i) => <button key={`${item.project.id}-${item.src}`} type="button" ref={i === index ? currentThumbnail : undefined}
                 aria-label={`查看 ${item.alt}`} aria-current={i === index ? "true" : undefined}
-                className={`relative h-12 w-20 shrink-0 overflow-hidden rounded-md border-2 sm:h-14 sm:w-24 ${i === index ? "border-white" : "border-transparent opacity-50 hover:opacity-100"}`}
+                className={`${styles.thumbnail} ${i === index ? styles.thumbnailCurrent : ""}`}
                 onClick={() => { setIndex(i); setPlaying(false); }}>
                 <SlideshowImage src={item.src} cover={item.project.coverImage} alt={item.alt} thumbnail className="h-full w-full object-cover" />
               </button>)}
             </div>
-          </div>
+            </div>
+            <button type="button" className={styles.galleryTrigger} aria-label="浏览图片" aria-expanded={galleryOpen} aria-controls="showcase-filmstrip"
+              onClick={() => setGalleryOpen(value => !value)}>
+              <span className={styles.galleryHandle} aria-hidden="true" />
+              <span>{galleryOpen ? "收起图片" : "浏览图片"}</span>
+            </button>
         </div>
       </>}
       </div>
