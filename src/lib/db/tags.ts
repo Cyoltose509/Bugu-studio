@@ -18,7 +18,7 @@ const DEFAULT_TAGS: {
   // 游戏引擎（组：引擎，始终前置）
   { name: "Godot", slug: "godot", color: ENGINE_TAG_COLORS.godot, sortOrder: 0, group: "引擎" },
   { name: "Unity", slug: "unity", color: ENGINE_TAG_COLORS.unity, sortOrder: 1, group: "引擎" },
-  { name: "GameMaker", slug: "gamemaker", color: ENGINE_TAG_COLORS.gamemaker, sortOrder: 2, group: "引擎" },
+  { name: "Game Maker", slug: "gamemaker", color: ENGINE_TAG_COLORS.gamemaker, sortOrder: 2, group: "引擎" },
   { name: "Unreal Engine", slug: "unreal", color: ENGINE_TAG_COLORS.unreal, sortOrder: 3, group: "引擎" },
   // 游戏类型
   { name: "RPG", slug: "rpg", color: "#e11d48", sortOrder: 10, group: "大类" },
@@ -59,8 +59,8 @@ let synced = false;
 export async function ensureDefaultTags(): Promise<void> {
   if (synced) return;
   try {
-    const existing = await prisma.tag.findMany({
-      select: { id: true, slug: true, color: true, group: true, sortOrder: true },
+    let existing = await prisma.tag.findMany({
+      select: { id: true, name: true, slug: true, color: true, group: true, sortOrder: true },
     });
     const existingSlugs = new Set(existing.map((t) => t.slug));
     const missing = DEFAULT_TAGS.filter((t) => !existingSlugs.has(t.slug));
@@ -68,6 +68,51 @@ export async function ensureDefaultTags(): Promise<void> {
     if (missing.length > 0) {
       await prisma.tag.createMany({ data: missing, skipDuplicates: true });
       console.log(`[tags] 补全了 ${missing.length} 个缺失的默认标签`);
+      // 重新拉取，包含刚创建的默认标签；后续归并/同步需要它们的 id
+      existing = await prisma.tag.findMany({
+        select: { id: true, name: true, slug: true, color: true, group: true, sortOrder: true },
+      });
+    }
+
+    // 归并旧的 `game-maker` 歧义标签到规范 slug `gamemaker`，确保只有一个 "Game Maker" 选项
+    // 必须在引擎同步前执行，否则 `gamemaker` 改名成 "Game Maker" 会与 `game-maker` 的 name 唯一约束冲突
+    const gameMakerAlias = existing.find((t) => t.slug === "game-maker");
+    const gameMakerCanonical = existing.find((t) => t.slug === "gamemaker");
+    if (gameMakerAlias && gameMakerCanonical) {
+      const aliasRelations = await prisma.projectTag.findMany({
+        where: { tagId: gameMakerAlias.id },
+        select: { projectId: true },
+      });
+      if (aliasRelations.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          for (const r of aliasRelations) {
+            const existingRel = await tx.projectTag.findUnique({
+              where: {
+                projectId_tagId: {
+                  projectId: r.projectId,
+                  tagId: gameMakerCanonical.id,
+                },
+              },
+            });
+            if (!existingRel) {
+              await tx.projectTag.create({
+                data: {
+                  projectId: r.projectId,
+                  tagId: gameMakerCanonical.id,
+                },
+              });
+            }
+          }
+          await tx.projectTag.deleteMany({ where: { tagId: gameMakerAlias.id } });
+          await tx.tag.delete({ where: { id: gameMakerAlias.id } });
+        });
+        console.log(
+          `[tags] 已归并 ${aliasRelations.length} 个 'game-maker' 项目标签到 'gamemaker' 并删除歧义选项`,
+        );
+      } else {
+        await prisma.tag.delete({ where: { id: gameMakerAlias.id } });
+        console.log("[tags] 已删除空 'game-maker' 歧义标签");
+      }
     }
 
     // 引擎标签：校正品牌色 / 分组 / 排序（已有库也跟上）
@@ -80,7 +125,8 @@ export async function ensureDefaultTags(): Promise<void> {
         if (
           row.color === def.color &&
           row.group === def.group &&
-          row.sortOrder === def.sortOrder
+          row.sortOrder === def.sortOrder &&
+          row.name === def.name
         ) {
           return;
         }
@@ -96,7 +142,7 @@ export async function ensureDefaultTags(): Promise<void> {
       }),
     );
 
-    // 若库里还有旧 slug `ue` / `game-maker`，也归到引擎组并套对应色
+    // 若库里还有旧 slug `ue`，归到引擎组并套对应色
     const ue = existing.find((t) => t.slug === "ue");
     if (ue) {
       await prisma.tag.update({
@@ -105,18 +151,6 @@ export async function ensureDefaultTags(): Promise<void> {
           color: ENGINE_TAG_COLORS.ue,
           group: "引擎",
           sortOrder: 3,
-        },
-      });
-    }
-    const gameMakerAlias = existing.find((t) => t.slug === "game-maker");
-    if (gameMakerAlias) {
-      await prisma.tag.update({
-        where: { slug: "game-maker" },
-        data: {
-          color: ENGINE_TAG_COLORS.gamemaker,
-          group: "引擎",
-          sortOrder: 2,
-          name: "GameMaker",
         },
       });
     }
