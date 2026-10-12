@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { RichContent } from "@/components/ui/RichContent";
 import PosterGallery from "./PosterGallery";
 import ShowcaseRowCard from "./ShowcaseRowCard";
@@ -11,7 +12,7 @@ import type { ShowcaseSlideshowProject } from "@/lib/activities/slideshow";
 
 interface Props {
   activity: { id: string; slug: string; title: string; summary: string | null; description: string | null;
-    startTime: Date; endTime: Date; location: string | null; status: string };
+    startTime: Date; endTime: Date; location: string | null; status: string; coverImage?: string | null };
   config: ActivityShowcase;
   isAdmin: boolean;
 }
@@ -40,6 +41,22 @@ export default async function ActivityShowcasePage({ activity, config, isAdmin }
       {isAdmin && <Link href={`/admin/activities/${activity.id}/edit`} className="text-brand-blue underline">管理海报与试玩目录</Link>}
     </div>
     {activity.status === "DRAFT" && <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">管理员预览 · 此活动为草稿，发布后访客即可查看。</p>}
+
+    {/* ── 封面（后台「封面」字段；特供页此前完全没渲染它）── */}
+    {activity.coverImage ? (
+      <div className="mb-6 overflow-hidden rounded-2xl border border-brand-border-subtle bg-card">
+        <div className="relative aspect-[21/9]">
+          <Image
+            src={activity.coverImage}
+            alt={`${activity.title} 封面`}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 1152px"
+            priority
+          />
+        </div>
+      </div>
+    ) : null}
 
     <section className="relative overflow-hidden rounded-[2rem] border border-brand-border-subtle bg-card p-6 sm:p-10">
       <div className="relative grid gap-10 md:grid-cols-[1.15fr_0.85fr] md:items-center">

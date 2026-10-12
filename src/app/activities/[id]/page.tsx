@@ -288,6 +288,14 @@ async function MeetingSection({
   const proposals = activity.proposals || [];
   const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
 
+  // 管理员把某条已通过申请整理成结构化条目后，标题会对上；按标题去重，避免同一分享显示两遍
+  const talkTitles = new Set(
+    talks.map((t: any) => String(t.title || "").trim().toLowerCase()).filter(Boolean),
+  );
+  const approvedProposals = proposals.filter(
+    (p: any) => !talkTitles.has(String(p.title || "").trim().toLowerCase()),
+  );
+
   // 仅本地：管理员待审列表在 DB 不可达时跳过，勿提交
   let pendingProposals: any[] = [];
   if (isAdmin && !isMockDataEnabled()) {
@@ -352,12 +360,12 @@ async function MeetingSection({
         </section>
       )}
 
-      {/* 兼容：尚无结构化条目时，仍展示已通过的报名议程 */}
-      {talks.length === 0 && proposals.length > 0 && (
+      {/* ── 已通过审核的报名分享（始终公开，不再被结构化条目挤掉）── */}
+      {approvedProposals.length > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-3 text-brand-navy">议程</h2>
           <div className="space-y-3">
-            {proposals.map((p: any) => (
+            {approvedProposals.map((p: any) => (
               <div key={p.id} className="bg-card rounded-xl border p-4 border-brand-border-subtle">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
