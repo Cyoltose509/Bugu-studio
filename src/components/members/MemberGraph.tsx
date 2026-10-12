@@ -83,17 +83,20 @@ interface SimLink {
 }
 
 // ── 物理参数（d3-force 语义：力 × alpha 累计，积分时统一衰减速度）──
-const CHARGE = 3200; // 斥力基准（除以距离平方），节点越大斥力越强
-const CHARGE_MAX_D = 460; // 斥力距离上限：之外不互斥，聚簇才能成形
-const GAP_DEV = 60; // develop 边：两节点边框之间的目标间隙
-const GAP_JOIN = 42; // join 边（成员—年份）的目标间隙，更短、聚得更紧
-const LINK_K = 0.55; // 弹簧强度基准，实际值 = LINK_K / min(两端度数)
-const CENTER = 0.016; // 向画布中心的弱引力，防止整图飘走
-const VELOCITY_KEEP = 0.6; // 每 tick 速度保留率（d3 默认 0.6），越小越稳
+const CHARGE = 4200; // 斥力基准（除以距离平方），节点越大斥力越强
+const CHARGE_MAX_D = 560; // 斥力距离上限：之外不互斥，聚簇才能成形
+const GAP_DEV = 74; // develop 边：两节点边框之间的目标间隙
+const GAP_JOIN = 52; // join 边（成员—年份）的目标间隙，更短、聚得更紧
+const LINK_K = 0.45; // 弹簧强度基准，实际值 = LINK_K / min(两端度数)
+const CENTER = 0.013; // 向画布中心的弱引力，防止整图飘走
+const VELOCITY_KEEP = 0.7; // 每 tick 速度保留率，越大惯性越足、运动越绵
 const ALPHA_DECAY = 0.976; // ≈ d3 默认，约 300 tick 收敛
-const ALPHA_MIN = 0.001;
-const COLLIDE_PAD = 5;
-const COLLIDE_STRENGTH = 0.65; // 每轮碰撞只推开一部分，两轮迭代收敛
+const ALPHA_FLOOR = 0.06; // 收敛后保底能量：不彻底冻结，节点继续缓慢呼吸漂移
+const BREATH_AMP = 0.1; // 向心力的呼吸幅度
+const BREATH_PERIOD = 300; // 呼吸周期（tick 数，约 5 秒）
+const COLLIDE_PAD = 9; // 节点之间的呼吸留白
+const COLLIDE_STRENGTH = 0.5; // 每轮碰撞只推开一部分，三轮迭代收敛
+const VIEW_EASE = 0.22; // 视图缓动系数（滚轮缩放 / 重置视图）
 
 const KIND_LABEL: Record<Kind, string> = {
     member: "成员",
@@ -177,7 +180,10 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     // 模拟与视图状态放在 ref 里，避免每帧 setState
     const simRef = useRef<{ nodes: SimNode[]; links: SimLink[] } | null>(null);
     const viewRef = useRef({ k: 1, x: 0, y: 0 });
+    // 视图目标值：滚轮缩放 / 重置视图是离散事件，直接跳很生硬，实际视图每帧朝它缓动
+    const targetRef = useRef({ k: 1, x: 0, y: 0 });
     const alphaRef = useRef(1);
+    const tRef = useRef(0); // tick 计数，呼吸相位用
     const rafRef = useRef<number | null>(null);
     const hoverRef = useRef<SimNode | null>(null);
     const dragRef = useRef<{ node: SimNode; moved: boolean } | null>(null);
@@ -288,7 +294,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         simRef.current = { nodes, links };
         alphaRef.current = 1;
         settleFitRef.current = false;
-        fitView();
+        fitView(true); // 首次落位直接到位，不做缓动
         start();
         return () => stop();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -316,7 +322,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             // 不 fit 的话整张图会被堆在画布左上角
             if (!fittedRef.current) {
                 fittedRef.current = true;
-                fitView();
+                fitView(true); // 首次拿到真实尺寸，直接落位
             }
             draw();
         });
@@ -334,30 +340,40 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
 
     const visible = useCallback((n: SimNode) => !hiddenRef.current[n.kind], []);
 
-    const fitView = useCallback(() => {
-        const sim = simRef.current;
-        const { w, h } = sizeRef.current;
-        if (!sim || !w || !h) return;
-        const pts = sim.nodes.filter(visible);
-        if (pts.length === 0) return;
-        let minX = Infinity,
-            minY = Infinity,
-            maxX = -Infinity,
-            maxY = -Infinity;
-        for (const n of pts) {
-            minX = Math.min(minX, n.x - n.w / 2);
-            minY = Math.min(minY, n.y - n.h / 2);
-            maxX = Math.max(maxX, n.x + n.w / 2);
-            maxY = Math.max(maxY, n.y + n.h / 2);
-        }
-        const bw = Math.max(maxX - minX, 1);
-        const bh = Math.max(maxY - minY, 1);
-        const k = Math.min((w - 40) / bw, (h - 40) / bh);
-        const view = viewRef.current;
-        view.k = Math.max(0.3, Math.min(k, 1.6));
-        view.x = w / 2 - ((minX + maxX) / 2) * view.k;
-        view.y = h / 2 - ((minY + maxY) / 2) * view.k;
-    }, [visible]);
+    /** 立即为真时直接落位，否则只写目标值、由每帧缓动过去 */
+    const fitView = useCallback(
+        (immediate = false) => {
+            const sim = simRef.current;
+            const { w, h } = sizeRef.current;
+            if (!sim || !w || !h) return;
+            const pts = sim.nodes.filter(visible);
+            if (pts.length === 0) return;
+            let minX = Infinity,
+                minY = Infinity,
+                maxX = -Infinity,
+                maxY = -Infinity;
+            for (const n of pts) {
+                minX = Math.min(minX, n.x - n.w / 2);
+                minY = Math.min(minY, n.y - n.h / 2);
+                maxX = Math.max(maxX, n.x + n.w / 2);
+                maxY = Math.max(maxY, n.y + n.h / 2);
+            }
+            const bw = Math.max(maxX - minX, 1);
+            const bh = Math.max(maxY - minY, 1);
+            const k = Math.min((w - 40) / bw, (h - 40) / bh);
+            const view = viewRef.current;
+            const target = targetRef.current;
+            target.k = Math.max(0.3, Math.min(k, 1.6));
+            target.x = w / 2 - ((minX + maxX) / 2) * target.k;
+            target.y = h / 2 - ((minY + maxY) / 2) * target.k;
+            if (immediate) {
+                view.k = target.k;
+                view.x = target.x;
+                view.y = target.y;
+            }
+        },
+        [visible],
+    );
 
     const tick = useCallback(() => {
         const sim = simRef.current;
@@ -422,8 +438,12 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         // 平衡点距离与 sqrt(力系数) 成反比，要让图形横向铺开的比例等于画布宽高比，
         // 两个方向的力系数之比就得是宽高比的平方，即 asp 直接用宽高比
         const asp = aspectRef.current;
-        const cx = (CENTER / asp) * alpha * 4;
-        const cy = CENTER * asp * alpha * 4;
+        // 呼吸：向心力做极缓慢的正弦起伏，整图周期性松紧，静止时也有有机感
+        const pulse =
+            1 + BREATH_AMP * Math.sin((tRef.current / BREATH_PERIOD) * Math.PI * 2);
+        tRef.current += 1;
+        const cx = (CENTER / asp) * alpha * 4 * pulse;
+        const cy = CENTER * asp * alpha * 4 * pulse;
         for (let i = 0; i < live.length; i++) {
             fx[i] -= live[i].x * cx;
             fy[i] -= live[i].y * cy;
@@ -443,8 +463,8 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             n.y += n.vy;
         }
 
-        // 碰撞：两轮松弛迭代，每轮只推开一部分，不和速度打架，收敛不抖
-        for (let round = 0; round < 2; round++) {
+        // 碰撞：三轮松弛迭代，每轮只推开一半，不和速度打架，收敛不抖
+        for (let round = 0; round < 3; round++) {
             for (let i = 0; i < live.length; i++) {
                 const a = live[i];
                 for (let j = i + 1; j < live.length; j++) {
@@ -470,7 +490,9 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             }
         }
 
-        alphaRef.current = alpha * ALPHA_DECAY;
+        // 衰减到保底能量就停住：不归零，图一直有微弱的呼吸位移
+        alphaRef.current =
+            ALPHA_FLOOR + (alpha - ALPHA_FLOOR) * ALPHA_DECAY;
     }, [visible]);
 
     /** 从 a 的中心朝 b 走，返回射线与 a 边框的交点，连线才不会压在头像上 */
@@ -625,19 +647,32 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     }, [visible, borderPoint]);
 
     const frame = useCallback(() => {
-        const alpha = alphaRef.current;
-        if (alpha > ALPHA_MIN) {
-            tick();
-        } else if (!dragRef.current && !panRef.current) {
-            // 刚收敛：按最终布局重新适配一次（用户手动调过视图就不打扰）
-            if (!settleFitRef.current && !touchedRef.current) {
-                settleFitRef.current = true;
-                fitView();
-            }
-            rafRef.current = null;
-            draw();
-            return;
+        // 后台标签页里 rAF 本就不触发，这里不用额外判断
+        tick();
+
+        // 视图缓动：滚轮缩放 / 重置视图是离散事件，直接跳很生硬
+        const v = viewRef.current;
+        const t = targetRef.current;
+        if (
+            Math.abs(t.k - v.k) > 0.0008 ||
+            Math.abs(t.x - v.x) > 0.4 ||
+            Math.abs(t.y - v.y) > 0.4
+        ) {
+            v.k += (t.k - v.k) * VIEW_EASE;
+            v.x += (t.x - v.x) * VIEW_EASE;
+            v.y += (t.y - v.y) * VIEW_EASE;
+        } else {
+            v.k = t.k;
+            v.x = t.x;
+            v.y = t.y;
         }
+
+        // 主收敛结束（能量降到保底附近）时按最终布局重新适配一次
+        if (!settleFitRef.current && !touchedRef.current && alphaRef.current < 0.07) {
+            settleFitRef.current = true;
+            fitView();
+        }
+
         draw();
         rafRef.current = requestAnimationFrame(frame);
     }, [draw, tick, fitView]);
@@ -764,6 +799,10 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             view.x = px - ((px - view.x) / view.k) * next;
             view.y = py - ((py - view.y) / view.k) * next;
             view.k = next;
+            // 捏合是跟手操作，改完实际视图要把目标同步过去，否则缓动会把视图拽回
+            targetRef.current.k = view.k;
+            targetRef.current.x = view.x;
+            targetRef.current.y = view.y;
             pinch.dist = dist;
             pinch.mx = mx;
             pinch.my = my;
@@ -784,6 +823,9 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             touchedRef.current = true;
             viewRef.current.x = pan.ox + (e.clientX - pan.sx);
             viewRef.current.y = pan.oy + (e.clientY - pan.sy);
+            // 平移同样跟手，同步目标值
+            targetRef.current.x = viewRef.current.x;
+            targetRef.current.y = viewRef.current.y;
             draw();
             return;
         }
@@ -825,14 +867,13 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        const view = viewRef.current;
-        const prev = view.k;
+        const target = targetRef.current;
+        const prev = target.k;
         const next = Math.max(0.3, Math.min(2.6, prev * (e.deltaY < 0 ? 1.12 : 0.89)));
-        // 以光标为锚点缩放
-        view.x = mx - ((mx - view.x) / prev) * next;
-        view.y = my - ((my - view.y) / prev) * next;
-        view.k = next;
-        draw();
+        // 以光标为锚点缩放：连滚会累积成一次缓动，不一级一级蹦
+        target.x = mx - ((mx - target.x) / prev) * next;
+        target.y = my - ((my - target.y) / prev) * next;
+        target.k = next;
     };
 
     const onLeave = () => {
