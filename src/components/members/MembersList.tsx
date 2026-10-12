@@ -23,13 +23,14 @@ interface MemberItem {
 
 interface Props {
   members: MemberItem[];
-  grouped: Record<string, MemberItem[]>;
-  sortedKeys: string[];
+  totalCount: number;
+  activeCount: number;
 }
 
-export default function MembersList({ members: allMembers, grouped: initialGrouped, sortedKeys: initialSortedKeys }: Props) {
+export default function MembersList({ members: allMembers, totalCount, activeCount }: Props) {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"grade" | "joinYear">("grade");
+  const hasQuery = query.trim().length > 0;
 
   // 客户端过滤 + 按模式分组
   const { filtered, groupedFiltered, sortedKeysFiltered } = useMemo(() => {
@@ -79,32 +80,36 @@ export default function MembersList({ members: allMembers, grouped: initialGroup
 
   return (
     <>
-      {/* 搜索栏 */}
-      <div className="mb-8">
-        <div className="relative max-w-md">
+      {/* 头部：标题与统计在左，搜索框靠右对齐 */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
+          <p className="mt-2 text-brand-text-secondary">
+            共 {totalCount} 位历届成员，{activeCount} 位在读成员
+            {hasQuery && <> · 找到 {filtered.length} 位匹配成员</>}
+          </p>
+        </div>
+        <div className="relative w-full sm:w-72 sm:shrink-0">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-text-muted">🔍</span>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜索成员姓名或职能…"
-            className="w-full bg-card border rounded-lg pl-9 pr-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent border-brand-border-subtle text-brand-text-heading"
+            aria-label="搜索成员"
+            className="w-full bg-card border rounded-lg pl-9 pr-9 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent border-brand-border-subtle text-brand-text-heading"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery("")}
+              aria-label="清除搜索"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-brand-text-muted hover:opacity-70"
             >
               ✕
             </button>
           )}
         </div>
-        {query && (
-          <p className="text-xs mt-2 text-brand-text-muted">
-            找到 {filtered.length} 位匹配成员
-          </p>
-        )}
       </div>
 
       {/* 模式切换 */}

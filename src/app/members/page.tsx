@@ -17,11 +17,20 @@ export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构�
 export default async function MembersPage() {
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
-            <div className="mb-10">
-                <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
-                <Suspense fallback={<LogoLoading text="正在加载成员..." compact />}>
-                    <MembersData />
-                </Suspense>
+            <Suspense fallback={<MembersHeaderSkeleton />}>
+                <MembersData />
+            </Suspense>
+        </div>
+    );
+}
+
+/** 加载中占位：标题先渲染出来，避免数据到达时标题跳动 */
+function MembersHeaderSkeleton() {
+    return (
+        <div className="mb-6">
+            <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
+            <div className="mt-2">
+                <LogoLoading text="正在加载成员..." compact />
             </div>
         </div>
     );
@@ -63,31 +72,14 @@ async function MembersData() {
         }));
     }, 300).catch(() => mockMembersList());
 
-    // 按 grade（如 2024 → "2024级"）分组，无 grade 时按 joinYear 分组
-    const grouped = members.reduce<Record<string, typeof members>>((acc, m: any) => {
-        const key = m.grade ? `${m.grade}级` : (m.joinYear ? `${m.joinYear} 年入社` : "未知");
-        (acc[key] ??= []).push(m);
-        return acc;
-    }, {});
-    const sortedKeys = Object.keys(grouped).sort((a, b) => {
-        const yA = parseInt(a) || 0;
-        const yB = parseInt(b) || 0;
-        return yB - yA;
-    });
-
     const activeCount = members.filter((m: any) => !m.graduated).length;
 
     return (
-        <>
-            <p className="mt-2 text-brand-text-secondary">
-                共 {members.length} 位历届成员，{activeCount} 位在读成员
-            </p>
-            <MembersList
-                members={members as any}
-                grouped={grouped}
-                sortedKeys={sortedKeys}
-            />
-        </>
+        <MembersList
+            members={members as any}
+            totalCount={members.length}
+            activeCount={activeCount}
+        />
     );
 }
 
