@@ -14,6 +14,8 @@ import { RichContent } from "@/components/ui/RichContent";
 import { positionLabel, positionColor } from "@/lib/position";
 import ProjectCard from "@/components/projects/ProjectCard";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 import { isMockDataEnabled, mockMemberById } from "@/lib/mock/frontend-data";
 
 // ISR: 成员信息变化少，5 分钟缓存
@@ -60,6 +62,7 @@ export default function MemberDetailPage({ params }: PageProps) {
 
 async function MemberDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const lang = await getLang();
 
   const member = isMockDataEnabled()
     ? mockMemberById(id)
@@ -185,7 +188,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
         {/* 左侧主区域 */}
         <div className="lg:col-span-2">
           {/* 顶部信息卡片 */}
-          <div className="flex flex-col sm:flex-row items-start gap-6 mb-10 p-6 rounded-xl border bg-brand-surface-page border-brand-border-subtle">
+          <div className="flex flex-col sm:flex-row items-start gap-6 mb-10">
             {/* 头像 — 移动端缩小 */}
             <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full shrink-0 overflow-hidden">
               {(member.user?.image || member.avatar) ? (
@@ -319,13 +322,13 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
 
           {/* 信息摘要 */}
           <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
-            <h3 className="font-semibold mb-3 text-brand-navy">个人信息</h3>
+            <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "members.personalInfo")}</h3>
             <dl className="space-y-2.5 text-sm">
-              {member.graduated && <InfoRow label="毕业状态" value="已毕业" />}
-              {!member.graduated && <InfoRow label="在读状态" value="在读" />}
-              {member.joinYear && <InfoRow label="入社年份" value={String(member.joinYear)} />}
-              {member.grade && <InfoRow label="年级" value={`${member.grade}级`} />}
-              <InfoRow label="参与项目数" value={String(member.projectMembers.length)} />
+              {member.graduated && <InfoRow label={t(lang, "members.graduated")} value={t(lang, "members.graduated")} />}
+              {!member.graduated && <InfoRow label={t(lang, "members.enrolled")} value={t(lang, "members.enrolled")} />}
+              {member.joinYear && <InfoRow label={t(lang, "members.joinYearLabel")} value={String(member.joinYear)} />}
+              {member.grade && <InfoRow label={t(lang, "members.gradeLabel")} value={`${member.grade}级`} />}
+              <InfoRow label={t(lang, "members.projectCount")} value={String(member.projectMembers.length)} />
             </dl>
           </div>
         </aside>
