@@ -4,15 +4,18 @@ import Link from "next/link";
 import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
 import {ProjectStatus} from "@prisma/client";
+import {getLang} from "@/lib/i18n/getLang";
+import {t} from "@/lib/i18n/dict";
 
-export const metadata: Metadata = {
-    title: "招新信息",
-    description: "了解布谷工作室招新信息、入会要求及新学期活动预告。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+    const lang = await getLang();
+    return {title: t(lang, "page.join.title"), description: t(lang, "page.join.description")};
+}
 
 export const dynamic = "force-dynamic";
 
 export default async function JoinPage() {
+    const lang = await getLang();
     const top3 = await cachedQuery("join:top3", () =>
             prisma.project.findMany({
                 where: {status: ProjectStatus.PUBLISHED},
@@ -33,20 +36,20 @@ export default async function JoinPage() {
                 <div className="container mx-auto max-w-3xl relative z-10">
                     <Image
                         src="/images/logo.png"
-                        alt="布谷工作室"
+                        alt={t(lang, "brand.name")}
                         width={88}
                         height={88}
                         className="mx-auto mb-6 rounded-xl shadow-lg"
                         priority
                     />
                     <h1 className="text-4xl md:text-5xl font-bold mb-4 text-brand-navy">
-                        加入布谷工作室
+                        {t(lang, "join.heroTitle")}
                     </h1>
                     <p className="text-lg mb-2 text-brand-text-body">
-                        BUGOO STUDIO · 武汉大学
+                        {t(lang, "join.subtitle")}
                     </p>
                     <p className="max-w-2xl mx-auto leading-relaxed text-brand-text-secondary">
-                        布谷工作室，致力于为喜爱游戏设计和制作的同学提供环境和资源用于开发自己理想中的游戏，为游戏行业培养技术和美术等方向的人才。
+                        {t(lang, "join.heroDesc")}
                     </p>
                 </div>
                 {/* 背景装饰 */}
@@ -60,10 +63,10 @@ export default async function JoinPage() {
             <section className="py-20 md:py-10 px-4 text-center join-g2">
                 <div className="text-center mb-12">
                     <p className="text-sm font-medium mb-2 tracking-wider text-brand-blue">
-                        BUGOO STUDIO · 布谷工作室
+                        {t(lang, "join.brandLine")}
                     </p>
                     <h2 className="text-3xl font-bold text-brand-navy">
-                        加入我们
+                        {t(lang, "join.joinUs")}
                     </h2>
                 </div>
                 <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -72,15 +75,15 @@ export default async function JoinPage() {
                         <div className="rounded-2xl p-6 w-full text-center glass-card">
                             <Image
                                 src="/images/join/qq_2dcode.webp"
-                                alt="布谷招待所QQ群二维码"
+                                alt={t(lang, "join.qqCodeAlt")}
                                 width={200}
                                 height={200}
                                 className="mx-auto rounded-lg"
                             />
                             <p className="mt-4 text-sm text-brand-text-muted">
-                                扫码加入布谷招待所大群
+                                {t(lang, "join.scanQQ")}
                             </p>
-                            <p className="text-xs mt-1 text-brand-text-muted">获取更多动态</p>
+                            <p className="text-xs mt-1 text-brand-text-muted">{t(lang, "join.moreUpdates")}</p>
                         </div>
                     </div>
 
@@ -89,31 +92,30 @@ export default async function JoinPage() {
                         {/* Q1 */}
                         <div className="rounded-2xl p-6 glass-card">
                             <h3 className="text-lg font-semibold mb-3 text-brand-navy">
-                                Q：如何加入布谷工作室？
+                                {t(lang, "join.q1Title")}
                             </h3>
                             <p className="leading-relaxed text-brand-text-body">
-                                预计于九月中旬至十月中上旬进行统一的招新活动。在正式招新后我们会进行入门级游戏开发教学，为大家答疑解惑。此外我们也开设长期招新通道，可以扫描左侧二维码加入布谷QQ群了解详情。
+                                {t(lang, "join.q1Desc")}
                             </p>
                         </div>
 
                         {/* Q3 */}
                         <div className="rounded-2xl p-6 glass-card">
                             <h3 className="text-lg font-semibold mb-3 text-brand-navy">
-                                Q：在布谷工作室需要做什么？
+                                {t(lang, "join.q2Title")}
                             </h3>
                             <p className="leading-relaxed text-brand-text-body">
-                                我们没有硬性技术要求，与团队成员尽情讨论，培养自己开发游戏的爱好；参与游戏开发，参与各项比赛充实自己；探讨游戏行业未来的发展，共同创造无限可能。
+                                {t(lang, "join.q2Desc")}
                             </p>
                         </div>
 
                         {/* Q4 — 入会要求 */}
                         <div className="rounded-2xl p-6 glass-card">
                             <h3 className="text-lg font-semibold mb-3 text-brand-navy">
-                                Q：入会考核要求是什么？
+                                {t(lang, "join.q3Title")}
                             </h3>
                             <p className="leading-relaxed text-brand-text-body">
-                                入会仅需向负责人提交一份自己的 Demo
-                                作品（游戏、技术演示、美术作品集均可），并且线下审查。我们不追求"完美"，更看重你的学习热情和创作潜力。
+                                {t(lang, "join.q3Desc")}
                             </p>
                         </div>
                     </div>
@@ -125,10 +127,10 @@ export default async function JoinPage() {
                 <div className="container mx-auto px-4 max-w-5xl">
                     <div className="text-center mb-12">
                         <p className="text-sm font-medium mb-2 tracking-wider text-brand-blue">
-                            BUGOO STUDIO · 布谷工作室
+                            {t(lang, "join.brandLine")}
                         </p>
                         <h2 className="text-3xl font-bold text-brand-navy">
-                            工作室主要活动
+                            {t(lang, "join.activities")}
                         </h2>
                     </div>
 
@@ -136,20 +138,20 @@ export default async function JoinPage() {
                         {/* 活动一：例会 */}
                         <div className="rounded-2xl p-8 glass-card">
                             <h3 className="text-2xl font-bold mb-3 text-center text-brand-navy">
-                                布谷例会
+                                {t(lang, "join.meeting")}
                             </h3>
                             <p className="leading-relaxed text-brand-text-body">
-                                每两周举行一次的工作室例会，是成员之间交流分享的重要平台。内容包括近期项目进度同步、技术心得分享、行业话题讨论、活动规划说明等。无论你是哪个方向，例会都是融入团队、了解工作室动态的最佳方式。
+                                {t(lang, "join.meetingDesc")}
                             </p>
                         </div>
 
                         {/* 活动二：公开课 */}
                         <div className="rounded-2xl p-8 glass-card">
                             <h3 className="text-2xl font-bold mb-3 text-center text-brand-navy">
-                                布谷公开课
+                                {t(lang, "join.course")}
                             </h3>
                             <p className="leading-relaxed text-brand-text-body">
-                                以策划方向为主的公开课活动。报名者自选课题进行分享演讲，由评委打分评选出优秀论题，获奖者将获得精美奖品。公开课旨在鼓励大家深入思考游戏设计理论，锻炼表达与分享能力，同时也为新人提供展示自我的舞台。
+                                {t(lang, "join.courseDesc")}
                             </p>
                         </div>
 
@@ -157,19 +159,17 @@ export default async function JoinPage() {
                         <div className="rounded-2xl p-8 relative overflow-hidden glass-card">
                             <div className="relative z-10">
                                 <h3 className="text-2xl font-bold mb-3 text-center text-brand-navy">
-                                    布谷 Game Jam
+                                    {t(lang, "join.gamejam")}
                                 </h3>
                                 <p className="leading-relaxed text-brand-text-body">
-                                    预计在招新期间举办。比赛规则为一周内限时主题游戏开发，同学们自由组队，根据主题开发游戏
-                                    Demo。赛前我们会邀请有经验的选手分享 Game Jam 参与经验。参与 Game Jam
-                                    不仅能结交志同道合的朋友，还可以提升游戏设计水平、团队协作能力和游戏理解能力，为自己留下一段难忘的创作经历。
+                                    {t(lang, "join.gamejamDesc")}
                                 </p>
                             </div>
                         </div>
                     </div>
                     <div className="text-center mb-12">
                         <p className="mt-10 text-brand-text-secondary">
-                            此外，我们还会多校联合，或与各知名公司等展开活动。
+                            {t(lang, "join.moreActivities")}
                         </p>
                     </div>
                 </div>
@@ -179,10 +179,10 @@ export default async function JoinPage() {
             <section className="py-16 join-g4">
                 <div className="container mx-auto px-4 max-w-3xl text-center">
                     <p className="text-sm font-medium mb-2 tracking-wider text-brand-blue">
-                        BUGOO STUDIO · 布谷工作室
+                        {t(lang, "join.brandLine")}
                     </p>
                     <h2 className="text-3xl font-bold mb-8 text-brand-navy">
-                        作品试玩
+                        {t(lang, "join.playtest")}
                     </h2>
 
                     {/* Top 3 热门作品 */}
@@ -229,7 +229,7 @@ export default async function JoinPage() {
                         rel="noopener noreferrer"
                         className="btn-primary inline-block px-8 py-3 rounded-lg font-medium text-sm"
                     >
-                        更多作品 →
+                        {t(lang, "join.moreWorks")}
                     </a>
                 </div>
             </section>
@@ -239,10 +239,10 @@ export default async function JoinPage() {
                 <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-12">
                         <p className="text-sm font-medium mb-2 tracking-wider text-brand-blue">
-                            BUGOO STUDIO · 布谷工作室
+                            {t(lang, "join.brandLine")}
                         </p>
                         <h2 className="text-3xl font-bold text-brand-navy">
-                            关注我们
+                            {t(lang, "join.followUs")}
                         </h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -255,11 +255,11 @@ export default async function JoinPage() {
                                 height={64}
                                 className="mx-auto mb-4"
                             />
-                            <h3 className="font-semibold mb-2 text-brand-text-heading">布谷招待所 QQ群</h3>
-                            <p className="text-sm mb-4 text-brand-text-secondary">扫码加入，获取动态</p>
+                            <h3 className="font-semibold mb-2 text-brand-text-heading">{t(lang, "join.qqGroupTitle")}</h3>
+                            <p className="text-sm mb-4 text-brand-text-secondary">{t(lang, "join.qqGroupDesc")}</p>
                             <Image
                                 src="/images/join/qq_2dcode.webp"
-                                alt="QQ群二维码"
+                                alt={t(lang, "join.qqGroupTitle")}
                                 width={160}
                                 height={160}
                                 className="mx-auto rounded-lg"
@@ -270,16 +270,16 @@ export default async function JoinPage() {
                         <div className="rounded-2xl p-6 text-center glass-card">
                             <Image
                                 src="/images/join/wechat.png"
-                                alt="微信"
+                                alt={t(lang, "join.wechatTitle")}
                                 width={64}
                                 height={64}
                                 className="mx-auto mb-4"
                             />
-                            <h3 className="font-semibold mb-2 text-brand-text-heading">微信公众号</h3>
-                            <p className="text-sm mb-4 text-brand-text-secondary">扫码加入，获取最新资讯</p>
+                            <h3 className="font-semibold mb-2 text-brand-text-heading">{t(lang, "join.wechatTitle")}</h3>
+                            <p className="text-sm mb-4 text-brand-text-secondary">{t(lang, "join.wechatDesc")}</p>
                             <Image
                                 src="/images/join/wx_2dcode.jpeg"
-                                alt="公众号二维码"
+                                alt={t(lang, "join.wechatTitle")}
                                 width={160}
                                 height={160}
                                 className="mx-auto rounded-lg"
@@ -295,15 +295,15 @@ export default async function JoinPage() {
                                 height={64}
                                 className="mx-auto mb-4"
                             />
-                            <h3 className="font-semibold mb-2 text-brand-text-heading">BiliBili</h3>
-                            <p className="text-sm mb-3 text-brand-text-secondary">关注我们的视频频道</p>
+                            <h3 className="font-semibold mb-2 text-brand-text-heading">{t(lang, "join.bilibiliName")}</h3>
+                            <p className="text-sm mb-3 text-brand-text-secondary">{t(lang, "join.bilibiliDesc")}</p>
                             <a
                                 href="https://space.bilibili.com/2074896294"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-block text-sm font-medium hover:underline text-brand-blue"
                             >
-                                武汉大学布谷工作室
+                                {t(lang, "join.bilibiliName")}
                             </a>
                         </div>
                     </div>
@@ -315,19 +315,19 @@ export default async function JoinPage() {
                 <div className="container mx-auto px-4 max-w-xl">
                     <Image
                         src="/images/logo.png"
-                        alt="布谷工作室"
+                        alt={t(lang, "brand.name")}
                         width={56}
                         height={56}
                         className="mx-auto mb-4 rounded-lg"
                     />
                     <p className="text-sm font-medium mb-1 tracking-wider text-brand-blue">
-                        BUGOO STUDIO
+                        {t(lang, "join.brandShort")}
                     </p>
                     <h2 className="text-3xl font-bold mb-3 text-brand-navy">
-                        布谷工作室
+                        {t(lang, "join.brandBottom")}
                     </h2>
                     <p className="mb-6 leading-relaxed text-[#666]">
-                        我们期待每一个热爱游戏开发的你，一起探索无限可能。
+                        {t(lang, "join.bottomDesc")}
                     </p>
                 </div>
             </section>

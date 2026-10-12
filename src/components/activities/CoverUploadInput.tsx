@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { uploadImage, ACCEPT_ATTR, compressionNote, assertImageFile } from "@/lib/utils/clientUpload";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 interface Props {
   defaultValue?: string;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function CoverUploadInput({ defaultValue, name = "coverImage" }: Props) {
+  const { t, lang } = useLang();
   const [preview, setPreview] = useState<string | null>(defaultValue || null);
   const [coverUrl, setCoverUrl] = useState(defaultValue || "");
   const [uploading, setUploading] = useState(false);
@@ -21,9 +23,9 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
 
   const uploadFile = useCallback(async (file: File) => {
     try {
-      assertImageFile(file);
+      assertImageFile(file, lang);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "请选择图片文件");
+      setError(err instanceof Error ? err.message : t("upload.selectImage"));
       return;
     }
     setError("");
@@ -39,13 +41,14 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
       const result = await uploadImage(file, {
         endpoint: "/api/upload/cover",
         type: "cover",
+        lang,
       });
 
       setCoverUrl(result.url);
       setPreview(result.url);
-      setNote(compressionNote(result));
+      setNote(compressionNote(result, lang));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "上传失败");
+      setError(err instanceof Error ? err.message : t("form.uploadFailed"));
       setNote("");
       setPreview(previousPreview);
       setCoverUrl(previousUrl);
@@ -53,7 +56,7 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
-  }, [coverUrl, preview]);
+  }, [coverUrl, preview, lang, t]);
 
   function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -100,7 +103,7 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
       <div
         role="button"
         tabIndex={0}
-        aria-label={hasCustom ? "点击或拖拽以更换封面" : "点击或拖拽以上传封面"}
+        aria-label={hasCustom ? t("upload.changeCoverAria") : t("upload.uploadCoverAria")}
         onClick={() => !uploading && fileRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -124,7 +127,7 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
       >
         <img
           src={displaySrc}
-          alt="封面预览"
+          alt={t("form.coverPreviewAlt")}
           className={[
             "absolute inset-0 h-full w-full object-cover transition duration-300",
             dragging || uploading ? "scale-[1.03] blur-[1px]" : "group-hover:scale-[1.02]",
@@ -144,18 +147,18 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
           ].join(" ")}
         >
           {uploading ? (
-            <span className="text-sm font-medium tracking-wide">上传中…</span>
+            <span className="text-sm font-medium tracking-wide">{t("form.uploading")}</span>
           ) : dragging ? (
             <>
-              <span className="text-sm font-semibold">松开以上传</span>
+              <span className="text-sm font-semibold">{t("upload.dropToUpload")}</span>
               <span className="text-xs text-white/80">JPG / PNG / WebP</span>
             </>
           ) : (
             <>
               <span className="text-sm font-semibold">
-                {hasCustom ? "更换封面" : "上传封面"}
+                {hasCustom ? t("form.changeCover") : t("upload.uploadCover")}
               </span>
-              <span className="text-xs text-white/80">点击或拖拽图片到此处</span>
+              <span className="text-xs text-white/80">{t("upload.dragImageHere")}</span>
             </>
           )}
         </div>

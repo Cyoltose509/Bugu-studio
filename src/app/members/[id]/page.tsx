@@ -40,19 +40,21 @@ const getMemberMeta = cache(async (id: string) => {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
+  const lang = await getLang();
   const member = await getMemberMeta(id);
-  if (!member) return { title: "成员不存在" };
+  if (!member) return { title: t(lang, "members.notFound") };
   return {
     title: member.displayName,
-    description: member.bio?.slice(0, 160) || `${member.displayName} 的成员页面`,
+    description: member.bio?.slice(0, 160) || t(lang, "members.pageTitle", { name: member.displayName }),
   };
 }
 
 /* ── 同步 Shell：首字节 < 50ms ── */
 
-export default function MemberDetailPage({ params }: PageProps) {
+export default async function MemberDetailPage({ params }: PageProps) {
+  const lang = await getLang();
   return (
-    <Suspense fallback={<LogoLoading text="正在加载成员信息..." compact />}>
+    <Suspense fallback={<LogoLoading text={t(lang, "members.loadingDetail")} compact />}>
       <MemberDetailContent params={params} />
     </Suspense>
   );
@@ -177,9 +179,9 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
     <div className="container mx-auto px-4 py-10 animate-fade-in">
       {/* 面包屑 */}
       <nav className="text-sm mb-8 text-brand-text-muted">
-        <Link href="/" className="hover:underline text-brand-text-secondary">首页</Link>
+        <Link href="/" className="hover:underline text-brand-text-secondary">{t(lang, "common.home")}</Link>
         <span className="mx-2">/</span>
-        <Link href="/members" className="hover:underline text-brand-text-secondary">成员列表</Link>
+        <Link href="/members" className="hover:underline text-brand-text-secondary">{t(lang, "page.members.title")}</Link>
         <span className="mx-2">/</span>
         <span className="text-brand-text-body">{member.displayName}</span>
       </nav>
@@ -212,14 +214,14 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
                   );
                 })()}
                 {!member.graduated ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/15 text-brand-green">在读</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/15 text-brand-green">{t(lang, "members.enrolled")}</span>
                 ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/[0.08] text-brand-text-muted">已毕业</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/[0.08] text-brand-text-muted">{t(lang, "members.graduated")}</span>
                 )}
               </div>
               <div className="text-sm space-y-1 text-brand-text-secondary">
-                {member.grade && <p>{member.grade}{member.graduated ? " · 已毕业" : ""}</p>}
-                {!member.grade && member.graduated && <p>已毕业</p>}
+                {member.grade && <p>{member.grade}{member.graduated ? ` · ${t(lang, "members.graduated")}` : ""}</p>}
+                {!member.grade && member.graduated && <p>{t(lang, "members.graduated")}</p>}
               </div>
 
               {/* 职能标签 */}
@@ -241,7 +243,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
             if (!bioText) return null;
             return (
               <div className="mb-10">
-                <h2 className="text-xl font-semibold mb-3 text-brand-navy">个人简介</h2>
+                <h2 className="text-xl font-semibold mb-3 text-brand-navy">{t(lang, "members.bioLabel")}</h2>
                 <p className="whitespace-pre-wrap leading-relaxed text-brand-text-body">
                   <RichContent text={bioText} />
                 </p>
@@ -253,7 +255,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
           {member.projectMembers.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4 text-brand-navy">
-                参与项目 <span className="text-sm font-normal text-brand-text-muted">共 {member.projectMembers.length} 个</span>
+                {t(lang, "members.joinedProjects")} <span className="text-sm font-normal text-brand-text-muted">{t(lang, "members.joinedProjectsCount", { n: member.projectMembers.length })}</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
                 {member.projectMembers.map(({ project }: { project: { id: string } }) => (
@@ -301,7 +303,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
           {/* 外部链接 */}
           {links.length > 0 && (
             <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
-              <h3 className="font-semibold mb-3 text-brand-navy">外部链接</h3>
+              <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "form.links")}</h3>
               <div className="space-y-2">
                 {links.map((link: { label: string; url: string | null; icon: string }) => (
                   <a
@@ -327,7 +329,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
               {member.graduated && <InfoRow label={t(lang, "members.graduated")} value={t(lang, "members.graduated")} />}
               {!member.graduated && <InfoRow label={t(lang, "members.enrolled")} value={t(lang, "members.enrolled")} />}
               {member.joinYear && <InfoRow label={t(lang, "members.joinYearLabel")} value={String(member.joinYear)} />}
-              {member.grade && <InfoRow label={t(lang, "members.gradeLabel")} value={`${member.grade}级`} />}
+              {member.grade && <InfoRow label={t(lang, "members.gradeLabel")} value={t(lang, "profile.edit.gradeValue", { n: member.grade })} />}
               <InfoRow label={t(lang, "members.projectCount")} value={String(member.projectMembers.length)} />
             </dl>
           </div>

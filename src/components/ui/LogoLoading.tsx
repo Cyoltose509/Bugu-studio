@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   LOADING_SCREEN_CLASS,
   isMascotLoadingActive,
@@ -8,6 +9,8 @@ import {
   retainLoadingScreen,
   subscribeLoadingScreen,
 } from "@/components/ui/loading-screen";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 type LogoLayer = {
   root: HTMLDivElement;
@@ -87,21 +90,26 @@ function releaseLogo() {
  * 若布谷娘已在跑则不显示，避免一页两个加载动画
  */
 export default function LogoLoading({
-  text = "加载中...",
+  text,
   compact: _compact = false,
 }: {
   text?: string;
   /** @deprecated 已统一全屏居中，保留参数以免改调用处 */
   compact?: boolean;
 }) {
+  const pathname = usePathname();
+  const { lang } = useLang();
+  const resolvedText = text ?? t(lang, "common.loading");
   useEffect(() => {
-    retainLogo(text);
+    // 特殊用例：首页即便在加载也不显示加载动画（用户要求）
+    if (pathname === "/") return;
+    retainLogo(resolvedText);
     const unsub = subscribeLoadingScreen(syncLogoVisibility);
     return () => {
       unsub();
       releaseLogo();
     };
-  }, [text]);
+  }, [resolvedText, pathname]);
 
   return <div data-logo-loading hidden aria-hidden />;
 }

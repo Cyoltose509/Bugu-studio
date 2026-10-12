@@ -10,6 +10,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProjectCard, { ProjectCardProject } from "@/components/projects/ProjectCard";
 import WorkCardSkeleton from "./WorkCardSkeleton";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t, tpl } from "@/lib/i18n/dict";
 
 interface Props {
   initialItems: ProjectCardProject[];
@@ -49,6 +51,7 @@ export default function WorksInfiniteGrid({
   total: seedTotal,
 }: Props) {
   const sp = useSearchParams();
+  const { lang } = useLang();
   const urlFilters = useMemo(
     () => ({
       types: sp.get("types") || undefined,
@@ -141,7 +144,7 @@ export default function WorksInfiniteGrid({
       } catch (err) {
         if (ac.signal.aborted && !timedOut) return;
         setReloadError(
-          timedOut ? "加载超时了，网络可能不太顺" : "加载失败，请重试",
+          timedOut ? t(lang, "works.error.timeout") : t(lang, "works.error.fail"),
         );
         // 失败时仍标记已尝试，避免死循环狂请求
         loadedKeyRef.current = urlKey;
@@ -224,7 +227,7 @@ export default function WorksInfiniteGrid({
     return (
       <>
         <div className="text-sm mb-4 text-brand-text-muted animate-pulse">
-          正在更新列表…
+          {t(lang, "works.loading")}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-stretch">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -240,7 +243,7 @@ export default function WorksInfiniteGrid({
       <div className="text-center py-20 text-brand-text-muted">
         <p className="text-base mb-2">{reloadError}</p>
         <p className="text-sm mb-4">
-          列表没能更新，当前显示的还是上一次的结果
+          {t(lang, "works.error.stale")}
         </p>
         <div className="flex items-center justify-center gap-3">
           <button
@@ -248,14 +251,14 @@ export default function WorksInfiniteGrid({
             onClick={handleRetry}
             className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle text-brand-blue hover:bg-brand-surface transition-colors"
           >
-            重试
+            {t(lang, "works.retry")}
           </button>
           <button
             type="button"
             onClick={() => router.refresh()}
             className="text-sm px-4 py-2 rounded-lg text-brand-text-muted hover:text-brand-text transition-colors"
           >
-            刷新页面
+            {t(lang, "works.refresh")}
           </button>
         </div>
       </div>
@@ -265,8 +268,8 @@ export default function WorksInfiniteGrid({
   if (items.length === 0) {
     return (
       <div className="text-center py-20 text-brand-text-muted">
-        <p className="text-base mb-2">没有找到匹配的作品</p>
-        <p className="text-sm mb-4">试试换个筛选条件，或清除筛选后再看</p>
+        <p className="text-base mb-2">{t(lang, "works.empty.title")}</p>
+        <p className="text-sm mb-4">{t(lang, "works.empty.desc")}</p>
         <button
           type="button"
           onClick={() => {
@@ -274,7 +277,7 @@ export default function WorksInfiniteGrid({
           }}
           className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle text-brand-blue hover:bg-brand-surface transition-colors"
         >
-          清除筛选
+          {t(lang, "works.clearFilters")}
         </button>
       </div>
     );
@@ -283,7 +286,7 @@ export default function WorksInfiniteGrid({
   return (
     <>
       <div className="text-sm mb-4 text-brand-text-muted">
-        已加载 {items.length} / {total} 件作品
+        {tpl(lang, "works.loaded", { n: items.length, m: total })}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-stretch">
@@ -309,7 +312,7 @@ export default function WorksInfiniteGrid({
         )}
         {!hasMore && items.length > 0 && (
           <div className="text-center py-8 text-sm flex flex-col items-center gap-3 text-[#bbb] dark:text-[#556]">
-            <span>— 已到底部，共 {total} 件作品 —</span>
+            <span>{tpl(lang, "works.end", { m: total })}</span>
           </div>
         )}
       </div>

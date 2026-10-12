@@ -2,12 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { leaveTeam } from "@/lib/actions/teams";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export function LeaveTeamButton({ teamId, activityId }: { teamId: string; activityId: string }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
 
   function handleLeave() {
-    if (!confirm("确定退出队伍？")) return;
+    if (!confirm(t("teams.confirmLeave"))) return;
     startTransition(async () => {
       await leaveTeam(teamId, activityId);
     });
@@ -20,7 +22,7 @@ export function LeaveTeamButton({ teamId, activityId }: { teamId: string; activi
       disabled={isPending}
       className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 text-brand-orange border border-brand-orange"
     >
-      {isPending ? "退出中…" : "退出队伍"}
+      {isPending ? t("teams.leaving") : t("teams.leave")}
     </button>
   );
 }

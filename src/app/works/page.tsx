@@ -28,7 +28,10 @@ import {
     mockSidebarYears,
 } from "@/lib/mock/frontend-data";
 
-export const metadata: Metadata = {title: "作品库", description: "浏览历届社员创作的所有游戏作品"};
+export async function generateMetadata(): Promise<Metadata> {
+    const lang = await getLang();
+    return { title: t(lang, "page.works.title"), description: t(lang, "page.works.description") };
+}
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 const PAGE_SIZE = 16; // 4x4
@@ -59,7 +62,7 @@ export default async function WorksPage({searchParams}: PageProps) {
             </div>
             <div className="flex flex-col lg:flex-row gap-8">
                 {/* ── 侧栏：流式加载（tags/total/years 数据）── */}
-                <Suspense fallback={<LogoLoading text="正在加载筛选..." compact />}>
+                <Suspense fallback={<LogoLoading text={t(lang, "works.filter.loading")} compact />}>
                     <WorksSidebarData params={params} lang={lang} />
                 </Suspense>
 
@@ -69,7 +72,7 @@ export default async function WorksPage({searchParams}: PageProps) {
                         <WorksToolbarData params={params} lang={lang} />
                     </Suspense>
 
-                    <Suspense fallback={<LogoLoading text="正在加载作品..." compact />}>
+                    <Suspense fallback={<LogoLoading text={t(lang, "works.grid.loading")} compact />}>
                         <WorksFirstPage params={params} />
                     </Suspense>
                 </div>

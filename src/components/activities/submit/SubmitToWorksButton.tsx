@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { submitToWorksLibrary } from "@/lib/actions/submissions";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export default function SubmitToWorksButton({
   activityId,
@@ -12,6 +13,7 @@ export default function SubmitToWorksButton({
   submissionId: string;
   title: string;
 }) {
+  const { t } = useLang();
   const [pending, start] = useTransition();
   const [showForm, setShowForm] = useState(false);
 
@@ -33,7 +35,7 @@ export default function SubmitToWorksButton({
         disabled={pending}
         className="text-xs px-3 py-1.5 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity bg-brand-green"
       >
-        {pending ? "提交中..." : "提交到作品库"}
+        {pending ? t("form.submitting") : t("submit.submitToWorks")}
       </button>
     );
   }
@@ -45,10 +47,10 @@ export default function SubmitToWorksButton({
         defaultValue="TRIAL_DEMO"
         className="text-xs rounded border border-brand-border-subtle px-2 py-1 text-brand-text-heading"
       >
-        <option value="IN_DEVELOPMENT">开发阶段</option>
-        <option value="TRIAL_DEMO">提供试玩</option>
-        <option value="MINI_GAME">小游戏</option>
-        <option value="OFFICIAL_RELEASE">正式上架</option>
+        <option value="IN_DEVELOPMENT">{t("work.status.IN_DEVELOPMENT")}</option>
+        <option value="TRIAL_DEMO">{t("work.status.TRIAL_DEMO")}</option>
+        <option value="MINI_GAME">{t("work.status.MINI_GAME")}</option>
+        <option value="OFFICIAL_RELEASE">{t("work.status.OFFICIAL_RELEASE")}</option>
       </select>
       <input
         name="developYear"
@@ -63,7 +65,7 @@ export default function SubmitToWorksButton({
         disabled={pending}
         className="text-xs px-3 py-1.5 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed bg-brand-green"
       >
-        {pending ? "提交中..." : "确认提交"}
+        {pending ? t("form.submitting") : t("submit.confirmSubmit")}
       </button>
       <button
         type="button"
@@ -71,7 +73,7 @@ export default function SubmitToWorksButton({
         disabled={pending}
         className="text-xs px-2 py-1 rounded-lg border border-brand-border-subtle text-brand-text-muted"
       >
-        取消
+        {t("common.cancel")}
       </button>
     </form>
   );

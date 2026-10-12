@@ -6,35 +6,39 @@ import { invalidateCache } from "@/lib/db/cache";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-
-const linkEntrySchema = z.object({
-  label: z.string().min(1, "链接标签不能为空").max(50),
-  url: z.string().url("请输入有效的 URL"),
-});
-
-const schema = z.object({
-  name: z.string().min(1, "名称不能为空").max(50),
-  bio: z.string().max(2000).optional().or(z.literal("")),
-  memberBio: z.string().max(2000).optional().or(z.literal("")),
-  grade: z.coerce.number().int().min(2000).max(2100).optional(),
-  skills: z.string().max(500).optional().or(z.literal("")),
-  socialLinks: z.string().optional().or(z.literal("")),
-  location: z.string().max(100).optional().or(z.literal("")),
-  phone: z.string().max(30).optional().or(z.literal("")),
-  wechat: z.string().max(50).optional().or(z.literal("")),
-  qq: z.string().max(30).optional().or(z.literal("")),
-  graduated: z.boolean().optional(),
-  realName: z.string().max(50).optional().or(z.literal("")),
-  joinYear: z.coerce.number().int().min(2000).max(2100).optional(),
-  college: z.string().max(100).optional().or(z.literal("")),
-  major: z.string().max(100).optional().or(z.literal("")),
-  workLocation: z.string().max(100).optional().or(z.literal("")),
-  workPosition: z.string().max(100).optional().or(z.literal("")),
-});
+import { t } from "@/lib/i18n/dict";
+import { getLang } from "@/lib/i18n/getLang";
 
 export async function saveProfile(formData: FormData) {
   const session = await auth();
   if (!session?.user) redirect("/auth/login");
+
+  const lang = await getLang();
+
+  const linkEntrySchema = z.object({
+    label: z.string().min(1, t(lang, "profile.edit.errLinkLabelEmpty")).max(50),
+    url: z.string().url(t(lang, "profile.edit.errLinkUrlInvalid")),
+  });
+
+  const schema = z.object({
+    name: z.string().min(1, t(lang, "profile.edit.errNameEmpty")).max(50),
+    bio: z.string().max(2000).optional().or(z.literal("")),
+    memberBio: z.string().max(2000).optional().or(z.literal("")),
+    grade: z.coerce.number().int().min(2000).max(2100).optional(),
+    skills: z.string().max(500).optional().or(z.literal("")),
+    socialLinks: z.string().optional().or(z.literal("")),
+    location: z.string().max(100).optional().or(z.literal("")),
+    phone: z.string().max(30).optional().or(z.literal("")),
+    wechat: z.string().max(50).optional().or(z.literal("")),
+    qq: z.string().max(30).optional().or(z.literal("")),
+    graduated: z.boolean().optional(),
+    realName: z.string().max(50).optional().or(z.literal("")),
+    joinYear: z.coerce.number().int().min(2000).max(2100).optional(),
+    college: z.string().max(100).optional().or(z.literal("")),
+    major: z.string().max(100).optional().or(z.literal("")),
+    workLocation: z.string().max(100).optional().or(z.literal("")),
+    workPosition: z.string().max(100).optional().or(z.literal("")),
+  });
 
   const isAdmin = session.user.role === "ADMIN";
 
@@ -170,13 +174,14 @@ export async function saveProfile(formData: FormData) {
  * 兑换邀请码升级身份（独立 Server Action）
  */
 export async function redeemInviteCode(inviteCode: string) {
+  const lang = await getLang();
   const session = await auth();
   if (!session?.user?.id) {
-    return { error: "请先登录" };
+    return { error: t(lang, "profile.edit.loginFirst") };
   }
 
   if (!inviteCode?.trim()) {
-    return { error: "请输入邀请码" };
+    return { error: t(lang, "profile.edit.enterInvite") };
   }
 
   const code = await prisma.inviteCode.findUnique({
@@ -184,15 +189,15 @@ export async function redeemInviteCode(inviteCode: string) {
   });
 
   if (!code || !code.isActive) {
-    return { error: "邀请码无效" };
+    return { error: t(lang, "profile.edit.invalidCode") };
   }
 
   if (code.expiresAt && code.expiresAt < new Date()) {
-    return { error: "邀请码已过期" };
+    return { error: t(lang, "profile.edit.codeExpired") };
   }
 
   if (code.maxUses && code.usedCount >= code.maxUses) {
-    return { error: "邀请码已达使用上限" };
+    return { error: t(lang, "profile.edit.codeMaxUses") };
   }
 
   const targetRole = code.role as "USER" | "MEMBER" | "ADMIN";
@@ -204,13 +209,14 @@ export async function redeemInviteCode(inviteCode: string) {
   });
 
   if (roleHierarchy[currentUser!.role] >= roleHierarchy[targetRole]) {
-    const roleLabels: Record<string, string> = {
-      ADMIN: "管理员",
-      MEMBER: "社团成员",
-      USER: "普通用户",
+    const roleKeyMap: Record<string, "role.admin" | "role.member" | "role.user"> = {
+      ADMIN: "role.admin",
+      MEMBER: "role.member",
+      USER: "role.user",
     };
+    const roleLabel = t(lang, roleKeyMap[currentUser!.role]);
     return {
-      error: `你当前的「${roleLabels[currentUser!.role]}」身份已等于或高于邀请码等级`,
+      error: t(lang, "profile.edit.roleTooHigh", { role: roleLabel }),
     };
   }
 
@@ -238,17 +244,17 @@ export async function redeemInviteCode(inviteCode: string) {
       await prisma.clubMember.create({
         data: {
           userId: session.user.id,
-          displayName: session.user.name ?? "新成员",
+          displayName: session.user.name ?? t(lang, "profile.edit.newMember"),
         },
       });
       await invalidateCache("members:all");
     }
   }
 
-  const messages: Record<string, string> = {
-    ADMIN: "已升级为管理员",
-    MEMBER: "已升级为社团成员",
+  const messages: Record<string, "profile.edit.upgradedAdmin" | "profile.edit.upgradedMember"> = {
+    ADMIN: "profile.edit.upgradedAdmin",
+    MEMBER: "profile.edit.upgradedMember",
   };
 
-  return { success: true, role: targetRole, message: messages[targetRole] };
+  return { success: true, role: targetRole, message: messages[targetRole] ? t(lang, messages[targetRole]) : undefined };
 }

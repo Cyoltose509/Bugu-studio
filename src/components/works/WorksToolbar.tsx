@@ -11,12 +11,15 @@ import { useSearchParams } from "next/navigation";
 import ActiveFilterChips from "./ActiveFilterChips";
 import FilterNavLink from "./FilterNavLink";
 import { buildActiveChips, buildUrl } from "@/lib/works/filters";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t, type DictKey } from "@/lib/i18n/dict";
 
-const SORT_OPTIONS = [
-  { value: "date", label: "时间" },
-  { value: "name", label: "名称" },
-  { value: "likes", label: "喜欢" },
-];
+const SORT_LABEL_KEY: Record<string, DictKey> = {
+  date: "works.sort.date",
+  name: "works.sort.name",
+  likes: "works.sort.likes",
+};
+const SORT_VALUES = ["date", "name", "likes"] as const;
 
 export default function WorksToolbar({
   tagNames = {},
@@ -24,6 +27,7 @@ export default function WorksToolbar({
   /** slug → 标签名，用来把 URL 里的 tag 显示成中文名 */
   tagNames?: Record<string, string>;
 }) {
+  const { lang } = useLang();
   const rawParams = useSearchParams();
 
   // 筛选只改 URL、不触发 RSC，所以已选胶囊必须按当前 URL 实时算，
@@ -33,8 +37,8 @@ export default function WorksToolbar({
     [rawParams],
   );
   const chips = useMemo(
-    () => buildActiveChips(currentParams, tagNames),
-    [currentParams, tagNames],
+    () => buildActiveChips(currentParams, tagNames, lang),
+    [currentParams, tagNames, lang],
   );
   const clearAllHref = chips.length
     ? buildUrl(currentParams, {
@@ -136,7 +140,7 @@ export default function WorksToolbar({
             type="button"
             onClick={toggleSearch}
             className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors shrink-0 active:scale-95 border-brand-border-subtle ${searchOpen ? "bg-brand-surface text-brand-blue" : "bg-card text-brand-text-muted"}`}
-            title={searchOpen ? "关闭搜索" : "搜索"}
+            title={searchOpen ? t(lang, "works.closeSearch") : t(lang, "works.search")}
           >
             {searchOpen ? "✕" : "🔍"}
           </button>
@@ -157,22 +161,22 @@ export default function WorksToolbar({
                   navigateWorks(params);
                 }
               }}
-              placeholder="搜索作品名称或简介..."
+              placeholder={t(lang, "works.searchPlaceholder")}
               className="bg-card border rounded-lg px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#3388BB] focus:border-transparent border-brand-border-subtle text-brand-text-heading w-[220px]"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-1 ml-auto" role="group" aria-label="排序方式">
-          <span className="text-xs mr-1 shrink-0 text-brand-text-muted">排序:</span>
-          {SORT_OPTIONS.map((s) => {
-            const isActive = displaySort === s.value;
-            const isPending = optimisticSort === s.value;
+        <div className="flex items-center gap-1 ml-auto" role="group" aria-label={t(lang, "works.sort.aria")}>
+          <span className="text-xs mr-1 shrink-0 text-brand-text-muted">{t(lang, "works.sort.label")}</span>
+          {SORT_VALUES.map((value) => {
+            const isActive = displaySort === value;
+            const isPending = optimisticSort === value;
             return (
               <button
-                key={s.value}
+                key={value}
                 type="button"
-                onClick={() => changeSort(s.value)}
+                onClick={() => changeSort(value)}
                 aria-pressed={isActive}
                 className={`relative px-2.5 py-1 rounded text-xs transition-all active:scale-95 ${
                   isActive
@@ -180,7 +184,7 @@ export default function WorksToolbar({
                     : "bg-transparent text-brand-text-muted border border-brand-border-subtle hover:border-brand-orange/40 hover:text-brand-orange"
                 } ${isPending && isActive ? "ring-2 ring-brand-orange/40 ring-offset-1" : ""}`}
               >
-                {s.label}
+                {t(lang, SORT_LABEL_KEY[value])}
               </button>
             );
           })}
@@ -189,7 +193,7 @@ export default function WorksToolbar({
 
       {chips.length > 0 && (
         <div className="hidden lg:flex items-center gap-2 min-w-0">
-          <span className="text-xs shrink-0 text-brand-text-muted">已选</span>
+          <span className="text-xs shrink-0 text-brand-text-muted">{t(lang, "works.selected")}</span>
           <ActiveFilterChips chips={chips} className="flex-wrap" />
           {clearAllHref && (
             <FilterNavLink
@@ -197,7 +201,7 @@ export default function WorksToolbar({
               active={false}
               className="text-xs shrink-0 text-brand-text-muted hover:text-brand-blue transition-colors"
             >
-              清除全部
+              {t(lang, "works.clearAll")}
             </FilterNavLink>
           )}
         </div>

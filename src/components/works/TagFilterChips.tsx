@@ -15,6 +15,8 @@ import {
     isEngineTagSlug,
 } from "@/lib/tags/engine-tags";
 import { buildUrl } from "@/lib/works/filters";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { tagDisplayName, tagGroupDisplayName } from "@/lib/tags/tag-names";
 
 export type TagChip = {
     slug: string;
@@ -31,17 +33,21 @@ export default function TagFilterChips({
     const sp = useSearchParams();
     const current = Object.fromEntries(sp.entries());
     const currentTag = sp.get("tag") || "";
+    const { lang } = useLang();
 
     return (
         <div className="space-y-3">
             {groups.map(({ group, tags }) => (
                 <div key={group}>
-                    <h4 className="text-xs font-medium mb-1.5 text-brand-text-muted">{group}</h4>
+                    <h4 className="text-xs font-medium mb-1.5 text-brand-text-muted">
+                        {tagGroupDisplayName(group, lang)}
+                    </h4>
                     <div className="flex flex-wrap gap-2">
                         {tags.map((tag) => {
                             const engine = isEngineTagSlug(tag.slug);
                             const color = getEngineColor(tag.slug) || tag.color || "#88C232";
                             const active = currentTag === tag.slug;
+                            const displayName = tagDisplayName(tag.slug, tag.name, lang);
                             return (
                                 <FilterNavLink
                                     key={tag.slug}
@@ -49,7 +55,7 @@ export default function TagFilterChips({
                                         tag: active ? void 0 : tag.slug,
                                     })}
                                     active={active}
-                                    title={`${tag.name}（${tag.count}）`}
+                                    title={`${displayName}（${tag.count}）`}
                                     className={`inline-flex items-center gap-1 text-xs px-2 py-1 transition-all ${
                                         engine
                                             ? `rounded-full font-medium ${getEngineChipClass(tag.slug)}`
@@ -62,7 +68,7 @@ export default function TagFilterChips({
                                     }
                                 >
                                     {engine && <EngineTagIcon slug={tag.slug} />}
-                                    {tag.name}
+                                    {displayName}
                                     <span className="opacity-70">({tag.count})</span>
                                 </FilterNavLink>
                             );

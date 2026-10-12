@@ -2,6 +2,8 @@
 
 import FilterNavLink from "./FilterNavLink";
 import type { ActiveFilterChip } from "./FilterSidebarClient";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 /** 已选筛选条件胶囊：点 × 清除对应条件 */
 export default function ActiveFilterChips({
@@ -11,6 +13,7 @@ export default function ActiveFilterChips({
   chips: ActiveFilterChip[];
   className?: string;
 }) {
+  const { lang } = useLang();
   if (chips.length === 0) return null;
 
   return (
@@ -20,7 +23,7 @@ export default function ActiveFilterChips({
           key={chip.key}
           href={chip.clearHref}
           active
-          title={`清除「${chip.label}」`}
+          title={t(lang, "works.filter.clearTitle", { name: chip.label })}
           className="inline-flex items-center gap-1 shrink-0 max-w-[10rem] pl-2.5 pr-1.5 py-1 rounded-full text-xs bg-brand-navy/10 text-brand-navy border border-brand-navy/15 hover:bg-brand-navy/15 transition-colors"
         >
           <span className="truncate">{chip.label}</span>

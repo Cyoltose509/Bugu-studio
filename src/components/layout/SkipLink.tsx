@@ -1,10 +1,13 @@
 "use client";
 
+import { useLang } from "@/lib/i18n/LangProvider";
+
 /**
  * 键盘导航 Skip Link — 跳过导航直接到主内容区域
  * 聚焦时可见，提升键盘用户和无障碍体验
  */
 export function SkipLink() {
+  const { t } = useLang();
   return (
     <a
       href="#main-content"
@@ -13,7 +16,7 @@ export function SkipLink() {
         focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#E38043] focus:ring-offset-2
         dark:focus:ring-offset-[#1a1f2e]"
     >
-      跳到主要内容
+      {t("common.skipToContent")}
     </a>
   );
 }

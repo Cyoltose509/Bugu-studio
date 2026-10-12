@@ -5,6 +5,7 @@
 import fs from "fs";
 import path from "path";
 import { nameSortKey } from "@/lib/works/name-sort";
+import { extractAwardYear, groupAwardsByYear } from "@/lib/history/awards";
 
 export type MockSnapshot = {
   fetchedAt: string;
@@ -346,12 +347,20 @@ export function mockHistoryYearDetails() {
   }
   for (const e of events) years.add(e.year);
   for (const a of activities) years.add(new Date(a.startTime).getFullYear());
+  // 奖项文本里的年份也纳入年份集合
+  for (const p of projects) {
+    for (const award of (p.awards || [])) {
+      const y = extractAwardYear(award);
+      if (y) years.add(y);
+    }
+  }
 
   const START_YEAR = 2019;
   const currentYear = new Date().getFullYear();
   const maxYear = years.size ? Math.max(...years) : currentYear;
   const minYear = Math.max(START_YEAR, years.size ? Math.min(...years) : START_YEAR);
 
+  const awardByYear = groupAwardsByYear(projects);
   const details: any[] = [];
   for (let year = maxYear; year >= minYear; year--) {
     const yearProjects = projects.filter((p) => p.developYear === year);
@@ -360,11 +369,13 @@ export function mockHistoryYearDetails() {
     const yearActivities = activities.filter(
       (a) => new Date(a.startTime).getFullYear() === year,
     );
+    const yearAwards = awardByYear.get(year) || [];
     if (
       !yearProjects.length &&
       !newBlood.length &&
       !yearEvents.length &&
-      !yearActivities.length
+      !yearActivities.length &&
+      !yearAwards.length
     ) {
       continue;
     }
@@ -410,6 +421,7 @@ export function mockHistoryYearDetails() {
       activities: yearActivities,
       activeMembers,
       presidents,
+      awards: yearAwards,
     });
   }
 

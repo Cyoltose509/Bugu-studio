@@ -21,6 +21,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 type Kind = "member" | "project" | "year";
 
@@ -98,11 +100,14 @@ const COLLIDE_PAD = 15; // 节点之间的呼吸留白
 const COLLIDE_STRENGTH = 0.5; // 每轮碰撞只推开一部分，三轮迭代收敛
 const VIEW_EASE = 0.22; // 视图缓动系数（滚轮缩放 / 重置视图）
 
-const KIND_LABEL: Record<Kind, string> = {
-    member: "成员",
-    project: "作品",
-    year: "入社年份",
+const KIND_LABEL: Record<Kind, { cn: string; en: string }> = {
+    member: { cn: "成员", en: "Member" },
+    project: { cn: "作品", en: "Project" },
+    year: { cn: "入社年份", en: "Join Year" },
 };
+function kindLabel(kind: Kind, lang: "cn" | "en"): string {
+    return KIND_LABEL[kind][lang];
+}
 
 /** 节点尺寸：年份按人数、其余按度数略微放大 */
 function nodeBox(n: RawNode): { w: number; h: number } {
@@ -163,6 +168,7 @@ function readColors() {
 
 export default function MemberGraph({ query = "" }: { query?: string }) {
     const router = useRouter();
+    const { lang } = useLang();
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -224,17 +230,17 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                 });
                 const json = await res.json();
                 if (!res.ok || !json?.success) {
-                    throw new Error(json?.error || "加载失败");
+                    throw new Error(json?.error || t(lang, "error.loadFailed"));
                 }
                 if (alive) setData(json.data as GraphPayload);
             } catch (e) {
-                if (alive) setError(e instanceof Error ? e.message : "加载失败");
+                if (alive) setError(e instanceof Error ? e.message : t(lang, "error.loadFailed"));
             }
         })();
         return () => {
             alive = false;
         };
-    }, [nonce]);
+    }, [nonce, lang]);
 
     // ── 主题变化时重读配色 ──
     useEffect(() => {
@@ -837,7 +843,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         const hit = pick(e.clientX, e.clientY);
         if (hit !== hoverRef.current) {
             hoverRef.current = hit;
-            setHoverLabel(hit ? `${KIND_LABEL[hit.kind]} · ${hit.label}` : null);
+            setHoverLabel(hit ? `${kindLabel(hit.kind, lang)} · ${hit.label}` : null);
             draw();
         }
     };
@@ -918,14 +924,14 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         return (
             <div className="rounded-xl border border-brand-border-subtle bg-card p-8 text-center">
                 <p className="text-sm mb-3 text-brand-text-muted">
-                    关系图谱加载失败：{error}
+                    {t(lang, "members.graph.loadFailed", { error: error ?? "" })}
                 </p>
                 <button
                     type="button"
                     onClick={() => setNonce((n) => n + 1)}
                     className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle text-brand-blue hover:bg-brand-surface transition-colors"
                 >
-                    重试
+                    {t(lang, "error.retry")}
                 </button>
             </div>
         );
@@ -934,7 +940,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     if (!data) {
         return (
             <div className="rounded-xl border border-brand-border-subtle bg-card p-8 text-center text-sm text-brand-text-muted">
-                正在计算关系图谱…
+                {t(lang, "members.graph.computing")}
             </div>
         );
     }
@@ -1121,15 +1127,19 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                                 ))}
                         </span>
                         <span className="text-brand-text-secondary">
-                            {KIND_LABEL[kind]}
+                            {kindLabel(kind, lang)}
                         </span>
                     </button>
                 ))}
                 <span className="ml-auto text-brand-text-muted">
-                    {stats.memberCount} 位成员 · {stats.projectCount} 部作品 ·{" "}
-                    {stats.yearCount} 个入社年份 · {stats.developCount} 条开发关系
+                    {t(lang, "members.graphStats", {
+                        m: stats.memberCount,
+                        p: stats.projectCount,
+                        y: stats.yearCount,
+                        d: stats.developCount,
+                    })}
                     {stats.activeDevCount < stats.memberCount &&
-                        `（${stats.activeDevCount} 位成员登记了作品）`}
+                        t(lang, "members.graphStatsActive", { n: stats.activeDevCount })}
                 </span>
             </div>
             <p className="mt-1 text-[11px] text-brand-text-muted">

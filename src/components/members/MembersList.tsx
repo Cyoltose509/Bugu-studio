@@ -133,8 +133,8 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
         <div className="min-w-0">
           <h1 className="text-3xl font-bold text-brand-navy">{t("page.members.title")}</h1>
           <p className="mt-2 text-brand-text-secondary">
-            共 {totalCount} 位历届成员，{activeCount} 位在读成员
-            {hasQuery && <> · 找到 {filtered.length} 位匹配成员</>}
+            {t("members.summary", { total: totalCount, active: activeCount })}
+            {hasQuery && <> {t("members.matched", { n: filtered.length })}</>}
           </p>
         </div>
         {/* 搜索：默认收起为一个线性放大镜图标，点开才展开输入框 */}
@@ -144,7 +144,7 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
             type="button"
             ref={searchBtnRef}
             onClick={() => setSearchOpen(true)}
-            aria-label="展开搜索框"
+            aria-label={t("members.openSearch")}
             aria-expanded={searchOpen}
             aria-hidden={searchOpen}
             tabIndex={searchOpen ? -1 : 0}
@@ -178,8 +178,8 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
                       setSearchOpen(false);
                     }
                   }}
-                  placeholder="搜索成员姓名或职能…"
-                  aria-label="搜索成员姓名或职能"
+                  placeholder={t("members.searchPlaceholder")}
+                  aria-label={t("members.searchPlaceholder")}
                   autoFocus
                   className="w-full bg-card border rounded-lg pl-9 pr-9 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                 />
@@ -191,7 +191,7 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
                     setSearchOpen(false);
                     searchBtnRef.current?.focus();
                   }}
-                  aria-label="关闭搜索"
+                  aria-label={t("works.closeSearch")}
                   className="absolute right-3 text-brand-text-muted hover:opacity-70"
                 >
                   <CloseIcon />
@@ -223,14 +223,14 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
       {sortedKeysFiltered.length === 0 ? (
         <div className="text-center py-16 text-brand-text-muted">
           <SearchIcon className="w-10 h-10 mx-auto mb-4 opacity-60" />
-          <p>没有找到匹配的成员</p>
+          <p>{t("members.empty")}</p>
         </div>
       ) : (
         sortedKeysFiltered.map(key => (
           <section key={key} className="mb-12">
             <h2 className="text-xl font-semibold mb-5 flex items-center gap-3 text-brand-navy">
               <span>{key}</span>
-              <span className="text-sm font-normal text-brand-text-muted">{groupedFiltered[key].length} 人</span>
+              <span className="text-sm font-normal text-brand-text-muted">{t("activityDetail.memberCountInline", { n: groupedFiltered[key].length })}</span>
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {groupedFiltered[key].map(m => (
@@ -259,8 +259,8 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
                       );
                     })()}
                   </div>
-                  <div className="text-xs mt-0.5 text-brand-text-muted">{m.projectCount ?? 0} 个项目</div>
-                  {m.graduated && <div className="text-xs mt-0.5 text-[#aaa]">已毕业</div>}
+                  <div className="text-xs mt-0.5 text-brand-text-muted">{t("members.projectCountShort", { n: m.projectCount ?? 0 })}</div>
+                  {m.graduated && <div className="text-xs mt-0.5 text-[#aaa]">{t("members.graduated")}</div>}
                 </Link>
               ))}
             </div>

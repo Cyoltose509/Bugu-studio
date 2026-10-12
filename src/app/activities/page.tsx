@@ -10,21 +10,40 @@ import { cachedQuery } from "@/lib/db/cache";
 import { ActivityType, ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-data";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
+import type { Lang } from "@/lib/i18n/config";
 
-export const metadata: Metadata = { title: "活动 - 布谷工作室" };
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getLang();
+  return { title: t(lang, "page.activities.title") };
+}
 export const dynamic = "force-dynamic";
 
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
-const TYPE_LABELS: Record<string, string> = {
-  MEETING:    "例会",
-  COURSE:     "公开课",
-  COMPETITION: "比赛",
-  GENERAL:    "普通活动",
+// 活动类型 / 状态 → 双语标签
+const ACTIVITY_TYPE_KEYS: Record<string, "activity.type.MEETING" | "activity.type.COURSE" | "activity.type.COMPETITION" | "activity.type.GENERAL"> = {
+  MEETING:     "activity.type.MEETING",
+  COURSE:      "activity.type.COURSE",
+  COMPETITION: "activity.type.COMPETITION",
+  GENERAL:     "activity.type.GENERAL",
 };
+const STATUS_LABEL: Record<string, { cn: string; en: string }> = {
+  ongoing:  { cn: "进行中", en: "Ongoing" },
+  upcoming: { cn: "即将开始", en: "Upcoming" },
+  past:     { cn: "已结束", en: "Ended" },
+};
+function activityTypeLabel(lang: Lang, type: string): string {
+  const k = ACTIVITY_TYPE_KEYS[type];
+  return k ? t(lang, k) : type;
+}
+function dateLocale(lang: Lang): string {
+  return lang === "en" ? "en-US" : "zh-CN";
+}
 
 // ── 倒计时 ──────────────────────────────────────────────────
-function Countdown({ startTime }: { startTime: Date }) {
+function Countdown({ startTime, lang }: { startTime: Date; lang: Lang }) {
   const now = new Date();
   const diff = startTime.getTime() - now.getTime();
   if (diff <= 0) return null;
@@ -32,21 +51,22 @@ function Countdown({ startTime }: { startTime: Date }) {
   const hours = Math.floor((diff % 86400000) / 3600000);
   if (days > 0) return (
     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 text-brand-orange">
-      {days}天后开始
+      {t(lang, "activities.daysLater").replace("{n}", String(days))}
     </span>
   );
   return (
     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 text-brand-orange">
-      {hours}小时后开始
+      {t(lang, "activities.hoursLater").replace("{n}", String(hours))}
     </span>
   );
 }
 
 // ── 卡片组件 ──────────────────────────────────────────────
-function ActivityCard({ a, badge, countdown }: {
-  a: any; badge?: string; countdown?: React.ReactNode;
+function ActivityCard({ a, lang, badge, countdown }: {
+  a: any; lang: Lang; badge?: "ongoing" | "upcoming" | "past"; countdown?: React.ReactNode;
 }) {
   const coverSrc = a.coverImage || DEFAULT_COVER;
+  const locale = dateLocale(lang);
 
   return (
     <Link href={`/activities/${a.id}`} className="group">
@@ -64,10 +84,10 @@ function ActivityCard({ a, badge, countdown }: {
           {/* 类型标签 + 状态 */}
           <div className="absolute top-2 left-2 flex items-center gap-1.5 flex-wrap">
             <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
-              {TYPE_LABELS[a.type] || a.type}
+              {activityTypeLabel(lang, a.type)}
             </span>
             {badge && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80 text-white backdrop-blur-sm">{badge}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80 text-white backdrop-blur-sm">{STATUS_LABEL[badge][lang]}</span>
             )}
           </div>
           {countdown && (
@@ -75,7 +95,7 @@ function ActivityCard({ a, badge, countdown }: {
           )}
           {a.meetingUrl && (
             <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
-              🔗 线上
+              {t(lang, "activity.online")}
             </div>
           )}
         </div>
@@ -89,9 +109,9 @@ function ActivityCard({ a, badge, countdown }: {
 
           {/* 时间 */}
           <p className="text-xs text-brand-text-muted">
-            {a.startTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
+            {a.startTime.toLocaleDateString(locale, { month: "short", day: "numeric" })}
             {" ~ "}
-            {a.endTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
+            {a.endTime.toLocaleDateString(locale, { month: "short", day: "numeric" })}
             {a.location ? ` · ${a.location}` : ""}
           </p>
 
@@ -105,13 +125,14 @@ function ActivityCard({ a, badge, countdown }: {
   );
 }
 
-function HeroCard({ a, status }: { a: any; status: "ongoing" | "upcoming" | "past" }) {
+function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" | "upcoming" | "past" }) {
   const coverSrc = a.coverImage || DEFAULT_COVER;
   const statusBadge = status === "ongoing"
-    ? { label: "进行中", cls: "bg-green-500/80" }
+    ? { label: STATUS_LABEL.ongoing[lang], cls: "bg-green-500/80" }
     : status === "upcoming"
-    ? { label: "即将开始", cls: "bg-orange-400/80" }
-    : { label: "已结束", cls: "bg-gray-400/80" };
+    ? { label: STATUS_LABEL.upcoming[lang], cls: "bg-orange-400/80" }
+    : { label: STATUS_LABEL.past[lang], cls: "bg-gray-400/80" };
+  const locale = dateLocale(lang);
 
   return (
       <Link href={`/activities/${a.id}`} className="group block">
@@ -140,7 +161,7 @@ function HeroCard({ a, status }: { a: any; status: "ongoing" | "upcoming" | "pas
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
               <div className="mb-2">
               <span className="text-xs px-2 py-1 rounded-full bg-white/20 backdrop-blur">
-                {TYPE_LABELS[a.type] || a.type}
+                {activityTypeLabel(lang, a.type)}
               </span>
               </div>
 
@@ -149,7 +170,7 @@ function HeroCard({ a, status }: { a: any; status: "ongoing" | "upcoming" | "pas
               </h2>
 
               <p className="text-sm opacity-90">
-                {a.startTime.toLocaleDateString("zh-CN")}
+                {a.startTime.toLocaleDateString(locale)}
                 {a.location ? ` · ${a.location}` : ""}
               </p>
 
@@ -164,8 +185,9 @@ function HeroCard({ a, status }: { a: any; status: "ongoing" | "upcoming" | "pas
       </Link>
   );
 }
-function UpcomingItem({ a }: { a: any }) {
+function UpcomingItem({ a, lang }: { a: any; lang: Lang }) {
   const thumbSrc = a.coverImage || DEFAULT_COVER;
+  const locale = dateLocale(lang);
   return (
       <Link href={`/activities/${a.id}`}>
         <div
@@ -182,10 +204,10 @@ function UpcomingItem({ a }: { a: any }) {
                 {a.title}
               </h3>
               <p className="text-xs mt-1 text-brand-text-muted">
-                {a.startTime.toLocaleDateString("zh-CN")}
+                {a.startTime.toLocaleDateString(locale)}
               </p>
             </div>
-            <Countdown startTime={a.startTime} />
+            <Countdown startTime={a.startTime} lang={lang} />
           </div>
         </div>
       </Link>
@@ -202,6 +224,7 @@ function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
 
 export default async function ActivitiesPage() {
   const now = new Date();
+  const lang = await getLang();
 
   const raw = isMockDataEnabled()
     ? mockActivitiesBuckets()
@@ -267,15 +290,15 @@ export default async function ActivitiesPage() {
 
         {/* 页面头 */}
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-brand-navy">社团活动</h1>
-          <p className="mt-2 text-brand-text-secondary">布谷工作室的例会、公开课、比赛与各类活动</p>
+          <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.activities.title")}</h1>
+          <p className="mt-2 text-brand-text-secondary">{t(lang, "activities.intro")}</p>
         </div>
 
         {!hasAny && (
           <div className="rounded-xl border border-brand-border-subtle bg-card px-6 py-16 text-center">
-            <p className="text-lg font-medium text-brand-navy">暂无公开活动</p>
+            <p className="text-lg font-medium text-brand-navy">{t(lang, "activities.emptyTitle")}</p>
             <p className="mt-2 text-sm text-brand-text-secondary">
-              新的例会、公开课与比赛发布后会出现在这里。
+              {t(lang, "activities.emptyDesc")}
             </p>
           </div>
         )}
@@ -285,20 +308,20 @@ export default async function ActivitiesPage() {
               {upcomingList.length > 0 ? (
               <div className="grid lg:grid-cols-5 gap-10">
                 <div className="lg:col-span-3">
-                  <HeroCard a={hero} status={heroStatus} />
+                  <HeroCard a={hero} lang={lang} status={heroStatus} />
                 </div>
                 <div className="lg:col-span-2">
-                  <h2 className="text-lg font-semibold mb-3 text-brand-navy">即将开始</h2>
+                  <h2 className="text-lg font-semibold mb-3 text-brand-navy">{t(lang, "activities.upcoming")}</h2>
                   <div className="space-y-3">
                     {upcomingList.slice(0, 5).map(a => (
-                      <UpcomingItem key={a.id} a={a} />
+                      <UpcomingItem key={a.id} a={a} lang={lang} />
                     ))}
                   </div>
                 </div>
               </div>
               ) : (
                 <div className="max-w-4xl">
-                  <HeroCard a={hero} status={heroStatus} />
+                  <HeroCard a={hero} lang={lang} status={heroStatus} />
                 </div>
               )}
             </section>
@@ -306,10 +329,10 @@ export default async function ActivitiesPage() {
 
         {otherOngoing.length > 0 && (
           <section className="mb-12">
-            <SectionTitle emoji="" title="进行中" />
+            <SectionTitle emoji="" title={t(lang, "activity.ongoing")} />
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {otherOngoing.map((a) => (
-                <ActivityCard key={a.id} a={a} badge="进行中" />
+                <ActivityCard key={a.id} a={a} lang={lang} badge="ongoing" />
               ))}
             </div>
           </section>
@@ -319,12 +342,12 @@ export default async function ActivitiesPage() {
             <section>
               <SectionTitle
                   emoji=""
-                  title="活动档案"
+                  title={t(lang, "activities.archive")}
               />
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {safePast.map(a => (
-                    <ActivityCard key={a.id} a={a} />
+                    <ActivityCard key={a.id} a={a} lang={lang} />
                 ))}
               </div>
             </section>

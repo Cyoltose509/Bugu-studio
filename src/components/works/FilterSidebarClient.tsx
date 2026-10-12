@@ -13,6 +13,8 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { useSearchParams } from "next/navigation";
 import ActiveFilterChips from "./ActiveFilterChips";
 import { buildActiveChips } from "@/lib/works/filters";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 const CloseFilterContext = createContext<(() => void) | null>(null);
 
@@ -40,9 +42,10 @@ export default function FilterSidebarClient({
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const sp = useSearchParams();
+  const { lang } = useLang();
   const activeChips = useMemo(
-    () => buildActiveChips(Object.fromEntries(sp.entries()), tagNames),
-    [sp, tagNames],
+    () => buildActiveChips(Object.fromEntries(sp.entries()), tagNames, lang),
+    [sp, tagNames, lang],
   );
 
   return (
@@ -67,7 +70,7 @@ export default function FilterSidebarClient({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          筛选
+          {t(lang, "works.filter.label")}
         </button>
 
         <ActiveFilterChips

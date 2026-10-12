@@ -10,6 +10,8 @@ import { ActivityStatus, ProposalStatus } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/utils/upload";
 import { DEFAULT_ACTIVITY_LOCATION, parseBvId } from "@/lib/activities/constants";
 import { parseActivityDateTime } from "@/lib/activities/datetime";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 import { showcaseKey } from "@/lib/activities/showcase";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -276,8 +278,9 @@ async function notifyAdminsOfActivity(params: {
 
 // ── 例会：提交分享/展示申请 ───────────────────────────────────
 export async function submitProposal(formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user) throw new Error("请先登录");
+  if (!session?.user) throw new Error(t(lang, "meeting.errLoginFirst"));
 
   const userId = session.user.id;
 
@@ -286,15 +289,15 @@ export async function submitProposal(formData: FormData) {
   const description  = (formData.get("description") as string || "").trim();
   const proposalType = (formData.get("proposalType") as string || "SHARE");
 
-  if (!activityId) return { error: "无效的活动" };
-  if (!title)       return { error: "请填写标题" };
+  if (!activityId) return { error: t(lang, "meeting.errInvalidActivity") };
+  if (!title)       return { error: t(lang, "meeting.errTitleRequired") };
 
   // 检查是否已提交过申请（一人只能提交一份）
   const existing = await prisma.meetingProposal.findFirst({
     where: { activityId, userId },
   });
   if (existing) {
-    return { error: "你已提交过申请，不能重复提交" };
+    return { error: t(lang, "meeting.errAlreadySubmitted") };
   }
 
   const proposal = await prisma.meetingProposal.create({

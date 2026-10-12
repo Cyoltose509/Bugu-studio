@@ -1,5 +1,6 @@
 "use client";
 
+import { useLang } from "@/lib/i18n/LangProvider";
 import ProjectForm from "@/components/projects/ProjectForm";
 import type { ProjectFormData } from "@/components/projects/ProjectForm";
 
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function SubmitForm({ tags }: Props) {
+  const { t } = useLang();
   async function handleSubmit(data: ProjectFormData) {
     const res = await fetch("/api/projects/submit", {
       method: "POST",
@@ -22,7 +24,7 @@ export default function SubmitForm({ tags }: Props) {
     });
     const json = await res.json();
     if (!res.ok) {
-      return { success: false, error: json.error || "提交失败" };
+      return { success: false, error: json.error || t("submit.fail") };
     }
     return { success: true };
   }

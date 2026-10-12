@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   LOADING_SCREEN_CLASS,
   isMascotLoadingActive,
   releaseLoadingScreen,
   retainLoadingScreen,
 } from "@/components/ui/loading-screen";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 /** 原地遁地（兔子洞） */
 const HOLE_MS = 780;
@@ -491,14 +494,19 @@ function releaseMascot() {
  * React 树内不占位，避免和 Logo 叠两层、位置错乱
  */
 export default function MascotLoading({
-  text = "加载中...",
+  text,
 }: {
   text?: string;
 }) {
+  const pathname = usePathname();
+  const { lang } = useLang();
+  const resolvedText = text ?? t(lang, "common.loading");
   useEffect(() => {
-    retainMascot(text);
+    // 特殊用例：首页即便在加载也不显示加载动画（用户要求）
+    if (pathname === "/") return;
+    retainMascot(resolvedText);
     return () => releaseMascot();
-  }, [text]);
+  }, [resolvedText, pathname]);
 
   // 占位标记给 Strict Mode / Logo 互斥探测；视觉全在 body 层
   return <div data-mascot-loading hidden aria-hidden />;

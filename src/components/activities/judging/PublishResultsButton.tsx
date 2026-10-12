@@ -2,12 +2,14 @@
 
 import { useTransition } from "react";
 import { publishResults } from "@/lib/actions/judging";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export function PublishResultsButton({ activityId }: { activityId: string }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
 
   function handlePublish() {
-    if (!confirm("确定公布比赛结果？公布后将结束活动。")) return;
+    if (!confirm(t("judging.confirmPublish"))) return;
     startTransition(async () => {
       await publishResults(activityId);
     });
@@ -20,7 +22,7 @@ export function PublishResultsButton({ activityId }: { activityId: string }) {
       className="text-sm px-4 py-2 rounded-lg text-white font-semibold disabled:opacity-50 bg-[linear-gradient(135deg,#E38043,#FFB347)]"
       onClick={handlePublish}
     >
-      {isPending ? "公布中…" : "🏆 公布结果"}
+      {isPending ? t("judging.publishing") : t("judging.publishResults")}
     </button>
   );
 }

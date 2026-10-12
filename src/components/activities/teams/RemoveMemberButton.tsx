@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { removeMember } from "@/lib/actions/teams";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export function RemoveMemberButton({
   teamId,
@@ -12,10 +13,11 @@ export function RemoveMemberButton({
   activityId: string;
   memberId: string;
 }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
 
   function handleRemove() {
-    if (!confirm("确定移除该成员？")) return;
+    if (!confirm(t("teams.confirmRemove"))) return;
     startTransition(async () => {
       await removeMember(teamId, activityId, memberId);
     });
@@ -28,7 +30,7 @@ export function RemoveMemberButton({
       disabled={isPending}
       className="text-xs px-2 py-1 rounded disabled:opacity-40 text-[#bbb]"
     >
-      {isPending ? "移除中…" : "移除"}
+      {isPending ? t("teams.removing") : t("common.remove")}
     </button>
   );
 }

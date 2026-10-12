@@ -3,8 +3,10 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createTeam } from "@/lib/actions/teams";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export function CreateTeamForm({ activityId }: { activityId: string }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -18,7 +20,7 @@ export function CreateTeamForm({ activityId }: { activityId: string }) {
       if (result.error) {
         setFeedback({ type: "error", msg: result.error });
       } else {
-        setFeedback({ type: "success", msg: "队伍创建成功！" });
+        setFeedback({ type: "success", msg: t("teams.createSuccess") });
         formRef.current?.reset();
         router.refresh();
         // 延迟关闭，让用户看到成功提示
@@ -33,10 +35,10 @@ export function CreateTeamForm({ activityId }: { activityId: string }) {
   return (
     <details className="group" ref={detailsRef}>
       <summary className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle cursor-pointer list-none text-brand-text-body">
-        创建队伍
+        {t("teams.createTeam")}
       </summary>
       <form ref={formRef} action={handleSubmit} className="mt-3 space-y-2">
-        <input name="name" placeholder="队伍名称（1-30字）" maxLength={30} required
+        <input name="name" placeholder={t("teams.namePlaceholder")} maxLength={30} required
           disabled={isPending}
           className="w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm disabled:opacity-50" />
         {feedback && (
@@ -46,7 +48,7 @@ export function CreateTeamForm({ activityId }: { activityId: string }) {
         )}
         <button type="submit" disabled={isPending}
           className="text-sm px-4 py-2 rounded-lg text-white disabled:opacity-50 bg-brand-orange">
-          {isPending ? "创建中…" : "创建"}
+          {isPending ? t("teams.creating") : t("teams.create")}
         </button>
       </form>
     </details>

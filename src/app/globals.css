@@ -4,6 +4,8 @@
 
 @layer base {
   :root {
+    /* 字体变量：默认（中文模式）用 Inter 渲染拉丁字符，英文模式整体切到 Nunito */
+    --font-sans: var(--font-inter);
     --background: 207 45% 94%;
     --background-end: 210 50% 96%;
     --foreground: 0 0% 20%;
@@ -79,7 +81,12 @@
   * {
     @apply border-border;
   }
+  /* 英文模式：整体切换到 Nunito（圆润友好，贴合品牌调性）。中文模式沿用 Inter + 系统中文。 */
+  html[lang="en"] {
+    --font-sans: var(--font-en);
+  }
   body {
+    font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     background: linear-gradient(135deg, #D6F0F8 0%, #F0F5F9 100%);
     min-height: 100vh;
     @apply text-foreground;

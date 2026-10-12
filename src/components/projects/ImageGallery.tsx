@@ -3,6 +3,8 @@
 import {useState, useCallback, useEffect, useRef} from "react";
 import { createPortal } from "react-dom";
 import SafeImage from "../ui/SafeImage";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 interface ImageItem {
     src: string;
@@ -31,6 +33,7 @@ const MAX_SCALE = 5;
  * 作品图片画廊：封面 + 截图 → 点击弹出灯箱大图查看（支持缩放+拖拽）
  */
 export default function ImageGallery({coverImage, coverAlt, screenshots}: Props) {
+    const { lang } = useLang();
     const allImages: ImageItem[] = [];
     if (coverImage) allImages.push({src: coverImage, alt: coverAlt, kind: "cover"});
     for (const img of screenshots) {
@@ -191,7 +194,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter") open(0); }}
-                    aria-label="查看封面大图"
+                    aria-label={t(lang, "imageGallery.viewCover")}
                 >
                     <img
                         src={coverItem.src}
@@ -199,7 +202,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        🔍 查看大图
+                        🔍 {t(lang, "common.viewImage")}
                     </div>
                 </div>
             )}
@@ -217,7 +220,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                                 role="button"
                                 tabIndex={0}
                                 onKeyDown={(e) => { if (e.key === "Enter") open(globalIdx); }}
-                                aria-label={`查看截图 ${i + 1} 大图`}
+                                aria-label={t(lang, "imageGallery.viewScreenshot", { n: i + 1 })}
                             >
                                 <SafeImage
                                     src={img.src}
@@ -226,7 +229,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                                     loading="lazy"
                                 />
                                 <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                    🔍 查看大图
+                                    🔍 {t(lang, "common.viewImage")}
                                 </div>
                             </div>
                         );
@@ -256,7 +259,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                             {lightbox.index + 1} / {allImages.length}
                             {isZoomed && (
                                 <span className="ml-3 text-white/60 text-xs">
-                                    {Math.round(transform.scale * 100)}% · 双击重置 · 滚轮缩放
+                                    {Math.round(transform.scale * 100)}% · {t(lang, "imageGallery.zoomHint")}
                                 </span>
                             )}
                         </div>
@@ -268,28 +271,28 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                                     return ns === MIN_SCALE ? {scale: 1, x: 0, y: 0} : {...t, scale: ns};
                                 })}
                                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-lg flex items-center justify-center transition-colors"
-                                aria-label="缩小"
-                                title="缩小 (−)"
+                                aria-label={t(lang, "imageGallery.zoomOut")}
+                                title={t(lang, "imageGallery.zoomOutTitle")}
                             >−</button>
                             {/* 重置 */}
                             <button
                                 onClick={resetTransform}
                                 className="px-3 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs flex items-center justify-center transition-colors"
-                                aria-label="重置缩放"
-                                title="重置 (双击)"
+                                aria-label={t(lang, "imageGallery.resetZoom")}
+                                title={t(lang, "imageGallery.resetTitle")}
                             >{Math.round(transform.scale * 100)}%</button>
                             {/* 放大 */}
                             <button
                                 onClick={() => setTransform(t => ({...t, scale: Math.min(MAX_SCALE, t.scale + 0.5)}))}
                                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-lg flex items-center justify-center transition-colors"
-                                aria-label="放大"
-                                title="放大 (+)"
+                                aria-label={t(lang, "imageGallery.zoomIn")}
+                                title={t(lang, "imageGallery.zoomInTitle")}
                             >+</button>
                             {/* 关闭 */}
                             <button
                                 onClick={close}
                                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors ml-2"
-                                aria-label="关闭"
+                                aria-label={t(lang, "imageGallery.close")}
                             >✕</button>
                         </div>
                     </div>
@@ -299,7 +302,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                         <button
                             onClick={(e) => { e.stopPropagation(); goPrev(); }}
                             className="absolute left-4 z-10 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
-                            aria-label="上一张"
+                            aria-label={t(lang, "imageGallery.prev")}
                         >‹</button>
                     )}
 
@@ -330,14 +333,14 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                         <button
                             onClick={(e) => { e.stopPropagation(); goNext(); }}
                             className="absolute right-4 z-10 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
-                            aria-label="下一张"
+                            aria-label={t(lang, "imageGallery.next")}
                         >›</button>
                     )}
 
                     {/* 底部提示 */}
                     {!isZoomed && (
                         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-xs">
-                            滚轮或捏合缩放 · 拖拽移动 · 双击重置
+                            {t(lang, "imageGallery.gestureHint")}
                         </div>
                     )}
                 </div>,

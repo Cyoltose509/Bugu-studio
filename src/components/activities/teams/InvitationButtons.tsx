@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { handleInvitation } from "@/lib/actions/teams";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export function InvitationButtons({
   invitationId,
@@ -10,6 +11,7 @@ export function InvitationButtons({
   invitationId: string;
   activityId: string;
 }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
 
   function act(action: "ACCEPTED" | "REJECTED") {
@@ -26,7 +28,7 @@ export function InvitationButtons({
         disabled={isPending}
         className="text-xs px-3 py-1 rounded text-white disabled:opacity-50 bg-brand-blue"
       >
-        {isPending ? "处理中…" : "接受"}
+        {isPending ? t("common.processing") : t("common.accept")}
       </button>
       <button
         type="button"
@@ -34,7 +36,7 @@ export function InvitationButtons({
         disabled={isPending}
         className="text-xs px-3 py-1 rounded disabled:opacity-50 text-brand-text-muted border border-brand-border-subtle"
       >
-        {isPending ? "处理中…" : "拒绝"}
+        {isPending ? t("common.processing") : t("common.reject")}
       </button>
     </div>
   );

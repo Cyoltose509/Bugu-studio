@@ -3,6 +3,8 @@ import { Suspense, useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 function getLoginErrorMsg(error: string | undefined): string {
   if (!error) return "邮箱或密码错误，请重试";
@@ -35,6 +37,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [checking, setChecking] = useState(true);
+  const { lang } = useLang();
 
   // 检测是否已登录：已登录自动跳转（但 permission_denied 时不算 callbackUrl，避免再次跳回）
   useEffect(() => {
@@ -54,7 +57,7 @@ function LoginForm() {
   }, [callbackUrl, router, error]);
 
   if (checking) {
-    return <div className="min-h-[80vh] flex items-center justify-center text-gray-400">加载中...</div>;
+    return <div className="min-h-[80vh] flex items-center justify-center text-gray-400">{t(lang, "common.loading")}</div>;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -88,7 +91,7 @@ function LoginForm() {
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            {loading ? "登录中..." : "登录"}
+            {loading ? t(lang, "auth.signingIn") : "登录"}
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-brand-text-secondary">
@@ -100,8 +103,9 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  const { lang } = useLang();
   return (
-    <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center"><div className="text-brand-text-muted">加载中...</div></div>}>
+    <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center"><div className="text-brand-text-muted">{t(lang, "common.loading")}</div></div>}>
       <LoginForm />
     </Suspense>
   );

@@ -7,11 +7,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 const inputClass = "w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading";
 
 export default function PrivacyPage() {
   const router = useRouter();
+  const { lang } = useLang();
+  // 注销确认词随语言变化（保留原有比对逻辑，仅本地化可见文本）
+  const CONFIRM_WORD = lang === "en" ? "DELETE" : "注销";
 
   // ── 修改密码 ──
   const [currentPwd, setCurrentPwd] = useState("");
@@ -25,9 +30,9 @@ export default function PrivacyPage() {
     e.preventDefault();
     setPwdError("");
     setPwdSuccess("");
-    if (newPwd.length < 8) { setPwdError("新密码长度至少为 8 位"); return; }
-    if (newPwd !== confirmPwd) { setPwdError("两次输入的新密码不一致"); return; }
-    if (newPwd === currentPwd) { setPwdError("新密码不能与当前密码相同"); return; }
+    if (newPwd.length < 8) { setPwdError(t(lang, "profile.privacy.errPwdTooShort")); return; }
+    if (newPwd !== confirmPwd) { setPwdError(t(lang, "profile.privacy.errPwdMismatch")); return; }
+    if (newPwd === currentPwd) { setPwdError(t(lang, "profile.privacy.errPwdSame")); return; }
     setPwdLoading(true);
     try {
       const res = await fetch("/api/user/change-password", {
@@ -37,15 +42,15 @@ export default function PrivacyPage() {
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        setPwdError(json?.error || "修改失败");
+        setPwdError(json?.error || t(lang, "profile.privacy.errChangeFailed"));
       } else {
-        setPwdSuccess("密码已修改");
+        setPwdSuccess(t(lang, "profile.privacy.pwdChanged"));
         setCurrentPwd("");
         setNewPwd("");
         setConfirmPwd("");
       }
     } catch {
-      setPwdError("网络错误，请稍后重试");
+      setPwdError(t(lang, "profile.privacy.errNetwork"));
     } finally {
       setPwdLoading(false);
     }
@@ -58,8 +63,8 @@ export default function PrivacyPage() {
   const [deleteError, setDeleteError] = useState("");
 
   async function handleDeleteAccount() {
-    if (deleteConfirmText !== "注销") {
-      setDeleteError("请输入「注销」确认");
+    if (deleteConfirmText !== CONFIRM_WORD) {
+      setDeleteError(t(lang, "profile.privacy.errTypeWord", { word: CONFIRM_WORD }));
       return;
     }
     setDeleteLoading(true);
@@ -68,14 +73,14 @@ export default function PrivacyPage() {
       const res = await fetch("/api/user/delete-account", { method: "POST" });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
-        setDeleteError(json?.error || "注销失败");
+        setDeleteError(json?.error || t(lang, "profile.privacy.errDeleteFailed"));
         setDeleteLoading(false);
       } else {
         await signOut({ redirect: false });
         router.push("/auth/login");
       }
     } catch {
-      setDeleteError("网络错误，请稍后重试");
+      setDeleteError(t(lang, "profile.privacy.errNetwork"));
     } finally {
       setDeleteLoading(false);
     }
@@ -85,20 +90,20 @@ export default function PrivacyPage() {
     <div className="max-w-2xl mx-auto py-10 px-4 animate-fade-in space-y-8">
       {/* 面包屑 */}
       <div className="flex items-center gap-2 text-sm text-brand-text-muted">
-        <Link href="/profile" className="hover:text-brand-blue transition-colors">个人中心</Link>
+        <Link href="/profile" className="hover:text-brand-blue transition-colors">{t(lang, "profile.center")}</Link>
         <span>/</span>
-        <span className="text-brand-text-heading">隐私设置</span>
+        <span className="text-brand-text-heading">{t(lang, "profile.privacy.title")}</span>
       </div>
 
-      <h1 className="text-2xl font-bold text-brand-navy">隐私设置</h1>
+      <h1 className="text-2xl font-bold text-brand-navy">{t(lang, "profile.privacy.title")}</h1>
 
       {/* ══════════ 修改密码 ══════════ */}
       <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-        <h2 className="font-semibold mb-1 text-brand-navy">修改密码</h2>
-        <p className="text-xs text-brand-text-muted mb-5">更换您的登录密码</p>
+        <h2 className="font-semibold mb-1 text-brand-navy">{t(lang, "profile.privacy.changePassword")}</h2>
+        <p className="text-xs text-brand-text-muted mb-5">{t(lang, "profile.privacy.changePasswordDesc")}</p>
         <form onSubmit={handlePasswordChange} className="space-y-3 max-w-sm">
           <div>
-            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="currentPwd">当前密码</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="currentPwd">{t(lang, "profile.privacy.currentPwd")}</label>
             <input
               id="currentPwd"
               type="password"
@@ -109,7 +114,7 @@ export default function PrivacyPage() {
             />
           </div>
           <div>
-            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="newPwd">新密码</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="newPwd">{t(lang, "profile.privacy.newPwd")}</label>
             <input
               id="newPwd"
               type="password"
@@ -118,10 +123,10 @@ export default function PrivacyPage() {
               className={inputClass}
               autoComplete="new-password"
             />
-            <p className="text-[11px] text-brand-text-muted mt-1">至少 8 位字符</p>
+            <p className="text-[11px] text-brand-text-muted mt-1">{t(lang, "profile.privacy.pwdHint")}</p>
           </div>
           <div>
-            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="confirmPwd">确认新密码</label>
+            <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="confirmPwd">{t(lang, "profile.privacy.confirmPwd")}</label>
             <input
               id="confirmPwd"
               type="password"
@@ -146,18 +151,16 @@ export default function PrivacyPage() {
             disabled={pwdLoading || !currentPwd || !newPwd || !confirmPwd}
             className="px-5 py-2.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-colors bg-brand-navy hover:bg-[#1a3a4a]"
           >
-            {pwdLoading ? "修改中..." : "修改密码"}
+            {pwdLoading ? t(lang, "profile.privacy.changing") : t(lang, "profile.privacy.changePassword")}
           </button>
         </form>
       </div>
 
       {/* ══════════ 注销账号 ══════════ */}
       <div className="bg-card rounded-xl border border-red-100 p-6 shadow-sm">
-        <h2 className="font-semibold mb-1 text-red-700">注销账号</h2>
+        <h2 className="font-semibold mb-1 text-red-700">{t(lang, "profile.privacy.deleteAccount")}</h2>
         <p className="text-xs text-brand-text-muted mb-5">
-          注销后，您的个人信息将被清除，但您参与的作品记录将保留。
-          已发布的评论和点赞将被保留但显示为「已注销用户」。
-          此操作不可撤销。
+          {t(lang, "profile.privacy.deleteDesc")}
         </p>
 
         {!showDeleteConfirm ? (
@@ -166,13 +169,13 @@ export default function PrivacyPage() {
             onClick={() => setShowDeleteConfirm(true)}
             className="px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-colors bg-red-600 hover:bg-red-700"
           >
-            注销账号
+            {t(lang, "profile.privacy.deleteAccount")}
           </button>
         ) : (
           <div className="space-y-4 max-w-sm p-4 rounded-lg border border-red-200 bg-red-50">
             <div className="text-sm text-red-800">
-              <p className="font-medium mb-1">⚠️ 确认注销账号</p>
-              <p>请在下方输入「注销」以确认：</p>
+              <p className="font-medium mb-1">{t(lang, "profile.privacy.deleteConfirmTitle")}</p>
+              <p>{t(lang, "profile.privacy.deleteConfirmPrompt", { word: CONFIRM_WORD })}</p>
             </div>
             <input
               type="text"
@@ -181,7 +184,7 @@ export default function PrivacyPage() {
                 setDeleteConfirmText(e.target.value);
                 setDeleteError("");
               }}
-              placeholder="输入「注销」"
+              placeholder={t(lang, "profile.privacy.deletePlaceholder", { word: CONFIRM_WORD })}
               className={inputClass}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleDeleteAccount();
@@ -196,10 +199,10 @@ export default function PrivacyPage() {
               <button
                 type="button"
                 onClick={handleDeleteAccount}
-                disabled={deleteLoading || deleteConfirmText !== "注销"}
+                disabled={deleteLoading || deleteConfirmText !== CONFIRM_WORD}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-colors bg-red-600 hover:bg-red-700"
               >
-                {deleteLoading ? "注销中..." : "确认注销"}
+                {deleteLoading ? t(lang, "profile.privacy.deleteDeleting") : t(lang, "profile.privacy.deleteConfirmBtn")}
               </button>
               <button
                 type="button"
@@ -211,7 +214,7 @@ export default function PrivacyPage() {
                 disabled={deleteLoading}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-brand-border-subtle text-brand-text-body hover:bg-muted"
               >
-                取消
+                {t(lang, "common.cancel")}
               </button>
             </div>
           </div>

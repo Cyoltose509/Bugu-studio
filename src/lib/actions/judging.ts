@@ -4,32 +4,35 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 // ============================================================
 // 评委管理
 // ============================================================
 
 export async function addJudge(activityId: string, formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user?.id) return { error: "请先登录" };
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
 
-  if (session.user.role === "GUEST") return { error: "权限不足" };
+  if (session.user.role === "GUEST") return { error: t(lang, "works.edit.forbidden") };
 
   const judgeUserId = (formData.get("judgeUserId") as string || "").trim();
-  if (!judgeUserId) return { error: "请选择评委" };
+  if (!judgeUserId) return { error: t(lang, "judging.errSelectJudge") };
 
   const judge = await prisma.user.findUnique({
     where: { id: judgeUserId },
     include: { member: { select: { graduated: true } } },
   });
-  if (!judge) return { error: "找不到该用户" };
-  if (judge.role === "GUEST") return { error: "Guest 用户不能担任评委" };
-  if (judge.member && judge.member.graduated) return { error: "该用户已毕业，不能担任评委" };
+  if (!judge) return { error: t(lang, "judging.errUserNotFound") };
+  if (judge.role === "GUEST") return { error: t(lang, "judging.errGuestJudge") };
+  if (judge.member && judge.member.graduated) return { error: t(lang, "judging.errGraduatedJudge") };
 
   const existing = await prisma.jamJudge.findFirst({
     where: { activityId, userId: judge.id },
   });
-  if (existing) return { error: "该用户已是评委" };
+  if (existing) return { error: t(lang, "judging.errAlreadyJudge") };
 
   await prisma.jamJudge.create({
     data: { activityId, userId: judge.id },
@@ -41,12 +44,13 @@ export async function addJudge(activityId: string, formData: FormData) {
 }
 
 export async function removeJudge(activityId: string, judgeId: string) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user?.id) return { error: "请先登录" };
-  if (session.user.role === "GUEST") return { error: "权限不足" };
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
+  if (session.user.role === "GUEST") return { error: t(lang, "works.edit.forbidden") };
 
   const judge = await prisma.jamJudge.findFirst({ where: { id: judgeId, activityId } });
-  if (!judge) return { error: "评委不存在" };
+  if (!judge) return { error: t(lang, "judging.errJudgeNotFound") };
 
   await prisma.jamJudge.delete({ where: { id: judgeId } });
   revalidatePath(`/activities/${activityId}/game-jam/judging`);
@@ -59,25 +63,26 @@ export async function removeJudge(activityId: string, judgeId: string) {
 // ============================================================
 
 export async function submitScore(activityId: string, formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user?.id) return { error: "请先登录" };
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
 
   const submissionId = (formData.get("submissionId") as string || "").trim();
-  if (!submissionId) return { error: "缺少提交 ID" };
+  if (!submissionId) return { error: t(lang, "gamejam.errNoId") };
 
   const isJudge = await prisma.jamJudge.findFirst({
     where: { activityId, userId: session.user.id },
   });
   const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
-  if (!isJudge && !isAdmin) return { error: "只有评委或管理员可以打分" };
+  if (!isJudge && !isAdmin) return { error: t(lang, "judging.errOnlyJudge") };
 
   const art = parseInt((formData.get("art") as string) || "0", 10);
   const story = parseInt((formData.get("story") as string) || "0", 10);
   const gameplay = parseInt((formData.get("gameplay") as string) || "0", 10);
   const comment = (formData.get("comment") as string || "").trim();
 
-  if (art < 0 || story < 0 || gameplay < 0) return { error: "分数不能为负" };
-  if (art > 100 || story > 100 || gameplay > 100) return { error: "分数不能超过 100" };
+  if (art < 0 || story < 0 || gameplay < 0) return { error: t(lang, "judging.errNegativeScore") };
+  if (art > 100 || story > 100 || gameplay > 100) return { error: t(lang, "judging.errScoreTooHigh") };
 
   const totalScore = Math.round((art + story + gameplay) / 3);
   const criteria = { art, story, gameplay };
@@ -113,25 +118,26 @@ export async function submitScore(activityId: string, formData: FormData) {
 // ============================================================
 
 export async function submitCourseScore(activityId: string, formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user?.id) return { error: "请先登录" };
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
 
   const teamId = (formData.get("teamId") as string || "").trim();
-  if (!teamId) return { error: "缺少队伍 ID" };
+  if (!teamId) return { error: t(lang, "judging.errNoTeamId") };
 
   const isJudge = await prisma.jamJudge.findFirst({
     where: { activityId, userId: session.user.id },
   });
   const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
-  if (!isJudge && !isAdmin) return { error: "只有评委或管理员可以打分" };
+  if (!isJudge && !isAdmin) return { error: t(lang, "judging.errOnlyJudge") };
 
   const content = parseInt((formData.get("content") as string) || "0", 10);
   const delivery = parseInt((formData.get("delivery") as string) || "0", 10);
   const preparation = parseInt((formData.get("preparation") as string) || "0", 10);
   const comment = (formData.get("comment") as string || "").trim();
 
-  if (content < 0 || delivery < 0 || preparation < 0) return { error: "分数不能为负" };
-  if (content > 100 || delivery > 100 || preparation > 100) return { error: "分数不能超过 100" };
+  if (content < 0 || delivery < 0 || preparation < 0) return { error: t(lang, "judging.errNegativeScore") };
+  if (content > 100 || delivery > 100 || preparation > 100) return { error: t(lang, "judging.errScoreTooHigh") };
 
   const totalScore = Math.round((content + delivery + preparation) / 3);
   const criteria = { content, delivery, preparation };
@@ -163,9 +169,10 @@ export async function submitCourseScore(activityId: string, formData: FormData) 
 // ============================================================
 
 export async function publishResults(activityId: string) {
+  const lang = await getLang();
   const session = await auth();
   if (!session?.user?.id || ((session.user.role as string) !== "ADMIN" && (session.user.role as string) !== "SUPER_ADMIN")) {
-    return { error: "只有管理员可以公布结果" };
+    return { error: t(lang, "judging.errOnlyAdminPublish") };
   }
 
   await prisma.activity.update({

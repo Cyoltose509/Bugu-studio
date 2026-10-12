@@ -1,6 +1,8 @@
 "use client"; // 全局错误边界必须是 Client Component
 
 import { useEffect, useState } from "react";
+import { t } from "@/lib/i18n/dict";
+import type { Lang } from "@/lib/i18n/config";
 
 /**
  * Next.js 全局错误边界 — 捕获根布局中的未处理错误
@@ -14,6 +16,13 @@ export default function GlobalError({
   reset: () => void;
 }) {
   const [reportId, setReportId] = useState<number | null>(null);
+  // 该组件渲染在根布局之外，拿不到 LangProvider，故直接读 cookie 判定语言
+  const [lang, setLang] = useState<Lang>("cn");
+
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|;\s*)locale=(cn|en)/);
+    if (m) setLang(m[1] as Lang);
+  }, []);
 
   useEffect(() => {
     // 发送到日志服务
@@ -46,7 +55,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="zh-CN">
+    <html lang={lang === "en" ? "en" : "zh-CN"}>
       <body className="bg-[#F0F5F9] dark:bg-[#1a1f2e] min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="mb-6">
@@ -58,16 +67,16 @@ export default function GlobalError({
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-[#333] dark:text-[#d0d8e8] mb-2">
-              抱歉，出了点问题
+              {t(lang, "globalError.title")}
             </h1>
             <p className="text-[#666] dark:text-[#8898a8] mb-2">
-              页面加载时发生了意外错误，请尝试刷新页面。
+              {t(lang, "globalError.desc")}
             </p>
             <p className="text-sm text-[#3388BB] dark:text-[#5ba8d8] mb-6">
-              该错误已自动上报给管理员
+              {t(lang, "error.routeReported")}
               {reportId && (
                 <span className="font-mono font-bold ml-1">
-                  （错误编号：#{reportId}）
+                  {t(lang, "error.routeReportId", { id: reportId })}
                 </span>
               )}
             </p>
@@ -76,11 +85,11 @@ export default function GlobalError({
             onClick={reset}
             className="px-6 py-2.5 bg-[#E38043] text-white rounded-lg hover:bg-[#d47035] transition-colors font-medium"
           >
-            重新加载
+            {t(lang, "error.routeReload")}
           </button>
           {reportId && (
             <p className="mt-4 text-xs text-[#999] dark:text-[#667]">
-              请将此页面截图发送给管理员以加速处理
+              {t(lang, "error.routeScreenshotHint")}
             </p>
           )}
         </div>

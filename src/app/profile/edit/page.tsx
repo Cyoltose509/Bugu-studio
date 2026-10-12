@@ -8,14 +8,17 @@ import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import EditForm from "@/components/forms/EditForm";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 export const dynamic = "force-dynamic";
 
 /* ── Shell（同步，立即渲染） ── */
 
-export default function EditProfilePage() {
+export default async function EditProfilePage() {
+  const lang = await getLang();
   return (
-    <Suspense fallback={<LogoLoading text="正在加载编辑资料..." compact />}>
+    <Suspense fallback={<LogoLoading text={t(lang, "loading.editProfile")} compact />}>
       <EditProfileContent />
     </Suspense>
   );

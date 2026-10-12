@@ -1,5 +1,8 @@
 import MascotLoading from "@/components/ui/MascotLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
-export default function JamTeamsLoading() {
-  return <MascotLoading text="正在加载队伍列表..." />;
+export default async function JamTeamsLoading() {
+  const lang = await getLang();
+  return <MascotLoading text={t(lang, "loading.jamTeams")} />;
 }

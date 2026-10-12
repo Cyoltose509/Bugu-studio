@@ -7,9 +7,11 @@
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export default function SignOutPage() {
   const router = useRouter();
+  const { t } = useLang();
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4">
@@ -18,16 +20,16 @@ export default function SignOutPage() {
         <div className="mb-6">
           <img
             src="/images/logo.png"
-            alt="布谷工作室"
+            alt={t("brand.name")}
             className="w-16 h-16 mx-auto rounded-xl"
           />
         </div>
 
         <h1 className="text-xl font-bold mb-2 text-brand-navy">
-          退出登录
+          {t("auth.signoutTitle")}
         </h1>
         <p className="text-sm mb-8 text-brand-text-secondary">
-          确认要退出当前账号吗？
+          {t("auth.signoutConfirm")}
         </p>
 
         <div className="space-y-3">
@@ -35,20 +37,20 @@ export default function SignOutPage() {
             onClick={() => signOut({ callbackUrl: "/" })}
             className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-opacity hover:opacity-90 bg-[var(--ui-text-red)]"
           >
-            确认退出
+            {t("auth.signoutYes")}
           </button>
 
           <button
             onClick={() => router.back()}
             className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors border text-brand-text-body border-brand-border-subtle"
           >
-            返回上一页
+            {t("auth.backPrev")}
           </button>
         </div>
 
         <p className="mt-8 text-xs text-[#AAA]">
           <Link href="/" className="hover:underline text-brand-blue">
-            返回首页
+            {t("common.backToHome")}
           </Link>
         </p>
       </div>

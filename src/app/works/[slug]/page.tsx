@@ -26,6 +26,11 @@ import PrefetchNav from "@/components/works/PrefetchNav";
 import { TagChipLink } from "@/components/tags/TagChip";
 import { sortProjectTagsEngineFirst } from "@/lib/tags/engine-tags";
 import { sortByNameAndSlice } from "@/lib/works/name-sort";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
+import type { DictKey } from "@/lib/i18n/dict";
+import type { Lang } from "@/lib/i18n/config";
+import { workDisplayNames } from "@/lib/i18n/work-title";
 import {
   isMockDataEnabled,
   mockAdjacentProjects,
@@ -70,8 +75,9 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const { slug } = await params;
+  const lang = await getLang();
   const project = await getProjectMeta(slug);
-  if (!project || project.status !== ProjectStatus.PUBLISHED) return { title: "作品不存在" };
+  if (!project || project.status !== ProjectStatus.PUBLISHED) return { title: t(lang, "works.detail.notFound") };
   return {
     title: project.title,
     description: project.description.slice(0, 160),
@@ -216,10 +222,11 @@ async function getAdjacentProjects(
 
 /* ── Shell（同步，立即渲染） ── */
 
-export default function WorkDetailPage({ params, searchParams }: PageProps) {
+export default async function WorkDetailPage({ params, searchParams }: PageProps) {
+  const lang = await getLang();
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
-      <Suspense fallback={<LogoLoading text="正在加载作品详情..." compact />}>
+      <Suspense fallback={<LogoLoading text={t(lang, "works.detailLoading")} compact />}>
         <WorkDetailContent params={params} searchParams={searchParams} />
       </Suspense>
     </div>
@@ -234,14 +241,21 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
   REJECTED: "bg-red-100 text-red-700",
   ARCHIVED: "bg-purple-100 text-purple-800",
 };
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "草稿", PENDING: "待审核", REJECTED: "已拒绝", ARCHIVED: "已归档",
+const STATUS_LABEL_KEYS: Record<string, DictKey> = {
+  DRAFT: "work.badge.DRAFT", PENDING: "work.badge.PENDING", REJECTED: "work.badge.REJECTED", ARCHIVED: "work.badge.ARCHIVED",
 };
 
-const AI_USAGE_LABELS: Record<string, string> = {
-  AI_GENERATED: "AI 生成式内容",
-  AI_ART: "AI 美术素材",
-  AI_MUSIC: "AI 音乐素材",
+const AI_USAGE_LABEL_KEYS: Record<string, DictKey> = {
+  AI_GENERATED: "aiUsage.AI_GENERATED",
+  AI_ART: "aiUsage.AI_ART",
+  AI_MUSIC: "aiUsage.AI_MUSIC",
+};
+
+const TYPE_LABEL_KEYS: Record<string, DictKey> = {
+  IN_DEVELOPMENT: "work.status.IN_DEVELOPMENT",
+  TRIAL_DEMO: "work.status.TRIAL_DEMO",
+  MINI_GAME: "work.status.MINI_GAME",
+  OFFICIAL_RELEASE: "work.status.OFFICIAL_RELEASE",
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -259,6 +273,9 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
   const project = await getProject(slug);
 
   if (!project) notFound();
+
+  const lang = await getLang();
+  const display = workDisplayNames(project.title, project.subtitle, lang);
 
   // ── 非 PUBLISHED 作品：仅提交者 / ADMIN 可查看
   const session = project.status !== ProjectStatus.PUBLISHED ? await auth() : null;
@@ -291,7 +308,15 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
 
   const isPending = project.status !== ProjectStatus.PUBLISHED;
   const statusBadgeClass = STATUS_BADGE_CLASS[project.status];
-  const statusLabel = STATUS_LABEL[project.status];
+  const statusLabelKey = STATUS_LABEL_KEYS[project.status];
+  const statusLabel = statusLabelKey ? t(lang, statusLabelKey) : project.status;
+
+  const PENDING_INFO: Record<string, { title: DictKey; desc: DictKey }> = {
+    PENDING: { title: "work.badge.PENDING", desc: "works.detail.pendingDesc" },
+    DRAFT: { title: "work.badge.DRAFT", desc: "works.detail.draftDesc" },
+    REJECTED: { title: "work.badge.REJECTED", desc: "works.detail.rejectedDesc" },
+  };
+  const pendingInfo = PENDING_INFO[project.status];
 
   const LINK_ICONS: Record<string, string> = {
     steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📁", drive: "📁", 官网: "🌐",
@@ -307,17 +332,17 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
   return (
     <>
       <nav className="text-sm mb-6 text-brand-text-muted">
-        <Link href="/" className="hover:underline text-brand-text-secondary">首页</Link>
+        <Link href="/" className="hover:underline text-brand-text-secondary">{t(lang, "common.home")}</Link>
         <span className="mx-2">/</span>
-        <Link href="/works" className="hover:underline text-brand-text-secondary">作品库</Link>
+        <Link href="/works" className="hover:underline text-brand-text-secondary">{t(lang, "nav.works")}</Link>
         <span className="mx-2">/</span>
-        <span className="text-brand-text-body">{project.title}</span>
+        <span className="text-brand-text-body">{display.main}</span>
       </nav>
 
       {/* ── 上一个 / 下一个导航 ── */}
       {sort === "likes" ? (
         <div className="text-xs text-brand-text-muted mb-6 text-center py-2 border rounded-lg border-brand-border-subtle">
-          当前为「喜欢」排序（动态变化），无法定位前后作品
+          {t(lang, "works.detail.sortLikesNotice")}
         </div>
       ) : (
       <div className={`flex items-center ${prev && next ? "justify-between" : prev ? "justify-start" : "justify-end"} mb-6`}>
@@ -327,7 +352,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               <span className="text-xs">◀</span>
               <span className="max-w-[200px] truncate">{prev.title}</span>
             </Link>
-          ) : <span className="text-sm px-3 py-2 text-gray-300">已是第一个</span>}
+          ) : <span className="text-sm px-3 py-2 text-gray-300">{t(lang, "works.detail.first")}</span>}
         </div>
         <div>
           {next ? (
@@ -335,7 +360,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               <span className="max-w-[200px] truncate">{next.title}</span>
               <span className="text-xs">▶</span>
             </Link>
-          ) : <span className="text-sm px-3 py-2 text-gray-300">已是最后一个</span>}
+          ) : <span className="text-sm px-3 py-2 text-gray-300">{t(lang, "works.detail.last")}</span>}
         </div>
       </div>
       )}
@@ -349,12 +374,10 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           <span className="text-xl">⏳</span>
           <div>
             <div className="font-medium text-sm text-orange-700">
-              {project.status === "PENDING" ? "待审核" : project.status === "DRAFT" ? "草稿" : project.status === "REJECTED" ? "已拒绝" : project.status}
+              {pendingInfo ? t(lang, pendingInfo.title) : project.status}
             </div>
             <div className="text-xs mt-0.5 text-orange-900">
-              {project.status === "PENDING" ? "此作品正在等待管理员审核，仅你和审核人员可查看。" :
-               project.status === "DRAFT" ? "此作品为草稿状态，尚未提交审核。" :
-               "此作品已被拒绝，你可以修改后重新提交。"}
+              {pendingInfo ? t(lang, pendingInfo.desc) : ""}
             </div>
           </div>
         </div>
@@ -370,12 +393,12 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           />
 
           <h1 className="text-3xl font-bold mb-2 text-brand-navy">
-            {project.title}
+            {display.main}
             {statusBadgeClass && (
               <span className={`inline-block ml-3 text-xs px-2 py-0.5 rounded-full align-middle ${statusBadgeClass}`}>{statusLabel}</span>
             )}
           </h1>
-          {project.subtitle && <p className="text-lg mb-4 text-brand-text-secondary">{project.subtitle}</p>}
+          {display.sub && <p className="text-lg mb-4 text-brand-text-secondary">{display.sub}</p>}
 
           {/* 点赞 + 编辑 + 删除 + 审核 */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -399,14 +422,14 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           </div>
 
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-3 text-brand-navy">作品简介</h2>
+        <h2 className="text-xl font-semibold mb-3 text-brand-navy">{t(lang, "works.detail.intro")}</h2>
         <p className="whitespace-pre-wrap leading-relaxed text-brand-text-body">
           <RichContent text={project.description} />
         </p>
       </div>
 
           {/* ── 留言板 ── */}
-          <Suspense fallback={<div className="text-xs text-brand-text-muted">留言加载中…</div>}>
+          <Suspense fallback={<div className="text-xs text-brand-text-muted">{t(lang, "works.commentLoading")}</div>}>
             <CommentSection projectId={project.id} />
           </Suspense>
         </div>
@@ -415,7 +438,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
         <aside className="space-y-6">
           {externalLinks.length > 0 && (
             <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
-              <h3 className="font-semibold mb-3 text-brand-navy">获取游戏</h3>
+              <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "works.detail.getGame")}</h3>
               <div className="space-y-2">
                 {externalLinks.map((link) => (
                   <a key={link.label} href={link.url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors hover:shadow-sm hover:bg-brand-border-subtle text-brand-text-heading bg-brand-surface">
@@ -427,13 +450,13 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           )}
 
           <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
-            <h3 className="font-semibold mb-3 text-brand-navy">项目信息</h3>
+            <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "works.detail.projectInfo")}</h3>
             <dl className="space-y-2.5 text-sm">
-              <InfoRow label="类型" value={project.type} />
-              <InfoRow label="开发年份" value={String(project.developYear)} />
+              <InfoRow lang={lang} label={t(lang, "works.filter.type")} value={project.type} />
+              <InfoRow lang={lang} label={t(lang, "works.detail.devYear")} value={String(project.developYear)} />
               {project.techStack.length > 0 && (
                 <div>
-                  <dt className="mb-1 text-brand-text-secondary">技术栈</dt>
+                  <dt className="mb-1 text-brand-text-secondary">{t(lang, "works.detail.techStack")}</dt>
                   <dd className="flex flex-wrap gap-1.5">
                     {project.techStack.map((tech: string) => (
                       <span key={tech} className="text-xs px-2 py-0.5 rounded bg-brand-surface text-brand-blue">{tech}</span>
@@ -443,7 +466,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               )}
               {project.awards && project.awards.length > 0 && (
                 <div>
-                  <dt className="mb-1 text-brand-text-secondary">🏆 所获奖项</dt>
+                  <dt className="mb-1 text-brand-text-secondary">{t(lang, "works.detail.awards")}</dt>
                   <dd className="space-y-1">
                     {project.awards.map((award: string, i: number) => (
                       <span key={i} className="text-xs px-2 py-0.5 rounded block bg-[#c4a86a]/[0.12] text-[#8B7355]">{award}</span>
@@ -453,11 +476,11 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               )}
               {project.aiUsages && project.aiUsages.length > 0 && (
                 <div>
-                  <dt className="mb-1 text-brand-text-secondary">🤖 AI 使用</dt>
+                  <dt className="mb-1 text-brand-text-secondary">{t(lang, "works.detail.aiUsage")}</dt>
                   <dd className="flex flex-wrap gap-1.5">
                     {project.aiUsages.map((u: string) => (
                       <span key={u} className="text-xs px-2 py-0.5 rounded bg-brand-purple/10 text-brand-purple">
-                        {AI_USAGE_LABELS[u] || u}
+                        {AI_USAGE_LABEL_KEYS[u] ? t(lang, AI_USAGE_LABEL_KEYS[u]) : u}
                       </span>
                     ))}
                   </dd>
@@ -465,7 +488,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               )}
               {project.platforms && project.platforms.length > 0 && (
                 <div>
-                  <dt className="mb-1 text-brand-text-secondary">💻 支持平台</dt>
+                  <dt className="mb-1 text-brand-text-secondary">{t(lang, "works.detail.platforms")}</dt>
                   <dd className="flex flex-wrap gap-1.5">
                     {project.platforms.map((p: string) => (
                       <span key={p} className="text-xs px-2 py-0.5 rounded bg-brand-blue/10 text-brand-blue">
@@ -480,11 +503,11 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
 
       {project.members.length > 0 && (
             <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
-              <h3 className="font-semibold mb-3 text-brand-navy">开发团队</h3>
+              <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "works.detail.team")}</h3>
               <div className="space-y-3">
                 {project.members.map((pm: any) => {
                   const isExternal = !pm.member && !pm.user;
-                  const displayName = pm.member?.displayName || (pm as any).user?.name || pm.externalName || "未知";
+                  const displayName = pm.member?.displayName || (pm as any).user?.name || pm.externalName || t(lang, "works.detail.unknown");
                   const avatarUrl =
                     pm.member ? (pm.member.user?.image || pm.member.avatar) :
                     (pm as any).user?.image || null;
@@ -501,7 +524,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                       </div>
                       <div>
                         <div className="text-sm font-medium text-brand-text-heading">{displayName}</div>
-                        <div className="text-xs text-brand-text-muted">{pm.roles?.join("、") || ""}</div>
+                        <div className="text-xs text-brand-text-muted">{pm.roles?.join(t(lang, "works.detail.rolesSep")) || ""}</div>
                       </div>
                     </>
                   );
@@ -536,17 +559,11 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  const TYPE_LABELS: Record<string, string> = { 
-    IN_DEVELOPMENT: "开发阶段", 
-    TRIAL_DEMO: "提供试玩", 
-    MINI_GAME: "小游戏",
-    OFFICIAL_RELEASE: "正式上架",
-  };
+function InfoRow({ lang, label, value }: { lang: Lang; label: string; value: string }) {
   return (
     <div className="flex justify-between">
       <dt className="text-brand-text-secondary">{label}</dt>
-      <dd className="text-brand-text-heading">{TYPE_LABELS[value] || value}</dd>
+      <dd className="text-brand-text-heading">{TYPE_LABEL_KEYS[value] ? t(lang, TYPE_LABEL_KEYS[value]) : value}</dd>
     </div>
   );
 }

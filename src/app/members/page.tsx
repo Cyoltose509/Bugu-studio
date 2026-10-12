@@ -5,8 +5,13 @@ import {cachedQuery} from "@/lib/db/cache";
 import MembersList from "@/components/members/MembersList";
 import LogoLoading from "@/components/ui/LogoLoading";
 import {isMockDataEnabled, mockMembersList} from "@/lib/mock/frontend-data";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
-export const metadata: Metadata = {title: "成员", description: "认识历届布谷工作室成员"};
+export async function generateMetadata(): Promise<Metadata> {
+    const lang = await getLang();
+    return {title: t(lang, "page.members.title"), description: t(lang, "page.members.description")};
+}
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 /**
@@ -15,9 +20,10 @@ export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构�
  * 数据在 Suspense 内异步加载，首字节不阻塞
  */
 export default async function MembersPage() {
+    const lang = await getLang();
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
-            <Suspense fallback={<MembersHeaderSkeleton />}>
+            <Suspense fallback={<MembersHeaderSkeleton lang={lang} />}>
                 <MembersData />
             </Suspense>
         </div>
@@ -25,12 +31,12 @@ export default async function MembersPage() {
 }
 
 /** 加载中占位：标题先渲染出来，避免数据到达时标题跳动 */
-function MembersHeaderSkeleton() {
+function MembersHeaderSkeleton({ lang = "cn" }: { lang?: "cn" | "en" }) {
     return (
         <div className="mb-6">
-            <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
+            <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.members.title")}</h1>
             <div className="mt-2">
-                <LogoLoading text="正在加载成员..." compact />
+                <LogoLoading text={t(lang, "loading.membersShort")} compact />
             </div>
         </div>
     );

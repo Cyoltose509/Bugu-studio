@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useLang } from "@/lib/i18n/LangProvider";
 import ProjectForm from "@/components/projects/ProjectForm";
 import type { ProjectFormData, InitialData } from "@/components/projects/ProjectForm";
 
@@ -19,6 +20,7 @@ interface Props {
 
 export default function ProjectEditForm({ projectId, projectStatus, tags, initialData }: Props) {
   const router = useRouter();
+  const { t } = useLang();
 
   async function handleSubmit(data: ProjectFormData) {
     let res: Response | null = null;
@@ -39,13 +41,13 @@ export default function ProjectEditForm({ projectId, projectStatus, tags, initia
     }
 
     if (!res) {
-      return { success: false, error: `网络连接失败，已重试3次。${lastErr?.message || ""}` };
+      return { success: false, error: t("works.edit.networkFail") + (lastErr?.message || "") };
     }
 
     try {
       const json = await res.json();
       if (!res.ok) {
-        const errMsg = json.error || "保存失败";
+        const errMsg = json.error || t("works.edit.saveFail");
         const details = json.details?.fieldErrors;
         const detailStr = details
           ? Object.entries(details)
@@ -57,7 +59,7 @@ export default function ProjectEditForm({ projectId, projectStatus, tags, initia
       router.refresh();
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message || "保存失败" };
+      return { success: false, error: err.message || t("works.edit.saveFail") };
     }
   }
 

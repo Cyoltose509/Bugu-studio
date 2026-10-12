@@ -3,11 +3,13 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { submitProposal } from "@/app/admin/activities/actions";
+import { useLang } from "@/lib/i18n/LangProvider";
 import MentionEditor from "@/components/ui/MentionEditor";
 
 const initialState = { error: "", success: false };
 
 function SubmitButton() {
+  const { t } = useLang();
   const { pending } = useFormStatus();
 
   return (
@@ -19,10 +21,10 @@ function SubmitButton() {
       {pending ? (
         <>
           <Spinner />
-          提交中...
+          {t("form.submitting")}
         </>
       ) : (
-        "提交申请"
+        t("meeting.submitProposal")
       )}
     </button>
   );
@@ -43,6 +45,7 @@ function Spinner() {
 }
 
 export default function SubmitProposalForm({ activityId }: { activityId: string }) {
+  const { t } = useLang();
   const [state, formAction] = useActionState(
     async (_prev: typeof initialState, formData: FormData) => {
       const result = await submitProposal(formData);
@@ -65,19 +68,19 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
 
       {state.success ? (
         <p className="text-xs px-3 py-2 rounded-lg bg-green-50 text-green-700 font-medium">
-          ✅ 申请已提交，等待管理员审核
+          {t("meeting.proposalSubmitted")}
         </p>
       ) : (
         <>
           <input
             name="title"
-            placeholder="分享主题…"
+            placeholder={t("meeting.topicPlaceholder")}
             required
             className="w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm"
           />
           <MentionEditor
             name="description"
-            placeholder="简介（可选）"
+            placeholder={t("meeting.descOptionalPlaceholder")}
             rows={2}
             className="w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm"
           />
