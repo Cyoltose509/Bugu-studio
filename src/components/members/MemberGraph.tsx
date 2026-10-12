@@ -110,6 +110,14 @@ function yearDigits(n: RawNode): string[] {
     return String(n.year).padStart(4, "0").slice(-4).split("");
 }
 
+/** 四宫格品牌配色：按品牌色卡 蓝/橙/绿/藏青 顺时针填入（暗色用亮变体保证对比度） */
+const YEAR_QUAD: { cell: string; text: string }[] = [
+    { cell: "bg-[#3388BB] dark:bg-[#5BA8D8]", text: "text-white dark:text-[#12283D]" },
+    { cell: "bg-[#E38043] dark:bg-[#F09055]", text: "text-[#14304A]" },
+    { cell: "bg-[#88C232] dark:bg-[#9ED44A]", text: "text-[#14304A]" },
+    { cell: "bg-[#25547A] dark:bg-[#3D74A8]", text: "text-white" },
+];
+
 /** 读取当前主题下的配色（昼夜切换后要重读） */
 function readColors() {
     const s = getComputedStyle(document.documentElement);
@@ -923,29 +931,23 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                                             </div>
                                         )
                                     ) : (
-                                        <div
-                                            className="grid h-full w-full grid-cols-2 grid-rows-2"
-                                            style={{
-                                                border: "1px solid rgba(125,140,160,0.55)",
-                                            }}
-                                        >
+                                        <div className="grid h-full w-full grid-cols-2 grid-rows-2 overflow-hidden rounded-[4px] ring-1 ring-black/15 dark:ring-white/25">
                                             {yearDigits(n).map((d, i) => (
                                                 <span
                                                     key={i}
-                                                    className="flex items-center justify-center leading-none"
+                                                    className={`flex items-center justify-center leading-none ${YEAR_QUAD[i].cell} ${YEAR_QUAD[i].text}`}
                                                     style={{
                                                         fontSize: Math.round(w * 0.36),
                                                         fontWeight: 900,
                                                         fontFamily:
                                                             '"SimHei", "Heiti SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
-                                                        color: "var(--color-brand-text-heading, #41505f)",
                                                         borderRight:
                                                             i % 2 === 0
-                                                                ? "1px solid rgba(125,140,160,0.55)"
+                                                                ? "1px solid rgba(255,255,255,0.35)"
                                                                 : undefined,
                                                         borderBottom:
                                                             i < 2
-                                                                ? "1px solid rgba(125,140,160,0.55)"
+                                                                ? "1px solid rgba(255,255,255,0.35)"
                                                                 : undefined,
                                                     }}
                                                 >
@@ -1003,15 +1005,12 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                                     ? "inline-block w-3 h-3 rounded-full ring-1 ring-inset ring-black/15 dark:ring-white/25 bg-brand-surface-page"
                                     : kind === "project"
                                       ? "inline-block w-4 h-[11px] rounded-[2px] ring-1 ring-inset ring-black/15 dark:ring-white/25 bg-brand-surface-page"
-                                      : "inline-grid grid-cols-2 grid-rows-2 w-3 h-3 border border-black/25 dark:border-white/30"
+                                      : "inline-grid grid-cols-2 grid-rows-2 w-3 h-3 overflow-hidden rounded-[2px] ring-1 ring-inset ring-black/15 dark:ring-white/25"
                             }
                         >
                             {kind === "year" &&
-                                ["", "", "", ""].map((_, i) => (
-                                    <span
-                                        key={i}
-                                        className="border-r border-b border-black/20 dark:border-white/25 last:border-r-0 [&:nth-child(3)]:border-b-0"
-                                    />
+                                YEAR_QUAD.map((q, i) => (
+                                    <span key={i} className={q.cell} />
                                 ))}
                         </span>
                         <span className="text-brand-text-secondary">
