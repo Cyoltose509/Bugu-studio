@@ -27,10 +27,16 @@ export interface GraphNode {
     graduated?: boolean;
     /** 成员：社团职务 */
     position?: string;
+    /** 成员：头像 URL（avatar 优先，没有则退回关联的 OAuth 头像） */
+    avatar?: string | null;
     /** 作品：详情页 slug */
     slug?: string;
+    /** 作品：封面图 URL */
+    cover?: string | null;
     /** 年份：该年入社人数 */
     count?: number;
+    /** 年份：四位年份，未登记为 null */
+    year?: number | null;
 }
 
 export interface GraphLink {
@@ -61,11 +67,14 @@ interface RawMember {
     joinYear: number | null;
     graduated: boolean;
     position: string;
+    /** 已兜底过的头像：avatar ?? user.image */
+    avatar: string | null;
 }
 interface RawProject {
     id: string;
     title: string;
     slug: string;
+    coverImage: string | null;
     members: { memberId: string | null; roles: string[] }[];
 }
 
@@ -85,6 +94,7 @@ function assemble(members: RawMember[], projects: RawProject[]): GraphPayload {
             degree: 0,
             graduated: m.graduated,
             position: m.position,
+            avatar: m.avatar,
         });
     }
 
@@ -108,6 +118,7 @@ function assemble(members: RawMember[], projects: RawProject[]): GraphPayload {
             label: y === 0 ? "入社年份未登记" : `${y} 年入社`,
             degree: 0,
             count: yearCount.get(yid) ?? 0,
+            year: y === 0 ? null : y,
         });
     }
 
@@ -133,6 +144,7 @@ function assemble(members: RawMember[], projects: RawProject[]): GraphPayload {
             label: p.title,
             degree: 0,
             slug: p.slug,
+            cover: p.coverImage,
         });
         for (const d of devs) {
             links.push({
@@ -173,6 +185,8 @@ async function buildFromDb(): Promise<GraphPayload> {
                 joinYear: true,
                 graduated: true,
                 position: true,
+                avatar: true,
+                user: { select: { image: true } },
             },
         }),
         prisma.project.findMany({
@@ -181,11 +195,15 @@ async function buildFromDb(): Promise<GraphPayload> {
                 id: true,
                 title: true,
                 slug: true,
+                coverImage: true,
                 members: { select: { memberId: true, roles: true } },
             },
         }),
     ]);
-    return assemble(members, projects);
+    return assemble(
+        members.map((m) => ({ ...m, avatar: m.avatar ?? m.user?.image ?? null })),
+        projects,
+    );
 }
 
 /**
@@ -200,11 +218,13 @@ async function buildFromMock(): Promise<GraphPayload> {
         joinYear: m.joinYear ?? null,
         graduated: !!m.graduated,
         position: m.position ?? "MEMBER",
+        avatar: m.avatar ?? m.user?.image ?? null,
     }));
     const projects: RawProject[] = (snap.projects ?? []).map((p: any) => ({
         id: p.id,
         title: p.title,
         slug: p.slug,
+        coverImage: p.coverImage ?? null,
         members: (p.members ?? []).map((pm: any) => ({
             memberId: pm.memberId ?? null,
             roles: pm.roles ?? [],

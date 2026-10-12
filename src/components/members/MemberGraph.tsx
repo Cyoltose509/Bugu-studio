@@ -1,17 +1,22 @@
 "use client";
 
 /**
- * 成员关系图谱（仿 Obsidian graph view）
+ * 成员关系图谱
  *
- * 三类节点：成员 / 作品 / 入社年份
+ * 三类节点：成员（头像）/ 作品（封面）/ 入社年份（2×2 数字格）
  *   - 成员 — 作品：作品里登记的社团内开发者
  *   - 成员 — 入社年份：该成员的入社年份
  *
- * 物理是自己写的简化力导向（斥力 + 弹簧 + 向心力 + 碰撞），
- * 规模只有几十个节点，O(n²) 直接算比引一个 d3-force 更省事。
+ * 分层渲染：连线画在 canvas 上，节点是 DOM 层。
+ * 头像和封面交给 next/image 自己加载，圆形裁切和圆角交给 CSS，
+ * 缩放只改 transform；如果也在 canvas 里 drawImage，八十来张图每帧重绘
+ * 既糊又难对齐，且跨域图片会污染画布。
+ *
+ * 物理是简化的力导向（斥力 + 弹簧 + 向心 + 碰撞），节点规模只有几十个。
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 type Kind = "member" | "project" | "year";
@@ -23,8 +28,11 @@ interface RawNode {
     degree: number;
     graduated?: boolean;
     position?: string;
+    avatar?: string | null;
     slug?: string;
+    cover?: string | null;
     count?: number;
+    year?: number | null;
 }
 interface RawLink {
     source: string;
@@ -49,6 +57,10 @@ interface SimNode extends RawNode {
     y: number;
     vx: number;
     vy: number;
+    /** 节点世界尺寸（px，视图缩放前） */
+    w: number;
+    h: number;
+    /** 碰撞用的外接圆半径 */
     r: number;
     idx: number;
 }
@@ -60,17 +72,17 @@ interface SimLink {
 }
 
 // ── 物理参数 ──
-const REPULSE = 1100; // 库仑斥力系数（除以距离平方）
-const REPULSE_MIN = 6; // 距离下限，防止两点重合时力爆炸
-const SPRING_DEV = 0.028;
-const SPRING_JOIN = 0.045;
-const LEN_DEV = 82;
-const LEN_JOIN = 56;
+const REPULSE = 2900; // 库仑斥力系数（除以距离平方）
+const REPULSE_MIN = 14; // 距离下限，防止两点重合时力爆炸
+const SPRING_DEV = 0.03;
+const SPRING_JOIN = 0.05;
+const LEN_DEV = 128;
+const LEN_JOIN = 88;
 const CENTER = 0.016; // 向画布中心的弱引力，防止整图飘走
 const DAMP = 0.84; // 速度衰减
 const ALPHA_DECAY = 0.988;
 const ALPHA_MIN = 0.02;
-const COLLIDE_PAD = 2;
+const COLLIDE_PAD = 6;
 
 const KIND_LABEL: Record<Kind, string> = {
     member: "成员",
@@ -78,9 +90,24 @@ const KIND_LABEL: Record<Kind, string> = {
     year: "入社年份",
 };
 
-function nodeRadius(n: RawNode): number {
-    if (n.kind === "year") return 6 + Math.sqrt(n.count ?? 1) * 3.2;
-    return 4 + Math.sqrt(n.degree) * 2.7;
+/** 节点尺寸：年份按人数、其余按度数略微放大 */
+function nodeBox(n: RawNode): { w: number; h: number } {
+    if (n.kind === "year") {
+        const s = 34 + Math.sqrt(n.count ?? 1) * 5.5;
+        return { w: s, h: s };
+    }
+    if (n.kind === "project") {
+        const w = 48 + Math.sqrt(n.degree) * 11;
+        return { w, h: Math.round(w * 0.66) };
+    }
+    const d = 30 + Math.sqrt(n.degree) * 7;
+    return { w: d, h: d };
+}
+
+/** 年份四宫格：2024 → ["2","0","2","4"] */
+function yearDigits(n: RawNode): string[] {
+    if (!n.year) return ["—", "—", "—", "—"];
+    return String(n.year).padStart(4, "0").slice(-4).split("");
 }
 
 /** 读取当前主题下的配色（昼夜切换后要重读） */
@@ -93,11 +120,12 @@ function readColors() {
         member: v("--color-brand-blue", "#3388BB"),
         project: v("--color-brand-orange", "#E38043"),
         year: dark ? "#93a1b5" : "#78849a",
-        edge: dark ? "rgba(170,195,225,0.22)" : "rgba(90,110,135,0.22)",
-        edgeHot: dark ? "rgba(190,215,240,0.85)" : "rgba(60,85,115,0.7)",
+        edge: dark ? "rgba(170,195,225,0.26)" : "rgba(90,110,135,0.26)",
+        edgeHot: dark ? "rgba(190,215,240,0.9)" : "rgba(60,85,115,0.75)",
         text: dark ? "#c8d4e4" : "#41505f",
-        textDim: dark ? "rgba(200,212,228,0.35)" : "rgba(65,80,95,0.4)",
-        halo: dark ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.08)",
+        textDim: dark ? "rgba(200,212,228,0.4)" : "rgba(65,80,95,0.45)",
+        ringHot: dark ? "rgba(225,238,255,0.7)" : "rgba(28,45,68,0.5)",
+        ringMatch: v("--color-brand-blue", "#3388BB"),
     };
 }
 
@@ -110,6 +138,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     const [error, setError] = useState<string | null>(null);
     const [nonce, setNonce] = useState(0);
     const [hoverLabel, setHoverLabel] = useState<string | null>(null);
+    const [broken, setBroken] = useState<Set<string>>(() => new Set());
     const [hidden, setHidden] = useState<Record<Kind, boolean>>({
         member: false,
         project: false,
@@ -124,6 +153,13 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     const hoverRef = useRef<SimNode | null>(null);
     const dragRef = useRef<{ node: SimNode; moved: boolean } | null>(null);
     const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
+    // 触摸端没有滚轮，双指捏合是唯一能缩放的方式
+    const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+    const pinchRef = useRef<{
+        dist: number;
+        mx: number;
+        my: number;
+    } | null>(null);
     const sizeRef = useRef({ w: 0, h: 0 });
     const aspectRef = useRef(1); // 画布宽高比，用于让布局跟着画布形状摊开
     const fittedRef = useRef(false); // 视图是否已完成首次自适应
@@ -132,6 +168,12 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     const colorsRef = useRef(readColors());
     const queryRef = useRef(query);
     const hiddenRef = useRef(hidden);
+
+    // 节点层 DOM：外层定位、本体缩放、标签。模拟运行时直接改 style，不走 React
+    const wrapEls = useRef(new Map<string, HTMLDivElement>());
+    const bodyEls = useRef(new Map<string, HTMLDivElement>());
+    const labelEls = useRef(new Map<string, HTMLDivElement>());
+
     queryRef.current = query;
     hiddenRef.current = hidden;
 
@@ -164,7 +206,6 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         const el = document.documentElement;
         const mo = new MutationObserver(() => {
             colorsRef.current = readColors();
-            alphaRef.current = Math.max(alphaRef.current, 0.05);
             draw();
         });
         mo.observe(el, { attributes: true, attributeFilter: ["class"] });
@@ -175,15 +216,20 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     // ── 初始化模拟 ──
     useEffect(() => {
         if (!data) return;
-        const nodes: SimNode[] = data.nodes.map((n, i) => ({
-            ...n,
-            x: 0,
-            y: 0,
-            vx: 0,
-            vy: 0,
-            r: nodeRadius(n),
-            idx: i,
-        }));
+        const nodes: SimNode[] = data.nodes.map((n, i) => {
+            const { w, h } = nodeBox(n);
+            return {
+                ...n,
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                w,
+                h,
+                r: Math.hypot(w, h) / 2,
+                idx: i,
+            };
+        });
         const byId = new Map(nodes.map((n) => [n.id, n]));
         const links: SimLink[] = [];
         for (const l of data.links) {
@@ -197,8 +243,8 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         const years = nodes.filter((n) => n.kind === "year");
         years.forEach((y, i) => {
             const ang = (i / Math.max(years.length, 1)) * Math.PI * 2;
-            y.x = Math.cos(ang) * 70;
-            y.y = Math.sin(ang) * 70;
+            y.x = Math.cos(ang) * 150;
+            y.y = Math.sin(ang) * 150;
         });
         const yearOfMember = new Map<string, SimNode>();
         for (const l of links) {
@@ -212,23 +258,18 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         };
         for (const n of nodes) {
             if (n.kind === "year") continue;
-            if (n.kind === "member") {
-                const y = yearOfMember.get(n.id);
-                const ang = rnd() * Math.PI * 2;
-                const rad = 70 + rnd() * 60;
-                n.x = (y?.x ?? 0) + Math.cos(ang) * rad;
-                n.y = (y?.y ?? 0) + Math.sin(ang) * rad;
-            } else {
-                const ang = rnd() * Math.PI * 2;
-                const rad = 250 + rnd() * 140;
-                n.x = Math.cos(ang) * rad;
-                n.y = Math.sin(ang) * rad;
-            }
+            const ang = rnd() * Math.PI * 2;
+            const rad =
+                n.kind === "member" ? 150 + rnd() * 130 : 420 + rnd() * 220;
+            const anchor =
+                n.kind === "member" ? yearOfMember.get(n.id) : undefined;
+            n.x = (anchor?.x ?? 0) + Math.cos(ang) * rad;
+            n.y = (anchor?.y ?? 0) + Math.sin(ang) * rad;
         }
 
         simRef.current = { nodes, links };
         alphaRef.current = 1;
-        fittedRef.current = false;
+        settleFitRef.current = false;
         fitView();
         start();
         return () => stop();
@@ -246,7 +287,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const h = wrap.clientHeight;
             if (!w || !h) return;
             sizeRef.current = { w, h };
-            aspectRef.current = Math.max(0.5, Math.min(w / h, 4));
+            aspectRef.current = Math.max(0.6, Math.min(w / h, 2.6));
             canvas.width = Math.round(w * dpr);
             canvas.height = Math.round(h * dpr);
             canvas.style.width = `${w}px`;
@@ -254,7 +295,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const ctx = canvas.getContext("2d");
             ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
             // 第一次拿到真实尺寸时做视图自适应；此时坐标还是围绕原点的初始值，
-            // 不 fit 的话整张图会被画在画布左上角
+            // 不 fit 的话整张图会被堆在画布左上角
             if (!fittedRef.current) {
                 fittedRef.current = true;
                 fitView();
@@ -286,16 +327,16 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             maxX = -Infinity,
             maxY = -Infinity;
         for (const n of pts) {
-            minX = Math.min(minX, n.x - n.r);
-            minY = Math.min(minY, n.y - n.r);
-            maxX = Math.max(maxX, n.x + n.r);
-            maxY = Math.max(maxY, n.y + n.r);
+            minX = Math.min(minX, n.x - n.w / 2);
+            minY = Math.min(minY, n.y - n.h / 2);
+            maxX = Math.max(maxX, n.x + n.w / 2);
+            maxY = Math.max(maxY, n.y + n.h / 2);
         }
         const bw = Math.max(maxX - minX, 1);
         const bh = Math.max(maxY - minY, 1);
-        const k = Math.min((w - 56) / bw, (h - 56) / bh);
+        const k = Math.min((w - 40) / bw, (h - 40) / bh);
         const view = viewRef.current;
-        view.k = Math.max(0.3, Math.min(k, 2.2));
+        view.k = Math.max(0.3, Math.min(k, 1.6));
         view.x = w / 2 - ((minX + maxX) / 2) * view.k;
         view.y = h / 2 - ((minY + maxY) / 2) * view.k;
     }, [visible]);
@@ -353,7 +394,9 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         // 向心 + 积分
         // 容器通常是宽扁的，纯 radial 向心力会把图挤成一个圆、横向留大片空白。
         // 这里按画布宽高比做成各向异性：横向拉得松、纵向拉得紧，图自然摊开成横扁形
-        const asp = Math.sqrt(aspectRef.current);
+        // 平衡点距离与 sqrt(力系数) 成反比，要让图形横向铺开的比例等于画布宽高比，
+        // 两个方向的力系数之比就得是宽高比的平方，即这里的 asp 直接用宽高比
+        const asp = aspectRef.current;
         const cx = (CENTER / asp) * alpha * 4;
         const cy = CENTER * asp * alpha * 4;
         for (const n of live) {
@@ -398,6 +441,24 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         alphaRef.current = alpha * ALPHA_DECAY;
     }, [visible]);
 
+    /** 从 a 的中心朝 b 走，返回射线与 a 边框的交点，连线才不会压在头像上 */
+    const borderPoint = useCallback(
+        (a: SimNode, b: SimNode) => {
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const d = Math.hypot(dx, dy) || 1;
+            const ux = dx / d;
+            const uy = dy / d;
+            const hw = a.w / 2 + 2;
+            const hh = a.h / 2 + 2;
+            const tx = Math.abs(ux) < 1e-6 ? Infinity : hw / Math.abs(ux);
+            const ty = Math.abs(uy) < 1e-6 ? Infinity : hh / Math.abs(uy);
+            const t = Math.min(tx, ty, d / 2);
+            return { x: a.x + ux * t, y: a.y + uy * t };
+        },
+        [],
+    );
+
     const draw = useCallback(() => {
         const canvas = canvasRef.current;
         const sim = simRef.current;
@@ -413,10 +474,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
 
         ctx.clearRect(0, 0, w, h);
 
-        const sx = (n: SimNode) => n.x * k + ox;
-        const sy = (n: SimNode) => n.y * k + oy;
-
-        // 邻接表（用于 hover 高亮）
+        // 邻接表（hover 高亮）
         const nb = new Set<string>();
         if (hover) {
             nb.add(hover.id);
@@ -431,19 +489,14 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                 if (n.label.toLowerCase().includes(q)) matchIds.add(n.id);
             }
         }
-        // 节点半径温和地跟随缩放：适配宽画布时布局会放大，
-        // 若半径同步线性放大，度数高的节点会糊成一团
-        const radScale = Math.pow(k, 0.6);
-
         const alphaOf = (n: SimNode) => {
             if (!visible(n)) return 0;
-            if (hover) return nb.has(n.id) ? 1 : 0.14;
-            if (q) return matchIds.has(n.id) ? 1 : 0.16;
+            if (hover) return nb.has(n.id) ? 1 : 0.1;
+            if (q) return matchIds.has(n.id) ? 1 : 0.14;
             return 1;
         };
 
         // ── 边 ──
-        ctx.lineWidth = 1;
         for (const l of sim.links) {
             if (!visible(l.a) || !visible(l.b)) continue;
             const related = !hover || (nb.has(l.a.id) && nb.has(l.b.id));
@@ -452,86 +505,69 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                 : q
                   ? matchIds.has(l.a.id) || matchIds.has(l.b.id)
                   : true;
-            ctx.globalAlpha = lit ? 1 : 0.1;
+            ctx.globalAlpha = lit ? 1 : 0.08;
             ctx.strokeStyle = lit ? c.edgeHot : c.edge;
             ctx.lineWidth = lit ? 1.5 : 1;
+            const p1 = borderPoint(l.a, l.b);
+            const p2 = borderPoint(l.b, l.a);
             ctx.beginPath();
-            ctx.moveTo(sx(l.a), sy(l.a));
-            ctx.lineTo(sx(l.b), sy(l.b));
+            ctx.moveTo(p1.x * k + ox, p1.y * k + oy);
+            ctx.lineTo(p2.x * k + ox, p2.y * k + oy);
             ctx.stroke();
         }
+        ctx.globalAlpha = 1;
 
-        // ── 节点 ──
+        // ── 节点：只更新 DOM 的 transform / opacity / 高亮环 ──
         for (const n of sim.nodes) {
+            const wrap = wrapEls.current.get(n.id);
+            const body = bodyEls.current.get(n.id);
+            const label = labelEls.current.get(n.id);
+            if (!wrap || !body) continue;
             const a = alphaOf(n);
-            if (a <= 0) continue;
-            ctx.globalAlpha = a;
-            const px = sx(n);
-            const py = sy(n);
-            const rad = Math.max(n.r * radScale, 1.5);
-            const color =
-                n.kind === "member" ? c.member : n.kind === "project" ? c.project : c.year;
+            if (a <= 0) {
+                if (wrap.style.display !== "none") wrap.style.display = "none";
+                continue;
+            }
+            if (wrap.style.display === "none") wrap.style.display = "block";
 
-            if (n.kind === "year") {
-                // 年份是聚合节点：空心环 + 中心点
-                ctx.beginPath();
-                ctx.arc(px, py, rad, 0, Math.PI * 2);
-                ctx.fillStyle = color;
-                ctx.globalAlpha = a * 0.18;
-                ctx.fill();
-                ctx.globalAlpha = a;
-                ctx.lineWidth = 1.4;
-                ctx.strokeStyle = color;
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(px, py, Math.max(rad * 0.3, 1), 0, Math.PI * 2);
-                ctx.fillStyle = color;
-                ctx.fill();
-            } else {
-                ctx.beginPath();
-                ctx.arc(px, py, rad, 0, Math.PI * 2);
-                ctx.fillStyle = color;
-                ctx.fill();
-                if (n.kind === "member" && n.graduated) {
-                    // 已毕业：外圈留白，视觉上和在校成员区分
-                    ctx.lineWidth = 1.2;
-                    ctx.strokeStyle = c.halo;
-                    ctx.stroke();
+            const px = n.x * k + ox;
+            const py = n.y * k + oy;
+            const tf = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0)`;
+            if (wrap.style.transform !== tf) wrap.style.transform = tf;
+            const op = a.toFixed(2);
+            if (wrap.style.opacity !== op) wrap.style.opacity = op;
+
+            const bodyTf = `translate(-50%, -50%) scale(${k.toFixed(3)})`;
+            if (body.style.transform !== bodyTf) body.style.transform = bodyTf;
+
+            const hot = hover && nb.has(n.id);
+            const ring = hot
+                ? `0 0 0 2px ${c.ringHot}`
+                : q && matchIds.has(n.id)
+                  ? `0 0 0 2px ${c.ringMatch}`
+                  : "";
+            if (body.style.boxShadow !== ring) body.style.boxShadow = ring;
+            const z = hot ? "30" : "10";
+            if (wrap.style.zIndex !== z) wrap.style.zIndex = z;
+
+            if (label) {
+                const isHot = !!hot;
+                const always =
+                    n.degree >= 5 || (n.kind === "year" && (n.count ?? 0) >= 5);
+                const show = (isHot || (!!q && matchIds.has(n.id)) || always) && a > 0.5;
+                const lo = show ? "1" : "0";
+                if (label.style.opacity !== lo) label.style.opacity = lo;
+                if (show) {
+                    const lt = `translate(-50%, ${((n.h * k) / 2 + 4).toFixed(1)}px)`;
+                    if (label.style.transform !== lt)
+                        label.style.transform = lt;
+                    const lc = isHot || (!!q && matchIds.has(n.id)) ? c.text : c.textDim;
+                    if (label.style.color !== lc) label.style.color = lc;
                 }
             }
-
-            // 搜索命中：加一圈高亮环
-            if (q && matchIds.has(n.id)) {
-                ctx.globalAlpha = a;
-                ctx.beginPath();
-                ctx.arc(px, py, rad + 3, 0, Math.PI * 2);
-                ctx.lineWidth = 1.6;
-                ctx.strokeStyle = c.edgeHot;
-                ctx.stroke();
-            }
         }
-
-        // ── 标签：hover 及其邻居、搜索命中、以及度数较高的常驻节点 ──
-        ctx.font =
-            '11px system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        for (const n of sim.nodes) {
-            const a = alphaOf(n);
-            if (a <= 0) continue;
-            const isHot = hover && nb.has(n.id);
-            const always = n.degree >= 5 || (n.kind === "year" && (n.count ?? 0) >= 5);
-            if (!isHot && !(q && matchIds.has(n.id)) && !always) continue;
-            if (a < 0.5) continue;
-            ctx.globalAlpha = 1;
-            const px = sx(n);
-            const py = sy(n) + Math.max(n.r * k, 1.5) + 3;
-            ctx.fillStyle = isHot || (q && matchIds.has(n.id)) ? c.text : c.textDim;
-            ctx.fillText(n.label, px, py);
-        }
-        ctx.globalAlpha = 1;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [visible]);
+    }, [visible, borderPoint]);
 
     const frame = useCallback(() => {
         const alpha = alphaRef.current;
@@ -549,7 +585,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         }
         draw();
         rafRef.current = requestAnimationFrame(frame);
-    }, [draw, tick]);
+    }, [draw, tick, fitView]);
 
     const start = useCallback(() => {
         if (rafRef.current != null) return;
@@ -563,40 +599,40 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
 
     useEffect(() => () => stop(), [stop]);
 
-    // 搜索词变化时重绘（用于高亮）
+    // 搜索词 / 隐藏类型 / 图片降级变化时重绘
     useEffect(() => {
         draw();
-    }, [query, draw]);
-
-    // 隐藏类型变化时重绘
-    useEffect(() => {
-        draw();
-    }, [hidden, draw]);
+    }, [query, hidden, broken, draw]);
 
     // ── 交互 ──
-    const pick = useCallback((clientX: number, clientY: number): SimNode | null => {
-        const canvas = canvasRef.current;
-        const sim = simRef.current;
-        if (!canvas || !sim) return null;
-        const rect = canvas.getBoundingClientRect();
-        const { k, x: ox, y: oy } = viewRef.current;
-        const mx = clientX - rect.left;
-        const my = clientY - rect.top;
-        let best: SimNode | null = null;
-        let bestD = Infinity;
-        for (const n of sim.nodes) {
-            if (!visible(n)) continue;
-            const px = n.x * k + ox;
-            const py = n.y * k + oy;
-            const d = Math.hypot(px - mx, py - my);
-            const hit = Math.max(n.r * k, 4) + 6;
-            if (d < hit && d < bestD) {
-                bestD = d;
-                best = n;
+    const pick = useCallback(
+        (clientX: number, clientY: number): SimNode | null => {
+            const canvas = canvasRef.current;
+            const sim = simRef.current;
+            if (!canvas || !sim) return null;
+            const rect = canvas.getBoundingClientRect();
+            const { k, x: ox, y: oy } = viewRef.current;
+            const mx = clientX - rect.left;
+            const my = clientY - rect.top;
+            let best: SimNode | null = null;
+            let bestD = Infinity;
+            for (const n of sim.nodes) {
+                if (!visible(n)) continue;
+                const px = n.x * k + ox;
+                const py = n.y * k + oy;
+                const hw = (n.w * k) / 2 + 3;
+                const hh = (n.h * k) / 2 + 3;
+                if (Math.abs(px - mx) > hw || Math.abs(py - my) > hh) continue;
+                const d = Math.hypot(px - mx, py - my);
+                if (d < bestD) {
+                    bestD = d;
+                    best = n;
+                }
             }
-        }
-        return best;
-    }, [visible]);
+            return best;
+        },
+        [visible],
+    );
 
     const toWorld = useCallback((clientX: number, clientY: number) => {
         const canvas = canvasRef.current;
@@ -610,7 +646,28 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     }, []);
 
     const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+        const canvas = e.target as HTMLCanvasElement;
+        try {
+            canvas.setPointerCapture(e.pointerId);
+        } catch {
+            /* 指针不可捕获时忽略 */
+        }
+        pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointersRef.current.size === 2) {
+            // 第二根手指落下：转为捏合，取消单指的拖拽 / 平移
+            dragRef.current = null;
+            panRef.current = null;
+            hoverRef.current = null;
+            setHoverLabel(null);
+            const [a, b] = [...pointersRef.current.values()];
+            pinchRef.current = {
+                dist: Math.max(Math.hypot(b.x - a.x, b.y - a.y), 1),
+                mx: (a.x + b.x) / 2,
+                my: (a.y + b.y) / 2,
+            };
+            touchedRef.current = true;
+            return;
+        }
         const hit = pick(e.clientX, e.clientY);
         if (hit) {
             dragRef.current = { node: hit, moved: false };
@@ -627,6 +684,37 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     };
 
     const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        if (pointersRef.current.has(e.pointerId)) {
+            pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        }
+        const pinch = pinchRef.current;
+        if (pinch && pointersRef.current.size >= 2) {
+            const [a, b] = [...pointersRef.current.values()];
+            const dist = Math.max(Math.hypot(b.x - a.x, b.y - a.y), 1);
+            const mx = (a.x + b.x) / 2;
+            const my = (a.y + b.y) / 2;
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const view = viewRef.current;
+            const px = mx - rect.left;
+            const py = my - rect.top;
+            // 先跟手平移（两指中点位移），再以中点为锚点做增量缩放
+            view.x += mx - pinch.mx;
+            view.y += my - pinch.my;
+            const next = Math.max(
+                0.3,
+                Math.min(2.6, view.k * (dist / pinch.dist)),
+            );
+            view.x = px - ((px - view.x) / view.k) * next;
+            view.y = py - ((py - view.y) / view.k) * next;
+            view.k = next;
+            pinch.dist = dist;
+            pinch.mx = mx;
+            pinch.my = my;
+            draw();
+            return;
+        }
         const drag = dragRef.current;
         if (drag) {
             const p = toWorld(e.clientX, e.clientY);
@@ -653,10 +741,12 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     };
 
     const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        pointersRef.current.delete(e.pointerId);
+        if (pointersRef.current.size < 2) pinchRef.current = null;
         const drag = dragRef.current;
         const pan = panRef.current;
         if (drag) {
-            // 位移很小当成点击
+            // 位移很小当成点击；两指缩放过（drag 已被清掉）不会误触发跳转
             if (!drag.moved) {
                 const n = drag.node;
                 if (n.kind === "member") router.push(`/members/${n.id.slice(2)}`);
@@ -698,6 +788,22 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         }
     };
 
+    const markBroken = useCallback((id: string) => {
+        setBroken((prev) => {
+            if (prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.add(id);
+            return next;
+        });
+    }, []);
+
+    const bindRef =
+        (map: React.MutableRefObject<Map<string, HTMLDivElement>>, id: string) =>
+        (el: HTMLDivElement | null) => {
+            if (el) map.current.set(id, el);
+            else map.current.delete(id);
+        };
+
     // ── 渲染 ──
     if (error) {
         return (
@@ -724,68 +830,190 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         );
     }
 
+    const nodes = data.nodes.map((n) => ({ ...n, ...nodeBox(n) }));
     const { stats } = data;
 
     return (
-        <div className="rounded-xl border border-brand-border-subtle bg-card overflow-hidden">
+        <div>
             <div
                 ref={wrapRef}
-                className="relative w-full h-[58vh] min-h-[420px] max-h-[680px] cursor-grab active:cursor-grabbing"
+                className="relative w-full h-[62vh] min-h-[440px] max-h-[720px] cursor-grab active:cursor-grabbing overflow-hidden"
             >
                 <canvas
                     ref={canvasRef}
-                    className="block w-full h-full touch-none"
+                    className="absolute inset-0 block h-full w-full touch-none"
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
+                    onPointerCancel={onPointerUp}
                     onPointerLeave={onLeave}
                     onWheel={onWheel}
                 />
+
+                {/* 节点层：不接收指针事件，命中判定全在 canvas 上 */}
+                <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                    {nodes.map((n) => {
+                        const w = n.w;
+                        const h = n.h;
+                        const common = {
+                            width: w,
+                            height: h,
+                            willChange: "transform" as const,
+                        };
+                        return (
+                            <div
+                                key={n.id}
+                                ref={bindRef(wrapEls, n.id)}
+                                className="absolute left-0 top-0"
+                                style={{ opacity: 0, willChange: "transform" }}
+                            >
+                                <div
+                                    ref={bindRef(bodyEls, n.id)}
+                                    className="absolute"
+                                    style={common}
+                                >
+                                    {n.kind === "member" ? (
+                                        n.avatar && !broken.has(n.id) ? (
+                                            <Image
+                                                src={n.avatar}
+                                                alt={n.label}
+                                                fill
+                                                sizes="128px"
+                                                referrerPolicy="no-referrer"
+                                                className={`rounded-full object-cover ring-1 ring-black/10 dark:ring-white/20 ${
+                                                    n.graduated
+                                                        ? "saturate-[0.45]"
+                                                        : ""
+                                                }`}
+                                                onError={() => markBroken(n.id)}
+                                            />
+                                        ) : (
+                                            <div
+                                                className="flex h-full w-full items-center justify-center rounded-full ring-1 ring-black/10 dark:ring-white/20 text-brand-text-secondary select-none"
+                                                style={{
+                                                    fontSize: Math.round(w * 0.42),
+                                                    background:
+                                                        "var(--color-brand-surface-page, rgba(125,140,160,0.14))",
+                                                }}
+                                            >
+                                                {n.label.trim().charAt(0).toUpperCase()}
+                                            </div>
+                                        )
+                                    ) : n.kind === "project" ? (
+                                        n.cover && !broken.has(n.id) ? (
+                                            <Image
+                                                src={n.cover}
+                                                alt={n.label}
+                                                fill
+                                                sizes="256px"
+                                                referrerPolicy="no-referrer"
+                                                className="rounded-[5px] object-cover ring-1 ring-black/10 dark:ring-white/20"
+                                                onError={() => markBroken(n.id)}
+                                            />
+                                        ) : (
+                                            <div
+                                                className="flex h-full w-full items-center justify-center rounded-[5px] ring-1 ring-black/10 dark:ring-white/20 px-1 text-center text-brand-text-secondary leading-tight"
+                                                style={{
+                                                    fontSize: Math.round(w * 0.16),
+                                                    background:
+                                                        "var(--color-brand-surface-page, rgba(125,140,160,0.14))",
+                                                }}
+                                            >
+                                                {n.label.slice(0, 6)}
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div
+                                            className="grid h-full w-full grid-cols-2 grid-rows-2"
+                                            style={{
+                                                border: "1px solid rgba(125,140,160,0.55)",
+                                            }}
+                                        >
+                                            {yearDigits(n).map((d, i) => (
+                                                <span
+                                                    key={i}
+                                                    className="flex items-center justify-center leading-none"
+                                                    style={{
+                                                        fontSize: Math.round(w * 0.36),
+                                                        fontWeight: 900,
+                                                        fontFamily:
+                                                            '"SimHei", "Heiti SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
+                                                        color: "var(--color-brand-text-heading, #41505f)",
+                                                        borderRight:
+                                                            i % 2 === 0
+                                                                ? "1px solid rgba(125,140,160,0.55)"
+                                                                : undefined,
+                                                        borderBottom:
+                                                            i < 2
+                                                                ? "1px solid rgba(125,140,160,0.55)"
+                                                                : undefined,
+                                                    }}
+                                                >
+                                                    {d}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div
+                                    ref={bindRef(labelEls, n.id)}
+                                    className="absolute left-0 top-0 whitespace-nowrap text-[11px] leading-tight"
+                                    style={{ opacity: 0, willChange: "transform, opacity" }}
+                                >
+                                    {n.label}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
                 {hoverLabel && (
                     <div className="pointer-events-none absolute left-3 top-3 rounded-md bg-black/70 px-2 py-1 text-xs text-white">
                         {hoverLabel}
                     </div>
                 )}
-                <div className="absolute right-3 bottom-3 flex flex-col items-end gap-1">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            touchedRef.current = false;
-                            fitView();
-                            draw();
-                        }}
-                        className="text-xs px-2 py-1 rounded-md border border-brand-border-subtle bg-card/90 text-brand-text-muted hover:text-brand-text transition-colors"
-                    >
-                        重置视图
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    onClick={() => {
+                        touchedRef.current = false;
+                        fitView();
+                        draw();
+                    }}
+                    className="absolute right-3 bottom-3 text-xs px-2 py-1 rounded-md border border-brand-border-subtle bg-card/90 text-brand-text-muted hover:text-brand-text transition-colors"
+                >
+                    重置视图
+                </button>
             </div>
 
             {/* 图例 + 统计 */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 border-t border-brand-border-subtle text-xs">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
                 {(["member", "project", "year"] as Kind[]).map((kind) => (
                     <button
                         key={kind}
                         type="button"
-                        onClick={() =>
-                            setHidden((h) => ({ ...h, [kind]: !h[kind] }))
-                        }
+                        onClick={() => setHidden((h) => ({ ...h, [kind]: !h[kind] }))}
                         className={`flex items-center gap-1.5 transition-opacity ${
                             hidden[kind] ? "opacity-35" : "opacity-100"
                         }`}
                         aria-pressed={!hidden[kind]}
                     >
                         <span
-                            className="inline-block w-2.5 h-2.5 rounded-full"
-                            style={{
-                                background:
-                                    kind === "member"
-                                        ? "var(--color-brand-blue)"
-                                        : kind === "project"
-                                          ? "var(--color-brand-orange)"
-                                          : "#78849a",
-                            }}
-                        />
+                            className={
+                                kind === "member"
+                                    ? "inline-block w-3 h-3 rounded-full ring-1 ring-inset ring-black/15 dark:ring-white/25 bg-brand-surface-page"
+                                    : kind === "project"
+                                      ? "inline-block w-4 h-[11px] rounded-[2px] ring-1 ring-inset ring-black/15 dark:ring-white/25 bg-brand-surface-page"
+                                      : "inline-grid grid-cols-2 grid-rows-2 w-3 h-3 border border-black/25 dark:border-white/30"
+                            }
+                        >
+                            {kind === "year" &&
+                                ["", "", "", ""].map((_, i) => (
+                                    <span
+                                        key={i}
+                                        className="border-r border-b border-black/20 dark:border-white/25 last:border-r-0 [&:nth-child(3)]:border-b-0"
+                                    />
+                                ))}
+                        </span>
                         <span className="text-brand-text-secondary">
                             {KIND_LABEL[kind]}
                         </span>
@@ -798,7 +1026,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                         `（${stats.activeDevCount} 位成员登记了作品）`}
                 </span>
             </div>
-            <p className="px-4 pb-3 text-[11px] text-brand-text-muted">
+            <p className="mt-1 text-[11px] text-brand-text-muted">
                 拖动节点可调整位置，拖拽空白处平移，滚轮缩放；点击成员或作品节点进入详情页。
             </p>
         </div>
