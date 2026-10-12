@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import MentionEditor from "@/components/ui/MentionEditor";
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
+import { uploadImage, ACCEPT_ATTR, compressionNote } from "@/lib/utils/clientUpload";
 
 interface EventImage {
   id?: string;
@@ -34,6 +36,7 @@ export default function AdminHistoryEventsPage() {
   const [formImages, setFormImages] = useState<EventImage[]>([]);
   const [saving, setSaving] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
+  const [imgNote, setImgNote] = useState("");
   const imgFileRef = useRef<HTMLInputElement>(null);
 
   const fetchEvents = useCallback(async () => {
@@ -69,18 +72,16 @@ export default function AdminHistoryEventsPage() {
     }
   }
 
-  async function uploadImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  async function handleImageFile(file: File | undefined) {
     if (!file) return;
+    if (formImages.length >= 5) return;
     setImgUploading(true);
+    setImgNote("");
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("type", "screenshot");
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "上传失败");
-      setFormImages((prev) => [...prev, { url: json.url }].slice(0, 5));
+      const result = await uploadImage(file, { endpoint: "/api/upload", type: "screenshot" });
+      setFormImages((prev) => [...prev, { url: result.url }].slice(0, 5));
+      const note = compressionNote(result);
+      if (note) setImgNote(note);
     } catch (err: any) {
       alert(err.message || "上传失败");
     } finally {
@@ -165,22 +166,32 @@ export default function AdminHistoryEventsPage() {
               </div>
               <div>
                 <label className={labelClass}>图片 ({formImages.length}/5)</label>
-                <input ref={imgFileRef} type="file" accept="image/*" className="hidden" onChange={uploadImage} />
-                {formImages.length > 0 && (
-                  <div className="flex gap-2 mb-2 flex-wrap">
-                    {formImages.map((img, i) => (
-                      <div key={i} className="relative w-16 h-12 rounded overflow-hidden border border-brand-border-subtle">
-                        <img src={img.url} alt="" className="w-full h-full object-cover" />
-                        <button onClick={() => setFormImages((prev) => prev.filter((_, j) => j !== i))}
-                          className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-bl">×</button>
-                      </div>
-                    ))}
+                <input ref={imgFileRef} type="file" accept={ACCEPT_ATTR} className="hidden"
+                  onChange={(e) => void handleImageFile(e.target.files?.[0])} />
+                <ImageDropZone className="rounded-xl p-1" hint="松开以上传图片"
+                  disabled={formImages.length >= 5 || imgUploading}
+                  onFile={(file) => handleImageFile(file)}
+                  onInvalid={(msg) => alert(msg)}>
+                  {formImages.length > 0 && (
+                    <div className="flex gap-2 mb-2 flex-wrap">
+                      {formImages.map((img, i) => (
+                        <div key={i} className="relative w-16 h-12 rounded overflow-hidden border border-brand-border-subtle">
+                          <img src={img.url} alt="" className="w-full h-full object-cover" />
+                          <button onClick={() => setFormImages((prev) => prev.filter((_, j) => j !== i))}
+                            className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-bl">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={() => imgFileRef.current?.click()} disabled={formImages.length >= 5 || imgUploading}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50 text-white bg-brand-green">
+                      {imgUploading ? "上传中..." : "+ 上传图片"}
+                    </button>
+                    <span className="text-xs text-brand-text-muted">也可以把图片直接拖到这里</span>
                   </div>
-                )}
-                <button onClick={() => imgFileRef.current?.click()} disabled={formImages.length >= 5 || imgUploading}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50 text-white bg-brand-green">
-                  {imgUploading ? "上传中..." : "+ 上传图片"}
-                </button>
+                  {imgNote && <p className="text-xs mt-1 text-brand-text-muted">{imgNote}</p>}
+                </ImageDropZone>
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">

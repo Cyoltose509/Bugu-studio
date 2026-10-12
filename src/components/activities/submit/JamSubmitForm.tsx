@@ -3,6 +3,13 @@
 import { useState, useRef } from "react";
 import { submitJamWork } from "@/lib/actions/submissions";
 import MentionEditor from "@/components/ui/MentionEditor";
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
+import {
+  uploadImage,
+  ACCEPT_ATTR,
+  assertImageFile,
+  compressionNote,
+} from "@/lib/utils/clientUpload";
 
 const PROJECT_TYPES = [
   { value: "IN_DEVELOPMENT", label: "开发阶段" },
@@ -60,6 +67,7 @@ export function JamSubmitForm({
     (existing?.files || []).map((url: string) => ({ url }))
   );
   const [screenshotUploading, setScreenshotUploading] = useState(false);
+  const [uploadNote, setUploadNote] = useState("");
 
   const [creators, setCreators] = useState<CreatorEntry[]>(
     teamMembers.map((m) => ({ name: m.userName, roles: ["制作"] }))
@@ -83,44 +91,44 @@ export function JamSubmitForm({
   const coverFileRef = useRef<HTMLInputElement>(null);
   const screenshotFileRef = useRef<HTMLInputElement>(null);
 
+  /** 统一的上传内核：原图在限额内就直传，超了才压缩；失败时给中文提示 */
   const uploadFile = async (file: File, type: "cover" | "screenshot") => {
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("type", type);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      throw new Error(j.error || "上传失败");
-    }
-    const j = await res.json();
-    return j.url || j.data?.url;
+    assertImageFile(file);
+    const result = await uploadImage(file, {
+      endpoint: "/api/upload",
+      type,
+    });
+    setUploadNote(compressionNote(result));
+    return result.url;
   };
 
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleCoverFile = async (file: File | undefined) => {
     if (!file) return;
     setCoverUploading(true);
+    setError("");
+    setUploadNote("");
     try {
       const url = await uploadFile(file, "cover");
       setCoverUrl(url);
       setCoverPreview(url);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "上传失败");
     } finally {
       setCoverUploading(false);
     }
   };
 
-  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleScreenshotFile = async (file: File | undefined) => {
     if (!file) return;
     if (screenshots.length >= 3) return;
     setScreenshotUploading(true);
+    setError("");
+    setUploadNote("");
     try {
       const url = await uploadFile(file, "screenshot");
       setScreenshots((prev) => [...prev, { url }]);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "上传失败");
     } finally {
       setScreenshotUploading(false);
     }
@@ -286,11 +294,18 @@ export function JamSubmitForm({
         <input
           ref={coverFileRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={ACCEPT_ATTR}
           className="hidden"
-          onChange={handleCoverUpload}
+          onChange={(e) => void handleCoverFile(e.target.files?.[0])}
           disabled={!isOngoing || loading}
         />
+        <ImageDropZone
+          hint="松开以上传封面"
+          disabled={coverUploading || !isOngoing || loading}
+          onFile={(file) => handleCoverFile(file)}
+          onInvalid={(msg) => setError(msg)}
+          className="rounded-xl p-1"
+        >
         {coverPreview && (
           <div className="relative inline-block">
             <img
@@ -311,29 +326,40 @@ export function JamSubmitForm({
             </button>
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => coverFileRef.current?.click()}
-          disabled={coverUploading || !isOngoing || loading}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white bg-brand-blue"
-        >
-          {coverUploading ? "上传中..." : coverPreview ? "更换封面" : "+ 上传封面"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => coverFileRef.current?.click()}
+            disabled={coverUploading || !isOngoing || loading}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white bg-brand-blue"
+          >
+            {coverUploading ? "上传中..." : coverPreview ? "更换封面" : "+ 上传封面"}
+          </button>
+          <span className="text-xs text-brand-text-muted">也可以把图片直接拖到这里</span>
+        </div>
+        </ImageDropZone>
       </section>
 
       {/* 截图 */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-brand-navy">
-          截图 / GIF
+          截图
         </h2>
         <input
           ref={screenshotFileRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={ACCEPT_ATTR}
           className="hidden"
-          onChange={handleScreenshotUpload}
+          onChange={(e) => void handleScreenshotFile(e.target.files?.[0])}
           disabled={!isOngoing || loading}
         />
+        <ImageDropZone
+          hint="松开以添加截图"
+          disabled={screenshotUploading || screenshots.length >= 3 || !isOngoing || loading}
+          onFile={(file) => handleScreenshotFile(file)}
+          onInvalid={(msg) => setError(msg)}
+          className="rounded-xl p-1"
+        >
         {screenshots.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {screenshots.map((img, i) => (
@@ -360,19 +386,24 @@ export function JamSubmitForm({
             ))}
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => screenshotFileRef.current?.click()}
-          disabled={screenshotUploading || screenshots.length >= 3 || !isOngoing || loading}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white bg-brand-blue"
-        >
-          {screenshotUploading
-            ? "上传中..."
-            : screenshots.length >= 3
-            ? "已达到上限"
-            : "+ 添加截图"}
-        </button>
-        <p className="text-xs text-brand-text-muted">最多 3 张</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => screenshotFileRef.current?.click()}
+            disabled={screenshotUploading || screenshots.length >= 3 || !isOngoing || loading}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 text-white bg-brand-blue"
+          >
+            {screenshotUploading
+              ? "上传中..."
+              : screenshots.length >= 3
+              ? "已达到上限"
+              : "+ 添加截图"}
+          </button>
+          <span className="text-xs text-brand-text-muted">也可以把图片直接拖到这里</span>
+        </div>
+        {uploadNote && <p className="text-xs text-brand-text-muted">{uploadNote}</p>}
+        <p className="text-xs text-brand-text-muted">最多 3 张，支持 JPG / PNG / WebP</p>
+        </ImageDropZone>
       </section>
 
       {/* 制作人员 */}

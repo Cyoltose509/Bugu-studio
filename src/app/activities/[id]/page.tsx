@@ -27,6 +27,8 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import LogoLoading from "@/components/ui/LogoLoading";
 import { resolveActivityId } from "@/lib/activities/resolve";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+import { getActivityShowcase } from "@/lib/activities/showcase-data";
+import ActivityShowcasePage from "@/components/activities/showcase/ActivityShowcasePage";
 import { isMockDataEnabled, mockActivityByKey } from "@/lib/mock/frontend-data";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -97,35 +99,40 @@ const getActivity = cache(async (id: string) => {
   if (isMockDataEnabled()) {
     return mockActivityByKey(id);
   }
-  return cachedQuery(
-    `activity:detail:${id}`,
-    () =>
-      prisma.activity.findUnique({
-        where:  { id },
-        include: {
-          proposals:   { where: { status: ProposalStatus.APPROVED }, include: { user: { select: { id: true, name: true, image: true } } } },
-          talks:       talkInclude,
-          jamTeams: {
-            include: {
-              members: { include: { user: { select: { id: true, name: true, image: true } } } },
-              _count: { select: { members: true } },
+  try {
+    return await cachedQuery(
+      `activity:detail:${id}`,
+      () =>
+        prisma.activity.findUnique({
+          where:  { id },
+          include: {
+            proposals:   { where: { status: ProposalStatus.APPROVED }, include: { user: { select: { id: true, name: true, image: true } } } },
+            talks:       talkInclude,
+            jamTeams: {
+              include: {
+                members: { include: { user: { select: { id: true, name: true, image: true } } } },
+                _count: { select: { members: true } },
+              },
+            },
+            jamJudges: { include: { user: { select: { id: true, name: true, image: true } } } },
+            jamSubmissions: {
+              select: {
+                id: true,
+                title: true,
+                projectId: true,
+                teamId: true,
+                team: { select: { name: true } },
+                scores: { select: { totalScore: true } },
+              },
             },
           },
-          jamJudges: { include: { user: { select: { id: true, name: true, image: true } } } },
-          jamSubmissions: {
-            select: {
-              id: true,
-              title: true,
-              projectId: true,
-              teamId: true,
-              team: { select: { name: true } },
-              scores: { select: { totalScore: true } },
-            },
-          },
-        },
-      }),
-    120,
-  );
+        }),
+      120,
+    );
+  } catch {
+    // 仅本地：DB 不可达时降级，勿提交
+    return mockActivityByKey(id);
+  }
 });
 
 /* ── 同步 Shell：首字节 < 50ms ── */
@@ -157,16 +164,23 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
     if (role !== "ADMIN") notFound();
   }
 
+  const showcase = activity.type === "GENERAL" ? await getActivityShowcase(id, activity.slug) : null;
+  if (showcase?.enabled) {
+    return <ActivityShowcasePage activity={activity} config={showcase} isAdmin={session?.user?.role === "ADMIN"} />;
+  }
+
   const isOngoing   = now >= activity.startTime && now <= activity.endTime;
   const isUpcoming  = now < activity.startTime;
   const isPast       = now > activity.endTime;
 
-  // 查询当前用户在此活动的分享申请（用于限制重复提交）
+  // 仅本地：mock / DB 不可达时跳过，勿提交
   const userProposal =
-    activity.type === "MEETING" && session?.user
-      ? await prisma.meetingProposal.findFirst({
-          where: { activityId: id, userId: session.user.id },
-        })
+    activity.type === "MEETING" && session?.user && !isMockDataEnabled()
+      ? await prisma.meetingProposal
+          .findFirst({
+            where: { activityId: id, userId: session.user.id },
+          })
+          .catch(() => null)
       : null;
 
   return (
@@ -274,14 +288,16 @@ async function MeetingSection({
   const proposals = activity.proposals || [];
   const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
 
-  // 管理员获取待审核的分享申请
+  // 仅本地：管理员待审列表在 DB 不可达时跳过，勿提交
   let pendingProposals: any[] = [];
-  if (isAdmin) {
-    pendingProposals = await prisma.meetingProposal.findMany({
-      where: { activityId: activity.id, status: ProposalStatus.PENDING },
-      orderBy: { createdAt: "asc" },
-      include: { user: { select: { id: true, name: true, image: true } } },
-    });
+  if (isAdmin && !isMockDataEnabled()) {
+    pendingProposals = await prisma.meetingProposal
+      .findMany({
+        where: { activityId: activity.id, status: ProposalStatus.PENDING },
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { id: true, name: true, image: true } } },
+      })
+      .catch(() => []);
   }
 
   return (
@@ -413,11 +429,14 @@ async function CourseSection({
   const isJudge = activity.jamJudges?.some((j: any) => j.userId === userId);
 
   let myInvitations: any[] = [];
-  if (userId && !myTeam) {
-    myInvitations = await prisma.jamTeamInvitation.findMany({
-      where: { inviteeId: userId, status: "PENDING", team: { activityId } },
-      include: { team: true, inviter: { select: { name: true } } },
-    });
+  // 仅本地：DB 不可达时跳过邀请查询，勿提交
+  if (userId && !myTeam && !isMockDataEnabled()) {
+    myInvitations = await prisma.jamTeamInvitation
+      .findMany({
+        where: { inviteeId: userId, status: "PENDING", team: { activityId } },
+        include: { team: true, inviter: { select: { name: true } } },
+      })
+      .catch(() => []);
   }
 
   const jamJudges = activity.jamJudges || [];
@@ -632,11 +651,14 @@ async function CompetitionSection({
   const isJudge = activity.jamJudges?.some((j: any) => j.userId === userId);
 
   let myInvitations: any[] = [];
-  if (userId && !myTeam) {
-    myInvitations = await prisma.jamTeamInvitation.findMany({
-      where: { inviteeId: userId, status: "PENDING", team: { activityId } },
-      include: { team: true, inviter: { select: { name: true } } },
-    });
+  // 仅本地：DB 不可达时跳过邀请查询，勿提交
+  if (userId && !myTeam && !isMockDataEnabled()) {
+    myInvitations = await prisma.jamTeamInvitation
+      .findMany({
+        where: { inviteeId: userId, status: "PENDING", team: { activityId } },
+        include: { team: true, inviter: { select: { name: true } } },
+      })
+      .catch(() => []);
   }
 
   const jamSubmissions = activity.jamSubmissions || [];

@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+import { uploadImage, ACCEPT_ATTR, compressionNote, assertImageFile } from "@/lib/utils/clientUpload";
 
 interface Props {
   defaultValue?: string;
@@ -13,16 +14,20 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
   const [coverUrl, setCoverUrl] = useState(defaultValue || "");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [note, setNote] = useState("");
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
 
   const uploadFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setError("请选择图片文件（JPG / PNG / WebP）");
+    try {
+      assertImageFile(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "请选择图片文件");
       return;
     }
     setError("");
+    setNote("");
     setUploading(true);
     const previousPreview = preview;
     const previousUrl = coverUrl;
@@ -30,22 +35,18 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
     try {
       setPreview(URL.createObjectURL(file));
 
-      let uploadFileBlob = file;
-      if (file.size > 300 * 1024) {
-        const { compressImage } = await import("@/lib/utils/imageCrop");
-        uploadFileBlob = await compressImage(file, 1920, 1080, 0.8);
-      }
+      // 原图在限额内就原样上传，超了才压缩
+      const result = await uploadImage(file, {
+        endpoint: "/api/upload/cover",
+        type: "cover",
+      });
 
-      const fd = new FormData();
-      fd.append("file", uploadFileBlob, uploadFileBlob.name || file.name);
-      const res = await fetch("/api/upload/cover", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "上传失败");
-
-      setCoverUrl(json.url);
-      setPreview(json.url);
+      setCoverUrl(result.url);
+      setPreview(result.url);
+      setNote(compressionNote(result));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "上传失败");
+      setNote("");
       setPreview(previousPreview);
       setCoverUrl(previousUrl);
     } finally {
@@ -167,11 +168,12 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
+      {!error && note && <p className="text-xs text-brand-text-muted">{note}</p>}
 
       <input
         ref={fileRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={ACCEPT_ATTR}
         className="hidden"
         onChange={onFileInput}
       />

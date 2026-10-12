@@ -1,0 +1,183 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #080b10;
+  color: #fff;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.dialog::backdrop { background: #080b10; }
+.coverImage {
+  object-fit: contain;
+  object-position: center;
+  /* 切换更快了，给一个短促的淡入，避免生硬跳帧 */
+  animation: slideFadeIn .32s ease both;
+}
+
+@keyframes slideFadeIn {
+  from { opacity: .25; transform: scale(1.015); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (orientation: portrait) {
+  .coverImage { object-fit: cover; }
+}
+
+.shade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 86%;
+  pointer-events: none;
+  background: linear-gradient(to top, #04070c 0%, rgba(4, 7, 12, .97) 18%, rgba(4, 7, 12, .86) 38%, rgba(4, 7, 12, .58) 61%, rgba(4, 7, 12, .18) 82%, transparent 100%);
+}
+
+.header {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 5vw 72px;
+  pointer-events: none;
+}
+
+/*
+ * 顶边不再压一条黑色渐变条（那条硬边把画面切成了两段）。
+ * 改成一层向上溢出屏幕的弥散毛玻璃：backdrop-filter 直接把画面顶部的颜色
+ * 糊开、向外延伸，再用 mask 让它向下渐渐化掉，和画面无缝衔接。
+ */
+.header::before {
+  content: "";
+  position: absolute;
+  inset: -80px 0 auto;
+  z-index: -1;
+  height: 240px;
+  pointer-events: none;
+  backdrop-filter: blur(34px) saturate(1.6) brightness(.9);
+  -webkit-backdrop-filter: blur(34px) saturate(1.6) brightness(.9);
+  background: linear-gradient(to bottom, rgba(6, 9, 14, .34), rgba(6, 9, 14, .12) 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, .8) 34%, rgba(0, 0, 0, .35) 66%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, .8) 34%, rgba(0, 0, 0, .35) 66%, transparent 100%);
+}
+
+.header button { pointer-events: auto; }
+.brand { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .22em; color: rgba(255, 255, 255, .85); }
+.brand span { margin-left: 28px; font-weight: 400; color: rgba(255, 255, 255, .55); }
+
+.closeButton {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: max(20px, env(safe-area-inset-right));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+}
+
+.closeButton:hover { opacity: .7; }
+.closeButton:focus-visible, .playButton:focus-visible, .galleryTrigger:focus-visible, .thumbnail:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.playButton { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: #080b10; }
+.playButton:hover { background: #e3e5e8; }
+.playButton:disabled { opacity: .4; }
+
+.caption {
+  position: absolute;
+  --drawer-lift: 104px;
+  inset: auto 5vw clamp(76px, 10vh, 104px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4vw;
+  max-width: 1600px;
+  margin-inline: auto;
+  transition: transform .25s ease;
+}
+.galleryExpanded .caption { transform: translateY(calc(-1 * var(--drawer-lift))); }
+.details { min-width: 0; }
+.eyebrow { display: flex; align-items: center; gap: 28px; margin: 0 0 24px; font-size: 12px; letter-spacing: .2em; color: rgba(255, 255, 255, .6); }
+.eyebrow span { letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.title { margin: 0 0 24px; color: #fff; font-size: clamp(40px, 5.3vw, 88px); font-weight: 650; line-height: 1.1; letter-spacing: -.035em; text-wrap: balance; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; max-height: 76px; overflow-y: auto; margin-bottom: 22px; }
+.tags span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 4px; font-size: 12px; line-height: 1.2; color: rgba(255, 255, 255, .8); }
+.engineIcon { width: 14px; height: 14px; flex-shrink: 0; }
+.description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; max-width: 72rem; margin: 0; font-size: clamp(16px, 1.2vw, 18px); line-height: 2; letter-spacing: .025em; color: rgba(255, 255, 255, .68); }
+.playback { display: flex; flex-direction: column; align-items: flex-end; gap: 24px; }
+.frameCount { display: flex; justify-content: flex-end; align-items: baseline; gap: 12px; margin: 0; font-size: 12px; color: rgba(255, 255, 255, .5); font-variant-numeric: tabular-nums; }
+.frameCount span:first-child { font-size: 36px; font-weight: 300; line-height: 1; color: #fff; }
+
+.drawer { position: absolute; inset: auto 0 0; z-index: 3; height: max(52px, calc(44px + env(safe-area-inset-bottom))); }
+.drawerOpen { height: calc(164px + env(safe-area-inset-bottom)); }
+.filmstrip {
+  position: absolute;
+  inset: auto 0 max(52px, calc(44px + env(safe-area-inset-bottom)));
+  padding: 18px 5vw;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(8, 11, 16, .88);
+  backdrop-filter: blur(16px);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(28px);
+  transition: transform .25s ease, opacity .25s ease, visibility .25s;
+  pointer-events: none;
+}
+.drawerOpen .filmstrip { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+.thumbnails { display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 8px; scrollbar-width: thin; scrollbar-color: #626670 transparent; }
+.thumbnails::-webkit-scrollbar { height: 4px; }
+.thumbnails::-webkit-scrollbar-track { background: transparent; }
+.thumbnails::-webkit-scrollbar-thumb { background: #626670; border-radius: 4px; }
+.thumbnail { position: relative; flex-shrink: 0; width: 120px; height: 68px; overflow: hidden; padding: 0; border: 2px solid transparent; border-radius: 4px; opacity: .5; transition: opacity .2s; }
+.thumbnail:hover, .thumbnailCurrent { opacity: 1; }
+.thumbnailCurrent { border-color: #fff; }
+.galleryTrigger { position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; display: flex; min-height: 40px; align-items: center; gap: 12px; padding: 6px 16px; transform: translateX(-50%); border: 0; background: transparent; color: rgba(255, 255, 255, .5); font-size: 11px; letter-spacing: .14em; white-space: nowrap; }
+.galleryHandle { display: block; width: 32px; height: 2px; background: rgba(255, 255, 255, .35); }
+
+@media (max-width: 767px) {
+  .header { padding: 20px 6vw 48px; }
+  .brand { font-size: 10px; letter-spacing: .15em; }
+  .brand span { display: none; }
+  .closeButton { top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); }
+  .caption { --drawer-lift: 72px; inset-inline: 6vw; bottom: calc(88px + env(safe-area-inset-bottom)); grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .eyebrow { margin-bottom: 16px; gap: 18px; font-size: 10px; }
+  .title { margin-bottom: 18px; font-size: clamp(32px, 8.5vw, 54px); }
+  .tags { gap: 6px; margin-bottom: 16px; max-height: 64px; }
+  .tags span { padding: 5px 9px; font-size: 10px; }
+  .engineIcon { width: 12px; height: 12px; }
+  .description { font-size: 14px; line-height: 1.85; -webkit-line-clamp: 3; }
+  .playback { flex-direction: row; align-items: center; justify-content: space-between; }
+  .frameCount { justify-content: flex-start; }
+  .frameCount span:first-child { font-size: 28px; }
+  .playButton { width: 52px; height: 52px; }
+  .filmstrip { padding: 12px 6vw; }
+  .thumbnail { width: 96px; height: 56px; }
+  .drawerOpen { height: calc(144px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-height: 500px) {
+  .header { padding-top: 12px; }
+  .caption { --drawer-lift: 120px; bottom: calc(76px + env(safe-area-inset-bottom)); grid-template-columns: minmax(0, 1fr) auto; gap: 24px; }
+  .eyebrow { margin-bottom: 10px; }
+  .title { margin-bottom: 12px; font-size: 36px; }
+  .tags { margin-bottom: 10px; max-height: 28px; }
+  .description { -webkit-line-clamp: 1; }
+  .playback { flex-direction: column; align-items: flex-end; gap: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caption, .filmstrip, .thumbnail { transition: none; }
+  .coverImage { animation: none; }
+}

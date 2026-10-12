@@ -37,14 +37,14 @@ export function getMockSnapshot(): MockSnapshot {
   const file = path.join(process.cwd(), "fixtures", "frontend-mock.json");
   if (!fs.existsSync(file)) {
     throw new Error(
-      "?? fixtures/frontend-mock.json?????: node scripts/assemble-mock-fixture.mjs ? node scripts/fetch-mock-from-prod.mjs",
+      "缺少 fixtures/frontend-mock.json，请先生成：node scripts/assemble-mock-fixture.mjs 或 node scripts/fetch-mock-from-prod.mjs",
     );
   }
   cached = JSON.parse(fs.readFileSync(file, "utf8")) as MockSnapshot;
   return cached;
 }
 
-/** ?????? fixture ??? */
+/** 清掉内存里的 fixture 缓存（测试里换 fixture 时用它） */
 export function clearMockSnapshotCache() {
   cached = null;
 }
@@ -150,6 +150,39 @@ export function mockLatestProjects(take = 8) {
 
 export function mockStats() {
   return getMockSnapshot().stats;
+}
+
+/** 管理员面板概览：离线（数据库连不上）时的兜底数据，结构与真实接口一致 */
+export function mockAdminDashboard() {
+  const snap = getMockSnapshot();
+  const projects = [...(snap.projects || [])].sort(
+    (a, b) =>
+      new Date(b.createdAt || b.publishedAt || 0).getTime() -
+      new Date(a.createdAt || a.publishedAt || 0).getTime(),
+  );
+  const members = [...(snap.members || [])];
+  const pendingCount = projects.filter((p) => p.status === "PENDING").length;
+
+  return {
+    userCount: members.length,
+    memberCount: snap.stats?.memberCount ?? members.length,
+    projectCount: snap.stats?.projectCount ?? projects.length,
+    pendingCount,
+    latestUsers: members.slice(0, 5).map((m, i) => ({
+      id: m.userId || m.user?.id || m.id || `mock-u-${i}`,
+      name: m.displayName || m.user?.name || "匿名",
+      email: m.user?.email || "-",
+      role: (m.user?.role as string) || "MEMBER",
+      createdAt: new Date(m.createdAt || Date.now()),
+    })),
+    latestProjects: projects.slice(0, 5).map((p) => ({
+      id: p.id,
+      title: p.title || "未命名作品",
+      status: p.status || "PUBLISHED",
+      createdAt: new Date(p.createdAt || p.publishedAt || Date.now()),
+    })),
+    offline: true as const,
+  };
 }
 
 export function mockSidebarTags() {
@@ -288,7 +321,7 @@ export function mockYearEvents() {
   );
 }
 
-/** ? /history ??????????????????????? */
+/** /history 年份详情：把 fixture 里的成员/作品/大事记拼成年度数据 */
 export function mockHistoryYearDetails() {
   const snap = getMockSnapshot();
   const members = snap.members || [];
@@ -376,7 +409,7 @@ export function mockHistoryYearDetails() {
   return { yearDetails: details, startYear: START_YEAR };
 }
 
-/** Mock ??????????????????? fixture? */
+/** 假登录用户：按 MOCK_USER_EMAIL / MOCK_MEMBER_ID 从 fixture 里取出对应用户 */
 export function getMockAuthUser() {
   if (!isMockDataEnabled()) return null;
   const email = (process.env.MOCK_USER_EMAIL || "").trim().toLowerCase();

@@ -689,6 +689,81 @@ html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
   }
 }
 
+/*
+ * 移动端竖屏修复：对整页快照做 clip-path 动画时，移动 GPU 会对快照做
+ * 低精度重采样，整个已扫过区域的内容会糊掉/变形（桌面端无此问题）。
+ * 改为：页面内容瞬时切换，由独立视图过渡层（view-transition-name）承载
+ * 一道纯渐变「光刃」扫过——渐变层即使被重采样也不可见，内容始终清晰。
+ */
+@media (pointer: coarse), (max-width: 768px) {
+  html.theme-cutting::view-transition-old(root),
+  html.theme-cutting::view-transition-new(root) {
+    animation: none !important;
+    clip-path: none !important;
+    filter: none !important;
+  }
+  html.theme-cutting::view-transition-old(root) {
+    opacity: 0 !important;
+  }
+
+  /* 光刃层：独立快照，纯渐变，扫过时不会带歪页面内容 */
+  html.theme-cutting::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    view-transition-name: theme-blade;
+  }
+  /* 入夜：冷色刃口（对应原 drop-shadow 配色） */
+  html.theme-cutting[data-theme-cut="to-dark"]::after {
+    background: linear-gradient(
+      135deg,
+      rgba(180, 210, 255, 0.55) 0%,
+      rgba(120, 160, 230, 0.28) 40%,
+      rgba(90, 130, 220, 0.12) 60%,
+      transparent 78%
+    );
+  }
+  /* 破晓：暖色刃口 */
+  html.theme-cutting[data-theme-cut="to-light"]::after {
+    background: linear-gradient(
+      135deg,
+      transparent 22%,
+      rgba(255, 180, 90, 0.12) 40%,
+      rgba(255, 200, 120, 0.28) 60%,
+      rgba(255, 236, 190, 0.55) 100%
+    );
+  }
+
+  html.theme-cutting::view-transition-old(theme-blade) {
+    display: none;
+  }
+  html.theme-cutting::view-transition-new(theme-blade) {
+    animation: theme-cut-blade 0.85s cubic-bezier(0.65, 0.05, 0.36, 1) both;
+  }
+  html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(theme-blade) {
+    animation-name: theme-cut-blade-rev;
+  }
+}
+
+/* 光刃扫过轨迹：与原 clip 动画同几何，只是作用对象从页面快照换成渐变层 */
+@keyframes theme-cut-blade {
+  from {
+    clip-path: polygon(-8% -8%, 0% -8%, -8% 0%);
+  }
+  to {
+    clip-path: polygon(-8% -8%, 220% -8%, -8% 220%);
+  }
+}
+@keyframes theme-cut-blade-rev {
+  from {
+    clip-path: polygon(108% 108%, 100% 108%, 108% 100%);
+  }
+  to {
+    clip-path: polygon(108% 108%, -120% 108%, 108% -120%);
+  }
+}
+
 /* Newspaper year-report: day / night skin */
 .newspaper-paper {
   --np-paper: #faf8f5;

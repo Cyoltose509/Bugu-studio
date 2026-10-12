@@ -61,3 +61,14 @@ nul
 /fixtures/
 /scripts/fetch-mock-from-prod.mjs
 /scripts/assemble-mock-fixture.mjs
+
+# AI 工具目录与锁文件（勿提交）
+.agents/
+.cursor/
+skills-lock.json
+
+# 临时脚本（用完即弃）
+/scripts/_tmp-*.mjs
+
+# TypeScript 增量构建信息
+tsconfig.tsbuildinfo

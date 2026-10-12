@@ -14,6 +14,9 @@ import MeetingTalksEditor from "@/components/activities/meeting/MeetingTalksEdit
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import DescriptionEditor from "@/components/admin/DescriptionEditor";
 import { DEFAULT_ACTIVITY_LOCATION } from "@/lib/activities/constants";
+import { getActivityShowcase } from "@/lib/activities/showcase-data";
+import ShowcaseEditor from "@/components/activities/showcase/ShowcaseEditor";
+import { formatActivityDateTime } from "@/lib/activities/datetime";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -51,7 +54,12 @@ export default async function EditActivityPage({ params }: PageProps) {
   const activity = await getActivity(id);
   if (!activity) notFound();
 
-  const fmt = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [showcase, projects] = activity.type === "GENERAL" ? await Promise.all([
+    getActivityShowcase(activity.id, activity.slug),
+    prisma.project.findMany({ where: { status: "PUBLISHED" }, select: { id: true, title: true, slug: true }, orderBy: { title: "asc" } }),
+  ]) : [null, []];
+
+  const fmt = formatActivityDateTime;
 
   return (
     <div className="animate-fade-in space-y-6 max-w-2xl">
@@ -202,6 +210,7 @@ export default async function EditActivityPage({ params }: PageProps) {
           }))}
         />
       )}
+      {activity.type === "GENERAL" && <ShowcaseEditor activityId={activity.id} initial={showcase} projects={projects} />}
     </div>
   );
 }

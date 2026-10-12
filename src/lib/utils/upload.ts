@@ -12,6 +12,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 import { extname } from "path";
+import { UPLOAD_LIMIT_BYTES, AVATAR_LIMIT_BYTES } from "./uploadLimits";
 
 // 允许上传的图片类型
 export const ALLOWED_MIME_TYPES = [
@@ -22,11 +23,20 @@ export const ALLOWED_MIME_TYPES = [
 
 export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
-// 文件大小限制
+/**
+ * 文件大小限制
+ *
+ * 注意：站点部署在 Vercel，Serverless Function 的请求体有硬上限（实测
+ * 4,491,679 字节，详见 ./uploadLimits.ts）。超过后请求根本到不了这里
+ * （Vercel 直接返回纯文本 413），所以这里的数字写更大没有意义，只会让报错骗人。
+ *
+ * 必须与客户端共用同一份常量：之前这里写 4MB 而客户端压到 4.2MB 以内，
+ * 落在 4.0~4.2MB 的图会被这里以「超出限制」拒掉，属于自己打自己。
+ */
 export const MAX_FILE_SIZE = {
-  avatar: 2 * 1024 * 1024,    // 2MB
-  cover: 5 * 1024 * 1024,     // 5MB
-  screenshot: 8 * 1024 * 1024, // 8MB
+  avatar: AVATAR_LIMIT_BYTES,
+  cover: UPLOAD_LIMIT_BYTES,
+  screenshot: UPLOAD_LIMIT_BYTES,
 } as const;
 
 export type UploadType = keyof typeof MAX_FILE_SIZE;

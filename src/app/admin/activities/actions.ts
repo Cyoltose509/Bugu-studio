@@ -9,6 +9,8 @@ import { revalidatePath } from "next/cache";
 import { ActivityStatus, ProposalStatus } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/utils/upload";
 import { DEFAULT_ACTIVITY_LOCATION, parseBvId } from "@/lib/activities/constants";
+import { parseActivityDateTime } from "@/lib/activities/datetime";
+import { showcaseKey } from "@/lib/activities/showcase";
 
 const TYPE_LABEL: Record<string, string> = {
   MEETING: "例会", COURSE: "公开课", COMPETITION: "比赛", GENERAL: "活动",
@@ -109,8 +111,8 @@ export async function createActivity(formData: FormData) {
       location,
       meetingUrl: meetingUrl || undefined,
       coverImage: coverImage || undefined,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      startTime: parseActivityDateTime(startTime),
+      endTime: parseActivityDateTime(endTime),
       maxParticipants,
       registrationOpen: regOpen,
       status: ActivityStatus.DRAFT,
@@ -178,8 +180,8 @@ export async function updateActivity(id: string, formData: FormData) {
       location,
       meetingUrl: meetingUrl || undefined,
       coverImage: coverImage || undefined,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      startTime: parseActivityDateTime(startTime),
+      endTime: parseActivityDateTime(endTime),
       maxParticipants,
       registrationOpen: regOpen,
       status: status as ActivityStatus,
@@ -224,7 +226,10 @@ export async function deleteActivity(id: string) {
   const activity = await prisma.activity.findUnique({ where: { id }, select: { coverImage: true } });
   const oldCover = activity?.coverImage;
 
-  await prisma.activity.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.siteSetting.deleteMany({ where: { key: showcaseKey(id) } }),
+    prisma.activity.delete({ where: { id } }),
+  ]);
 
   // ── 清理 R2 旧封面（best-effort）──
   if (oldCover) {
