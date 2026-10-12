@@ -241,31 +241,43 @@ function LaurelBranch({flip = false, className = ""}: { flip?: boolean; classNam
     // 平滑的茎路径
     const stemPath = `M ${P0.x},${P0.y} Q ${P1.x},${P1.y} ${P2.x},${P2.y}`;
 
-    // 叶子沿茎两侧密集排列
+    // 叶片：带尖端的披针形（参考图不是钝椭圆，是两头尖的细叶）
+    const leafPath = (len: number, wid: number) =>
+        `M 0,0 C ${len * 0.28},${-wid} ${len * 0.72},${-wid * 0.85} ${len},0` +
+        ` C ${len * 0.72},${wid * 0.85} ${len * 0.28},${wid} 0,0 Z`;
+
+    // 羽状对生叶：每个节点沿茎两侧各出一片，密集交叠成一条粗羽枝
     const leaves: React.ReactElement[] = [];
-    const N = 15;
-    for (let i = 0; i < N; i++) {
-        const t = i / (N - 1);
+    const PAIRS = 16;
+    for (let i = 0; i < PAIRS; i++) {
+        const t = 0.04 + (i / (PAIRS - 1)) * 0.88;  // 0.04 ~ 0.92
         const p = bezier(t);
         const theta = tangentDeg(t);
-        // 越靠两端叶子越小，中间最大
-        const tipFactor = 1 - Math.abs(i - (N - 1) / 2) / ((N - 1) / 2);
-        const rx = 6.0 + tipFactor * 2.2;
-        const ry = 2.8 + tipFactor * 1.0;
-        // 外倾角：外侧（背离内容）+，内侧（朝向内容）-
-        const side = i % 2 === 0 ? 1 : -1;
-        const rot = theta + side * 34;
+        // 中段叶最大，向两端渐小
+        const sizeFactor = 1 - 0.3 * Math.abs(t - 0.48) * 2;
+        const len = 16 * sizeFactor;
+        const wid = 6.0 * sizeFactor;
+        for (const side of [1, -1]) {
+            leaves.push(
+                <path key={`${i}-${side}`} d={leafPath(len, wid)}
+                      transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${(theta + side * 62).toFixed(1)})`}/>
+            );
+        }
+    }
+    // 两端各补一片沿茎延长线的顶叶
+    for (const t of [0, 1]) {
+        const p = bezier(t);
+        const theta = tangentDeg(t);
         leaves.push(
-            <ellipse key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)}
-                     rx={rx.toFixed(1)} ry={ry.toFixed(1)}
-                     transform={`rotate(${rot.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})`}/>
+            <path key={`tip-${t}`} d={leafPath(7.5, 2.4)}
+                  transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${theta.toFixed(1)})`}/>
         );
     }
 
     return (
         <svg viewBox={LAUREL_VIEWBOX} className={className} aria-hidden="true"
              fill="currentColor" style={flip ? {transform: "scaleX(-1)"} : undefined}>
-            <path d={stemPath} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"/>
+            <path d={stemPath} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round"/>
             {leaves}
         </svg>
     );
