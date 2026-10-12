@@ -904,6 +904,10 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                             width: w,
                             height: h,
                             willChange: "transform" as const,
+                            // 高亮环（box-shadow）画在这个外包 div 上，
+                            // 圆角和内部视觉元素一致，环才贴着头像/封面/四宫格的真实边缘
+                            borderRadius:
+                                n.kind === "member" ? "50%" : n.kind === "project" ? 5 : 4,
                         };
                         return (
                             <div
