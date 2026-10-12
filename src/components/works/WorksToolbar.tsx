@@ -6,11 +6,11 @@
  * 排序用乐观 UI：一点就高亮，只改 URL，列表由 WorksInfiniteGrid 客户端拉 API，
  * 不再 router.refresh() 卡整页。
  */
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import ActiveFilterChips from "./ActiveFilterChips";
 import FilterNavLink from "./FilterNavLink";
-import type { ActiveFilterChip } from "./FilterSidebarClient";
+import { buildActiveChips, buildUrl } from "@/lib/works/filters";
 
 const SORT_OPTIONS = [
   { value: "date", label: "时间" },
@@ -19,16 +19,33 @@ const SORT_OPTIONS = [
 ];
 
 export default function WorksToolbar({
-  currentQ,
-  chips = [],
-  clearAllHref,
+  tagNames = {},
 }: {
-  currentQ?: string;
-  chips?: ActiveFilterChip[];
-  clearAllHref?: string;
+  /** slug → 标签名，用来把 URL 里的 tag 显示成中文名 */
+  tagNames?: Record<string, string>;
 }) {
-  const router = useRouter();
   const rawParams = useSearchParams();
+
+  // 筛选只改 URL、不触发 RSC，所以已选胶囊必须按当前 URL 实时算，
+  // 否则点完筛选胶囊不会变
+  const currentParams = useMemo(
+    () => Object.fromEntries(rawParams.entries()),
+    [rawParams],
+  );
+  const chips = useMemo(
+    () => buildActiveChips(currentParams, tagNames),
+    [currentParams, tagNames],
+  );
+  const clearAllHref = chips.length
+    ? buildUrl(currentParams, {
+        types: void 0,
+        year: void 0,
+        tag: void 0,
+        q: void 0,
+      })
+    : undefined;
+
+  const currentQ = currentParams.q;
 
   const urlSort = rawParams.get("sort") || "date";
   const [optimisticSort, setOptimisticSort] = useState<string | null>(null);
@@ -58,10 +75,13 @@ export default function WorksToolbar({
     (params: URLSearchParams) => {
       params.delete("page");
       const qs = params.toString();
-      // 只改 URL：列表组件监听 searchParams 后自己拉 API，比整页 refresh 快一截
-      router.replace(qs ? `/works?${qs}` : "/works", { scroll: false });
+      const url = qs ? `/works?${qs}` : "/works";
+      if (window.location.pathname + window.location.search === url) return;
+      // 原生 History API：只改 URL，不触发 RSC 导航。
+      // 列表组件监听 searchParams 后自己拉 /api/works，省掉整页服务端重渲染
+      window.history.replaceState(null, "", url);
     },
-    [router],
+    [],
   );
 
   const toggleSearch = useCallback(() => {

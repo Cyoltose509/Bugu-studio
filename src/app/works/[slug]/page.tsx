@@ -25,6 +25,7 @@ import LogoLoading from "@/components/ui/LogoLoading";
 import PrefetchNav from "@/components/works/PrefetchNav";
 import { TagChipLink } from "@/components/tags/TagChip";
 import { sortProjectTagsEngineFirst } from "@/lib/tags/engine-tags";
+import { sortByNameAndSlice } from "@/lib/works/name-sort";
 import {
   isMockDataEnabled,
   mockAdjacentProjects,
@@ -129,34 +130,24 @@ async function getAdjacentProjects(
   }
 
   if (sort === "name") {
-    // API 排序: title ASC, id DESC
-    const [prev, next] = await Promise.all([
-      // prev = 列表中当前之前（标题更小，或同标题但 id 更大）
-      prisma.project.findFirst({
-        where: {
-          status: ProjectStatus.PUBLISHED,
-          OR: [
-            { title: { lt: title } },
-            { title, id: { gt: id } },
-          ],
-        },
-        orderBy: [{ title: "desc" }, { id: "asc" }],
-        select: { slug: true, title: true },
-      }),
-      // next = 列表中当前之后（标题更大，或同标题但 id 更小）
-      prisma.project.findFirst({
-        where: {
-          status: ProjectStatus.PUBLISHED,
-          OR: [
-            { title: { gt: title } },
-            { title, id: { lt: id } },
-          ],
-        },
-        orderBy: [{ title: "asc" }, { id: "desc" }],
-        select: { slug: true, title: true },
-      }),
-    ]);
-    return { prev, next };
+    // 与列表页一致：中文按拼音、英文按原名，同一个字母序里混排（见 lib/works/name-sort.ts）
+    const rows = await cachedQuery(
+      "works:adjacent:byname",
+      () =>
+        prisma.project.findMany({
+          where: { status: ProjectStatus.PUBLISHED },
+          select: { id: true, slug: true, title: true, subtitle: true },
+        }),
+      60,
+    );
+    const ordered = sortByNameAndSlice(rows, null, rows.length);
+    const idx = ordered.findIndex((r) => r.id === id);
+    if (idx === -1) return { prev: null, next: null };
+    const pick = (i: number) =>
+      i >= 0 && i < ordered.length
+        ? { slug: ordered[i].slug, title: ordered[i].title }
+        : null;
+    return { prev: pick(idx - 1), next: pick(idx + 1) };
   }
 
   // date 排序（默认）: developYear DESC, publishedAt DESC NULLS LAST, id DESC

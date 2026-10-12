@@ -9,8 +9,10 @@
  * - 桌面端：主内容区工具栏下方（见 WorksToolbar / ActiveFilterChips）
  * 件数只在主区「已加载 x / y」展示，侧栏不再重复。
  */
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ActiveFilterChips from "./ActiveFilterChips";
+import { buildActiveChips } from "@/lib/works/filters";
 
 const CloseFilterContext = createContext<(() => void) | null>(null);
 
@@ -26,16 +28,22 @@ export type ActiveFilterChip = {
 };
 
 interface Props {
-  activeChips?: ActiveFilterChip[];
+  /** slug → 标签名；已选胶囊改由客户端按 URL 实时算 */
+  tagNames?: Record<string, string>;
   children: React.ReactNode;
 }
 
 export default function FilterSidebarClient({
-  activeChips = [],
+  tagNames = {},
   children,
 }: Props) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
+  const sp = useSearchParams();
+  const activeChips = useMemo(
+    () => buildActiveChips(Object.fromEntries(sp.entries()), tagNames),
+    [sp, tagNames],
+  );
 
   return (
     <CloseFilterContext.Provider value={close}>

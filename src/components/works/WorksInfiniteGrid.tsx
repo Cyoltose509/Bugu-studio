@@ -68,6 +68,8 @@ export default function WorksInfiniteGrid({
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloading, setReloading] = useState(false);
   const [clickingId, setClickingId] = useState<string | null>(null);
+  const [reloadError, setReloadError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<() => void>(() => {});
@@ -90,15 +92,28 @@ export default function WorksInfiniteGrid({
     [router],
   );
 
-  // URL 筛选/排序变了 → 立刻重拉第一页（AbortController 防连点）
+  // 重试：把已加载标记清掉，effect 才会重新拉一次
+  const handleRetry = useCallback(() => {
+    loadedKeyRef.current = "";
+    setRetryNonce((n) => n + 1);
+  }, []);
+
+  // URL 筛选/排序变了 → 立刻重拉第一页（AbortController 防连点 + 超时兜底）
   useEffect(() => {
     if (urlKey === loadedKeyRef.current) return;
 
     const ac = new AbortController();
     const f = urlFilters;
+    // 数据库偶尔不可达，请求会长时间挂着；与其让骨架屏一直转，不如告诉用户
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      ac.abort();
+    }, 10000);
 
     (async () => {
       setReloading(true);
+      setReloadError(null);
       loadingMoreRef.current = false;
       setLoadingMore(false);
       try {
@@ -124,16 +139,23 @@ export default function WorksInfiniteGrid({
         if (typeof data.total === "number") setTotal(data.total);
         loadedKeyRef.current = urlKey;
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
+        if (ac.signal.aborted && !timedOut) return;
+        setReloadError(
+          timedOut ? "加载超时了，网络可能不太顺" : "加载失败，请重试",
+        );
         // 失败时仍标记已尝试，避免死循环狂请求
         loadedKeyRef.current = urlKey;
       } finally {
-        if (!ac.signal.aborted) setReloading(false);
+        clearTimeout(timer);
+        if (!ac.signal.aborted || timedOut) setReloading(false);
       }
     })();
 
-    return () => ac.abort();
-  }, [urlKey, urlFilters]);
+    return () => {
+      clearTimeout(timer);
+      ac.abort();
+    };
+  }, [urlKey, urlFilters, retryNonce]);
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || reloading || clickingRef.current) return;
@@ -210,6 +232,33 @@ export default function WorksInfiniteGrid({
           ))}
         </div>
       </>
+    );
+  }
+
+  if (reloadError) {
+    return (
+      <div className="text-center py-20 text-brand-text-muted">
+        <p className="text-base mb-2">{reloadError}</p>
+        <p className="text-sm mb-4">
+          列表没能更新，当前显示的还是上一次的结果
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle text-brand-blue hover:bg-brand-surface transition-colors"
+          >
+            重试
+          </button>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="text-sm px-4 py-2 rounded-lg text-brand-text-muted hover:text-brand-text transition-colors"
+          >
+            刷新页面
+          </button>
+        </div>
+      </div>
     );
   }
 

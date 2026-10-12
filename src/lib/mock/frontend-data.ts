@@ -4,6 +4,7 @@
  */
 import fs from "fs";
 import path from "path";
+import { nameSortKey } from "@/lib/works/name-sort";
 
 export type MockSnapshot = {
   fetchedAt: string;
@@ -82,7 +83,13 @@ function matchesFilters(
 function sortProjects(list: any[], sort: string) {
   const arr = [...list];
   if (sort === "name") {
-    arr.sort((a, b) => String(a.title).localeCompare(String(b.title), "zh") || String(b.id).localeCompare(String(a.id)));
+    // 与真实数据一致：中文按拼音、英文原名优先，统一字母序混排
+    arr.sort(
+      (a, b) =>
+        nameSortKey(String(a.title), a.subtitle ?? null).localeCompare(
+          nameSortKey(String(b.title), b.subtitle ?? null),
+        ) || String(b.id).localeCompare(String(a.id)),
+    );
   } else if (sort === "likes") {
     arr.sort(
       (a, b) =>
