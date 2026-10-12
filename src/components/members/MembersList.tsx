@@ -6,6 +6,7 @@ import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { positionLabel, positionColor } from "@/lib/position";
 import MemberGraph from "./MemberGraph";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 /** 线性（描边）放大镜图标 */
 function SearchIcon({ className = "" }: { className?: string }) {
@@ -69,6 +70,7 @@ interface Props {
 }
 
 export default function MembersList({ members: allMembers, totalCount, activeCount }: Props) {
+  const { t, lang } = useLang();
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"grade" | "joinYear" | "graph">("grade");
   const [searchRaw, setSearchOpen] = useState(false);
@@ -93,23 +95,26 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
   // 客户端过滤 + 按模式分组
   const { filtered, groupedFiltered, sortedKeysFiltered } = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) {
-      // 无搜索时：按当前模式重新分组
+    // 分组 key（带语言）：从字符串里取年份数字做排序，中英文都兼容
+    const makeKey = (m: MemberItem): string => {
+      if (mode === "grade") return m.grade != null ? t("members.gradeGroup", { g: m.grade }) : t("common.unset");
+      return m.joinYear != null ? t("members.joinYearGroup", { y: m.joinYear }) : t("common.unset");
+    };
+    const yearVal = (key: string) => {
+      const m = key.match(/\d+/);
+      return m ? parseInt(m[0], 10) : 0;
+    };
+    const group = (list: MemberItem[]) => {
       const groups: Record<string, MemberItem[]> = {};
-      for (const m of allMembers) {
-        let key: string;
-        if (mode === "grade") {
-          key = m.grade != null ? `${m.grade}级` : "未设置";
-        } else {
-          key = m.joinYear != null ? `${m.joinYear}年入社` : "未设置";
-        }
+      for (const m of list) {
+        const key = makeKey(m);
         (groups[key] ??= []).push(m);
       }
-      const keys = Object.keys(groups).sort((a, b) => {
-        const nA = parseInt(a) || 0;
-        const nB = parseInt(b) || 0;
-        return nB - nA;
-      });
+      const keys = Object.keys(groups).sort((a, b) => yearVal(b) - yearVal(a));
+      return { groups, keys };
+    };
+    if (!q) {
+      const { groups, keys } = group(allMembers);
       return { filtered: allMembers, groupedFiltered: groups, sortedKeysFiltered: keys };
     }
     const matched = allMembers.filter((m) => {
@@ -117,31 +122,16 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
       const skillsText = (m.skills || []).join(" ").toLowerCase();
       return name.includes(q) || skillsText.includes(q);
     });
-    // 重新分组
-    const groups: Record<string, MemberItem[]> = {};
-    for (const m of matched) {
-      let key: string;
-      if (mode === "grade") {
-        key = m.grade != null ? `${m.grade}级` : "未设置";
-      } else {
-        key = m.joinYear != null ? `${m.joinYear}年入社` : "未设置";
-      }
-      (groups[key] ??= []).push(m);
-    }
-    const keys = Object.keys(groups).sort((a, b) => {
-      const nA = parseInt(a) || 0;
-      const nB = parseInt(b) || 0;
-      return nB - nA;
-    });
+    const { groups, keys } = group(matched);
     return { filtered: matched, groupedFiltered: groups, sortedKeysFiltered: keys };
-  }, [query, allMembers, mode]);
+  }, [query, allMembers, mode, t]);
 
   return (
     <>
       {/* 头部：标题与统计在左，搜索框靠右对齐 */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div className="min-w-0">
-          <h1 className="text-3xl font-bold text-brand-navy">成员列表</h1>
+          <h1 className="text-3xl font-bold text-brand-navy">{t("page.members.title")}</h1>
           <p className="mt-2 text-brand-text-secondary">
             共 {totalCount} 位历届成员，{activeCount} 位在读成员
             {hasQuery && <> · 找到 {filtered.length} 位匹配成员</>}
@@ -216,13 +206,13 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
       <div className="flex flex-wrap gap-2 mb-6">
         <button type="button" onClick={() => setMode("grade")}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === "grade" ? "bg-brand-navy text-white" : "bg-brand-surface-page text-brand-text-body"}`}
-        >按年级</button>
+        >{t("members.sortByGrade")}</button>
         <button type="button" onClick={() => setMode("joinYear")}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === "joinYear" ? "bg-brand-navy text-white" : "bg-brand-surface-page text-brand-text-body"}`}
-        >按入社年份</button>
+        >{t("members.sortByJoinYear")}</button>
         <button type="button" onClick={() => setMode("graph")}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === "graph" ? "bg-brand-navy text-white" : "bg-brand-surface-page text-brand-text-body"}`}
-        >关系图谱</button>
+        >{t("members.sortByGraph")}</button>
       </div>
 
       {mode === "graph" ? (
