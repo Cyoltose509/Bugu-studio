@@ -251,9 +251,9 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
                       <Image
                         src="/images/graduation-cap.png"
                         alt=""
-                        width={40}
-                        height={40}
-                        className="pointer-events-none absolute -top-3 left-1/2 z-10 w-10 h-10 -translate-x-1/2 object-contain drop-shadow-sm select-none"
+                        width={56}
+                        height={56}
+                        className="pointer-events-none absolute -top-2 -right-2 z-10 w-14 h-14 object-contain drop-shadow-md select-none"
                         aria-hidden
                       />
                     )}
