@@ -46,9 +46,15 @@ const DEFAULT_TAGS: {
   { name: "多人联机", slug: "multiplayer", color: "#ec4899", sortOrder: 42, group: "要素" },
   { name: "休闲", slug: "casual", color: "#10b981", sortOrder: 43, group: "要素" },
   { name: "Game Jam", slug: "gamejam", color: "#ef4444", sortOrder: 44, group: "要素" },
+  // 活动 & 赛事
+  { name: "GGJ", slug: "ggj", color: "#3388BB", sortOrder: 50, group: "活动&赛事" },
+  { name: "CiGA", slug: "ciga", color: "#E38043", sortOrder: 51, group: "活动&赛事" },
+  { name: "CUSGA", slug: "cusga", color: "#88C232", sortOrder: 52, group: "活动&赛事" },
+  { name: "萌芽杯", slug: "mengyabei", color: "#25547A", sortOrder: 53, group: "活动&赛事" },
 ];
 
 const ENGINE_SLUGS = ["godot", "unity", "gamemaker", "unreal"] as const;
+const EVENT_SLUGS = ["ggj", "ciga", "cusga", "mengyabei"] as const;
 
 let synced = false;
 
@@ -118,6 +124,33 @@ export async function ensureDefaultTags(): Promise<void> {
     // 引擎标签：校正品牌色 / 分组 / 排序（已有库也跟上）
     await Promise.all(
       ENGINE_SLUGS.map(async (slug) => {
+        const def = DEFAULT_TAGS.find((t) => t.slug === slug);
+        if (!def) return;
+        const row = existing.find((t) => t.slug === slug);
+        if (!row) return;
+        if (
+          row.color === def.color &&
+          row.group === def.group &&
+          row.sortOrder === def.sortOrder &&
+          row.name === def.name
+        ) {
+          return;
+        }
+        await prisma.tag.update({
+          where: { slug },
+          data: {
+            color: def.color,
+            group: def.group,
+            sortOrder: def.sortOrder,
+            name: def.name,
+          },
+        });
+      }),
+    );
+
+    // 活动 & 赛事标签：校正分组 / 颜色 / 排序 / 名称
+    await Promise.all(
+      EVENT_SLUGS.map(async (slug) => {
         const def = DEFAULT_TAGS.find((t) => t.slug === slug);
         if (!def) return;
         const row = existing.find((t) => t.slug === slug);

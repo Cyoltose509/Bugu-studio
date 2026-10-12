@@ -41,12 +41,17 @@ export const TAG_EN_NAMES: Record<string, string> = {
   multiplayer: "Multiplayer",
   casual: "Casual",
   gamejam: "Game Jam",
+  ggj: "GGJ",
+  ciga: "CiGA",
+  cusga: "CUSGA",
+  mengyabei: "萌芽杯",
 };
 
 export const TAG_GROUP_EN: Record<string, string> = {
   引擎: "Engine",
   大类: "Genre",
   要素: "Element",
+  "活动&赛事": "Event & Competition",
   其他: "Other",
 };
 

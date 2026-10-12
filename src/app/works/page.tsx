@@ -16,7 +16,11 @@ import FilterLink from "@/components/works/FilterLink";
 import TagFilterChips from "@/components/works/TagFilterChips";
 import { PROJECT_SELECT } from "@/lib/works/project-select";
 import { sortByNameAndSlice } from "@/lib/works/name-sort";
-import { TYPE_OPTIONS, buildUrl } from "@/lib/works/filters";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
+import type { Lang } from "@/lib/i18n/config";
+import { typeLabel, TYPE_OPTIONS, buildUrl } from "@/lib/works/filters";
+import { tagDisplayName } from "@/lib/tags/tag-names";
 import {
     isMockDataEnabled,
     mockListProjects,
@@ -46,22 +50,23 @@ interface PageProps {
 export default async function WorksPage({searchParams}: PageProps) {
     // 仅解析 URL 参数 — 无 DB 操作，瞬间完成
     const params = await searchParams;
+    const lang = await getLang();
 
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-brand-navy">作品库</h1>
+                <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.works.title")}</h1>
             </div>
             <div className="flex flex-col lg:flex-row gap-8">
                 {/* ── 侧栏：流式加载（tags/total/years 数据）── */}
                 <Suspense fallback={<LogoLoading text="正在加载筛选..." compact />}>
-                    <WorksSidebarData params={params} />
+                    <WorksSidebarData params={params} lang={lang} />
                 </Suspense>
 
                 {/* ── 主区域：工具栏（含桌面已选胶囊）+ 作品网格── */}
                 <div className="flex-1 min-w-0">
                     <Suspense fallback={<WorksToolbar />}>
-                        <WorksToolbarData params={params} />
+                        <WorksToolbarData params={params} lang={lang} />
                     </Suspense>
 
                     <Suspense fallback={<LogoLoading text="正在加载作品..." compact />}>
@@ -74,7 +79,7 @@ export default async function WorksPage({searchParams}: PageProps) {
 }
 
 /** 主区工具栏 — 解析标签名后渲染桌面端已选胶囊 */
-async function WorksToolbarData({ params }: { params: Record<string, any> }) {
+async function WorksToolbarData({ params, lang }: { params: Record<string, any>; lang: Lang }) {
     const tags = isMockDataEnabled()
         ? mockSidebarTags()
         : await cachedQuery(
@@ -93,7 +98,9 @@ async function WorksToolbarData({ params }: { params: Record<string, any> }) {
         120,
     );
     // 胶囊与高亮都由客户端按 URL 实时算（筛选不再触发 RSC 导航）
-    const tagNames = Object.fromEntries(tags.map((t: any) => [t.slug, t.name]));
+    const tagNames = Object.fromEntries(
+        tags.map((t: any) => [t.slug, tagDisplayName(t.slug, t.name, lang)]),
+    );
 
     return <WorksToolbar tagNames={tagNames} />;
 }
@@ -102,7 +109,7 @@ async function WorksToolbarData({ params }: { params: Record<string, any> }) {
    侧栏数据 — 异步组件（Suspense 包裹，流式加载）
    ═══════════════════════════════════════════════════════════════════ */
 
-async function WorksSidebarData({ params }: { params: Record<string, any> }) {
+async function WorksSidebarData({ params, lang }: { params: Record<string, any>; lang: Lang }) {
     const [tags, years] = isMockDataEnabled()
         ? [mockSidebarTags(), mockSidebarYears()]
         : await (async () => {
@@ -126,7 +133,7 @@ async function WorksSidebarData({ params }: { params: Record<string, any> }) {
         (acc[key] ??= []).push(tag);
         return acc;
     }, {});
-    const groupOrder = ["引擎", "大类", "要素", "其他"];
+    const groupOrder = ["引擎", "大类", "要素", "活动&赛事", "其他"];
     const sortedGroups = Object.keys(tagGroups).sort((a, b) => {
         const ia = groupOrder.indexOf(a);
         const ib = groupOrder.indexOf(b);
@@ -146,7 +153,7 @@ async function WorksSidebarData({ params }: { params: Record<string, any> }) {
                 (tagGroups[group] || []).filter((tag: any) => tag._count.projects > 0),
             ).map((tag: any) => ({
                 slug: tag.slug,
-                name: tag.name,
+                name: tagDisplayName(tag.slug, tag.name, lang),
                 color: tag.color,
                 count: tag._count.projects,
             })),
@@ -156,22 +163,22 @@ async function WorksSidebarData({ params }: { params: Record<string, any> }) {
     const filterContent = (
         <div className="space-y-6">
             <div>
-                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">类型</h3>
+                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.type")}</h3>
                 <div className="space-y-1.5">
-                    <FilterLink href={buildUrl(params, {types: void 0})} activeKeys={["types"]} label="全部类型"/>
+                    <FilterLink href={buildUrl(params, {types: void 0})} activeKeys={["types"]} label={t(lang, "works.filter.allTypes")}/>
                     {typeOptions.map(t => (
                         <FilterLink key={t.value}
                                     href={buildUrl(params, {types: t.value})}
                                     activeKeys={["types"]}
-                                    label={t.label}/>
+                                    label={typeLabel(t.value, lang)}/>
                     ))}
                 </div>
             </div>
             {years.length > 0 && (
                 <div>
-                    <h3 className="text-sm font-semibold mb-3 text-brand-text-body">年份</h3>
+                    <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.year")}</h3>
                     <div className="space-y-1.5">
-                        <FilterLink href={buildUrl(params, {year: void 0})} activeKeys={["year"]} label="全部年份"/>
+                        <FilterLink href={buildUrl(params, {year: void 0})} activeKeys={["year"]} label={t(lang, "works.filter.allYears")}/>
                         {years.map(y => <FilterLink key={y.developYear}
                                                     href={buildUrl(params, {year: String(y.developYear)})}
                                                     activeKeys={["year"]}
@@ -180,14 +187,16 @@ async function WorksSidebarData({ params }: { params: Record<string, any> }) {
                 </div>
             )}
             <div>
-                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">标签</h3>
+                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.tags")}</h3>
                 {/* 0 件作品的标签不展示，避免点进去空列表误以为筛选坏了 */}
                 <TagFilterChips groups={tagGroupsForUi} />
             </div>
         </div>
     );
 
-    const tagNames = Object.fromEntries(tags.map((t: any) => [t.slug, t.name]));
+    const tagNames = Object.fromEntries(
+        tags.map((t: any) => [t.slug, tagDisplayName(t.slug, t.name, lang)]),
+    );
 
     return (
         <FilterSidebarClient tagNames={tagNames}>
