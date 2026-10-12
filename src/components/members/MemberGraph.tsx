@@ -12,7 +12,10 @@
  * 缩放只改 transform；如果也在 canvas 里 drawImage，八十来张图每帧重绘
  * 既糊又难对齐，且跨域图片会污染画布。
  *
- * 物理是简化的力导向（斥力 + 弹簧 + 向心 + 碰撞），节点规模只有几十个。
+ * 物理仿 d3-force / Obsidian 图谱：所有力先累计到缓冲区、再统一积分；
+ * 斥力带距离上限（远处不互斥，自然形成聚簇而不是均匀摊开）；
+ * 弹簧长度按节点尺寸自适应、强度按 1/min(度) 衰减（hub 不勒死布局）；
+ * 碰撞是松弛迭代而不是直接改位置，收敛过程不抖。
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -62,27 +65,35 @@ interface SimNode extends RawNode {
     h: number;
     /** 碰撞用的外接圆半径 */
     r: number;
+    /** 斥力系数：节点越大，把别人推得越远 */
+    charge: number;
     idx: number;
+    /** 当前 tick 在 live 数组里的下标（力累计用） */
+    ti: number;
 }
 interface SimLink {
     a: SimNode;
     b: SimNode;
     kind: "develop" | "join";
     roles: string[];
+    /** 弹簧原长：两节点视觉半径之和 + 目标间隙 */
+    rest: number;
+    /** 弹簧强度：1/min(两端度数)，hub 一侧被弱约束，布局不被大叶节点勒死 */
+    k: number;
 }
 
-// ── 物理参数 ──
-const REPULSE = 2900; // 库仑斥力系数（除以距离平方）
-const REPULSE_MIN = 14; // 距离下限，防止两点重合时力爆炸
-const SPRING_DEV = 0.03;
-const SPRING_JOIN = 0.05;
-const LEN_DEV = 128;
-const LEN_JOIN = 88;
+// ── 物理参数（d3-force 语义：力 × alpha 累计，积分时统一衰减速度）──
+const CHARGE = 3200; // 斥力基准（除以距离平方），节点越大斥力越强
+const CHARGE_MAX_D = 460; // 斥力距离上限：之外不互斥，聚簇才能成形
+const GAP_DEV = 60; // develop 边：两节点边框之间的目标间隙
+const GAP_JOIN = 42; // join 边（成员—年份）的目标间隙，更短、聚得更紧
+const LINK_K = 0.55; // 弹簧强度基准，实际值 = LINK_K / min(两端度数)
 const CENTER = 0.016; // 向画布中心的弱引力，防止整图飘走
-const DAMP = 0.84; // 速度衰减
-const ALPHA_DECAY = 0.988;
-const ALPHA_MIN = 0.02;
-const COLLIDE_PAD = 6;
+const VELOCITY_KEEP = 0.6; // 每 tick 速度保留率（d3 默认 0.6），越小越稳
+const ALPHA_DECAY = 0.976; // ≈ d3 默认，约 300 tick 收敛
+const ALPHA_MIN = 0.001;
+const COLLIDE_PAD = 5;
+const COLLIDE_STRENGTH = 0.65; // 每轮碰撞只推开一部分，两轮迭代收敛
 
 const KIND_LABEL: Record<Kind, string> = {
     member: "成员",
@@ -224,18 +235,25 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     // ── 初始化模拟 ──
     useEffect(() => {
         if (!data) return;
+        // 初始布局用叶序螺旋（d3-force 同款）：均匀无缠绕，收敛形态稳定
+        const PHI = Math.PI * (3 - Math.sqrt(5)); // 黄金角
         const nodes: SimNode[] = data.nodes.map((n, i) => {
             const { w, h } = nodeBox(n);
+            const r = Math.hypot(w, h) / 2;
+            const rad = 44 * Math.sqrt(i + 0.5);
+            const ang = i * PHI;
             return {
                 ...n,
-                x: 0,
-                y: 0,
+                x: Math.cos(ang) * rad,
+                y: Math.sin(ang) * rad,
                 vx: 0,
                 vy: 0,
                 w,
                 h,
-                r: Math.hypot(w, h) / 2,
+                r,
+                charge: 0.5 + r / 60,
                 idx: i,
+                ti: i,
             };
         });
         const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -244,35 +262,17 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const a = byId.get(l.source);
             const b = byId.get(l.target);
             if (!a || !b) continue;
-            links.push({ a, b, kind: l.kind, roles: l.roles ?? [] });
-        }
-
-        // 初始布局：年份节点落在内环，成员挨着自己的年份节点，作品在外环
-        const years = nodes.filter((n) => n.kind === "year");
-        years.forEach((y, i) => {
-            const ang = (i / Math.max(years.length, 1)) * Math.PI * 2;
-            y.x = Math.cos(ang) * 150;
-            y.y = Math.sin(ang) * 150;
-        });
-        const yearOfMember = new Map<string, SimNode>();
-        for (const l of links) {
-            if (l.kind !== "join") continue;
-            yearOfMember.set(l.a.id, l.b);
-        }
-        let seed = 20261012;
-        const rnd = () => {
-            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-            return seed / 0x7fffffff;
-        };
-        for (const n of nodes) {
-            if (n.kind === "year") continue;
-            const ang = rnd() * Math.PI * 2;
-            const rad =
-                n.kind === "member" ? 150 + rnd() * 130 : 420 + rnd() * 220;
-            const anchor =
-                n.kind === "member" ? yearOfMember.get(n.id) : undefined;
-            n.x = (anchor?.x ?? 0) + Math.cos(ang) * rad;
-            n.y = (anchor?.y ?? 0) + Math.sin(ang) * rad;
+            // 视觉半径取均值半径（比外接圆小，方形节点的角不会把间隙撑大）
+            const rest =
+                (a.w + a.h) / 4 + (b.w + b.h) / 4 + (l.kind === "develop" ? GAP_DEV : GAP_JOIN);
+            const k = Math.max(
+                0.12,
+                Math.min(
+                    0.55,
+                    LINK_K / Math.min(Math.max(a.degree, 1), Math.max(b.degree, 1)),
+                ),
+            );
+            links.push({ a, b, kind: l.kind, roles: l.roles ?? [], rest, k });
         }
 
         simRef.current = { nodes, links };
@@ -355,8 +355,15 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         const { nodes, links } = sim;
         const alpha = alphaRef.current;
         const live = nodes.filter(visible);
+        for (let i = 0; i < live.length; i++) live[i].ti = i;
+
+        // 力累计缓冲区：所有力先算完再统一积分，顺序不影响结果
+        const fx = new Float64Array(live.length);
+        const fy = new Float64Array(live.length);
 
         // 斥力（O(n²)，节点规模小，直接算）
+        // 带距离上限：超过 CHARGE_MAX_D 不互斥，聚簇自然成形而不是全图均匀摊开；
+        // 接近上限时线性淡出，力不跳变
         for (let i = 0; i < live.length; i++) {
             const a = live[i];
             for (let j = i + 1; j < live.length; j++) {
@@ -370,78 +377,85 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                     dy = (b.idx % 5) * 0.1 + 0.1;
                     d2 = dx * dx + dy * dy;
                 }
-                const d = Math.max(Math.sqrt(d2), REPULSE_MIN);
-                const f = (REPULSE * alpha) / (d * d);
-                const fx = (dx / d) * f;
-                const fy = (dy / d) * f;
-                a.vx -= fx;
-                a.vy -= fy;
-                b.vx += fx;
-                b.vy += fy;
+                const d = Math.max(Math.sqrt(d2), 16);
+                if (d > CHARGE_MAX_D) continue;
+                let f = (CHARGE * a.charge * b.charge * alpha) / (d * d);
+                if (d > CHARGE_MAX_D * 0.72) {
+                    f *= (CHARGE_MAX_D - d) / (CHARGE_MAX_D * 0.28);
+                }
+                const ux = dx / d;
+                const uy = dy / d;
+                fx[i] -= ux * f;
+                fy[i] -= uy * f;
+                fx[j] += ux * f;
+                fy[j] += uy * f;
             }
         }
 
-        // 弹簧
+        // 弹簧：原长按节点尺寸预计算，强度按 1/min(度) 预计算
         for (const l of links) {
             if (!visible(l.a) || !visible(l.b)) continue;
             const dx = l.b.x - l.a.x;
             const dy = l.b.y - l.a.y;
             const d = Math.max(Math.hypot(dx, dy), 0.5);
-            const rest = l.kind === "develop" ? LEN_DEV : LEN_JOIN;
-            const k = l.kind === "develop" ? SPRING_DEV : SPRING_JOIN;
-            const f = ((d - rest) / d) * k * alpha;
+            const f = ((d - l.rest) / d) * l.k * alpha;
             // 度数大的一端少动一点，图更稳
             const wa = 1 / (1 + Math.min(l.a.degree, 8) * 0.12);
             const wb = 1 / (1 + Math.min(l.b.degree, 8) * 0.12);
-            l.a.vx += dx * f * wa;
-            l.a.vy += dy * f * wa;
-            l.b.vx -= dx * f * wb;
-            l.b.vy -= dy * f * wb;
+            fx[l.a.ti] += dx * f * wa;
+            fy[l.a.ti] += dy * f * wa;
+            fx[l.b.ti] -= dx * f * wb;
+            fy[l.b.ti] -= dy * f * wb;
         }
 
-        // 向心 + 积分
-        // 容器通常是宽扁的，纯 radial 向心力会把图挤成一个圆、横向留大片空白。
-        // 这里按画布宽高比做成各向异性：横向拉得松、纵向拉得紧，图自然摊开成横扁形
+        // 向心（各向异性）：容器通常是宽扁的，纯 radial 向心力会把图挤成一个圆。
         // 平衡点距离与 sqrt(力系数) 成反比，要让图形横向铺开的比例等于画布宽高比，
-        // 两个方向的力系数之比就得是宽高比的平方，即这里的 asp 直接用宽高比
+        // 两个方向的力系数之比就得是宽高比的平方，即 asp 直接用宽高比
         const asp = aspectRef.current;
         const cx = (CENTER / asp) * alpha * 4;
         const cy = CENTER * asp * alpha * 4;
-        for (const n of live) {
-            n.vx -= n.x * cx;
-            n.vy -= n.y * cy;
+        for (let i = 0; i < live.length; i++) {
+            fx[i] -= live[i].x * cx;
+            fy[i] -= live[i].y * cy;
+        }
+
+        // 统一积分：v = (v + F) * 速度保留率
+        for (let i = 0; i < live.length; i++) {
+            const n = live[i];
             if (dragRef.current?.node === n) {
                 n.vx = 0;
                 n.vy = 0;
                 continue;
             }
-            n.vx *= DAMP;
-            n.vy *= DAMP;
+            n.vx = (n.vx + fx[i]) * VELOCITY_KEEP;
+            n.vy = (n.vy + fy[i]) * VELOCITY_KEEP;
             n.x += n.vx;
             n.y += n.vy;
         }
 
-        // 碰撞分离（直接改位置，避免抖动）
-        for (let i = 0; i < live.length; i++) {
-            const a = live[i];
-            for (let j = i + 1; j < live.length; j++) {
-                const b = live[j];
-                const min = a.r + b.r + COLLIDE_PAD;
-                let dx = b.x - a.x;
-                let dy = b.y - a.y;
-                const d2 = dx * dx + dy * dy;
-                if (d2 >= min * min || d2 < 0.0001) continue;
-                const d = Math.sqrt(d2);
-                const push = (min - d) / 2;
-                const ux = dx / d;
-                const uy = dy / d;
-                if (dragRef.current?.node !== a) {
-                    a.x -= ux * push;
-                    a.y -= uy * push;
-                }
-                if (dragRef.current?.node !== b) {
-                    b.x += ux * push;
-                    b.y += uy * push;
+        // 碰撞：两轮松弛迭代，每轮只推开一部分，不和速度打架，收敛不抖
+        for (let round = 0; round < 2; round++) {
+            for (let i = 0; i < live.length; i++) {
+                const a = live[i];
+                for (let j = i + 1; j < live.length; j++) {
+                    const b = live[j];
+                    const min = a.r + b.r + COLLIDE_PAD;
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+                    const d2 = dx * dx + dy * dy;
+                    if (d2 >= min * min || d2 < 0.0001) continue;
+                    const d = Math.sqrt(d2);
+                    const push = ((min - d) / 2) * COLLIDE_STRENGTH;
+                    const ux = dx / d;
+                    const uy = dy / d;
+                    if (dragRef.current?.node !== a) {
+                        a.x -= ux * push;
+                        a.y -= uy * push;
+                    }
+                    if (dragRef.current?.node !== b) {
+                        b.x += ux * push;
+                        b.y += uy * push;
+                    }
                 }
             }
         }
@@ -457,11 +471,18 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const d = Math.hypot(dx, dy) || 1;
             const ux = dx / d;
             const uy = dy / d;
-            const hw = a.w / 2 + 2;
-            const hh = a.h / 2 + 2;
-            const tx = Math.abs(ux) < 1e-6 ? Infinity : hw / Math.abs(ux);
-            const ty = Math.abs(uy) < 1e-6 ? Infinity : hh / Math.abs(uy);
-            const t = Math.min(tx, ty, d / 2);
+            let t: number;
+            if (a.kind === "member") {
+                // 成员渲染成圆形头像，按圆裁；按方裁会在斜角方向把线头留在图里
+                t = a.w / 2 + 3;
+            } else {
+                const hw = a.w / 2 + 3;
+                const hh = a.h / 2 + 3;
+                const tx = Math.abs(ux) < 1e-6 ? Infinity : hw / Math.abs(ux);
+                const ty = Math.abs(uy) < 1e-6 ? Infinity : hh / Math.abs(uy);
+                t = Math.min(tx, ty);
+            }
+            t = Math.min(t, d / 2);
             return { x: a.x + ux * t, y: a.y + uy * t };
         },
         [],
@@ -504,24 +525,40 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             return 1;
         };
 
-        // ── 边 ──
-        for (const l of sim.links) {
-            if (!visible(l.a) || !visible(l.b)) continue;
-            const related = !hover || (nb.has(l.a.id) && nb.has(l.b.id));
-            const lit = hover
-                ? related
-                : q
-                  ? matchIds.has(l.a.id) || matchIds.has(l.b.id)
-                  : true;
-            ctx.globalAlpha = lit ? 1 : 0.08;
-            ctx.strokeStyle = lit ? c.edgeHot : c.edge;
-            ctx.lineWidth = lit ? 1.5 : 1;
-            const p1 = borderPoint(l.a, l.b);
-            const p2 = borderPoint(l.b, l.a);
-            ctx.beginPath();
-            ctx.moveTo(p1.x * k + ox, p1.y * k + oy);
-            ctx.lineTo(p2.x * k + ox, p2.y * k + oy);
-            ctx.stroke();
+        // ── 边：两遍绘制。常态全是统一细线（Obsidian 风格）；
+        // hover / 搜索时先画淡出层，再把高亮边画在最上层
+        const focusing = !!hover || !!q;
+        ctx.lineCap = "round";
+        for (const pass of ["dim", "lit"] as const) {
+            for (const l of sim.links) {
+                if (!visible(l.a) || !visible(l.b)) continue;
+                const related = !hover || (nb.has(l.a.id) && nb.has(l.b.id));
+                const lit = hover
+                    ? related
+                    : q
+                      ? matchIds.has(l.a.id) || matchIds.has(l.b.id)
+                      : true;
+                if ((pass === "lit") !== lit) continue;
+                if (lit && !focusing) {
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = c.edge;
+                    ctx.lineWidth = 1;
+                } else if (lit) {
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = c.edgeHot;
+                    ctx.lineWidth = 1.6;
+                } else {
+                    ctx.globalAlpha = 0.06;
+                    ctx.strokeStyle = c.edge;
+                    ctx.lineWidth = 1;
+                }
+                const p1 = borderPoint(l.a, l.b);
+                const p2 = borderPoint(l.b, l.a);
+                ctx.beginPath();
+                ctx.moveTo(p1.x * k + ox, p1.y * k + oy);
+                ctx.lineTo(p2.x * k + ox, p2.y * k + oy);
+                ctx.stroke();
+            }
         }
         ctx.globalAlpha = 1;
 
