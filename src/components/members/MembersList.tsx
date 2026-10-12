@@ -1,10 +1,51 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { positionLabel, positionColor } from "@/lib/position";
+import MemberGraph from "./MemberGraph";
+
+/** 线性（描边）放大镜图标 */
+function SearchIcon({ className = "" }: { className?: string }) {
+    return (
+        <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className={className}
+        >
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <line x1="15.5" y1="15.5" x2="20" y2="20" />
+        </svg>
+    );
+}
+
+/** 线性关闭图标 */
+function CloseIcon() {
+    return (
+        <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden
+        >
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+        </svg>
+    );
+}
 
 interface MemberItem {
   id: string;
@@ -29,8 +70,25 @@ interface Props {
 
 export default function MembersList({ members: allMembers, totalCount, activeCount }: Props) {
   const [query, setQuery] = useState("");
-  const [mode, setMode] = useState<"grade" | "joinYear">("grade");
+  const [mode, setMode] = useState<"grade" | "joinYear" | "graph">("grade");
+  const [searchRaw, setSearchOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const searchBtnRef = useRef<HTMLButtonElement>(null);
   const hasQuery = query.trim().length > 0;
+  // 有搜索词时保持展开，清空后自动收回成图标
+  const searchOpen = searchRaw || hasQuery;
+
+  // 展开后 <input> 才挂载，靠它的 autoFocus 拿到焦点。
+  // 这里只补一种情况：挂载完仍没有任何焦点（个别浏览器不认 autoFocus）。
+  // 用户已经点了别处时不抢焦点。
+  useEffect(() => {
+    if (!searchOpen) return;
+    const id = window.setTimeout(() => {
+      const el = inputRef.current;
+      if (el && document.activeElement === document.body) el.focus();
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [searchOpen]);
 
   // 客户端过滤 + 按模式分组
   const { filtered, groupedFiltered, sortedKeysFiltered } = useMemo(() => {
@@ -89,43 +147,92 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
             {hasQuery && <> · 找到 {filtered.length} 位匹配成员</>}
           </p>
         </div>
-        <div className="relative w-full sm:w-72 sm:shrink-0">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-text-muted">🔍</span>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索成员姓名或职能…"
-            aria-label="搜索成员"
-            className="w-full bg-card border rounded-lg pl-9 pr-9 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="清除搜索"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-brand-text-muted hover:opacity-70"
-            >
-              ✕
-            </button>
-          )}
+        {/* 搜索：默认收起为一个线性放大镜图标，点开才展开输入框 */}
+        <div className="relative h-[42px] w-full sm:w-72 sm:shrink-0">
+          {/* 收起态：一个线性放大镜图标按钮 */}
+          <button
+            type="button"
+            ref={searchBtnRef}
+            onClick={() => setSearchOpen(true)}
+            aria-label="展开搜索框"
+            aria-expanded={searchOpen}
+            aria-hidden={searchOpen}
+            tabIndex={searchOpen ? -1 : 0}
+            className={`absolute right-0 top-0 h-[42px] w-[42px] flex items-center justify-center rounded-lg text-brand-text-muted transition-all hover:text-brand-text hover:bg-brand-surface ${
+              searchOpen ? "pointer-events-none opacity-0" : "opacity-100"
+            }`}
+          >
+            <SearchIcon />
+          </button>
+
+          {/* 展开态：输入框（收起时不渲染，避免藏一个可聚焦元素在无障碍树里） */}
+          <div
+            className={`absolute inset-y-0 right-0 flex items-center transition-all duration-200 ${
+              searchOpen ? "w-full" : "w-[42px] pointer-events-none"
+            }`}
+          >
+            {searchOpen && (
+              <>
+                <span className="pointer-events-none absolute left-3 text-brand-text-muted">
+                  <SearchIcon />
+                </span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onBlur={() => setSearchOpen(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setQuery("");
+                      setSearchOpen(false);
+                    }
+                  }}
+                  placeholder="搜索成员姓名或职能…"
+                  aria-label="搜索成员姓名或职能"
+                  autoFocus
+                  className="w-full bg-card border rounded-lg pl-9 pr-9 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent border-brand-border-subtle text-brand-text-heading"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setQuery("");
+                    setSearchOpen(false);
+                    searchBtnRef.current?.focus();
+                  }}
+                  aria-label="关闭搜索"
+                  className="absolute right-3 text-brand-text-muted hover:opacity-70"
+                >
+                  <CloseIcon />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* 模式切换 */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <button type="button" onClick={() => setMode("grade")}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === "grade" ? "bg-brand-navy text-white" : "bg-brand-surface-page text-brand-text-body"}`}
         >按年级</button>
         <button type="button" onClick={() => setMode("joinYear")}
           className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === "joinYear" ? "bg-brand-navy text-white" : "bg-brand-surface-page text-brand-text-body"}`}
         >按入社年份</button>
+        <button type="button" onClick={() => setMode("graph")}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === "graph" ? "bg-brand-navy text-white" : "bg-brand-surface-page text-brand-text-body"}`}
+        >关系图谱</button>
       </div>
 
+      {mode === "graph" ? (
+        <MemberGraph query={query} />
+      ) : (
+      <>
       {/* 成员列表 */}
       {sortedKeysFiltered.length === 0 ? (
         <div className="text-center py-16 text-brand-text-muted">
-          <div className="text-4xl mb-4">🔍</div>
+          <SearchIcon className="w-10 h-10 mx-auto mb-4 opacity-60" />
           <p>没有找到匹配的成员</p>
         </div>
       ) : (
@@ -169,6 +276,8 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
             </div>
           </section>
         ))
+      )}
+      </>
       )}
     </>
   );
