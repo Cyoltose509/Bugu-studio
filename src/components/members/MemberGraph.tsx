@@ -129,6 +129,16 @@ const YEAR_QUAD: { cell: string; text: string }[] = [
     { cell: "bg-[#25547A] dark:bg-[#3D74A8]", text: "text-white" },
 ];
 
+/** 无头像成员的品牌色染色池（藏青在暗色底下太暗，只取两主题都够亮的四色） */
+const BRAND_TINTS = ["#3388BB", "#E38043", "#88C232", "#F09055"];
+
+/** 按 id 哈希取色：看起来是随机染色，但同一成员的颜色稳定不变 */
+function brandTint(id: string): string {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return BRAND_TINTS[h % BRAND_TINTS.length];
+}
+
 /** 读取当前主题下的配色（昼夜切换后要重读） */
 function readColors() {
     const s = getComputedStyle(document.documentElement);
@@ -938,11 +948,14 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                                             />
                                         ) : (
                                             <div
-                                                className="flex h-full w-full items-center justify-center rounded-full ring-1 ring-black/10 dark:ring-white/20 text-brand-text-secondary select-none"
+                                                className={`flex h-full w-full items-center justify-center rounded-full ring-1 ring-black/10 dark:ring-white/20 select-none ${
+                                                    n.graduated ? "saturate-[0.45]" : ""
+                                                }`}
                                                 style={{
                                                     fontSize: Math.round(w * 0.42),
-                                                    background:
-                                                        "var(--color-brand-surface-page, rgba(125,140,160,0.14))",
+                                                    fontWeight: 700,
+                                                    color: brandTint(n.id),
+                                                    background: `${brandTint(n.id)}33`,
                                                 }}
                                             >
                                                 {n.label.trim().charAt(0).toUpperCase()}
