@@ -3,7 +3,7 @@
 /**
  * 客户端图片上传统一入口
  *
- * 背景（重要）：站点部署在 Vercel，Serverless Function 的请求体上限是 4.5MB。
+ * 背景（重要）：站点部署在 Vercel，Serverless Function 的请求体有硬上限。
  * 超过这个体积时，请求根本到不了 Next.js —— Vercel 边缘直接返回纯文本：
  *
  *     Request Entity Too Large
@@ -14,26 +14,28 @@
  * `Unexpected token 'R', "Request En"... is not valid JSON`。
  * 那个 'R' 就是 "Request Entity Too Large" 的首字母。
  *
+ * 具体数值见 ./uploadLimits.ts（2026-10-12 对生产站实测：请求体上限
+ * 4,491,679 ~ 4,492,093 字节），本文件不再自己定义阈值。
+ *
  * 所以这里的策略是：
  *   1. 能不动就不动 —— 原图体积在安全阀以内就直接上传，一个字节都不重编码。
- *   2. 超限时才压缩，且先只降质量、保住原始分辨率，实在不行再缩尺寸。
- *   3. 解析响应先取文本再 try JSON，413 / 非 JSON 都给出中文提示。
+ *   2. 超限的一律过压缩算法，且先只降质量、保住原始分辨率，实在不行再缩尺寸。
+ *   3. 压缩完仍超限就不再发送（否则必然 413），直接给中文提示。
+ *   4. 解析响应先取文本再 try JSON，413 / 非 JSON 都给出中文提示。
  */
 
-/** 实际发送上限。Vercel 硬限 4.5MB，留出 0.3MB 给 multipart 边界和字段头 */
-export const UPLOAD_LIMIT_BYTES = 4.2 * 1024 * 1024;
-/** 展示用的服务器硬限（Vercel 侧） */
-export const UPLOAD_LIMIT_MB = 4.5;
+// 限额统一在 uploadLimits.ts 定义，客户端与服务端共用同一份，避免两边口径不一致
+import {
+  UPLOAD_LIMIT_BYTES,
+  UPLOAD_LIMIT_MB,
+  AVATAR_LIMIT_BYTES,
+  formatMB,
+} from "./uploadLimits";
+
+export { UPLOAD_LIMIT_BYTES, UPLOAD_LIMIT_MB, AVATAR_LIMIT_BYTES, formatMB };
 
 export const ACCEPTED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 export const ACCEPT_ATTR = "image/jpeg,image/png,image/webp";
-
-/** 头像接口自己的限额是 2MB */
-export const AVATAR_LIMIT_BYTES = 1.9 * 1024 * 1024;
-
-export function formatMB(bytes: number): string {
-  return (bytes / 1024 / 1024).toFixed(1);
-}
 
 export function isAcceptedImage(file: File): boolean {
   return (ACCEPTED_MIME as readonly string[]).includes(file.type);
@@ -182,10 +184,12 @@ export async function fitWithinLimit(
       Math.round(longest * Math.sqrt(limit / file.size) * 0.95),
     );
 
-    let best: Blob | null = null;
+    // 用对象持有而不是 let 变量：闭包里赋值时 TS 的控制流分析会把 let 窄化成 null，
+    // 后面读到的类型会变成 never
+    const holder: { best: Blob | null } = { best: null };
     const accept = (blob: Blob | null): File | null => {
       if (!blob) return null;
-      best = blob;
+      holder.best = blob;
       if (blob.size <= limit) {
         return new File([blob], renameFor(file.name, blob.type), {
           type: blob.type,
@@ -213,18 +217,30 @@ export async function fitWithinLimit(
       side = Math.max(640, Math.round(side * 0.72));
     }
 
-    if (best) {
-      const blob = best as Blob;
+    // 兜底：主循环没压到限额以内时，再按更小的边长 + 更低的质量走一轮。
+    // 4.2MB 的限额下 640px 不可能压不进去，能走到这里说明是极端输入。
+    for (const s of [1280, 960, 720, 640]) {
+      for (const q of [0.6, 0.5, 0.4]) {
+        const done = accept(await encode(decoded, s, q));
+        if (done) return { file: done, compressed: true, originalSize: file.size };
+      }
+    }
+
+    // 仍然超限就不要发了 —— 发出去必然是 413，不如给一句明确的中文提示
+    const best = holder.best;
+    if (best && best.size <= limit) {
       return {
-        file: new File([blob], renameFor(file.name, blob.type), {
-          type: blob.type,
+        file: new File([best], renameFor(file.name, best.type), {
+          type: best.type,
           lastModified: Date.now(),
         }),
         compressed: true,
         originalSize: file.size,
       };
     }
-    throw new Error("图片压缩失败，请换一张试试");
+    throw new Error(
+      `图片压缩后仍有 ${formatMB(best?.size ?? file.size)}MB，超过 ${formatMB(limit)}MB 上限，请换一张小一些的图`,
+    );
   } finally {
     decoded.dispose();
     if (decoded.objectUrl) URL.revokeObjectURL(decoded.objectUrl);
@@ -267,6 +283,14 @@ export async function uploadImage(
   assertImageFile(file);
 
   const fitted = await fitWithinLimit(file, limit);
+
+  // 压缩完仍然超限就不发了：Vercel 边缘会直接返回纯文本 413，
+  // 用户只会看到莫名其妙的报错。这里拦下来给明确提示。
+  if (fitted.file.size > limit) {
+    throw new Error(
+      `图片压缩后仍有 ${formatMB(fitted.file.size)}MB，超过 ${formatMB(limit)}MB 上限，请换一张小一些的图`,
+    );
+  }
 
   const fd = new FormData();
   fd.append("file", fitted.file, fitted.file.name);

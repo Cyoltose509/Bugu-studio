@@ -6,7 +6,7 @@
 
 import { auth } from "@/lib/auth/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { uploadToR2 } from "@/lib/utils/upload";
+import { uploadToR2, MAX_FILE_SIZE } from "@/lib/utils/upload";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
 
 export async function POST(req: NextRequest) {
@@ -38,8 +38,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (file.size > 4 * 1024 * 1024) {
-    return NextResponse.json({ error: "文件大小不能超过 4MB" }, { status: 400 });
+  if (file.size > MAX_FILE_SIZE.cover) {
+    return NextResponse.json(
+      { error: `文件大小不能超过 ${MAX_FILE_SIZE.cover / 1024 / 1024}MB` },
+      { status: 400 }
+    );
   }
 
   const bytes = await file.arrayBuffer();
