@@ -211,43 +211,61 @@ const F_GEORGIA_TNR: React.CSSProperties = {fontFamily: "Georgia,'Times New Roma
 
 // ═══════════════════════════════════════════════════════
 //  橄榄枝（月桂叶）：程序化生成，左右对称，像括号一样包住奖项
+//  参考样式：小椭圆叶密集排列在弧线两侧，颜色用 --np-laurel（青色）
 // ═══════════════════════════════════════════════════════
-const LAUREL_VIEWBOX = "0 0 120 200";
+const LAUREL_VIEWBOX = "0 0 80 200";
 
 function LaurelBranch({flip = false, className = ""}: { flip?: boolean; className?: string }) {
-    const CX = 102, CY = 100, R = 76;
-    const rad = (d: number) => (d * Math.PI) / 180;
+    // 茎是一条左开口的二次贝塞尔曲线，像半个括号 "("
+    const P0 = { x: 54, y: 10 };
+    const P1 = { x: 2, y: 100 };
+    const P2 = { x: 54, y: 190 };
 
-    // 茎：沿圆弧采样（两端略微超出叶子范围，形成伸出的小尾巴）
-    const stemPts: string[] = [];
-    for (let d = 76; d <= 284; d += 4) {
-        stemPts.push(`${(CX + R * Math.cos(rad(d))).toFixed(1)},${(CY + R * Math.sin(rad(d))).toFixed(1)}`);
-    }
-    const stemPath = "M " + stemPts.join(" L ");
+    const bezier = (t: number) => {
+        const a = (1 - t) * (1 - t);
+        const b = 2 * (1 - t) * t;
+        const c = t * t;
+        return {
+            x: a * P0.x + b * P1.x + c * P2.x,
+            y: a * P0.y + b * P1.y + c * P2.y,
+        };
+    };
 
-    // 叶子：沿茎交错排列，长短轴向切线方向、交替外倾
+    // 切线角度（度）
+    const tangentDeg = (t: number) => {
+        const dx = 2 * (1 - t) * (P1.x - P0.x) + 2 * t * (P2.x - P1.x);
+        const dy = 2 * (1 - t) * (P1.y - P0.y) + 2 * t * (P2.y - P1.y);
+        return (Math.atan2(dy, dx) * 180) / Math.PI;
+    };
+
+    // 平滑的茎路径
+    const stemPath = `M ${P0.x},${P0.y} Q ${P1.x},${P1.y} ${P2.x},${P2.y}`;
+
+    // 叶子沿茎两侧密集排列
     const leaves: React.ReactElement[] = [];
-    const N = 10;
+    const N = 15;
     for (let i = 0; i < N; i++) {
-        const t = 96 + (174 * i) / (N - 1); // 96° → 270°
-        const leafR = R + 13 + (i % 2 ? 3 : 0);
-        const x = CX + leafR * Math.cos(rad(t));
-        const y = CY + leafR * Math.sin(rad(t));
-        // 切线角 = t + 90°，交替 ±26° 外倾，越靠尖端叶子越小
-        const tipFactor = 1 - Math.abs(i - (N - 1) / 2) / ((N - 1) / 2); // 中间 1，两端 0
-        const rx = 11.5 + tipFactor * 2.5;
-        const ry = 4.4 + tipFactor * 1.2;
-        const rot = t + 90 + (i % 2 ? 26 : -26);
+        const t = i / (N - 1);
+        const p = bezier(t);
+        const theta = tangentDeg(t);
+        // 越靠两端叶子越小，中间最大
+        const tipFactor = 1 - Math.abs(i - (N - 1) / 2) / ((N - 1) / 2);
+        const rx = 6.0 + tipFactor * 2.2;
+        const ry = 2.8 + tipFactor * 1.0;
+        // 外倾角：外侧（背离内容）+，内侧（朝向内容）-
+        const side = i % 2 === 0 ? 1 : -1;
+        const rot = theta + side * 34;
         leaves.push(
-            <ellipse key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} rx={rx.toFixed(1)} ry={ry.toFixed(1)}
-                     transform={`rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`}/>,
+            <ellipse key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)}
+                     rx={rx.toFixed(1)} ry={ry.toFixed(1)}
+                     transform={`rotate(${rot.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})`}/>
         );
     }
 
     return (
         <svg viewBox={LAUREL_VIEWBOX} className={className} aria-hidden="true"
              fill="currentColor" style={flip ? {transform: "scaleX(-1)"} : undefined}>
-            <path d={stemPath} fill="none" stroke="currentColor" strokeWidth={3.4} strokeLinecap="round"/>
+            <path d={stemPath} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"/>
             {leaves}
         </svg>
     );
@@ -259,11 +277,11 @@ function LaurelBranch({flip = false, className = ""}: { flip?: boolean; classNam
 function LaurelBracket({children, gap = 10}: { children: React.ReactNode; gap?: number }) {
     return (
         <div className="flex items-stretch justify-center w-full" style={{columnGap: gap}}>
-            <LaurelBranch className="w-7 sm:w-8 shrink-0 self-stretch"/>
+            <LaurelBranch className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
             <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center py-1.5">
                 {children}
             </div>
-            <LaurelBranch flip className="w-7 sm:w-8 shrink-0 self-stretch"/>
+            <LaurelBranch flip className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
         </div>
     );
 }
