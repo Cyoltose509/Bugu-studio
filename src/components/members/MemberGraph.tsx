@@ -83,10 +83,10 @@ interface SimLink {
 }
 
 // ── 物理参数（d3-force 语义：力 × alpha 累计，积分时统一衰减速度）──
-const CHARGE = 4200; // 斥力基准（除以距离平方），节点越大斥力越强
-const CHARGE_MAX_D = 560; // 斥力距离上限：之外不互斥，聚簇才能成形
-const GAP_DEV = 74; // develop 边：两节点边框之间的目标间隙
-const GAP_JOIN = 52; // join 边（成员—年份）的目标间隙，更短、聚得更紧
+const CHARGE = 5800; // 斥力基准（除以距离平方），节点越大斥力越强
+const CHARGE_MAX_D = 680; // 斥力距离上限：之外不互斥，聚簇才能成形
+const GAP_DEV = 108; // develop 边：两节点边框之间的目标间隙
+const GAP_JOIN = 76; // join 边（成员—年份）的目标间隙，更短、聚得更紧
 const LINK_K = 0.45; // 弹簧强度基准，实际值 = LINK_K / min(两端度数)
 const CENTER = 0.013; // 向画布中心的弱引力，防止整图飘走
 const VELOCITY_KEEP = 0.7; // 每 tick 速度保留率，越大惯性越足、运动越绵
@@ -94,7 +94,7 @@ const ALPHA_DECAY = 0.976; // ≈ d3 默认，约 300 tick 收敛
 const ALPHA_FLOOR = 0.06; // 收敛后保底能量：不彻底冻结，节点继续缓慢呼吸漂移
 const BREATH_AMP = 0.1; // 向心力的呼吸幅度
 const BREATH_PERIOD = 300; // 呼吸周期（tick 数，约 5 秒）
-const COLLIDE_PAD = 9; // 节点之间的呼吸留白
+const COLLIDE_PAD = 15; // 节点之间的呼吸留白
 const COLLIDE_STRENGTH = 0.5; // 每轮碰撞只推开一部分，三轮迭代收敛
 const VIEW_EASE = 0.22; // 视图缓动系数（滚轮缩放 / 重置视图）
 
@@ -111,7 +111,7 @@ function nodeBox(n: RawNode): { w: number; h: number } {
         return { w: s, h: s };
     }
     if (n.kind === "project") {
-        const w = 48 + Math.sqrt(n.degree) * 11;
+        const w = 70 + Math.sqrt(n.degree) * 15;
         return { w, h: Math.round(w * 0.66) };
     }
     const d = 30 + Math.sqrt(n.degree) * 7;
@@ -294,9 +294,14 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         simRef.current = { nodes, links };
         alphaRef.current = 1;
         settleFitRef.current = false;
+        // 关系图谱是专注视图：给 <html> 加 class 隐藏站点尾部卡片（避免与滚轮缩放打架）
+        document.documentElement.classList.add("graph-fullscreen");
         fitView(true); // 首次落位直接到位，不做缓动
         start();
-        return () => stop();
+        return () => {
+            document.documentElement.classList.remove("graph-fullscreen");
+            stop();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data]);
 
@@ -363,7 +368,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const k = Math.min((w - 40) / bw, (h - 40) / bh);
             const view = viewRef.current;
             const target = targetRef.current;
-            target.k = Math.max(0.3, Math.min(k, 1.6));
+            target.k = Math.max(0.12, Math.min(k, 1.6));
             target.x = w / 2 - ((minX + maxX) / 2) * target.k;
             target.y = h / 2 - ((minY + maxY) / 2) * target.k;
             if (immediate) {
@@ -859,22 +864,30 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         }
     };
 
-    const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-        e.preventDefault();
-        touchedRef.current = true;
+    // 滚轮缩放必须手动挂非 passive 监听：React 的 onWheel 经根节点 passive 委托，
+    // e.preventDefault() 不生效，结果滚轮变成滚页面而非缩放（这一页滚轮被干扰的根因）。
+    // 依赖 data：组件在 data 未到达时只渲染 loading、canvas 还没挂载，首挂载时 canvasRef 为
+    // null 会提前 return，必须在 canvas 真正出现后（data 就绪）重挂监听。
+    useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-        const target = targetRef.current;
-        const prev = target.k;
-        const next = Math.max(0.3, Math.min(2.6, prev * (e.deltaY < 0 ? 1.12 : 0.89)));
-        // 以光标为锚点缩放：连滚会累积成一次缓动，不一级一级蹦
-        target.x = mx - ((mx - target.x) / prev) * next;
-        target.y = my - ((my - target.y) / prev) * next;
-        target.k = next;
-    };
+        const handler = (e: WheelEvent) => {
+            e.preventDefault();
+            touchedRef.current = true;
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const target = targetRef.current;
+            const prev = target.k;
+            const next = Math.max(0.3, Math.min(2.6, prev * (e.deltaY < 0 ? 1.12 : 0.89)));
+            // 以光标为锚点缩放：连滚会累积成一次缓动，不一级一级蹦
+            target.x = mx - ((mx - target.x) / prev) * next;
+            target.y = my - ((my - target.y) / prev) * next;
+            target.k = next;
+        };
+        canvas.addEventListener("wheel", handler, { passive: false });
+        return () => canvas.removeEventListener("wheel", handler);
+    }, [data]);
 
     const onLeave = () => {
         if (hoverRef.current) {
@@ -933,7 +946,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         <div>
             <div
                 ref={wrapRef}
-                className="relative w-full h-[62vh] min-h-[440px] max-h-[720px] cursor-grab active:cursor-grabbing overflow-hidden"
+                className="relative w-full h-[calc(100vh-210px)] min-h-[520px] cursor-grab active:cursor-grabbing overflow-hidden"
             >
                 <canvas
                     ref={canvasRef}
@@ -943,7 +956,6 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                     onPointerUp={onPointerUp}
                     onPointerCancel={onPointerUp}
                     onPointerLeave={onLeave}
-                    onWheel={onWheel}
                 />
 
                 {/* 节点层：不接收指针事件，命中判定全在 canvas 上 */}

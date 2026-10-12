@@ -777,4 +777,9 @@ html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
 .newspaper-paper .np-act-tag-course { background: var(--np-navy); }
 .newspaper-paper .np-act-tag-general { background: var(--np-green); }
 .newspaper-paper .np-act-tag-meeting { background: var(--np-line); color: var(--np-ink); }
+
+/* 关系图谱视图：全屏专注模式，隐藏站点尾部卡片，避免滚轮缩放与页面滚动打架 */
+html.graph-fullscreen footer {
+  display: none !important;
+}
 .newspaper-paper .np-rich a { color: var(--np-navy); }
