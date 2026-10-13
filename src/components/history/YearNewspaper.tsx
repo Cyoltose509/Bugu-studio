@@ -398,7 +398,6 @@ const Q: Record<string, string> = {
     tlImgWrap: "relative w-[120px] h-[80px] rounded-[2px] overflow-hidden border np-border-l cursor-zoom-in shrink-0",
 
     colophon: "text-center text-[11px] np-line-fg leading-[1.8] tracking-[3px] pb-8",
-    colophonUrl: "text-[9px] tracking-[1px] opacity-70",
 };
 
 const QS: Record<string, React.CSSProperties> = {
@@ -422,7 +421,6 @@ const QS: Record<string, React.CSSProperties> = {
     tlTitle: F_SANS,
     tlDate: F_GEORGIA,
     colophon: F_SANS,
-    colophonUrl: F_GEORGIA,
     sidePanelTitle: F_SANS,
 };
 
@@ -1036,8 +1034,6 @@ function YearNewspaper({
                         <div className={Q.rule} style={QS.rule}/>
                         <div className={Q.colophon} style={QS.colophon}>
                             {t(lang, "history.colophon")}
-                            <br/>
-                            <span className={Q.colophonUrl} style={QS.colophonUrl}>bugu.studio</span>
                         </div>
                     </div>
                 </div>

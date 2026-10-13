@@ -202,8 +202,8 @@ export const dict = {
   "history.activeMembersSection": { cn: "年 度 活 跃 成 员", en: "ACTIVE MEMBERS OF THE YEAR" },
   "history.presidents": { cn: "◆ 当年社长", en: "◆ Presidents" },
   "history.colophon": {
-    cn: "布谷工作室 · 保持热爱 · 持续创造",
-    en: "Bugoo Studio · Keep the Passion · Keep Creating",
+    cn: "Bugoo Studio",
+    en: "Bugoo Studio",
   },
   "history.saveAsPdf": { cn: "保存 {y} 年报为 PDF", en: "Save {y} annual review as PDF" },
   "history.saveAsImage": { cn: "保存 {y} 年报为长图", en: "Save {y} annual review as image" },
