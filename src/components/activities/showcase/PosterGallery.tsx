@@ -13,6 +13,7 @@ export default function PosterGallery({ posters, featured = false }: {
   const dialog = useRef<HTMLDialogElement>(null);
   const [selected, setSelected] = useState(0);
   if (!posters.length) return null;
+  const poster = posters[Math.min(selected, posters.length - 1)];
   return <>
     <div className={featured ? "w-full max-w-sm mx-auto" : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3"}>
       {posters.map((poster, index) => <figure key={`${poster.url}-${index}`} className="min-w-0">
@@ -28,15 +29,15 @@ export default function PosterGallery({ posters, featured = false }: {
         <figcaption className="mt-3 text-sm text-brand-text-secondary">{poster.title} <span className="text-brand-blue">{t(lang, "showcase.poster.clickHint")}</span></figcaption>
       </figure>)}
     </div>
-    <dialog ref={dialog} aria-label={posters[selected].title}
+    <dialog ref={dialog} aria-label={poster.title}
       className="m-auto max-w-[96vw] max-h-[94dvh] rounded-xl bg-card p-3 backdrop:bg-black/80"
       onClick={e => { if (e.target === dialog.current) dialog.current.close(); }}>
       <div className="mb-3 flex items-center justify-between gap-4 text-brand-text-heading">
-        <span className="text-sm">{posters[selected].title}</span>
+        <span className="text-sm">{poster.title}</span>
         <button type="button" onClick={() => dialog.current?.close()} aria-label={t(lang, "showcase.poster.closeAria")} className="rounded-lg border px-3 py-1">{t(lang, "showcase.poster.close")}</button>
       </div>
-      <img src={posters[selected].url} alt={posters[selected].title} className="mx-auto max-h-[78dvh] max-w-full object-contain" />
-      <a href={posters[selected].url} target="_blank" rel="noreferrer" className="mt-2 block text-center text-sm text-brand-blue underline">{t(lang, "showcase.poster.openFull")}</a>
+      <img src={poster.url} alt={poster.title} className="mx-auto max-h-[78dvh] max-w-full object-contain" />
+      <a href={poster.url} target="_blank" rel="noreferrer" className="mt-2 block text-center text-sm text-brand-blue underline">{t(lang, "showcase.poster.openFull")}</a>
     </dialog>
   </>;
 }
