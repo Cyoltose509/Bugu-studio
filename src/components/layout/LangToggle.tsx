@@ -3,11 +3,12 @@
 /**
  * 语言切换按钮 — 昼夜切换按钮左侧。
  * 显示「点击后将切换到的语言」（中文页显示 EN，英文页显示 CN），点击切换。
- * 用 globe 图标 + 两字母代码，放大为胶囊按钮，与 ThemeToggle 在父级 items-center 下对齐。
+ * 胶囊按钮：移动端只显示两字母代码（EN/CN）以节省顶栏空间，
+ * 桌面端（sm+）才叠加 globe 图标。
  */
 import { useLang } from "@/lib/i18n/LangProvider";
 
-function GlobeIcon({ size = 16 }: { size?: number }) {
+function GlobeIcon({ size = 16, className = "" }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
@@ -19,6 +20,7 @@ function GlobeIcon({ size = 16 }: { size?: number }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
+      className={className}
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M3 12h18" />
@@ -39,9 +41,9 @@ export default function LangToggle() {
       onClick={toggle}
       title={title}
       aria-label={title}
-      className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-full border border-white/25 text-white hover:bg-white/10 transition-colors select-none"
+      className="h-8 sm:h-9 px-2 sm:px-2.5 inline-flex items-center justify-center gap-0 sm:gap-1.5 rounded-full border-0 sm:border sm:border-white/25 text-white hover:bg-white/10 transition-colors select-none"
     >
-      <GlobeIcon size={16} />
+      <GlobeIcon size={16} className="hidden sm:block" />
       <span className="text-xs font-semibold tracking-wide leading-none">{target}</span>
     </button>
   );

@@ -12,6 +12,7 @@ import { ActivityType } from "@prisma/client";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import LocationPresetInput from "@/components/activities/LocationPresetInput";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import MentionEditor from "@/components/ui/MentionEditor";
 import { DEFAULT_ACTIVITY_LOCATION } from "@/lib/activities/constants";
 
@@ -122,7 +123,7 @@ export default function CreateActivityPage() {
           )}
           {type === "COMPETITION" && (
             <div className="mt-4 space-y-4 p-4 rounded-lg border border-[#FFF3E0] bg-[#FFFDF7]">
-              <p className="text-sm font-medium text-brand-orange">🏆 Game Jam 设置</p>
+              <p className="text-sm font-medium text-brand-orange"><TrophyIcon size={15} className="mr-1 align-[-0.15em]" />Game Jam 设置</p>
               <div>
                 <label className="block text-xs mb-1 text-brand-text-secondary" htmlFor="theme">比赛题目 <span className="text-xs text-brand-text-muted">(比赛开始后公布，留空则无需题目)</span></label>
                 <textarea id="theme" name="theme" rows={3} placeholder="如：主题是「时光倒流」—— 创作一个围绕时间回溯玩法的游戏"

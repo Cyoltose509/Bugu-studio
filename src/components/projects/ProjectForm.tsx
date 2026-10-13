@@ -6,6 +6,7 @@ import { useLang } from "@/lib/i18n/LangProvider";
 import type { DictKey } from "@/lib/i18n/dict";
 import MentionEditor from "@/components/ui/MentionEditor";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import {
   uploadImage,
@@ -571,7 +572,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
       {/* ═════════ 所获奖项 ═════════ */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-brand-navy">🏆 {t("form.awards")}</h2>
+        <h2 className="text-lg font-semibold text-brand-navy"><TrophyIcon size={18} className="mr-1.5 align-[-0.18em]" />{t("form.awards")}</h2>
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <input type="text" value={awardInput} onChange={(e) => setAwardInput(e.target.value)}
@@ -586,7 +587,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
           <div className="flex flex-wrap gap-2">
             {awards.map((a, i) => (
               <span key={i} className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full text-amber-500 bg-amber-500/15">
-                🏆 {a}
+                <TrophyIcon size={13} />
+                {a}
                 <button type="button" onClick={() => removeAward(i)} className="hover:text-red-500 ml-0.5">×</button>
               </span>
             ))}

@@ -21,6 +21,7 @@ import ApproveButton from "@/components/works/ApproveButton";
 import CommentSection from "@/components/projects/CommentSection";
 import ProjectLikeButton from "@/components/projects/ProjectLikeButton";
 import { RichContent } from "@/components/ui/RichContent";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import LogoLoading from "@/components/ui/LogoLoading";
 import PrefetchNav from "@/components/works/PrefetchNav";
 import { TagChipLink } from "@/components/tags/TagChip";
@@ -466,7 +467,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               )}
               {project.awards && project.awards.length > 0 && (
                 <div>
-                  <dt className="mb-1 text-brand-text-secondary">{t(lang, "works.detail.awards")}</dt>
+                  <dt className="mb-1 text-brand-text-secondary"><TrophyIcon size={14} className="mr-1 align-[-0.15em]" />{t(lang, "works.detail.awards")}</dt>
                   <dd className="space-y-1">
                     {project.awards.map((award: string, i: number) => (
                       <span key={i} className="text-xs px-2 py-0.5 rounded block bg-[#c4a86a]/[0.12] text-[#8B7355]">{award}</span>

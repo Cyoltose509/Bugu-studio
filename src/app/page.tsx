@@ -51,7 +51,7 @@ export default async function HomePage() {
                     >
                         official
                     </p>
-                    <p className="mb-8 max-w-xl mx-auto text-brand-text-secondary">
+                    <p className="mb-8 max-w-xl mx-auto text-sm leading-relaxed text-brand-text-secondary">
                         {t(lang, "home.intro")}
                     </p>
                     <div className="flex justify-center gap-4">

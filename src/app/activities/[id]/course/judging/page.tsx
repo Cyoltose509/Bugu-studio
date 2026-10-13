@@ -9,6 +9,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { resolveActivityId } from "@/lib/activities/resolve";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 
 async function ensureAdminJudges(activityId: string) {
   const adminUsers = await prisma.user.findMany({
@@ -258,7 +259,7 @@ export default async function CourseJudgingPage({ params }: { params: Promise<{ 
                     {/* 已有评分 */}
                     {scores.length > 0 && (
                       <div className="space-y-2 mb-4">
-                        <h3 className="text-sm font-semibold mb-2 text-brand-navy">{t(lang, "judging.scores", { n: scores.length })}</h3>
+                        <h3 className="text-sm font-semibold mb-2 text-brand-navy"><TrophyIcon size={14} className="mr-1 align-[-0.15em]" />{t(lang, "judging.scores", { n: scores.length })}</h3>
                         {scores.map(sc => {
                           const c = (sc.criteria || {}) as Record<string, number>;
                           return (

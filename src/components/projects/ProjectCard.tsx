@@ -6,6 +6,7 @@ import MiniLikeButton from "./MiniLikeButton";
 import ProjectCardMedia, { type CardGalleryImage } from "./ProjectCardMedia";
 import { toPlainCardText } from "@/lib/rich-content";
 import { TagChip } from "@/components/tags/TagChip";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import { sortProjectTagsEngineFirst } from "@/lib/tags/engine-tags";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
@@ -148,7 +149,7 @@ function ProjectCard({
           data-awards={JSON.stringify(p.awards)}
         >
           {p.awards && p.awards.length > 0 && (
-            <span title={p.awards.join("、")}>🏆</span>
+            <TrophyIcon size={20} title={p.awards.join("、")} className="drop-shadow-md" />
           )}
           {p.aiUsages && p.aiUsages.length > 0 && (
             <span title="使用了 AI 技术">🤖</span>

@@ -11,6 +11,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { resolveActivityId } from "@/lib/activities/resolve";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 
 /* ── 图片灯箱 (客户端) ── */
 function LightboxLink({ src, children, className }: { src: string; children: React.ReactNode; className?: string }) {
@@ -332,7 +333,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                     {/* 已有评分 */}
                     {sub.scores.length > 0 && (
                       <div className="space-y-2 mb-4">
-                        <h3 className="text-sm font-semibold mb-2 text-brand-navy">{t(lang, "judging.scores", { n: sub.scores.length })}</h3>
+                        <h3 className="text-sm font-semibold mb-2 text-brand-navy"><TrophyIcon size={14} className="mr-1 align-[-0.15em]" />{t(lang, "judging.scores", { n: sub.scores.length })}</h3>
                         {sub.scores.map(sc => {
                           const c = (sc.criteria || {}) as Record<string, number>;
                           return (

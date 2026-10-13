@@ -11,6 +11,7 @@ import {t} from "@/lib/i18n/dict";
 import type {Lang} from "@/lib/i18n/config";
 import type {AwardEntry} from "@/lib/history/awards";
 import {tagDisplayName} from "@/lib/tags/tag-names";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
@@ -723,7 +724,7 @@ function YearNewspaper({
                                                     {featuredWork.awards && featuredWork.awards.length > 0 && (
                                                         <div className="mt-2">
                                                             {featuredWork.awards.map((award, i) => (
-                                                                <span key={i} className={Q.awardTag}>🏆 {award}</span>
+                                                                <span key={i} className={Q.awardTag}><TrophyIcon size={12} className="mr-1 align-[-0.15em]" />{award}</span>
                                                             ))}
                                                         </div>
                                                     )}

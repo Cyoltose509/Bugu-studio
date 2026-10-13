@@ -14,6 +14,7 @@ import { ActivityStatus, ProposalType, ProposalStatus } from "@prisma/client";
 import SubmitProposalForm from "@/components/activities/meeting/SubmitProposalForm";
 import DeleteProposalButton from "@/components/activities/meeting/DeleteProposalButton";
 import { RichContent } from "@/components/ui/RichContent";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import ReviewProposalForm from "@/components/activities/meeting/ReviewProposalForm";
 import BilibiliTvLink from "@/components/activities/meeting/BilibiliTvLink";
 import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
@@ -700,7 +701,7 @@ async function CompetitionSection({
       <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-lg font-bold text-brand-navy">🏆 Game Jam</h2>
+            <h2 className="text-lg font-bold text-brand-navy"><TrophyIcon size={18} className="mr-1.5 align-[-0.18em]" />Game Jam</h2>
             <p className="text-sm mt-1 text-brand-text-secondary">
               {isUpcoming && t(lang, "activityDetail.jamUpcoming")}
               {isOngoing && t(lang, "activityDetail.jamOngoing")}

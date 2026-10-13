@@ -12,6 +12,7 @@ import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import LocationPresetInput from "@/components/activities/LocationPresetInput";
 import MeetingTalksEditor from "@/components/activities/meeting/MeetingTalksEditor";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import DescriptionEditor from "@/components/admin/DescriptionEditor";
 import { DEFAULT_ACTIVITY_LOCATION } from "@/lib/activities/constants";
 import { getActivityShowcase } from "@/lib/activities/showcase-data";
@@ -166,7 +167,7 @@ export default async function EditActivityPage({ params }: PageProps) {
         {/* Game Jam 设置（仅 COMPETITION 类型显示） */}
         {activity.type === "COMPETITION" && (
         <div className="p-4 rounded-lg border border-[#FFF3E0] bg-[#FFFDF7]">
-          <p className="text-sm font-medium mb-3 text-brand-orange">🏆 Game Jam 设置</p>
+          <p className="text-sm font-medium mb-3 text-brand-orange"><TrophyIcon size={15} className="mr-1 align-[-0.15em]" />Game Jam 设置</p>
           <div className="space-y-3">
             <div>
               <label className="block text-xs mb-1 text-brand-text-secondary">比赛题目</label>

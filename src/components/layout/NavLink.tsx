@@ -6,9 +6,11 @@ import { usePathname } from "next/navigation";
 export default function NavLink({
   href,
   children,
+  className = "",
 }: {
   href: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const pathname = usePathname();
   const isActive = pathname === href || pathname.startsWith(href + "/");
@@ -19,7 +21,7 @@ export default function NavLink({
       prefetch={true}
       className={`hover:text-white transition-colors nav-link relative whitespace-nowrap shrink-0 ${
         isActive ? "text-white font-medium" : "text-white/80"
-      }`}
+      } ${className}`}
     >
       {children}
       {isActive && (

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 
 interface NotificationItem {
   id: string;
@@ -41,7 +42,7 @@ function getIcon(type: string) {
   if (type === "NEW_USER") return "👤";
   if (type === "ACTIVITY_PROPOSAL") return "🎤";
   if (type === "ACTIVITY_ENROLL") return "📚";
-  if (type === "ACTIVITY_SUBMISSION") return "🏆";
+  if (type === "ACTIVITY_SUBMISSION") return <TrophyIcon size={16} />;
   if (type === "JAM_APPLICATION") return "📨";
   if (type === "JAM_APPROVED") return "✅";
   if (type === "JAM_REJECTED") return "❌";
