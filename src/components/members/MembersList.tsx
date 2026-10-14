@@ -1,12 +1,24 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { positionLabel, positionColor } from "@/lib/position";
 import MemberGraph from "./MemberGraph";
 import { useLang } from "@/lib/i18n/LangProvider";
+import type { DictKey } from "@/lib/i18n/dict";
+
+const SKILL_LABEL_KEYS: Record<string, DictKey> = {
+  "程序": "form.role.program",
+  "策划": "form.role.design",
+  "美术": "form.role.art",
+  "音效": "form.role.sound",
+  "音乐": "form.role.music",
+  "测试": "form.role.test",
+  "宣发": "form.role.pr",
+  "全栈": "form.role.fullstack",
+};
 
 /** 线性（描边）放大镜图标 */
 function SearchIcon({ className = "" }: { className?: string }) {
@@ -48,6 +60,82 @@ function CloseIcon() {
     );
 }
 
+function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div className="flex min-w-0 items-start gap-2">
+            <h3 className="w-12 shrink-0 whitespace-nowrap pt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-text-muted">{label}</h3>
+            <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+const FILTER_TONES = {
+    blue: {
+        idle: "border-[#3388BB]/25 bg-[#3388BB]/10 text-[#28739D] dark:text-[#8CCCF0]",
+        active: "border-[#3388BB]/55 bg-[#3388BB]/25 text-[#1D668E] ring-1 ring-[#3388BB]/20 dark:text-[#A9DDF7]",
+    },
+    green: {
+        idle: "border-[#88C232]/30 bg-[#88C232]/10 text-[#568515] dark:text-[#B9E479]",
+        active: "border-[#88C232]/60 bg-[#88C232]/25 text-[#46720A] ring-1 ring-[#88C232]/20 dark:text-[#C8EC94]",
+    },
+    orange: {
+        idle: "border-[#E38043]/30 bg-[#E38043]/10 text-[#B15B27] dark:text-[#F2B185]",
+        active: "border-[#E38043]/60 bg-[#E38043]/25 text-[#9D4817] ring-1 ring-[#E38043]/20 dark:text-[#F7C09A]",
+    },
+    purple: {
+        idle: "border-purple-400/25 bg-purple-400/10 text-purple-700 dark:text-purple-300",
+        active: "border-purple-400/55 bg-purple-400/25 text-purple-800 ring-1 ring-purple-400/20 dark:text-purple-200",
+    },
+    rose: {
+        idle: "border-rose-400/25 bg-rose-400/10 text-rose-700 dark:text-rose-300",
+        active: "border-rose-400/55 bg-rose-400/25 text-rose-800 ring-1 ring-rose-400/20 dark:text-rose-200",
+    },
+    teal: {
+        idle: "border-teal-400/30 bg-teal-400/10 text-teal-700 dark:text-teal-300",
+        active: "border-teal-400/60 bg-teal-400/25 text-teal-800 ring-1 ring-teal-400/20 dark:text-teal-200",
+    },
+    amber: {
+        idle: "border-amber-400/30 bg-amber-400/10 text-amber-700 dark:text-amber-300",
+        active: "border-amber-400/60 bg-amber-400/25 text-amber-800 ring-1 ring-amber-400/20 dark:text-amber-200",
+    },
+    gray: {
+        idle: "border-slate-400/25 bg-slate-400/10 text-slate-600 dark:text-slate-300",
+        active: "border-slate-400/55 bg-slate-400/25 text-slate-700 ring-1 ring-slate-400/20 dark:text-slate-200",
+    },
+} as const;
+
+type FilterTone = keyof typeof FILTER_TONES;
+
+// 仅用于筛选菜单：个人主页仍按成员提交的 skills 顺序展示。
+const COMMON_SKILL_TONES = new Map<string, FilterTone>([
+    ["策划", "purple"],
+    ["程序", "blue"],
+    ["美术", "rose"],
+    ["音乐", "teal"],
+    ["全栈", "orange"],
+    ["宣发", "green"],
+    ["测试", "amber"],
+]);
+const COMMON_SKILL_ORDER = [...COMMON_SKILL_TONES.keys()];
+const COMMON_SKILL_SET = new Set(COMMON_SKILL_ORDER);
+
+function FilterChip({ active, onClick, tone, children }: { active: boolean; onClick: () => void; tone: FilterTone; children: ReactNode }) {
+    const colors = FILTER_TONES[tone];
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={`rounded-full border px-2.5 py-1 text-[11px] leading-tight font-medium backdrop-blur-sm transition-all hover:-translate-y-px hover:brightness-95 ${active ? colors.active : colors.idle}`}
+        >
+            {active && <span className="mr-1" aria-hidden>✓</span>}
+            {children}
+        </button>
+    );
+}
+
 interface MemberItem {
   id: string;
   displayName: string;
@@ -73,24 +161,47 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
   const { t, lang } = useLang();
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"grade" | "joinYear" | "graph">("grade");
-  const [searchRaw, setSearchOpen] = useState(false);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [selectedGrades, setSelectedGrades] = useState<number[]>([]);
+  const [selectedJoinYears, setSelectedJoinYears] = useState<number[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const searchBtnRef = useRef<HTMLButtonElement>(null);
+  const filterRootRef = useRef<HTMLDivElement>(null);
   const hasQuery = query.trim().length > 0;
-  // 有搜索词时保持展开，清空后自动收回成图标
-  const searchOpen = searchRaw || hasQuery;
+  const activeFilterCount = selectedGrades.length + selectedJoinYears.length + selectedSkills.length;
+  const hasFilters = activeFilterCount > 0;
 
-  // 展开后 <input> 才挂载，靠它的 autoFocus 拿到焦点。
-  // 这里只补一种情况：挂载完仍没有任何焦点（个别浏览器不认 autoFocus）。
-  // 用户已经点了别处时不抢焦点。
+  const { grades, joinYears, skills } = useMemo(() => {
+    const availableSkills = new Set(allMembers.flatMap((m) => m.skills ?? []));
+    return {
+      grades: [...new Set(allMembers.flatMap((m) => m.grade == null ? [] : [m.grade]))].sort((a, b) => b - a),
+      joinYears: [...new Set(allMembers.flatMap((m) => m.joinYear == null ? [] : [m.joinYear]))].sort((a, b) => b - a),
+      skills: [
+        ...COMMON_SKILL_ORDER.filter((skill) => availableSkills.has(skill)),
+        ...[...availableSkills].filter((skill) => !COMMON_SKILL_SET.has(skill)).sort((a, b) => a.localeCompare(b, lang === "cn" ? "zh" : "en")),
+      ],
+    };
+  }, [allMembers, lang]);
+
   useEffect(() => {
-    if (!searchOpen) return;
-    const id = window.setTimeout(() => {
-      const el = inputRef.current;
-      if (el && document.activeElement === document.body) el.focus();
-    }, 60);
-    return () => window.clearTimeout(id);
-  }, [searchOpen]);
+    if (!filterPanelOpen) return;
+    const focusId = window.setTimeout(() => inputRef.current?.focus(), 0);
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!filterRootRef.current?.contains(event.target as Node)) setFilterPanelOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFilterPanelOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(focusId);
+    };
+  }, [filterPanelOpen]);
 
   // 客户端过滤 + 按模式分组
   const { filtered, groupedFiltered, sortedKeysFiltered } = useMemo(() => {
@@ -113,92 +224,121 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
       const keys = Object.keys(groups).sort((a, b) => yearVal(b) - yearVal(a));
       return { groups, keys };
     };
-    if (!q) {
-      const { groups, keys } = group(allMembers);
-      return { filtered: allMembers, groupedFiltered: groups, sortedKeysFiltered: keys };
-    }
     const matched = allMembers.filter((m) => {
       const name = m.displayName.toLowerCase();
       const skillsText = (m.skills || []).join(" ").toLowerCase();
-      return name.includes(q) || skillsText.includes(q);
+      const matchesQuery = !q || name.includes(q) || skillsText.includes(q);
+      const matchesGrade = selectedGrades.length === 0 || (m.grade != null && selectedGrades.includes(m.grade));
+      const matchesJoinYear = selectedJoinYears.length === 0 || (m.joinYear != null && selectedJoinYears.includes(m.joinYear));
+      const matchesSkill = selectedSkills.length === 0 || selectedSkills.some((skill) => (m.skills || []).includes(skill));
+      return matchesQuery && matchesGrade && matchesJoinYear && matchesSkill;
     });
     const { groups, keys } = group(matched);
     return { filtered: matched, groupedFiltered: groups, sortedKeysFiltered: keys };
-  }, [query, allMembers, mode, t]);
+  }, [query, allMembers, mode, selectedGrades, selectedJoinYears, selectedSkills, t]);
+
+  const toggleNumber = (value: number, selected: number[], setSelected: (next: number[]) => void) => {
+    setSelected(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
+    if (mode === "graph") setMode("grade");
+  };
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills((current) => current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill]);
+    if (mode === "graph") setMode("grade");
+  };
+
+  const clearFilters = () => {
+    setQuery("");
+    setSelectedGrades([]);
+    setSelectedJoinYears([]);
+    setSelectedSkills([]);
+  };
 
   return (
     <>
-      {/* 头部：标题与统计在左，搜索框靠右对齐 */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+      {/* 标题与搜索入口同排，统计置于标题下方 */}
+      <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:items-end sm:gap-6">
         <div className="min-w-0">
           <h1 className="text-3xl font-bold text-brand-navy">{t("page.members.title")}</h1>
           <p className="mt-2 text-brand-text-secondary">
             {t("members.summary", { total: totalCount, active: activeCount })}
-            {hasQuery && <> {t("members.matched", { n: filtered.length })}</>}
+            {(hasQuery || hasFilters) && <> {t("members.matched", { n: filtered.length })}</>}
           </p>
         </div>
-        {/* 搜索：默认收起为一个线性放大镜图标，点开才展开输入框 */}
-        <div className="relative h-[42px] w-full sm:w-72 sm:shrink-0">
-          {/* 收起态：一个线性放大镜图标按钮 */}
+        <div ref={filterRootRef} className="relative z-30 flex justify-end">
           <button
             type="button"
-            ref={searchBtnRef}
-            onClick={() => setSearchOpen(true)}
+            onFocus={() => setFilterPanelOpen(true)}
+            onClick={() => setFilterPanelOpen(true)}
             aria-label={t("members.openSearch")}
-            aria-expanded={searchOpen}
-            aria-hidden={searchOpen}
-            tabIndex={searchOpen ? -1 : 0}
-            className={`absolute right-0 top-0 h-[42px] w-[42px] flex items-center justify-center rounded-lg text-brand-text-muted transition-all hover:text-brand-text hover:bg-brand-surface ${
-              searchOpen ? "pointer-events-none opacity-0" : "opacity-100"
+            aria-expanded={filterPanelOpen}
+            aria-controls="member-filter-menu"
+            title={t("members.openSearch")}
+            className={`relative flex h-[42px] w-[42px] items-center justify-center rounded-lg border transition-colors ${
+              filterPanelOpen || hasQuery || hasFilters
+                ? "border-brand-blue/40 bg-brand-surface text-brand-blue"
+                : "border-brand-border-subtle bg-card text-brand-text-muted hover:border-brand-blue/40 hover:text-brand-blue"
             }`}
           >
             <SearchIcon />
+            {activeFilterCount > 0 && <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-brand-orange px-1 text-[10px] leading-4 text-white">{activeFilterCount}</span>}
           </button>
 
-          {/* 展开态：输入框（收起时不渲染，避免藏一个可聚焦元素在无障碍树里） */}
-          <div
-            className={`absolute inset-y-0 right-0 flex items-center transition-all duration-200 ${
-              searchOpen ? "w-full" : "w-[42px] pointer-events-none"
-            }`}
-          >
-            {searchOpen && (
-              <>
-                <span className="pointer-events-none absolute left-3 text-brand-text-muted">
-                  <SearchIcon />
-                </span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onBlur={() => setSearchOpen(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      setQuery("");
-                      setSearchOpen(false);
-                    }
-                  }}
-                  placeholder={t("members.searchPlaceholder")}
-                  aria-label={t("members.searchPlaceholder")}
-                  autoFocus
-                  className="w-full bg-card border rounded-lg pl-9 pr-9 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                />
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setQuery("");
-                    setSearchOpen(false);
-                    searchBtnRef.current?.focus();
-                  }}
-                  aria-label={t("works.closeSearch")}
-                  className="absolute right-3 text-brand-text-muted hover:opacity-70"
-                >
+          {filterPanelOpen && (
+            <section id="member-filter-menu" className="absolute right-0 top-[calc(100%+8px)] z-40 w-[min(360px,calc(100vw-2rem))] rounded-xl border border-brand-border-subtle bg-card/95 p-4 shadow-xl backdrop-blur-xl animate-fade-in sm:w-[min(640px,calc(100vw-2rem))]" aria-label={t("members.filterTitle")}>
+              <div className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-muted"><SearchIcon /></span>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") setFilterPanelOpen(false); }}
+                    placeholder={t("members.searchPlaceholder")}
+                    aria-label={t("members.searchPlaceholder")}
+                    className="w-full rounded-lg border border-brand-border-subtle bg-card py-2.5 pl-9 pr-9 text-sm text-brand-text-heading placeholder:text-brand-text-muted focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                  />
+                  {hasQuery && <button type="button" onClick={() => setQuery("")} aria-label={t("works.closeSearch")} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-text-muted hover:text-brand-text-heading"><CloseIcon /></button>}
+                </div>
+                <button type="button" onClick={() => setFilterPanelOpen(false)} aria-label={t("members.closeFilters")} className="shrink-0 rounded p-2 text-brand-text-muted hover:bg-brand-surface hover:text-brand-text-heading">
                   <CloseIcon />
                 </button>
-              </>
-            )}
-          </div>
+              </div>
+
+              {(hasQuery || hasFilters) && (
+                <div className="mt-2 flex justify-end">
+                  <button type="button" onClick={clearFilters} className="text-xs font-medium text-brand-blue hover:underline">
+                    {t("members.clearFilters")}
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <FilterGroup label={t("members.gradeLabel")}>
+                  {grades.map((grade) => (
+                    <FilterChip key={grade} active={selectedGrades.includes(grade)} tone="blue" onClick={() => toggleNumber(grade, selectedGrades, setSelectedGrades)}>
+                      {t("members.gradeGroup", { g: grade })}
+                    </FilterChip>
+                  ))}
+                </FilterGroup>
+                <FilterGroup label={t("members.joinYearLabel")}>
+                  {joinYears.map((year) => (
+                    <FilterChip key={year} active={selectedJoinYears.includes(year)} tone="orange" onClick={() => toggleNumber(year, selectedJoinYears, setSelectedJoinYears)}>
+                      {year}
+                    </FilterChip>
+                  ))}
+                </FilterGroup>
+                <FilterGroup label={t("members.skillLabel")}>
+                  {skills.map((skill) => (
+                    <FilterChip key={skill} active={selectedSkills.includes(skill)} tone={COMMON_SKILL_TONES.get(skill) ?? "gray"} onClick={() => toggleSkill(skill)}>
+                      {SKILL_LABEL_KEYS[skill] ? t(SKILL_LABEL_KEYS[skill]) : skill}
+                    </FilterChip>
+                  ))}
+                </FilterGroup>
+              </div>
+            </section>
+          )}
         </div>
       </div>
 
@@ -234,18 +374,20 @@ export default function MembersList({ members: allMembers, totalCount, activeCou
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {groupedFiltered[key].map(m => (
-                <Link key={m.id} href={`/members/${m.id}`} className="group text-center p-4 pt-5 rounded-xl bg-card border shadow-sm hover:shadow-md transition-all border-brand-border-subtle">
+                <Link key={m.id} href={`/members/${m.id}`} className={`group text-center p-4 rounded-xl bg-card border shadow-sm hover:shadow-md transition-all border-brand-border-subtle ${m.graduated ? "pt-6" : "pt-5"}`}>
                   <div className="relative w-12 h-12 mx-auto">
                     <UserAvatar src={m.user?.image || m.avatar} name={m.displayName} size={48} className="mx-auto" />
                     {m.graduated && (
-                      <Image
-                        src="/images/graduation-cap.png"
-                        alt=""
-                        width={56}
-                        height={56}
-                        className="pointer-events-none absolute -top-2 -right-2 z-10 w-14 h-14 object-contain drop-shadow-md select-none"
-                        aria-hidden
-                      />
+                      /* 毕业帽当头像框：帽板横跨头像宽度、居中压在头顶，流苏自然垂在左侧 */
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-[22px] z-10 block w-20 h-[59px] drop-shadow-md" aria-hidden>
+                        <Image
+                          src="/images/graduation-cap.png"
+                          alt=""
+                          width={80}
+                          height={59}
+                          className="w-full h-full object-contain select-none"
+                        />
+                      </span>
                     )}
                   </div>
                   <div className="text-sm mt-0.5 mx-auto font-medium group-hover:text-brand-blue transition-colors line-clamp-1 flex items-center gap-1 justify-center text-brand-text-heading">

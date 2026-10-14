@@ -126,7 +126,7 @@ const getActivity = cache(async (id: string) => {
         prisma.activity.findUnique({
           where:  { id },
           include: {
-            proposals:   { where: { status: ProposalStatus.APPROVED }, include: { user: { select: { id: true, name: true, image: true } } } },
+            proposals:   { where: { status: ProposalStatus.APPROVED }, include: { user: { select: { id: true, name: true, image: true, member: { select: { id: true, displayName: true } } } } } },
             talks:       talkInclude,
             jamTeams: {
               include: {
@@ -302,6 +302,39 @@ function TalkSpeaker({ talk, lang }: { talk: any; lang: Lang }) {
   return <span className="text-brand-navy/80">{name}</span>;
 }
 
+// ── 议程分享人：头像 + 名字，关联站内账号。有成员档案 → /members；仅站内用户 → /profile?id= ──
+function ProposalSpeaker({ proposal, lang }: { proposal: any; lang: Lang }) {
+  const user = proposal.user;
+  const name =
+    user?.member?.displayName ||
+    user?.name ||
+    t(lang, "activityDetail.speakerFallback");
+  const memberId = user?.member?.id as string | undefined;
+  const userId = (proposal.userId || user?.id) as string | undefined;
+
+  const inner = (
+    <>
+      <UserAvatar src={user?.image} name={name} size={24} />
+      <span className="text-xs font-medium text-brand-text-heading truncate max-w-[9rem]">{name}</span>
+    </>
+  );
+
+  const href = memberId ? `/members/${memberId}` : userId ? `/profile?id=${userId}` : null;
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        title={name}
+        className="flex items-center gap-1.5 shrink-0 rounded-full pl-2 pr-2.5 py-1 -my-1 hover:bg-brand-surface transition-colors"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <span className="flex items-center gap-1.5 shrink-0 pl-2 pr-2.5 py-1 -my-1">{inner}</span>;
+}
+
 // ── 例会 ───────────────────────────────────────────────────
 async function MeetingSection({
   activity, session, isOngoing, isUpcoming, userProposal, lang,
@@ -389,7 +422,7 @@ async function MeetingSection({
           <div className="space-y-3">
             {approvedProposals.map((p: any) => (
               <div key={p.id} className="bg-card rounded-xl border p-4 border-brand-border-subtle">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-brand-text-heading">{p.title}</span>
@@ -397,12 +430,14 @@ async function MeetingSection({
                         {p.proposalType === "SHARE" ? t(lang, "activityDetail.proposalShare") : t(lang, "activityDetail.proposalShowcase")}
                       </span>
                     </div>
-                    <p className="text-xs mt-1 text-brand-text-secondary">by {p.user.name}</p>
                     {p.description && <p className="text-sm mt-1 text-brand-text-body">{p.description}</p>}
                   </div>
-                  {isAdmin && (
-                    <DeleteProposalButton proposalId={p.id} />
-                  )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <ProposalSpeaker proposal={p} lang={lang} />
+                    {isAdmin && (
+                      <DeleteProposalButton proposalId={p.id} />
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

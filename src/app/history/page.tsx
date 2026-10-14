@@ -29,7 +29,6 @@ export default async function HistoryPage() {
                 <HistoryClient
                     yearDetails={yearDetails}
                     startYear={startYear}
-                    yearCount={yearDetails.length}
                 />
             </div>
         );
@@ -302,7 +301,6 @@ export default async function HistoryPage() {
             <HistoryClient
                 yearDetails={yearDetails}
                 startYear={START_YEAR}
-                yearCount={yearDetails.length}
             />
         </div>
     );

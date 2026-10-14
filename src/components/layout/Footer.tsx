@@ -15,8 +15,8 @@ export function Footer({ lang = "cn" }: { lang?: Lang }) {
                 <div className="absolute inset-0 pointer-events-none texture-bg texture-bg--fade-up" />
                 <div className="relative z-[1]">
                     <div className="container mx-auto px-4 py-10">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-8">
+                            <div className="col-span-2 md:col-span-1">
                                 <div className="flex items-center gap-2 mb-3">
                                     <Image src="/images/logo.png" alt={t(lang, "brand.name")} width={28} height={28} className="rounded"/>
                                     <span className="font-bold text-[#25547A] dark:text-[#7eb8da]">{t(lang, "brand.name")}</span>

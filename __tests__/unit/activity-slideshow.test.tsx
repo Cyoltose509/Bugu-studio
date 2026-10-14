@@ -130,7 +130,7 @@ describe("game slideshow", () => {
     Object.defineProperty(document, "exitFullscreen", { configurable: true, value: exit });
     try { unmount(); expect(exit).toHaveBeenCalledOnce(); }
     finally {
-      delete (document as Partial<Document>).fullscreenElement;
+      Reflect.deleteProperty(document, "fullscreenElement");
       delete (document as Partial<Document>).exitFullscreen;
     }
   });
@@ -168,7 +168,7 @@ describe("game slideshow", () => {
       expect(exit).toHaveBeenCalledOnce();
     } finally {
       delete (HTMLDivElement.prototype as Partial<HTMLDivElement>).requestFullscreen;
-      delete (document as Partial<Document>).fullscreenElement;
+      Reflect.deleteProperty(document, "fullscreenElement");
       delete (document as Partial<Document>).exitFullscreen;
     }
   });

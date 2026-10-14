@@ -54,7 +54,9 @@ export async function Navbar({ lang = "cn" }: { lang?: Lang }) {
         {/* 用户区域 */}
         <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-3 shrink-0">
           <LangToggle />
-          <ThemeToggle />
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
           <NavActionsMenu
             canSubmit={canSubmit}
             isAdmin={isAdmin}

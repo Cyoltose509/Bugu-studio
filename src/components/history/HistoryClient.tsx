@@ -70,11 +70,10 @@ interface YearDetail {
 
 // ═══════════════════════════════════════════════════════
 export default function HistoryClient({
-  yearDetails, startYear, yearCount,
+  yearDetails, startYear,
 }: {
   yearDetails: YearDetail[];
   startYear: number;
-  yearCount: number;
 }) {
   const [mounted, setMounted] = useState(false);
   const [sections, setSections] = useState<SectionVisibility>(allSections(true));
@@ -109,7 +108,7 @@ export default function HistoryClient({
             max-width: 100% !important;
             margin: 0 auto 16px !important;
           }
-          [data-save-buttons], [data-toolbar], [data-history-sidebar] {
+          [data-save-buttons], [data-history-sidebar] {
             display: none !important;
           }
           @page {
@@ -209,15 +208,6 @@ export default function HistoryClient({
 
         {/* ═══ 主内容区 ═══ */}
         <div className="min-w-0">
-          {/* ═══ 顶部信息行 ═══ */}
-          {mounted && yearDetails.length > 0 && (
-            <div data-toolbar className="flex justify-center mb-6">
-              <span className="text-sm text-brand-text-secondary">
-                {t(lang, "history.yearsSummary", { n: yearCount, start: startYear })}
-              </span>
-            </div>
-          )}
-
           {/* ═══ 报纸列表 ═══ */}
           {yearDetails.length === 0 ? (
             <div className="rounded-xl border border-brand-border-subtle bg-card px-6 py-16 text-center">

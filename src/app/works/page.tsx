@@ -56,11 +56,11 @@ export default async function WorksPage({searchParams}: PageProps) {
     const lang = await getLang();
 
     return (
-        <div className="container mx-auto px-4 py-10 animate-fade-in">
-            <div className="mb-8">
+        <div className="container mx-auto px-4 py-6 lg:py-10 animate-fade-in">
+            <div className="mb-6 lg:mb-8">
                 <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.works.title")}</h1>
             </div>
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex flex-col gap-0 lg:flex-row lg:gap-8">
                 {/* ── 侧栏：流式加载（tags/total/years 数据）── */}
                 <Suspense fallback={<LogoLoading text={t(lang, "works.filter.loading")} compact />}>
                     <WorksSidebarData params={params} lang={lang} />

@@ -11,6 +11,7 @@ import Link from "next/link";
 import MiniLikeButton from "@/components/projects/MiniLikeButton";
 import ProjectCard from "@/components/projects/ProjectCard";
 import { RichContent } from "@/components/ui/RichContent";
+import LinkIcon from "@/components/icons/LinkIcon";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
 import LogoLoading from "@/components/ui/LogoLoading";
@@ -430,7 +431,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
               <div className="flex flex-wrap gap-3">
                 {member.socialLinks!.map((l: { id: string; url: string; label: string }) => (
                   <Link key={l.id} href={l.url} target="_blank" className="text-sm hover:underline flex items-center gap-1 text-brand-blue">
-                    {LINK_ICONS[l.label] || "🔗"} {l.label}
+                    <LinkIcon label={l.label} url={l.url} size={15} /> {l.label}
                   </Link>
                 ))}
               </div>
@@ -479,12 +480,6 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
     </div>
   );
 }
-
-const LINK_ICONS: Record<string, string> = {
-  "GitHub": "💻", "B站": "▶️", "个人网站": "🌐", "知乎": "📝",
-  "小红书": "📕", "微博": "📢", "抖音": "🎵", "CSDN": "📋",
-  "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
-};
 
 function ContactRow({ label, value }: { label: string; value: string }) {
   return (

@@ -21,6 +21,7 @@ import ApproveButton from "@/components/works/ApproveButton";
 import CommentSection from "@/components/projects/CommentSection";
 import ProjectLikeButton from "@/components/projects/ProjectLikeButton";
 import { RichContent } from "@/components/ui/RichContent";
+import LinkIcon from "@/components/icons/LinkIcon";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import LogoLoading from "@/components/ui/LogoLoading";
 import PrefetchNav from "@/components/works/PrefetchNav";
@@ -319,14 +320,10 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
   };
   const pendingInfo = PENDING_INFO[project.status];
 
-  const LINK_ICONS: Record<string, string> = {
-    steam: "🎮", github: "💻", itch: "🕹️", 网盘: "📁", drive: "📁", 官网: "🌐",
-  };
   const externalLinks = [
     ...project.links.map((l: { label: string; url: string }) => ({
       label: l.label,
       url: l.url,
-      icon: LINK_ICONS[l.label.toLowerCase()] || "🔗",
     })),
   ];
 
@@ -443,7 +440,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               <div className="space-y-2">
                 {externalLinks.map((link) => (
                   <a key={link.label} href={link.url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors hover:shadow-sm hover:bg-brand-border-subtle text-brand-text-heading bg-brand-surface">
-                    <span>{link.icon}</span><span>{link.label}</span><span className="ml-auto text-brand-text-muted">↗</span>
+                    <LinkIcon label={link.label} url={link.url} size={16} /><span>{link.label}</span><span className="ml-auto text-brand-text-muted">↗</span>
                   </a>
                 ))}
               </div>

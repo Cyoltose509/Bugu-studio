@@ -211,10 +211,6 @@ export const dict = {
   "history.saveTitle": { cn: "保存 {y} 年报", en: "Save {y} annual review" },
   "history.dateRange": { cn: "{m}月{d}日 至 {m2}月{d2}日", en: "{m}/{d} – {m2}/{d2}" },
   "history.dateSingle": { cn: "{m}月{d}日", en: "{m}/{d}" },
-  "history.yearsSummary": {
-    cn: "共 {n} 年年报（{start}年至今）· 每份年报右下角可单独保存",
-    en: "{n} annual reports (since {start}) · each can be saved individually from its bottom-right",
-  },
   "history.empty": { cn: "暂无年报内容", en: "No annual reports yet" },
   "history.emptyDesc": {
     cn: "发布作品、大事记或活动后，这里会按年份自动生成回顾。",
@@ -667,6 +663,8 @@ export const dict = {
 
   // ── 作品库筛选 / 卡片操作 ──
   "works.filter.label": { cn: "筛选", en: "Filter" },
+  "works.filter.open": { cn: "展开筛选", en: "Open filters" },
+  "works.filter.close": { cn: "收起筛选", en: "Close filters" },
   "works.filter.yearValue": { cn: "{n}年", en: "{n}" },
   "works.filter.query": { cn: "“{q}”", en: "\"{q}\"" },
   "works.filter.clearTitle": { cn: "清除「{name}」", en: "Clear \"{name}\"" },
@@ -1011,6 +1009,10 @@ export const dict = {
   "members.summary": { cn: "共 {total} 位历届成员，{active} 位在读成员", en: "{total} alumni members, {active} currently enrolled" },
   "members.matched": { cn: "· 找到 {n} 位匹配成员", en: "· {n} matching members" },
   "members.openSearch": { cn: "展开搜索框", en: "Open search" },
+  "members.filterTitle": { cn: "成员筛选", en: "Member filters" },
+  "members.skillLabel": { cn: "职能", en: "Role" },
+  "members.clearFilters": { cn: "清除全部", en: "Clear all" },
+  "members.closeFilters": { cn: "收起成员筛选", en: "Close member filters" },
   "members.searchPlaceholder": { cn: "搜索成员姓名或职能…", en: "Search by name or role…" },
   "members.empty": { cn: "没有找到匹配的成员", en: "No matching members found" },
   "members.projectCountShort": { cn: "{n} 个项目", en: "{n} projects" },
