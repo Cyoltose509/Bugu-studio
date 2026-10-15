@@ -194,7 +194,6 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   const isPast       = now > activity.endTime;
   const shareData = activityShareData(activity, lang);
   const hasTalkSection = hasActivityTalkSection(activity);
-  const talkSignupOpen = canSubmitActivityTalk(activity, now);
 
   // 仅本地：mock / DB 不可达时跳过，勿提交
   const userProposal =
@@ -295,34 +294,13 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
     />
   ) : null;
 
-  // 有议程/报名时：左介绍、右议程，避免长表单把正文顶得很远
+  // 有议程/报名时：宽屏左右分栏；窄屏自然单列叠放，不硬写死右侧
   if (hasTalkSection) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.85fr)] lg:items-start">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(16rem,22rem)] xl:items-start">
           <div className="min-w-0">{mainColumn}</div>
-          <aside className="min-w-0 lg:sticky lg:top-24 space-y-4">
-            <div className="rounded-2xl border border-brand-blue/20 bg-card p-4 sm:p-5">
-              <p className="mb-1 text-[10px] font-bold tracking-[0.18em] text-brand-orange">BUGOO / ACTIVITY</p>
-              <h2 className="font-bold text-brand-navy">
-                {lang === "en" ? "Agenda & signup" : "议程与报名"}
-              </h2>
-              <p className="mt-1.5 text-sm text-brand-text-secondary">
-                {lang === "en"
-                  ? "Talks and submissions stay on this side."
-                  : "本次分享安排与报名入口固定在右侧。"}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {talkSignupOpen && (
-                  <a href="#meeting-signup" className="btn-primary rounded-lg px-3 py-2 text-xs font-semibold">
-                    {lang === "en" ? "Submit a talk" : "报名分享"}
-                  </a>
-                )}
-                <a href="#meeting-agenda" className="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
-                  {lang === "en" ? "View agenda" : "查看议程"}
-                </a>
-              </div>
-            </div>
+          <aside className="min-w-0 xl:sticky xl:top-24">
             {talkColumn}
           </aside>
         </div>
