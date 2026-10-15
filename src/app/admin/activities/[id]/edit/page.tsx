@@ -163,6 +163,11 @@ export default async function EditActivityPage({ params }: PageProps) {
             className="w-4 h-4 accent-brand-blue" />
           <label className="text-sm text-brand-text-body">开放报名</label>
         </div>
+        <div className="flex items-center gap-2">
+          <input name="talkSubmissionOpen" type="checkbox" defaultChecked={activity.talkSubmissionOpen}
+            className="w-4 h-4 accent-brand-blue" />
+          <label className="text-sm text-brand-text-body">开放报名分享</label>
+        </div>
 
         {/* Game Jam 设置（仅 COMPETITION 类型显示） */}
         {activity.type === "COMPETITION" && (
@@ -194,7 +199,8 @@ export default async function EditActivityPage({ params }: PageProps) {
         </div>
       </form>
 
-      {activity.type === "MEETING" && (
+      {/* 分享条目编辑器只在「这次活动真的有分享」时出现：例会、或已勾选开放报名分享、或已录入过条目 */}
+      {(activity.type === "MEETING" || activity.talkSubmissionOpen || activity.talks.length > 0) && (
         <MeetingTalksEditor
           activityId={activity.id}
           initialTalks={activity.talks.map((t) => ({

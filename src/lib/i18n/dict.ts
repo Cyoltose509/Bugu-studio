@@ -596,7 +596,7 @@ export const dict = {
   "showcase.status.upcoming": { cn: "即将见面", en: "Coming Soon" },
   "showcase.status.ongoing": { cn: "正在进行", en: "Ongoing" },
   "showcase.status.ended": { cn: "活动已结束", en: "Ended" },
-  "showcase.badgeOriginal": { cn: "原创游戏 · 现场试玩", en: "Original Games · Playable On Site" },
+  "showcase.badgeOriginal": { cn: "原创游戏", en: "Original Games" },
   "showcase.summaryFallback": {
     cn: "来体验我们的原创游戏，与创作者面对面交流。",
     en: "Come play our original games and meet the creators in person.",
@@ -812,7 +812,7 @@ export const dict = {
   "meetingTalks.linkedMember": { cn: "已关联成员 · {name}", en: "Linked member · {name}" },
   "meetingTalks.linkedUser": { cn: "已关联用户 · {name}", en: "Linked user · {name}" },
   "meetingTalks.saved": { cn: "分享条目已保存", en: "Talk entries saved" },
-  "meetingTalks.title": { cn: "例会分享条目", en: "Meeting Talk Entries" },
+  "meetingTalks.title": { cn: "活动分享条目", en: "Activity Talk Entries" },
   "meetingTalks.desc": { cn: "按「主讲 + 标题 + BV 号」逐条录入。主讲可搜索站内用户并关联；有录像时填 BV（或粘贴 B 站链接），前台会显示小电视跳转观看。", en: "Enter each entry as \"Speaker + Title + BV number\". The speaker can be searched among site users and linked; if there is a recording, fill in the BV number (or paste the Bilibili link) and the site shows a TV button to jump to it." },
   "meetingTalks.moveUp": { cn: "上移", en: "Move up" },
   "meetingTalks.moveDown": { cn: "下移", en: "Move down" },
@@ -941,6 +941,7 @@ export const dict = {
   "meeting.errLoginFirst": { cn: "请先登录", en: "Please log in first" },
   "meeting.errInvalidActivity": { cn: "无效的活动", en: "Invalid activity" },
   "meeting.errTitleRequired": { cn: "请填写标题", en: "Please enter a title" },
+  "meeting.errTalkClosed": { cn: "本次活动暂未开放报名分享。", en: "Talk submissions are closed for this activity." },
   "meeting.errAlreadySubmitted": { cn: "你已提交过申请，不能重复提交", en: "You've already submitted an application" },
 
   // ── 角色（注册用户）──
@@ -1377,8 +1378,8 @@ export const dict = {
   "globalError.desc": { cn: "页面加载时发生了意外错误，请尝试刷新页面。", en: "An unexpected error occurred while loading the page. Please try refreshing." },
 
   // ── 成员关系图谱运行时状态 ──
-  "members.graph.computing": { cn: "正在计算关系图谱…", en: "Computing the relationship graph…" },
   "members.graph.loadFailed": { cn: "关系图谱加载失败：{error}", en: "Failed to load the relationship graph: {error}" },
+  "members.graph.hint": { cn: "拖动节点可调整位置，拖拽空白处平移，滚轮缩放；点击成员或作品节点进入详情页。", en: "Drag a node to reposition it, drag the canvas to pan, scroll to zoom; click a member or work node to open its page." },
 } as const;
 
 export type DictKey = keyof typeof dict;

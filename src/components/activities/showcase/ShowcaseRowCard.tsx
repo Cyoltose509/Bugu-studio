@@ -95,12 +95,11 @@ export default function ShowcaseRowCard({
           ))}
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-          <span className="rounded-full bg-brand-orange/10 px-2 py-1 text-xs text-brand-orange">{t(lang, "showcase.playable")}</span>
-          {project.developYear && (
+        {project.developYear ? (
+          <div className="mt-auto flex items-center justify-end gap-3 pt-2">
             <span className="text-xs text-brand-text-muted">{project.developYear}</span>
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
     </Link>
   );

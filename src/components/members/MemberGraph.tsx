@@ -58,6 +58,8 @@ interface GraphPayload {
 }
 
 interface SimNode extends RawNode {
+    /** 从相连的中心节点向外逐步出现，单位 ms。 */
+    revealAt: number;
     x: number;
     y: number;
     vx: number;
@@ -99,6 +101,33 @@ const BREATH_PERIOD = 300; // 呼吸周期（tick 数，约 5 秒）
 const COLLIDE_PAD = 15; // 节点之间的呼吸留白
 const COLLIDE_STRENGTH = 0.5; // 每轮碰撞只推开一部分，三轮迭代收敛
 const VIEW_EASE = 0.22; // 视图缓动系数（滚轮缩放 / 重置视图）
+const ENTER_DURATION = 600;
+const ENTER_SPREAD = 1100;
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+/** 从高连接度节点沿真实关系展开，孤立节点也会进入序列。 */
+function revealOrder(data: GraphPayload): Map<string, number> {
+    const neighbors = new Map(data.nodes.map(n => [n.id, [] as string[]]));
+    for (const link of data.links) {
+        neighbors.get(link.source)?.push(link.target);
+        neighbors.get(link.target)?.push(link.source);
+    }
+    const order = new Map<string, number>();
+    const roots = [...data.nodes].sort((a, b) => b.degree - a.degree);
+    for (const root of roots) {
+        if (order.has(root.id)) continue;
+        const queue = [root.id];
+        order.set(root.id, order.size);
+        for (let i = 0; i < queue.length; i++) {
+            for (const id of neighbors.get(queue[i]) ?? []) {
+                if (order.has(id) || !neighbors.has(id)) continue;
+                order.set(id, order.size);
+                queue.push(id);
+            }
+        }
+    }
+    return order;
+}
 
 const KIND_LABEL: Record<Kind, { cn: string; en: string }> = {
     member: { cn: "成员", en: "Member" },
@@ -175,7 +204,6 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     const [data, setData] = useState<GraphPayload | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [nonce, setNonce] = useState(0);
-    const [hoverLabel, setHoverLabel] = useState<string | null>(null);
     const [broken, setBroken] = useState<Set<string>>(() => new Set());
     const [hidden, setHidden] = useState<Record<Kind, boolean>>({
         member: false,
@@ -191,6 +219,8 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     const alphaRef = useRef(1);
     const tRef = useRef(0); // tick 计数，呼吸相位用
     const rafRef = useRef<number | null>(null);
+    const enterStartRef = useRef(0);
+    const reducedMotionRef = useRef(false);
     const hoverRef = useRef<SimNode | null>(null);
     const dragRef = useRef<{ node: SimNode; moved: boolean } | null>(null);
     const panRef = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
@@ -256,7 +286,13 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
 
     // ── 初始化模拟 ──
     useEffect(() => {
-        if (!data) return;
+        if (!data) {
+            canvasRef.current?.getContext("2d")?.clearRect(0, 0, sizeRef.current.w, sizeRef.current.h);
+            return;
+        }
+        const order = revealOrder(data);
+        const stagger = Math.min(45, ENTER_SPREAD / Math.max(data.nodes.length - 1, 1));
+        reducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         // 初始布局用叶序螺旋（d3-force 同款）：均匀无缠绕，收敛形态稳定
         const PHI = Math.PI * (3 - Math.sqrt(5)); // 黄金角
         const nodes: SimNode[] = data.nodes.map((n, i) => {
@@ -266,6 +302,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const ang = i * PHI;
             return {
                 ...n,
+                revealAt: (order.get(n.id) ?? i) * stagger,
                 x: Math.cos(ang) * rad,
                 y: Math.sin(ang) * rad,
                 vx: 0,
@@ -299,7 +336,13 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
 
         simRef.current = { nodes, links };
         alphaRef.current = 1;
+        hoverRef.current = null;
+        touchedRef.current = false;
+        fittedRef.current = false;
         settleFitRef.current = false;
+        // 消除初始位置重叠；后续的受力展开过程直接展示在画布中。
+        for (let i = 0; i < (reducedMotionRef.current ? 200 : 12); i++) tick();
+        enterStartRef.current = performance.now();
         // 关系图谱是专注视图：给 <html> 加 class 隐藏站点尾部卡片（避免与滚轮缩放打架）
         document.documentElement.classList.add("graph-fullscreen");
         fitView(true); // 首次落位直接到位，不做缓动
@@ -307,6 +350,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         return () => {
             document.documentElement.classList.remove("graph-fullscreen");
             stop();
+            simRef.current = null;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data]);
@@ -543,6 +587,8 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         const c = colorsRef.current;
         const hover = hoverRef.current;
         const q = queryRef.current.trim().toLowerCase();
+        const elapsed = performance.now() - enterStartRef.current;
+        const progress = (n: SimNode) => reducedMotionRef.current ? 1 : clamp01((elapsed - n.revealAt) / ENTER_DURATION);
 
         ctx.clearRect(0, 0, w, h);
 
@@ -575,6 +621,8 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         for (const pass of ["dim", "lit"] as const) {
             for (const l of sim.links) {
                 if (!visible(l.a) || !visible(l.b)) continue;
+                const growth = reducedMotionRef.current ? 1 : clamp01((elapsed - Math.max(l.a.revealAt, l.b.revealAt) - 80) / ENTER_DURATION);
+                if (growth <= 0) continue;
                 const related = !hover || (nb.has(l.a.id) && nb.has(l.b.id));
                 const lit = hover
                     ? related
@@ -595,11 +643,15 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                     ctx.strokeStyle = c.edge;
                     ctx.lineWidth = 1;
                 }
-                const p1 = borderPoint(l.a, l.b);
-                const p2 = borderPoint(l.b, l.a);
+                ctx.globalAlpha *= growth;
+                const first = l.a.revealAt <= l.b.revealAt ? l.a : l.b;
+                const second = first === l.a ? l.b : l.a;
+                const p1 = borderPoint(first, second);
+                const p2 = borderPoint(second, first);
+                const length = 1 - Math.pow(1 - growth, 3);
                 ctx.beginPath();
                 ctx.moveTo(p1.x * k + ox, p1.y * k + oy);
-                ctx.lineTo(p2.x * k + ox, p2.y * k + oy);
+                ctx.lineTo((p1.x + (p2.x - p1.x) * length) * k + ox, (p1.y + (p2.y - p1.y) * length) * k + oy);
                 ctx.stroke();
             }
         }
@@ -611,7 +663,8 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const body = bodyEls.current.get(n.id);
             const label = labelEls.current.get(n.id);
             if (!wrap || !body) continue;
-            const a = alphaOf(n);
+            const entry = progress(n);
+            const a = alphaOf(n) * Math.min(1, entry * 2);
             if (a <= 0) {
                 if (wrap.style.display !== "none") wrap.style.display = "none";
                 continue;
@@ -625,7 +678,10 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             const op = a.toFixed(2);
             if (wrap.style.opacity !== op) wrap.style.opacity = op;
 
-            const bodyTf = `translate(-50%, -50%) scale(${k.toFixed(3)})`;
+            // 弹性入场：先略微超过目标尺寸，再收回；仅影响视觉缩放。
+            const spring = entry >= 1 ? 1 : 1 - Math.exp(-4.5 * entry) * Math.cos(11 * entry);
+            const scale = 0.28 + 0.72 * spring;
+            const bodyTf = `translate(-50%, -50%) scale(${(k * scale).toFixed(3)})`;
             if (body.style.transform !== bodyTf) body.style.transform = bodyTf;
 
             const hot = hover && nb.has(n.id);
@@ -642,7 +698,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                 const isHot = !!hot;
                 const always =
                     n.degree >= 5 || (n.kind === "year" && (n.count ?? 0) >= 5);
-                const show = (isHot || (!!q && matchIds.has(n.id)) || always) && a > 0.5;
+                const show = (isHot || (!!q && matchIds.has(n.id)) || always) && a > 0.5 && entry > 0.8;
                 const lo = show ? "1" : "0";
                 if (label.style.opacity !== lo) label.style.opacity = lo;
                 if (show) {
@@ -659,7 +715,8 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
 
     const frame = useCallback(() => {
         // 后台标签页里 rAF 本就不触发，这里不用额外判断
-        tick();
+        if (!reducedMotionRef.current || alphaRef.current > 0.07 || dragRef.current) tick();
+        if (!touchedRef.current && performance.now() - enterStartRef.current < ENTER_SPREAD + ENTER_DURATION) fitView();
 
         // 视图缓动：滚轮缩放 / 重置视图是离散事件，直接跳很生硬
         const v = viewRef.current;
@@ -689,7 +746,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     }, [draw, tick, fitView]);
 
     const start = useCallback(() => {
-        if (rafRef.current != null) return;
+        if (!simRef.current || rafRef.current != null) return;
         rafRef.current = requestAnimationFrame(frame);
     }, [frame]);
 
@@ -719,6 +776,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             let bestD = Infinity;
             for (const n of sim.nodes) {
                 if (!visible(n)) continue;
+                if (!reducedMotionRef.current && performance.now() - enterStartRef.current < n.revealAt + ENTER_DURATION * 0.7) continue;
                 const px = n.x * k + ox;
                 const py = n.y * k + oy;
                 const hw = (n.w * k) / 2 + 3;
@@ -759,7 +817,6 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             dragRef.current = null;
             panRef.current = null;
             hoverRef.current = null;
-            setHoverLabel(null);
             const [a, b] = [...pointersRef.current.values()];
             pinchRef.current = {
                 dist: Math.max(Math.hypot(b.x - a.x, b.y - a.y), 1),
@@ -843,7 +900,6 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         const hit = pick(e.clientX, e.clientY);
         if (hit !== hoverRef.current) {
             hoverRef.current = hit;
-            setHoverLabel(hit ? `${kindLabel(hit.kind, lang)} · ${hit.label}` : null);
             draw();
         }
     };
@@ -872,8 +928,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
 
     // 滚轮缩放必须手动挂非 passive 监听：React 的 onWheel 经根节点 passive 委托，
     // e.preventDefault() 不生效，结果滚轮变成滚页面而非缩放（这一页滚轮被干扰的根因）。
-    // 依赖 data：组件在 data 未到达时只渲染 loading、canvas 还没挂载，首挂载时 canvasRef 为
-    // null 会提前 return，必须在 canvas 真正出现后（data 就绪）重挂监听。
+    // 数据重试会从错误提示切回画布，需要随 data 重新绑定。
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -898,7 +953,6 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
     const onLeave = () => {
         if (hoverRef.current) {
             hoverRef.current = null;
-            setHoverLabel(null);
             draw();
         }
     };
@@ -937,21 +991,15 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
         );
     }
 
-    if (!data) {
-        return (
-            <div className="rounded-xl border border-brand-border-subtle bg-card p-8 text-center text-sm text-brand-text-muted">
-                {t(lang, "members.graph.computing")}
-            </div>
-        );
-    }
-
-    const nodes = data.nodes.map((n) => ({ ...n, ...nodeBox(n) }));
-    const { stats } = data;
+    const nodes = (data?.nodes ?? []).map((n) => ({ ...n, ...nodeBox(n) }));
+    const stats = data?.stats;
 
     return (
         <div>
             <div
                 ref={wrapRef}
+                aria-busy={!data}
+                data-member-graph
                 className="relative w-full h-[calc(100vh-210px)] min-h-[520px] cursor-grab active:cursor-grabbing overflow-hidden"
             >
                 <canvas
@@ -1082,11 +1130,6 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                     })}
                 </div>
 
-                {hoverLabel && (
-                    <div className="pointer-events-none absolute left-3 top-3 rounded-md bg-black/70 px-2 py-1 text-xs text-white">
-                        {hoverLabel}
-                    </div>
-                )}
                 <button
                     type="button"
                     onClick={() => {
@@ -1101,7 +1144,7 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
             </div>
 
             {/* 图例 + 统计 */}
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+            {stats && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
                 {(["member", "project", "year"] as Kind[]).map((kind) => (
                     <button
                         key={kind}
@@ -1141,9 +1184,9 @@ export default function MemberGraph({ query = "" }: { query?: string }) {
                     {stats.activeDevCount < stats.memberCount &&
                         t(lang, "members.graphStatsActive", { n: stats.activeDevCount })}
                 </span>
-            </div>
+            </div>}
             <p className="mt-1 text-[11px] text-brand-text-muted">
-                拖动节点可调整位置，拖拽空白处平移，滚轮缩放；点击成员或作品节点进入详情页。
+                {t(lang, "members.graph.hint")}
             </p>
         </div>
     );

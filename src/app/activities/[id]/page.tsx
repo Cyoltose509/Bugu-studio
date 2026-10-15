@@ -34,6 +34,9 @@ import { isMockDataEnabled, mockActivityByKey } from "@/lib/mock/frontend-data";
 import { getLang } from "@/lib/i18n/getLang";
 import { t, type DictKey } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
+import ShareButton from "@/components/share/ShareButton";
+import { activityShareData, shareDescription, shareMetadata } from "@/lib/share";
+import { canSubmitActivityTalk, hasActivityTalkSection } from "@/lib/activities/capabilities";
 
 // 活动类型 / 状态 → 双语标签
 const ACTIVITY_TYPE_KEYS: Record<string, DictKey> = {
@@ -77,11 +80,11 @@ const getActivityMeta = cache(async (key: string) => {
   if (!id) return null;
   if (isMockDataEnabled()) {
     const a = mockActivityByKey(id);
-    return a ? { title: a.title, summary: a.summary, status: a.status } : null;
+    return a ? { id: a.id, title: a.title, summary: a.summary, status: a.status, coverImage: a.coverImage } : null;
   }
   return prisma.activity.findUnique({
     where: { id },
-    select: { title: true, summary: true, status: true },
+    select: { id: true, title: true, summary: true, status: true, coverImage: true },
   });
 });
 
@@ -94,8 +97,8 @@ export async function generateMetadata(
   const a = await getActivityMeta(key);
   if (!a || a.status === "DRAFT") return { title: t(lang, "activityDetail.metaNotFound") };
   return {
+    ...shareMetadata({ kind: "activity", title: a.title, summary: shareDescription(a.summary), path: `/activities/${a.id}`, image: a.coverImage }),
     title: t(lang, "activityDetail.metaTitle", { title: a.title }),
-    description: (a as any).summary || a.title,
   };
 }
 
@@ -186,18 +189,16 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
     if (role !== "ADMIN") notFound();
   }
 
-  const showcase = activity.type === "GENERAL" ? await getActivityShowcase(id, activity.slug) : null;
-  if (showcase?.enabled) {
-    return <ActivityShowcasePage activity={activity} config={showcase} isAdmin={session?.user?.role === "ADMIN"} />;
-  }
-
   const isOngoing   = now >= activity.startTime && now <= activity.endTime;
   const isUpcoming  = now < activity.startTime;
   const isPast       = now > activity.endTime;
+  const shareData = activityShareData(activity, lang);
+  const hasTalkSection = hasActivityTalkSection(activity);
+  const talkSignupOpen = canSubmitActivityTalk(activity, now);
 
   // 仅本地：mock / DB 不可达时跳过，勿提交
   const userProposal =
-    activity.type === "MEETING" && session?.user && !isMockDataEnabled()
+    hasTalkSection && session?.user && !isMockDataEnabled()
       ? await prisma.meetingProposal
           .findFirst({
             where: { activityId: id, userId: session.user.id },
@@ -205,8 +206,16 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
           .catch(() => null)
       : null;
 
-  return (
-    <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in">
+  const showcase = activity.type === "GENERAL" ? await getActivityShowcase(id, activity.slug) : null;
+  if (showcase?.enabled) {
+    return <>
+      <ActivityShowcasePage activity={activity} config={showcase} isAdmin={session?.user?.role === "ADMIN"} />
+      {hasTalkSection && <div className="mx-auto max-w-4xl px-4 py-8"><ActivityTalkSection activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} userProposal={userProposal} lang={lang} /></div>}
+    </>;
+  }
+
+  const mainColumn = (
+    <>
       {/* ── 封面图 ──────────────────────────────────── */}
       <div className="mb-6 rounded-xl overflow-hidden relative aspect-video bg-brand-surface">
         <Image
@@ -235,7 +244,10 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
           {isPast    && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{t(lang, "activity.past")}</span>}
         </div>
 
-        <h1 className="text-3xl font-bold text-brand-navy">{activity.title}</h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="min-w-0 text-3xl font-bold text-brand-navy">{activity.title}</h1>
+          {activity.status !== "DRAFT" && <ShareButton data={shareData} />}
+        </div>
 
         <p className="text-sm text-brand-text-secondary">
           📅 {activity.startTime.toLocaleString(dateLocale(lang))} ~ {activity.endTime.toLocaleString(dateLocale(lang))}
@@ -266,11 +278,61 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
         </div>
       )}
 
-      {/* ── 根据类型渲染 ──────────────────────────── */}
-      {activity.type === "MEETING"    && <MeetingSection activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} userProposal={userProposal} lang={lang} />}
       {activity.type === "COURSE"     && <CourseSection  activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} isPast={isPast} lang={lang} />}
       {activity.type === "COMPETITION" && <CompetitionSection activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} isPast={isPast} lang={lang} />}
       {activity.type === "GENERAL"    && <GeneralSection activity={activity} lang={lang} />}
+    </>
+  );
+
+  const talkColumn = hasTalkSection ? (
+    <ActivityTalkSection
+      activity={activity}
+      session={session}
+      isOngoing={isOngoing}
+      isUpcoming={isUpcoming}
+      userProposal={userProposal}
+      lang={lang}
+    />
+  ) : null;
+
+  // 有议程/报名时：左介绍、右议程，避免长表单把正文顶得很远
+  if (hasTalkSection) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.85fr)] lg:items-start">
+          <div className="min-w-0">{mainColumn}</div>
+          <aside className="min-w-0 lg:sticky lg:top-24 space-y-4">
+            <div className="rounded-2xl border border-brand-blue/20 bg-card p-4 sm:p-5">
+              <p className="mb-1 text-[10px] font-bold tracking-[0.18em] text-brand-orange">BUGOO / ACTIVITY</p>
+              <h2 className="font-bold text-brand-navy">
+                {lang === "en" ? "Agenda & signup" : "议程与报名"}
+              </h2>
+              <p className="mt-1.5 text-sm text-brand-text-secondary">
+                {lang === "en"
+                  ? "Talks and submissions stay on this side."
+                  : "本次分享安排与报名入口固定在右侧。"}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {talkSignupOpen && (
+                  <a href="#meeting-signup" className="btn-primary rounded-lg px-3 py-2 text-xs font-semibold">
+                    {lang === "en" ? "Submit a talk" : "报名分享"}
+                  </a>
+                )}
+                <a href="#meeting-agenda" className="btn-secondary rounded-lg px-3 py-2 text-xs font-semibold">
+                  {lang === "en" ? "View agenda" : "查看议程"}
+                </a>
+              </div>
+            </div>
+            {talkColumn}
+          </aside>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in">
+      {mainColumn}
     </div>
   );
 }
@@ -336,7 +398,7 @@ function ProposalSpeaker({ proposal, lang }: { proposal: any; lang: Lang }) {
 }
 
 // ── 例会 ───────────────────────────────────────────────────
-async function MeetingSection({
+async function ActivityTalkSection({
   activity, session, isOngoing, isUpcoming, userProposal, lang,
 }: { activity: any; session: any; isOngoing: boolean; isUpcoming: boolean; userProposal: any; lang: Lang }) {
   const talks = activity.talks || [];
@@ -364,7 +426,7 @@ async function MeetingSection({
   }
 
   return (
-    <div className="space-y-6">
+    <div id="meeting-agenda" className="scroll-mt-28 space-y-6">
       {/* ── 管理员审核待处理的申请 ──────────────── */}
       {isAdmin && pendingProposals.length > 0 && (
         <section>
@@ -445,8 +507,8 @@ async function MeetingSection({
         </section>
       )}
 
-      {(isOngoing || isUpcoming) && (
-        <section className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+      {(isOngoing || isUpcoming) && canSubmitActivityTalk(activity) && (
+        <section id="meeting-signup" className="scroll-mt-28 bg-card rounded-xl border p-6 border-brand-border-subtle">
           <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
           {userProposal ? (
             /* 已提交申请 — 显示状态 */
@@ -470,7 +532,7 @@ async function MeetingSection({
             /* 未提交 — 显示表单 */
             <>
               <p className="text-xs mb-3 text-brand-text-secondary">{t(lang, "activityDetail.proposalHint")}</p>
-              <SubmitProposalForm activityId={activity.id} />
+              {session?.user ? <SubmitProposalForm activityId={activity.id} /> : <Link href={`/auth/login?callbackUrl=${encodeURIComponent(`/activities/${activity.id}#meeting-signup`)}`} className="btn-primary inline-flex rounded-lg px-4 py-2.5 text-sm font-semibold">{lang === "en" ? "Sign in to submit a talk" : "登录后报名分享"}</Link>}
             </>
           )}
         </section>

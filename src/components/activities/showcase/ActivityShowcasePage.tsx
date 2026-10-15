@@ -2,20 +2,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { RichContent } from "@/components/ui/RichContent";
 import PosterGallery from "./PosterGallery";
-import ShowcaseRowCard from "./ShowcaseRowCard";
+import PlayableCatalogue from "./PlayableCatalogue";
 import { getShowcaseProjects } from "@/lib/activities/showcase-data";
 import { BAITUAN_SLUG, type ActivityShowcase } from "@/lib/activities/showcase";
-import GameSlideshow from "./GameSlideshow";
-import { toPlainCardText } from "@/lib/rich-content";
-import { sortTagsEngineFirst } from "@/lib/tags/engine-tags";
-import type { ShowcaseSlideshowProject } from "@/lib/activities/slideshow";
 import { t } from "@/lib/i18n/dict";
 import { getLang } from "@/lib/i18n/getLang";
 import type { Lang } from "@/lib/i18n/config";
+import ShareButton from "@/components/share/ShareButton";
+import { activityShareData } from "@/lib/share";
 
 interface Props {
   activity: { id: string; slug: string; title: string; summary: string | null; description: string | null;
-    startTime: Date; endTime: Date; location: string | null; status: string; coverImage?: string | null };
+    startTime: Date; endTime: Date; location: string | null; status: string; coverImage?: string | null;
+    talkSubmissionOpen?: boolean; talks?: { title: string; speaker: string }[];
+    proposals?: { title: string; user?: { name?: string | null; member?: { displayName?: string | null } | null } | null }[] };
   config: ActivityShowcase;
   isAdmin: boolean;
 }
@@ -36,19 +36,15 @@ export default async function ActivityShowcasePage({ activity, config, isAdmin }
   const date = new Intl.DateTimeFormat(dateLocale, { timeZone: "Asia/Shanghai", month: "numeric", day: "numeric" }).format(start);
   const time = (d: Date) => new Intl.DateTimeFormat(dateLocale, { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
   const isBaituan = activity.slug === BAITUAN_SLUG;
-  const slideshowProjects: ShowcaseSlideshowProject[] = projects.map(project => ({
-    id: project.id, slug: project.slug, title: project.title,
-    description: toPlainCardText(project.description), coverImage: project.coverImage,
-    images: project.images || [],
-    tags: sortTagsEngineFirst<{ name: string; slug: string; sortOrder?: number }>((project.tags || []).map((item: { tag: { name: string; slug: string; sortOrder?: number } }) => item.tag))
-      .map(tag => ({ slug: tag.slug, name: tag.name })),
-  }));
 
   return <div className="bg-[#f6f7f8] dark:bg-[#141a22]">
   <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10 animate-fade-in">
     <div className="flex flex-wrap items-center justify-between gap-3 mb-6 text-sm">
       <Link href="/activities" className="text-brand-text-secondary hover:text-brand-blue">{t(lang, "showcase.allActivities")}</Link>
-      {isAdmin && <Link href={`/admin/activities/${activity.id}/edit`} className="text-brand-blue underline">{t(lang, "showcase.manage")}</Link>}
+      <div className="flex items-center gap-3">
+        {activity.status !== "DRAFT" && <ShareButton data={activityShareData({ ...activity, relatedImages: config.posters }, lang)} />}
+        {isAdmin && <Link href={`/admin/activities/${activity.id}/edit`} className="text-brand-blue underline">{t(lang, "showcase.manage")}</Link>}
+      </div>
     </div>
     {activity.status === "DRAFT" && <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{t(lang, "showcase.draftNotice")}</p>}
 
@@ -74,7 +70,6 @@ export default async function ActivityShowcasePage({ activity, config, isAdmin }
           <p className="mb-6 text-xs font-bold tracking-[0.18em] text-brand-blue">BUGOO STUDIO / {isBaituan ? "2026 CAMPUS RECRUITMENT" : "PLAY TOGETHER"}</p>
           <div className="mb-5 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full bg-brand-blue/10 px-3 py-1 text-brand-blue">{status}</span>
-            <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-brand-orange">{t(lang, "showcase.badgeOriginal")}</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-black leading-tight text-brand-text-heading">{activity.title}</h1>
           <p className="my-6 text-base sm:text-lg leading-relaxed text-brand-text-body">{activity.summary || t(lang, "showcase.summaryFallback")}</p>
@@ -93,21 +88,7 @@ export default async function ActivityShowcasePage({ activity, config, isAdmin }
       </div>
     </section>
 
-    <section id="playable-games" className="scroll-mt-24 py-12 sm:py-16">
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
-        <div><p className="mb-2 text-xs font-bold tracking-[0.16em] text-brand-orange">MADE BY US. PLAYED BY YOU.</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-brand-text-heading">{t(lang, "showcase.sectionTitle")}</h2>
-          <p className="mt-3 text-sm text-brand-text-secondary">{t(lang, "showcase.sectionDesc", { n: projects.length })}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <GameSlideshow projects={slideshowProjects} />
-          <Link href="/works" className="text-sm text-brand-blue hover:underline">{t(lang, "showcase.browseAll")}</Link>
-        </div>
-      </div>
-      {projects.length ? <div className="flex flex-col gap-3">{projects.map((project, idx) =>
-        <ShowcaseRowCard key={project.id} project={project} index={idx} lang={lang} />
-      )}</div> : <p className="rounded-2xl border border-dashed border-brand-border-subtle p-8 text-center text-brand-text-secondary">{t(lang, "showcase.emptyCatalogue")}</p>}
-    </section>
+    <PlayableCatalogue projects={projects} lang={lang} />
 
     {config.posters.length > 1 && <section className="border-t border-brand-border-subtle py-10">
       <h2 className="mb-6 text-2xl font-bold text-brand-text-heading">{t(lang, "showcase.morePosters")}</h2>

@@ -18,6 +18,8 @@ import LogoLoading from "@/components/ui/LogoLoading";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import { isMockDataEnabled, mockMemberById } from "@/lib/mock/frontend-data";
+import ShareButton from "@/components/share/ShareButton";
+import { shareDescription, shareMetadata } from "@/lib/share";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -31,11 +33,11 @@ interface PageProps {
 const getMemberMeta = cache(async (id: string) => {
   if (isMockDataEnabled()) {
     const m = mockMemberById(id);
-    return m ? { displayName: m.displayName, bio: m.bio } : null;
+    return m ? { displayName: m.displayName, bio: m.bio, avatar: m.avatar, user: m.user } : null;
   }
   return prisma.clubMember.findUnique({
     where: { id },
-    select: { displayName: true, bio: true },
+    select: { displayName: true, bio: true, avatar: true, user: { select: { image: true } } },
   });
 });
 
@@ -44,10 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const lang = await getLang();
   const member = await getMemberMeta(id);
   if (!member) return { title: t(lang, "members.notFound") };
-  return {
-    title: member.displayName,
-    description: member.bio?.slice(0, 160) || t(lang, "members.pageTitle", { name: member.displayName }),
-  };
+  return shareMetadata({ kind: "member", title: member.displayName, path: `/members/${id}`, image: member.user?.image || member.avatar, summary: shareDescription(member.bio) || t(lang, "members.pageTitle", { name: member.displayName }) });
 }
 
 /* ── 同步 Shell：首字节 < 50ms ── */
@@ -174,13 +173,16 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
       {/* 面包屑 */}
-      <nav className="text-sm mb-8 text-brand-text-muted">
+      <div className="mb-8 flex items-center justify-between gap-3">
+      <nav className="min-w-0 text-sm text-brand-text-muted">
         <Link href="/" className="hover:underline text-brand-text-secondary">{t(lang, "common.home")}</Link>
         <span className="mx-2">/</span>
         <Link href="/members" className="hover:underline text-brand-text-secondary">{t(lang, "page.members.title")}</Link>
         <span className="mx-2">/</span>
         <span className="text-brand-text-body">{member.displayName}</span>
       </nav>
+      <ShareButton data={{ kind: "member", title: member.displayName, path: `/members/${member.id}`, summary: shareDescription(member.bio || member.user?.bio), image: member.user?.image || member.avatar, tags: member.skills, works: member.projectMembers.map((item: { project: { slug: string; title: string; subtitle: string | null; description: string | null; coverImage: string | null; type: string; developYear: number | null; tags?: { tag: { slug: string; name: string; color?: string | null; group?: string | null } }[] } }) => ({ slug: item.project.slug, title: item.project.title, subtitle: item.project.subtitle, description: item.project.description, image: item.project.coverImage, type: item.project.type, year: item.project.developYear, tags: (item.project.tags || []).map(({ tag }) => tag) })) }} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* 左侧主区域 */}

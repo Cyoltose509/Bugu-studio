@@ -55,7 +55,10 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
 
   return <section className="rounded-xl border border-brand-border-subtle bg-card p-6 shadow-sm space-y-5 text-brand-text-body">
     <div><h2 className="text-lg font-bold text-brand-text-heading">海报与试玩目录</h2>
-      <p className="mt-2 text-sm text-brand-text-secondary">启用后，活动详情使用专页布局。这里的内容独立保存；作品卡片自动引用站内最新信息。</p></div>
+      <p className="mt-2 text-sm text-brand-text-secondary">
+        可复用模块：启用后详情页展示海报专页，并用试玩目录（长条作品卡 + 全屏放映 + 跳转作品页）。
+        内容独立保存；作品信息自动同步站内最新数据。
+      </p></div>
     <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
       <label className="flex gap-2 items-center text-sm"><input type="checkbox" checked={config.enabled}
         onChange={e => { markChanged(); setConfig(c => ({ ...c, enabled: e.target.checked })); }} />启用海报与试玩专页</label>

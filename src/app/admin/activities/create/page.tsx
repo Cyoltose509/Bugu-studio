@@ -199,6 +199,16 @@ export default function CreateActivityPage() {
           <input id="registrationOpen" name="registrationOpen" type="checkbox" className="w-4 h-4 accent-brand-blue" />
           <label className="text-sm text-brand-text-body" htmlFor="registrationOpen">开放报名</label>
         </div>
+        <div className="flex items-center gap-2">
+          <input id="talkSubmissionOpen" name="talkSubmissionOpen" type="checkbox" className="w-4 h-4 accent-brand-blue" />
+          <label className="text-sm text-brand-text-body" htmlFor="talkSubmissionOpen">开放报名分享</label>
+        </div>
+
+        {type === "GENERAL" && (
+          <div className="rounded-lg border border-brand-border-subtle bg-brand-surface px-4 py-3 text-sm text-brand-text-secondary">
+            普通活动创建后，可在编辑页启用「海报与试玩目录」：复用试玩长条卡、全屏放映与作品页跳转（与百团专页同一套组件）。
+          </div>
+        )}
 
         {/* 提交 */}
         <div className="pt-2">

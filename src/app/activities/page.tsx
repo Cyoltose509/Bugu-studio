@@ -69,11 +69,11 @@ function ActivityCard({ a, lang, badge, countdown }: {
   const locale = dateLocale(lang);
 
   return (
-    <Link href={`/activities/${a.id}`} className="group">
-      <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all">
+    <Link href={`/activities/${a.id}`} className="group h-full">
+      <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all h-full flex flex-col">
 
         {/* 封面图 */}
-        <div className="relative aspect-video overflow-hidden bg-brand-surface">
+        <div className="relative aspect-video overflow-hidden bg-brand-surface shrink-0">
           <Image
             src={coverSrc}
             alt={a.title}
@@ -100,25 +100,20 @@ function ActivityCard({ a, lang, badge, countdown }: {
           )}
         </div>
 
-        {/* 信息区 */}
-        <div className="p-3 space-y-1">
-          {/* 标题 */}
+        {/* 信息区：固定三行，避免有/无简介、地点长短导致卡片高低不一 */}
+        <div className="p-3 flex flex-col gap-1 flex-1 min-h-[4.75rem]">
           <h3 className="text-sm font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
             {a.title}
           </h3>
-
-          {/* 时间 */}
-          <p className="text-xs text-brand-text-muted">
+          <p className="text-xs text-brand-text-muted line-clamp-1">
             {a.startTime.toLocaleDateString(locale, { month: "short", day: "numeric" })}
             {" ~ "}
             {a.endTime.toLocaleDateString(locale, { month: "short", day: "numeric" })}
             {a.location ? ` · ${a.location}` : ""}
           </p>
-
-          {/* 一句话简介 */}
-          {a.summary && (
-            <p className="text-xs line-clamp-1 text-brand-text-secondary">{a.summary}</p>
-          )}
+          <p className="text-xs line-clamp-1 text-brand-text-secondary min-h-[1rem]">
+            {a.summary || "\u00A0"}
+          </p>
         </div>
       </div>
     </Link>
@@ -330,7 +325,7 @@ export default async function ActivitiesPage() {
         {otherOngoing.length > 0 && (
           <section className="mb-12">
             <SectionTitle emoji="" title={t(lang, "activity.ongoing")} />
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
               {otherOngoing.map((a) => (
                 <ActivityCard key={a.id} a={a} lang={lang} badge="ongoing" />
               ))}
@@ -345,7 +340,7 @@ export default async function ActivitiesPage() {
                   title={t(lang, "activities.archive")}
               />
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
                 {safePast.map(a => (
                     <ActivityCard key={a.id} a={a} lang={lang} />
                 ))}

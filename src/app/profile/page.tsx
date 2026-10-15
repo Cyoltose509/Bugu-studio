@@ -12,6 +12,8 @@ import MiniLikeButton from "@/components/projects/MiniLikeButton";
 import ProjectCard from "@/components/projects/ProjectCard";
 import { RichContent } from "@/components/ui/RichContent";
 import LinkIcon from "@/components/icons/LinkIcon";
+import ShareButton from "@/components/share/ShareButton";
+import { shareDescription } from "@/lib/share";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
 import LogoLoading from "@/components/ui/LogoLoading";
@@ -154,7 +156,6 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           },
           _count: { select: { likes: true } },
         },
-        take: 12,
       })
     , 30),
     cachedQuery(`profile:liked:${userId}`, () =>
@@ -283,6 +284,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       </div>
 
       {/* 账号信息 */}
+      {member && <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand-border-subtle bg-card p-5">
+        <div><p className="font-semibold text-brand-navy">{lang === "en" ? "Public profile" : "公开主页"}</p><Link href={`/members/${member.id}`} className="mt-1 inline-block text-sm text-brand-blue hover:underline">{lang === "en" ? "View profile & works ↗" : "查看主页与作品 ↗"}</Link></div>
+        <ShareButton label={lang === "en" ? "Share profile" : "分享主页"} data={{ kind: "member", title: member.displayName, path: `/members/${member.id}`, summary: shareDescription(member.bio || user?.bio), image: user?.image, tags: member.skills, works: userProjects.filter((project) => project.status === "PUBLISHED").map((project) => ({ slug: project.slug, title: project.title, subtitle: project.subtitle, description: project.description, image: project.coverImage, type: project.type, year: project.developYear, tags: (project.tags || []).map(({ tag }: { tag: { slug: string; name: string; color?: string | null; group?: string | null } }) => tag) })) }} />
+      </div>}
+
       <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
         <h2 className="font-semibold mb-4 text-brand-navy">{t(lang, "profile.accountInfo")}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
