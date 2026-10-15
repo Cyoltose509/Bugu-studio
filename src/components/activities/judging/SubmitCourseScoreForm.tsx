@@ -2,12 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { submitCourseScore } from "@/lib/actions/judging";
-
-const DIMENSIONS = [
-  { key: "content", label: "📝 内容质量", desc: "讲题深度、知识准确性、结构逻辑" },
-  { key: "delivery", label: "🎤 讲解表达", desc: "语言流畅度、互动性、时间把控" },
-  { key: "preparation", label: "📋 准备充分度", desc: "资料齐备、案例丰富、PPT/演示质量" },
-] as const;
+import { useLang } from "@/lib/i18n/LangProvider";
 
 const QUICK_SCORES = [50, 60, 70, 80, 90];
 
@@ -72,6 +67,7 @@ export function SubmitCourseScoreForm({
   teamId: string;
   myScore: any;
 }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
   const criteria = (myScore?.criteria || {}) as Record<string, number>;
 
@@ -92,7 +88,7 @@ export function SubmitCourseScoreForm({
       <summary
         className={`text-xs cursor-pointer list-none inline-flex items-center gap-1.5 ${myScore ? "text-brand-blue" : "text-brand-orange"}`}
       >
-        {myScore ? "✏️ 修改评分" : "📝 打分"}
+        {myScore ? t("judging.editScore") : t("judging.score")}
       </summary>
       <form action={handleSubmit} className="mt-3 space-y-3 p-3 rounded-lg bg-[#F8FAFB]">
         <input type="hidden" name="teamId" value={teamId} />
@@ -101,14 +97,14 @@ export function SubmitCourseScoreForm({
         <input type="hidden" name="preparation" value={preparation} />
 
         <div className="space-y-3">
-          <ScoreSlider label="📝 内容质量" desc="讲题深度、知识准确性、结构逻辑" value={content} onChange={setContent} disabled={isPending} />
-          <ScoreSlider label="🎤 讲解表达" desc="语言流畅度、互动性、时间把控" value={delivery} onChange={setDelivery} disabled={isPending} />
-          <ScoreSlider label="📋 准备充分度" desc="资料齐备、案例丰富、演示质量" value={preparation} onChange={setPreparation} disabled={isPending} />
+          <ScoreSlider label={t("judging.dim.content")} desc={t("judging.dim.contentDesc")} value={content} onChange={setContent} disabled={isPending} />
+          <ScoreSlider label={t("judging.dim.delivery")} desc={t("judging.dim.deliveryDesc")} value={delivery} onChange={setDelivery} disabled={isPending} />
+          <ScoreSlider label={t("judging.dim.preparation")} desc={t("judging.dim.preparationDesc")} value={preparation} onChange={setPreparation} disabled={isPending} />
         </div>
 
         {/* 快捷选分 */}
         <div className="flex items-center gap-1">
-          <span className="text-[10px] mr-1 text-[#bbb]">快捷：</span>
+          <span className="text-[10px] mr-1 text-[#bbb]">{t("judging.quickScores")}</span>
           {QUICK_SCORES.map((s) => (
             <button
               key={s}
@@ -135,7 +131,7 @@ export function SubmitCourseScoreForm({
           className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#E8F4FD]"
         >
           <span className="text-xs font-medium text-brand-navy">
-            综合分（平均）
+            {t("judging.avgScore")}
           </span>
           <span
             className={`text-lg font-bold ${avgScore < 35 ? "text-[#e57373]" : avgScore < 65 ? "text-brand-orange" : "text-[var(--ui-text-green)]"}`}
@@ -147,14 +143,14 @@ export function SubmitCourseScoreForm({
 
         {/* 评语 */}
         <div>
-          <label className="block text-xs mb-1 text-brand-text-secondary">评语（可选）</label>
+          <label className="block text-xs mb-1 text-brand-text-secondary">{t("judging.commentOptional")}</label>
           <textarea
             name="comment"
             rows={2}
             defaultValue={myScore?.comment || ""}
             disabled={isPending}
             className="w-full rounded-lg border border-brand-border-subtle px-3 py-1.5 text-sm resize-y disabled:opacity-50"
-            placeholder="可以写下对讲题的评价、建议…"
+            placeholder={t("judging.commentPlaceholderTopic")}
           />
         </div>
 
@@ -163,7 +159,7 @@ export function SubmitCourseScoreForm({
           disabled={isPending}
           className="text-xs px-4 py-1.5 rounded-lg text-white disabled:opacity-50 transition-colors bg-brand-blue"
         >
-          {isPending ? "提交中…" : myScore ? "更新评分" : "提交评分"}
+          {isPending ? t("form.submitting") : myScore ? t("judging.updateScore") : t("judging.submitScore")}
         </button>
       </form>
     </details>

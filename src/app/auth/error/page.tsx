@@ -7,6 +7,8 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 const errorMessages: Record<string, string> = {
   Configuration: "服务器配置错误，请联系管理员",
@@ -40,11 +42,12 @@ function AuthErrorContent() {
 }
 
 export default function AuthErrorPage() {
+  const { lang } = useLang();
   return (
     <Suspense
       fallback={
         <div className="min-h-[80vh] flex items-center justify-center">
-          <div className="text-gray-400">加载中...</div>
+          <div className="text-gray-400">{t(lang, "common.loading")}</div>
         </div>
       }
     >

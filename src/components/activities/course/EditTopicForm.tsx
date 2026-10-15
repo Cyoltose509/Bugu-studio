@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setTeamTopic } from "@/lib/actions/teams";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export default function EditTopicForm({
   teamId,
@@ -13,6 +14,7 @@ export default function EditTopicForm({
   activityId: string;
   currentTopic: string | null;
 }) {
+  const { t } = useLang();
   const [pending, startTransition] = useTransition();
   const [topic, setTopic] = useState(currentTopic || "");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -37,7 +39,7 @@ export default function EditTopicForm({
             // 立即更新本地状态 + 触发页面刷新
             if (result.topic) setTopic(result.topic);
             router.refresh();
-            setFeedback({ type: "success", msg: "讲题已更新" });
+            setFeedback({ type: "success", msg: t("course.topicUpdated") });
             setTimeout(() => setFeedback(null), 2000);
           }
         });
@@ -48,7 +50,7 @@ export default function EditTopicForm({
         name="topic"
         value={topic}
         onChange={(e) => setTopic(e.target.value)}
-        placeholder="输入讲题…"
+        placeholder={t("course.topicPlaceholder")}
         maxLength={200}
         className="flex-1 rounded-lg border border-brand-border-subtle px-3 py-1.5 text-sm text-brand-text-heading"
         disabled={pending}
@@ -58,7 +60,7 @@ export default function EditTopicForm({
         disabled={pending}
         className="text-xs px-3 py-1.5 rounded-lg text-white shrink-0 disabled:opacity-50 bg-brand-blue"
       >
-        {pending ? "保存中…" : "保存"}
+        {pending ? t("common.saving") : t("common.save")}
       </button>
       {feedback && (
         <span className={`text-xs shrink-0 ${feedback.type === "success" ? "text-green-600" : "text-red-500"}`}>

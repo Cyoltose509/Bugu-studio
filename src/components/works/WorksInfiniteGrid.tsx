@@ -10,6 +10,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProjectCard, { ProjectCardProject } from "@/components/projects/ProjectCard";
 import WorkCardSkeleton from "./WorkCardSkeleton";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t, tpl } from "@/lib/i18n/dict";
 
 interface Props {
   initialItems: ProjectCardProject[];
@@ -49,6 +51,7 @@ export default function WorksInfiniteGrid({
   total: seedTotal,
 }: Props) {
   const sp = useSearchParams();
+  const { lang } = useLang();
   const urlFilters = useMemo(
     () => ({
       types: sp.get("types") || undefined,
@@ -68,6 +71,8 @@ export default function WorksInfiniteGrid({
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloading, setReloading] = useState(false);
   const [clickingId, setClickingId] = useState<string | null>(null);
+  const [reloadError, setReloadError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<() => void>(() => {});
@@ -90,15 +95,28 @@ export default function WorksInfiniteGrid({
     [router],
   );
 
-  // URL 筛选/排序变了 → 立刻重拉第一页（AbortController 防连点）
+  // 重试：把已加载标记清掉，effect 才会重新拉一次
+  const handleRetry = useCallback(() => {
+    loadedKeyRef.current = "";
+    setRetryNonce((n) => n + 1);
+  }, []);
+
+  // URL 筛选/排序变了 → 立刻重拉第一页（AbortController 防连点 + 超时兜底）
   useEffect(() => {
     if (urlKey === loadedKeyRef.current) return;
 
     const ac = new AbortController();
     const f = urlFilters;
+    // 数据库偶尔不可达，请求会长时间挂着；与其让骨架屏一直转，不如告诉用户
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      ac.abort();
+    }, 10000);
 
     (async () => {
       setReloading(true);
+      setReloadError(null);
       loadingMoreRef.current = false;
       setLoadingMore(false);
       try {
@@ -124,16 +142,23 @@ export default function WorksInfiniteGrid({
         if (typeof data.total === "number") setTotal(data.total);
         loadedKeyRef.current = urlKey;
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
+        if (ac.signal.aborted && !timedOut) return;
+        setReloadError(
+          timedOut ? t(lang, "works.error.timeout") : t(lang, "works.error.fail"),
+        );
         // 失败时仍标记已尝试，避免死循环狂请求
         loadedKeyRef.current = urlKey;
       } finally {
-        if (!ac.signal.aborted) setReloading(false);
+        clearTimeout(timer);
+        if (!ac.signal.aborted || timedOut) setReloading(false);
       }
     })();
 
-    return () => ac.abort();
-  }, [urlKey, urlFilters]);
+    return () => {
+      clearTimeout(timer);
+      ac.abort();
+    };
+  }, [urlKey, urlFilters, retryNonce]);
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || reloading || clickingRef.current) return;
@@ -202,7 +227,7 @@ export default function WorksInfiniteGrid({
     return (
       <>
         <div className="text-sm mb-4 text-brand-text-muted animate-pulse">
-          正在更新列表…
+          {t(lang, "works.loading")}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-stretch">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -213,11 +238,38 @@ export default function WorksInfiniteGrid({
     );
   }
 
+  if (reloadError) {
+    return (
+      <div className="text-center py-20 text-brand-text-muted">
+        <p className="text-base mb-2">{reloadError}</p>
+        <p className="text-sm mb-4">
+          {t(lang, "works.error.stale")}
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle text-brand-blue hover:bg-brand-surface transition-colors"
+          >
+            {t(lang, "works.retry")}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="text-sm px-4 py-2 rounded-lg text-brand-text-muted hover:text-brand-text transition-colors"
+          >
+            {t(lang, "works.refresh")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="text-center py-20 text-brand-text-muted">
-        <p className="text-base mb-2">没有找到匹配的作品</p>
-        <p className="text-sm mb-4">试试换个筛选条件，或清除筛选后再看</p>
+        <p className="text-base mb-2">{t(lang, "works.empty.title")}</p>
+        <p className="text-sm mb-4">{t(lang, "works.empty.desc")}</p>
         <button
           type="button"
           onClick={() => {
@@ -225,7 +277,7 @@ export default function WorksInfiniteGrid({
           }}
           className="text-sm px-4 py-2 rounded-lg border border-brand-border-subtle text-brand-blue hover:bg-brand-surface transition-colors"
         >
-          清除筛选
+          {t(lang, "works.clearFilters")}
         </button>
       </div>
     );
@@ -234,7 +286,7 @@ export default function WorksInfiniteGrid({
   return (
     <>
       <div className="text-sm mb-4 text-brand-text-muted">
-        已加载 {items.length} / {total} 件作品
+        {tpl(lang, "works.loaded", { n: items.length, m: total })}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-stretch">
@@ -260,7 +312,7 @@ export default function WorksInfiniteGrid({
         )}
         {!hasMore && items.length > 0 && (
           <div className="text-center py-8 text-sm flex flex-col items-center gap-3 text-[#bbb] dark:text-[#556]">
-            <span>— 已到底部，共 {total} 件作品 —</span>
+            <span>{tpl(lang, "works.end", { m: total })}</span>
           </div>
         )}
       </div>

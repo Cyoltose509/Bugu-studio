@@ -5,23 +5,30 @@ import {cachedQuery} from "@/lib/db/cache";
 import {batchRenderRichContent} from "@/lib/renderRichContent";
 import {ProjectStatus, ActivityStatus} from "@prisma/client";
 import {isMockDataEnabled, mockHistoryYearDetails} from "@/lib/mock/frontend-data";
+import {getLang} from "@/lib/i18n/getLang";
+import {t} from "@/lib/i18n/dict";
+import {extractAwardYear, groupAwardsByYear} from "@/lib/history/awards";
+import type {AwardEntry} from "@/lib/history/awards";
 
-export const metadata: Metadata = {title: "社团历史", description: "记录布谷工作室每一年的成长与创作"};
+export async function generateMetadata(): Promise<Metadata> {
+    const lang = await getLang();
+    return {title: t(lang, "page.history.title"), description: t(lang, "page.history.description")};
+}
 export const dynamic = "force-dynamic"; // 避免构建时并发连接池耗尽
 
 export default async function HistoryPage() {
+    const lang = await getLang();
     if (isMockDataEnabled()) {
         const {yearDetails, startYear} = mockHistoryYearDetails();
         return (
             <div className="container mx-auto px-4 py-10 animate-fade-in">
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold text-brand-navy">社团历史</h1>
+                    <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.history.title")}</h1>
                     <p className="mt-2 text-brand-text-secondary">记录每一届成员的努力与成果</p>
                 </div>
                 <HistoryClient
                     yearDetails={yearDetails}
                     startYear={startYear}
-                    yearCount={yearDetails.length}
                 />
             </div>
         );
@@ -32,7 +39,7 @@ export default async function HistoryPage() {
     // 从四个数据源收集所有有数据的年份（历史数据几乎不变，缓存1小时）
     const [projectYearRows, memberGradeRows, eventYearRows, activityRows] = await Promise.all([
         cachedQuery("history:projectYears", () =>
-                prisma.project.findMany({where: {status: ProjectStatus.PUBLISHED}, select: {developYear: true}, distinct: ["developYear"]}),
+                prisma.project.findMany({where: {status: ProjectStatus.PUBLISHED}, select: {developYear: true, awards: true}}),
             3600),
         cachedQuery("history:memberGrades", () =>
                 prisma.clubMember.findMany({select: {grade: true}, distinct: ["grade"]}),
@@ -67,6 +74,13 @@ export default async function HistoryPage() {
     for (const y of memberYearSet) allYearsSet.add(y);
     for (const e of eventYearRows) allYearsSet.add(e.year);
     for (const y of activityYearSet) allYearsSet.add(y);
+    // 奖项文本里的年份也纳入年份集合（奖项可能落在没有作品 / 活动的年份）
+    for (const p of projectYearRows) {
+        for (const award of (p.awards ?? [])) {
+            const y = extractAwardYear(award);
+            if (y && y >= 2000 && y <= currentYear) allYearsSet.add(y);
+        }
+    }
 
     // 兜底：从 2019 起步（创始人是 2017 届但 2019 年起才有实际产出）
     const START_YEAR = 2019;
@@ -80,7 +94,7 @@ export default async function HistoryPage() {
     }
 
     // 单次批量查询所有年份数据，在 JS 中分组 — 减少查询次数
-    const yearDetails: { year: number; projects: any[]; members: any[]; events: any[]; activities: any[]; activeMembers: any[]; presidents: any[] }[] = [];
+    const yearDetails: { year: number; projects: any[]; members: any[]; events: any[]; activities: any[]; activeMembers: any[]; presidents: any[]; awards: AwardEntry[] }[] = [];
     
     const [
       allProjects,
@@ -96,7 +110,7 @@ export default async function HistoryPage() {
           select: {
             id: true, slug: true, title: true, subtitle: true, coverImage: true,
             type: true, developYear: true, awards: true, aiUsages: true,
-            tags: { select: { tag: { select: { name: true } } } },
+            tags: { select: { tag: { select: { name: true, slug: true } } } },
             members: { select: { memberId: true, userId: true, externalName: true, roles: true, member: { select: { displayName: true } }, user: { select: { name: true, image: true } } } },
             _count: { select: { likes: true } }
           },
@@ -184,12 +198,17 @@ export default async function HistoryPage() {
       activitiesByYear.get(y)!.push(a);
     }
 
+    // 奖项按「获奖年份」分组：奖项文本内的年份优先，找不到则跟随作品发布年份
+    const awardByYear = groupAwardsByYear(allProjects);
+
     for (const year of allYears) {
       const projects = projectByYear.get(year) || [];
       const newBlood = newBloodByYear.get(year) || [];
       const events = allEvents.filter(e => e.year === year);
       const activities = activitiesByYear.get(year) || [];
-      if (newBlood.length === 0 && events.length === 0 && activities.length === 0 && projects.length === 0) continue;
+      // ─── 奖项按「获奖年份」归位（奖项文本年份优先，回落作品发布年份） ───
+      const awards = awardByYear.get(year) || [];
+      if (newBlood.length === 0 && events.length === 0 && activities.length === 0 && projects.length === 0 && awards.length === 0) continue;
       
       // ─── 活跃度计算（跨年统计 — 统计所有成员在该年的贡献） ───
       // 作品制作：该年作品中的 memberId 计数
@@ -269,20 +288,19 @@ export default async function HistoryPage() {
          m.position === "FOUNDER")
       );
       
-      yearDetails.push({ year, projects, members: newBlood, events, activities, activeMembers, presidents });
+      yearDetails.push({ year, projects, members: newBlood, events, activities, activeMembers, presidents, awards });
     }
 
     return (
         <div className="container mx-auto px-4 py-10 animate-fade-in">
             <div className="mb-8 text-center">
-                <h1 className="text-3xl font-bold text-brand-navy">社团历史</h1>
+                <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.history.title")}</h1>
                 <p className="mt-2 text-brand-text-secondary">记录每一届成员的努力与成果</p>
             </div>
 
             <HistoryClient
                 yearDetails={yearDetails}
                 startYear={START_YEAR}
-                yearCount={yearDetails.length}
             />
         </div>
     );

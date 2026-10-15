@@ -1,5 +1,8 @@
 import MascotLoading from "@/components/ui/MascotLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
-export default function MembersLoading() {
-  return <MascotLoading text="正在加载成员列表..." />;
+export default async function MembersLoading() {
+  const lang = await getLang();
+  return <MascotLoading text={t(lang, "loading.members")} />;
 }

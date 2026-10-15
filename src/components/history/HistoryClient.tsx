@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from "react";
 import YearNewspaper, { SectionVisibility } from "@/components/history/YearNewspaper";
+import type { AwardEntry } from "@/lib/history/awards";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
-const SECTION_LABELS: { key: keyof SectionVisibility; label: string }[] = [
-  { key: "lead", label: "卷首语" },
-  { key: "stats", label: "数字面板" },
-  { key: "projects", label: "作品巡礼" },
-  { key: "awards", label: "所获奖项" },
-  { key: "members", label: "新血液" },
-  { key: "activeMembers", label: "活跃成员" },
-  { key: "activities", label: "活动回顾" },
-  { key: "events", label: "大事记" },
+const SECTION_LABEL_KEYS: { key: keyof SectionVisibility; dictKey: "history.section.lead" | "history.section.stats" | "history.section.projects" | "history.section.awards" | "history.section.members" | "history.section.activeMembers" | "history.section.activities" | "history.section.events" }[] = [
+  { key: "lead", dictKey: "history.section.lead" },
+  { key: "stats", dictKey: "history.section.stats" },
+  { key: "projects", dictKey: "history.section.projects" },
+  { key: "awards", dictKey: "history.section.awards" },
+  { key: "members", dictKey: "history.section.members" },
+  { key: "activeMembers", dictKey: "history.section.activeMembers" },
+  { key: "activities", dictKey: "history.section.activities" },
+  { key: "events", dictKey: "history.section.events" },
 ];
 
 function allSections(value: boolean): SectionVisibility {
@@ -59,6 +62,7 @@ interface YearDetail {
   activities: Activity[];
   activeMembers: ActiveMember[];
   presidents: Member[];
+  awards: AwardEntry[];
 }
 
 // ─── 样式工具 ────────────────────────────────────────
@@ -66,15 +70,15 @@ interface YearDetail {
 
 // ═══════════════════════════════════════════════════════
 export default function HistoryClient({
-  yearDetails, startYear, yearCount,
+  yearDetails, startYear,
 }: {
   yearDetails: YearDetail[];
   startYear: number;
-  yearCount: number;
 }) {
   const [mounted, setMounted] = useState(false);
   const [sections, setSections] = useState<SectionVisibility>(allSections(true));
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { lang } = useLang();
 
   // 等待客户端挂载后再显示按钮（避免 SSR 水合不匹配）
   useEffect(() => { setMounted(true); }, []);
@@ -104,7 +108,7 @@ export default function HistoryClient({
             max-width: 100% !important;
             margin: 0 auto 16px !important;
           }
-          [data-save-buttons], [data-toolbar], [data-history-sidebar] {
+          [data-save-buttons], [data-history-sidebar] {
             display: none !important;
           }
           @page {
@@ -160,12 +164,12 @@ export default function HistoryClient({
                       onClick={() => setSections(allSections(false))}
                       className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 0 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
                     >
-                      清空
+                      {t(lang, "history.clear")}
                     </button>
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    {SECTION_LABELS.map(({ key, label }) => (
+                    {SECTION_LABEL_KEYS.map(({ key, dictKey }) => (
                       <label
                         key={key}
                         className="flex items-center gap-2 py-1 px-1.5 rounded cursor-pointer hover:bg-brand-surface transition-colors text-sm text-brand-text-body"
@@ -176,7 +180,7 @@ export default function HistoryClient({
                           onChange={() => setSections(prev => ({ ...prev, [key]: !prev[key] }))}
                           className="w-3.5 h-3.5 rounded accent-brand-navy cursor-pointer"
                         />
-                        {label}
+                        {t(lang, dictKey)}
                       </label>
                     ))}
                   </div>
@@ -204,26 +208,17 @@ export default function HistoryClient({
 
         {/* ═══ 主内容区 ═══ */}
         <div className="min-w-0">
-          {/* ═══ 顶部信息行 ═══ */}
-          {mounted && yearDetails.length > 0 && (
-            <div data-toolbar className="flex justify-center mb-6">
-              <span className="text-sm text-brand-text-secondary">
-                共 {yearCount} 年年报（{startYear}年至今）· 每份年报右下角可单独保存
-              </span>
-            </div>
-          )}
-
           {/* ═══ 报纸列表 ═══ */}
           {yearDetails.length === 0 ? (
             <div className="rounded-xl border border-brand-border-subtle bg-card px-6 py-16 text-center">
-              <p className="text-lg font-medium text-brand-navy">暂无年报内容</p>
+              <p className="text-lg font-medium text-brand-navy">{t(lang, "history.empty")}</p>
               <p className="mt-2 text-sm text-brand-text-secondary">
-                发布作品、大事记或活动后，这里会按年份自动生成回顾。
+                {t(lang, "history.emptyDesc")}
               </p>
             </div>
           ) : (
           <div className="space-y-8">
-            {yearDetails.map(({ year, members, projects, events, activities, activeMembers, presidents }) => (
+            {yearDetails.map(({ year, members, projects, events, activities, activeMembers, presidents, awards }) => (
               <div key={year} className="history-scroll-wrapper">
                 <YearNewspaper
                   year={year}
@@ -233,6 +228,7 @@ export default function HistoryClient({
                   activities={activities}
                   activeMembers={activeMembers}
                   presidents={presidents}
+                  awards={awards}
                   startYear={startYear}
                   sections={sections}
                 />

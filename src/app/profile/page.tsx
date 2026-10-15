@@ -11,9 +11,14 @@ import Link from "next/link";
 import MiniLikeButton from "@/components/projects/MiniLikeButton";
 import ProjectCard from "@/components/projects/ProjectCard";
 import { RichContent } from "@/components/ui/RichContent";
+import LinkIcon from "@/components/icons/LinkIcon";
+import ShareButton from "@/components/share/ShareButton";
+import { shareDescription } from "@/lib/share";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import { positionLabel, positionColor } from "@/lib/position";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 import {
   getMockAuthUser,
   isMockDataEnabled,
@@ -25,9 +30,10 @@ export const dynamic = "force-dynamic";
 
 /* ── 同步 Shell ── */
 
-export default function ProfilePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+  const lang = await getLang();
   return (
-    <Suspense fallback={<LogoLoading text="正在加载个人中心..." compact />}>
+    <Suspense fallback={<LogoLoading text={t(lang, "profile.loading")} compact />}>
       <ProfileContent searchParams={searchParams} />
     </Suspense>
   );
@@ -37,13 +43,14 @@ export default function ProfilePage({ searchParams }: { searchParams: Promise<{ 
 
 async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const session = await auth();
+  const lang = await getLang();
 
   if (!session?.user) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-lg mb-4 text-brand-text-secondary">请先登录</p>
-          <Link href="/auth/login" className="btn-primary px-6 py-2 rounded-lg text-sm font-medium">前往登录</Link>
+          <p className="text-lg mb-4 text-brand-text-secondary">{t(lang, "profile.pleaseLogin")}</p>
+          <Link href="/auth/login" className="btn-primary px-6 py-2 rounded-lg text-sm font-medium">{t(lang, "profile.goLogin")}</Link>
         </div>
       </div>
     );
@@ -149,7 +156,6 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           },
           _count: { select: { likes: true } },
         },
-        take: 12,
       })
     , 30),
     cachedQuery(`profile:liked:${userId}`, () =>
@@ -195,11 +201,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           <div className="flex items-center gap-3">
             <span className="text-lg">🛡️</span>
             <div>
-              <p className="text-sm font-medium text-red-700">管理员视图 — 正在查看 {user?.name || user?.email || "未知用户"} 的资料</p>
-              <p className="text-xs text-red-600">你无法编辑此用户的资料，仅可查看</p>
+              <p className="text-sm font-medium text-red-700">{t(lang, "profile.adminViewBanner", { name: user?.name || user?.email || t(lang, "profile.unknownUser") })}</p>
+              <p className="text-xs text-red-600">{t(lang, "profile.adminViewHint")}</p>
             </div>
           </div>
-          <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">← 返回用户管理</Link>
+          <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">{t(lang, "profile.backToUsers")}</Link>
         </div>
       )}
 
@@ -228,23 +234,23 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
 
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-2xl font-bold text-brand-navy">
-              {member?.displayName || user?.name || "未设置昵称"}
+              {member?.displayName || user?.name || t(lang, "profile.unsetNickname")}
             </h1>
             <div className="mt-1 space-y-1">
               <p className="text-sm text-brand-text-secondary">{user?.email}</p>
               <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${roleBadge(user?.role)}`}>
-                  {user?.role === "ADMIN" ? "管理员" :
-                   user?.role === "MEMBER" ? "社团成员" : "注册用户"}
+                  {user?.role === "ADMIN" ? t(lang, "role.admin") :
+                   user?.role === "MEMBER" ? t(lang, "role.member") : t(lang, "role.registered")}
                 </span>
                 {user?.emailVerified && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-800">
-                    已验证
+                    {t(lang, "profile.verified")}
                   </span>
                 )}
                 {user?.isActive === false && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                    已禁用
+                    {t(lang, "profile.disabled")}
                   </span>
                 )}
               </div>
@@ -254,22 +260,22 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           {/* 操作按钮 — 窄屏 2×2，避免 3+1 折行 */}
           <div className="w-full sm:w-auto">
             {isAdminView ? (
-              <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium inline-flex">← 返回用户管理</Link>
+              <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium inline-flex">{t(lang, "profile.backToUsers")}</Link>
             ) : (
               <div className="grid grid-cols-2 gap-2 w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:flex sm:flex-wrap sm:justify-end">
                 {user?.role === "ADMIN" && (
-                  <Link href="/admin" className="btn-primary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">管理后台</Link>
+                  <Link href="/admin" className="btn-primary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "nav.admin")}</Link>
                 )}
-                <Link href="/profile/edit" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">编辑资料</Link>
-                <Link href="/profile/settings" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">通知设置</Link>
-                <Link href="/profile/privacy" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">隐私设置</Link>
+                <Link href="/profile/edit" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "profile.editProfileShort")}</Link>
+                <Link href="/profile/settings" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "page.settings.title")}</Link>
+                <Link href="/profile/privacy" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "profile.privacy.title")}</Link>
                 <Link
                   href="/auth/signout"
                   className={`px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2 border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-400/50 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors ${
                     user?.role === "ADMIN" ? "col-span-2 sm:col-span-1" : ""
                   }`}
                 >
-                  退出登录
+                  {t(lang, "profile.signOut")}
                 </Link>
               </div>
             )}
@@ -278,23 +284,28 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       </div>
 
       {/* 账号信息 */}
+      {member && <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-brand-border-subtle bg-card p-5">
+        <div><p className="font-semibold text-brand-navy">{lang === "en" ? "Public profile" : "公开主页"}</p><Link href={`/members/${member.id}`} className="mt-1 inline-block text-sm text-brand-blue hover:underline">{lang === "en" ? "View profile & works ↗" : "查看主页与作品 ↗"}</Link></div>
+        <ShareButton label={lang === "en" ? "Share profile" : "分享主页"} data={{ kind: "member", title: member.displayName, path: `/members/${member.id}`, summary: shareDescription(member.bio || user?.bio), image: user?.image, tags: member.skills, works: userProjects.filter((project) => project.status === "PUBLISHED").map((project) => ({ slug: project.slug, title: project.title, subtitle: project.subtitle, description: project.description, image: project.coverImage, type: project.type, year: project.developYear, tags: (project.tags || []).map(({ tag }: { tag: { slug: string; name: string; color?: string | null; group?: string | null } }) => tag) })) }} />
+      </div>}
+
       <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-        <h2 className="font-semibold mb-4 text-brand-navy">账号信息</h2>
+        <h2 className="font-semibold mb-4 text-brand-navy">{t(lang, "profile.accountInfo")}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="text-xs mb-0.5 text-brand-text-muted">邮箱</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "auth.email")}</div>
             <div className="text-brand-text-heading">{user?.email}</div>
           </div>
           <div>
-            <div className="text-xs mb-0.5 text-brand-text-muted">角色</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "profile.role")}</div>
             <div className="text-brand-text-heading">{user?.role}</div>
           </div>
           <div>
-            <div className="text-xs mb-0.5 text-brand-text-muted">注册时间</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "profile.registerTime")}</div>
             <div className="text-brand-text-heading">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString("zh-CN") : "—"}</div>
           </div>
           <div>
-            <div className="text-xs mb-0.5 text-brand-text-muted">最后登录</div>
+            <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "profile.lastLogin")}</div>
             <div className="text-brand-text-heading">{user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString("zh-CN") : "—"}</div>
           </div>
         </div>
@@ -303,7 +314,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       {/* 个人介绍 — 所有用户可见 */}
       {user?.bio && (
         <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-          <h2 className="font-semibold mb-3 text-brand-navy">个人介绍</h2>
+          <h2 className="font-semibold mb-3 text-brand-navy">{t(lang, "profile.intro")}</h2>
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-brand-text-body">
             <RichContent text={user.bio} />
           </p>
@@ -316,10 +327,10 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
         const canSeeSensitive = !isAdminView || (session.user.role !== "USER");
         return (
         <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-          <h2 className="font-semibold mb-4 text-brand-navy">社团成员信息</h2>
+          <h2 className="font-semibold mb-4 text-brand-navy">{t(lang, "profile.memberInfo")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
-              <div className="text-xs mb-0.5 text-brand-text-muted">展示名称</div>
+              <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "profile.displayName")}</div>
               <div className="flex items-center gap-1.5 text-brand-text-heading">
                 {member.displayName}
                 {member.position && member.position !== "MEMBER" && (() => {
@@ -333,17 +344,17 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
               </div>
             </div>
             <div>
-              <div className="text-xs mb-0.5 text-brand-text-muted">年级</div>
-              <div className="text-brand-text-heading">{member.grade != null ? `${member.grade}级` : "—"}</div>
+              <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "members.gradeLabel")}</div>
+              <div className="text-brand-text-heading">{member.grade != null ? t(lang, "profile.edit.gradeValue", { n: member.grade }) : "—"}</div>
             </div>
             <div>
-              <div className="text-xs mb-0.5 text-brand-text-muted">入社年份</div>
-              <div className="text-brand-text-heading">{member.joinYear != null ? `${member.joinYear}年` : "—"}</div>
+              <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "members.joinYearLabel")}</div>
+              <div className="text-brand-text-heading">{member.joinYear != null ? t(lang, "profile.edit.yearValue", { n: member.joinYear }) : "—"}</div>
             </div>
             <div>
-              <div className="text-xs mb-0.5 text-brand-text-muted">毕业状态</div>
+              <div className="text-xs mb-0.5 text-brand-text-muted">{t(lang, "profile.graduationStatus")}</div>
               <div className={member.graduated ? "text-brand-orange" : "text-brand-blue"}>
-                {member.graduated ? "已毕业" : "在读"}
+                {member.graduated ? t(lang, "members.graduated") : t(lang, "members.enrolled")}
               </div>
             </div>
           </div>
@@ -351,12 +362,12 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           {/* 联系方式 — 敏感项，仅成员+可见 */}
           {canSeeSensitive && (member.location || member.phone || member.wechat || member.qq) && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="text-xs mb-2 text-brand-text-muted">联系方式（仅成员可见）</div>
+              <div className="text-xs mb-2 text-brand-text-muted">{t(lang, "profile.contactMembersOnly")}</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                {member.location && <ContactRow label="所在地" value={member.location} />}
-                {member.phone && <ContactRow label="电话" value={member.phone} />}
-                {member.wechat && <ContactRow label="微信" value={member.wechat} />}
-                {member.qq && <ContactRow label="QQ" value={member.qq} />}
+                {member.location && <ContactRow label={t(lang, "profile.edit.location")} value={member.location} />}
+                {member.phone && <ContactRow label={t(lang, "profile.edit.phone")} value={member.phone} />}
+                {member.wechat && <ContactRow label={t(lang, "profile.edit.wechat")} value={member.wechat} />}
+                {member.qq && <ContactRow label={t(lang, "profile.edit.qq")} value={member.qq} />}
               </div>
             </div>
           )}
@@ -365,11 +376,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           {canSeeSensitive && member.realName && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="text-xs mb-2 flex items-center gap-1 text-brand-text-muted">
-                🔒 真实姓名（仅成员可见）
+                {t(lang, "profile.realNameMembersOnly")}
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-brand-text-heading">{member.realName}</span>
-                <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700">敏感</span>
+                <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700">{t(lang, "profile.edit.sensitive")}</span>
               </div>
             </div>
           )}
@@ -379,19 +390,19 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
             <>
               {!member.graduated && (member.college || member.major) && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="text-xs mb-2 text-brand-text-muted">在校信息（仅成员可见）</div>
+                  <div className="text-xs mb-2 text-brand-text-muted">{t(lang, "profile.schoolInfoMembersOnly")}</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    {member.college && <ContactRow label="学院" value={member.college} />}
-                    {member.major && <ContactRow label="专业" value={member.major} />}
+                    {member.college && <ContactRow label={t(lang, "profile.edit.college")} value={member.college} />}
+                    {member.major && <ContactRow label={t(lang, "profile.edit.major")} value={member.major} />}
                   </div>
                 </div>
               )}
               {member.graduated && (member.workLocation || member.workPosition) && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="text-xs mb-2 text-brand-text-muted">工作信息（仅成员可见）</div>
+                  <div className="text-xs mb-2 text-brand-text-muted">{t(lang, "profile.workInfoMembersOnly")}</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    {member.workLocation && <ContactRow label="工作所在地" value={member.workLocation} />}
-                    {member.workPosition && <ContactRow label="工作岗位" value={member.workPosition} />}
+                    {member.workLocation && <ContactRow label={t(lang, "profile.edit.workLocation")} value={member.workLocation} />}
+                    {member.workPosition && <ContactRow label={t(lang, "profile.edit.workPosition")} value={member.workPosition} />}
                   </div>
                 </div>
               )}
@@ -400,7 +411,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
 
           {member.bio && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="text-xs mb-1 text-brand-text-muted">个人简介</div>
+              <div className="text-xs mb-1 text-brand-text-muted">{t(lang, "members.bioLabel")}</div>
               <div className="text-sm text-brand-text-body">
                 <RichContent text={member.bio} />
               </div>
@@ -409,7 +420,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
 
           {member.skills.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="text-xs mb-2 text-brand-text-muted">职能标签</div>
+              <div className="text-xs mb-2 text-brand-text-muted">{t(lang, "profile.edit.skills")}</div>
               <div className="flex flex-wrap gap-1.5">
                 {member.skills.map((s: string, i: number) => (
                   <span key={i} className="text-xs px-2 py-0.5 rounded bg-green-50 text-brand-green">
@@ -422,11 +433,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
 
           {(member.socialLinks?.length ?? 0) > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="text-xs mb-2 text-brand-text-muted">个人链接</div>
+              <div className="text-xs mb-2 text-brand-text-muted">{t(lang, "profile.edit.links")}</div>
               <div className="flex flex-wrap gap-3">
                 {member.socialLinks!.map((l: { id: string; url: string; label: string }) => (
                   <Link key={l.id} href={l.url} target="_blank" className="text-sm hover:underline flex items-center gap-1 text-brand-blue">
-                    {LINK_ICONS[l.label] || "🔗"} {l.label}
+                    <LinkIcon label={l.label} url={l.url} size={15} /> {l.label}
                   </Link>
                 ))}
               </div>
@@ -438,10 +449,10 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
 
       {/* 作品列表 — 橱窗形式 */}
       <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-        <h2 className="font-semibold mb-4 text-brand-navy">我的作品</h2>
+        <h2 className="font-semibold mb-4 text-brand-navy">{t(lang, "profile.myWorks")}</h2>
         {userProjects.length === 0 ? (
           <div className="text-center py-10 text-sm text-brand-text-secondary">
-            暂无作品
+            {t(lang, "profile.noWorks")}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
@@ -460,7 +471,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       {/* 我喜欢的作品 */}
       {likedProjects.length > 0 && (
         <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-          <h2 className="font-semibold mb-4 text-brand-orange">❤️ 我喜欢的作品</h2>
+          <h2 className="font-semibold mb-4 text-brand-orange">{t(lang, "profile.likedWorks")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
             {likedProjects.map((p, i) => (
               <ProjectCard
@@ -475,12 +486,6 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
     </div>
   );
 }
-
-const LINK_ICONS: Record<string, string> = {
-  "GitHub": "💻", "B站": "▶️", "个人网站": "🌐", "知乎": "📝",
-  "小红书": "📕", "微博": "📢", "抖音": "🎵", "CSDN": "📋",
-  "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
-};
 
 function ContactRow({ label, value }: { label: string; value: string }) {
   return (

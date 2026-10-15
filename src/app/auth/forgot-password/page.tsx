@@ -2,9 +2,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const { t } = useLang();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -25,10 +27,10 @@ export default function ForgotPasswordPage() {
       if (res.ok) {
         setSent(true);
       } else {
-        setMsg(data.error || "请求失败，请稍后再试");
+        setMsg(data.error || t("auth.requestFailed"));
       }
     } catch {
-      setMsg("网络错误，请稍后再试");
+      setMsg(t("auth.networkError"));
     } finally {
       setLoading(false);
     }
@@ -39,23 +41,23 @@ export default function ForgotPasswordPage() {
       <div className="min-h-[80vh] flex items-center justify-center">
         <div className="w-full max-w-md bg-card border rounded-xl p-8 shadow-sm border-brand-border-subtle text-center">
           <div className="text-4xl mb-4">📧</div>
-          <h1 className="text-xl font-bold mb-2 text-brand-navy">邮件已发送</h1>
+          <h1 className="text-xl font-bold mb-2 text-brand-navy">{t("auth.emailSent")}</h1>
           <p className="text-sm text-brand-text-secondary mb-6">
-            如果 <span className="font-medium text-brand-text-body">{email}</span> 已注册，
-            你将在几分钟内收到一封包含重置链接的邮件。
+            {t("auth.emailIfPrefix")}<span className="font-medium text-brand-text-body">{email}</span>{t("auth.emailRegistered")}
+            {t("auth.emailSentDesc")}
           </p>
           <p className="text-xs text-brand-text-muted mb-6">
-            没有收到？检查垃圾邮件文件夹，或{" "}
+            {t("auth.notReceived")}{" "}
             <button
               type="button"
               onClick={() => { setSent(false); setMsg(""); }}
               className="text-brand-blue hover:underline"
             >
-              重新发送
+              {t("auth.resend")}
             </button>
           </p>
           <Link href="/auth/login" className="text-sm text-brand-blue hover:underline">
-            返回登录
+            {t("auth.backToLogin")}
           </Link>
         </div>
       </div>
@@ -65,9 +67,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
       <div className="w-full max-w-md bg-card border rounded-xl p-8 shadow-sm border-brand-border-subtle">
-        <h1 className="text-2xl font-bold mb-2 text-center text-brand-navy">忘记密码</h1>
+        <h1 className="text-2xl font-bold mb-2 text-center text-brand-navy">{t("auth.forgotTitle")}</h1>
         <p className="text-sm text-center mb-8 text-brand-text-secondary">
-          输入注册邮箱，我们将发送重置链接
+          {t("auth.forgotDesc")}
         </p>
         {msg && (
           <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm">
@@ -77,7 +79,7 @@ export default function ForgotPasswordPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="email">
-              邮箱
+              {t("auth.email")}
             </label>
             <input
               id="email"
@@ -98,12 +100,12 @@ export default function ForgotPasswordPage() {
             {loading && (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
-            {loading ? "发送中..." : "发送重置邮件"}
+            {loading ? t("auth.sending") : t("auth.sendReset")}
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-brand-text-secondary">
           <Link href="/auth/login" className="hover:underline text-brand-blue">
-            返回登录
+            {t("auth.backToLogin")}
           </Link>
         </p>
       </div>

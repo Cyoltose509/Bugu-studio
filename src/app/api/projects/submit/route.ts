@@ -15,27 +15,31 @@ import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { withAuditContext } from "@/lib/db/audit-context";
 import { notifyNewProject } from "@/lib/services/notification";
 import { ProjectStatus } from "@prisma/client";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 export const POST = withAuditContext(async function (request: NextRequest) {
+  const lang = await getLang();
+
   // 速率限制：每用户每小时 5 次提交
   const ip = getClientIp(request);
   const rl = checkRateLimit(ip, { windowSeconds: 3600, maxRequests: 5, prefix: "submit" });
   if (!rl.allowed) {
-    return apiError("提交过于频繁，请稍后再试", 429);
+    return apiError(t(lang, "submit.rateLimited"), 429);
   }
 
   const session = await auth();
-  if (!session?.user) return apiError("请先登录", 401);
+  if (!session?.user) return apiError(t(lang, "profile.edit.loginFirst"), 401);
   // 双重校验：role 为 MEMBER 及以上，或有关联的 ClubMember 记录
   if (!isMemberOrAbove(session.user.role as any)) {
     const hasClubMember = await prisma.clubMember.findUnique({ where: { userId: session.user.id }, select: { id: true } });
     if (!hasClubMember) {
-      return apiError("仅社团成员可提交作品。如果你已是社团成员，请尝试重新登录后重试。", 403);
+      return apiError(t(lang, "submit.onlyMember"), 403);
     }
   }
 
   const body = await request.json().catch(() => null);
-  if (!body) return apiError("请求体格式错误", 400);
+  if (!body) return apiError(t(lang, "submit.bodyError"), 400);
 
   const { title, subtitle, description, type, developYear, coverImage, tagIds, customTags, links, members, memberRoles, images, aiUsages, platforms } = body;
 
@@ -91,7 +95,7 @@ export const POST = withAuditContext(async function (request: NextRequest) {
     });
     const existingIds = new Set(existingMembers.map((m) => m.id));
     const invalid = memberIds.filter((id) => !existingIds.has(id));
-    if (invalid.length > 0) return apiError(`以下成员不存在: ${invalid.join(", ")}`, 400);
+    if (invalid.length > 0) return apiError(t(lang, "submit.memberNotFound", { ids: invalid.join(", ") }), 400);
   }
 
   // 标签校验
@@ -102,7 +106,7 @@ export const POST = withAuditContext(async function (request: NextRequest) {
     });
     const existingTagIds = new Set(existingTags.map((t) => t.id));
     const invalid = tagIds.filter((id: string) => !existingTagIds.has(id));
-    if (invalid.length > 0) return apiError(`以下标签不存在: ${invalid.join(", ")}`, 400);
+    if (invalid.length > 0) return apiError(t(lang, "submit.tagNotFound", { ids: invalid.join(", ") }), 400);
   }
 
   // 生成 slug
@@ -123,7 +127,7 @@ export const POST = withAuditContext(async function (request: NextRequest) {
       });
       customTagRecords.push(tag);
     } catch (e: any) {
-      return apiError(`自定义标签「${name}」处理失败：${e.message || "未知错误"}`, 422);
+      return apiError(t(lang, "form.customTagFail", { name, msg: e.message || "未知错误" }), 422);
     }
   }
 

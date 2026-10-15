@@ -8,6 +8,8 @@ import {
   getEngineColor,
   isEngineTagSlug,
 } from "@/lib/tags/engine-tags";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { tagDisplayName } from "@/lib/tags/tag-names";
 
 type TagLike = {
   slug: string;
@@ -44,6 +46,8 @@ export function TagChip({
   className?: string;
 }) {
   const engine = isEngineTagSlug(tag.slug);
+  const { lang } = useLang();
+  const displayName = tagDisplayName(tag.slug, tag.name, lang);
   return (
     <span
       className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded whitespace-nowrap font-medium ${
@@ -52,7 +56,7 @@ export function TagChip({
       style={chipStyle(tag)}
     >
       {engine && <EngineTagIcon slug={tag.slug} />}
-      <span className="truncate">{tag.name}</span>
+      <span className="truncate">{displayName}</span>
     </span>
   );
 }
@@ -72,6 +76,8 @@ export function TagChipLink({
   onClick?: (e: MouseEvent) => void;
 }) {
   const engine = isEngineTagSlug(tag.slug);
+  const { lang } = useLang();
+  const displayName = tagDisplayName(tag.slug, tag.name, lang);
   return (
     <Link
       href={href}
@@ -83,7 +89,7 @@ export function TagChipLink({
       style={chipStyle(tag, active)}
     >
       {engine && <EngineTagIcon slug={tag.slug} />}
-      <span className="truncate">{tag.name}</span>
+      <span className="truncate">{displayName}</span>
     </Link>
   );
 }

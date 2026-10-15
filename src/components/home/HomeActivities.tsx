@@ -9,16 +9,18 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockHomeActivities } from "@/lib/mock/frontend-data";
+import {t, type DictKey} from "@/lib/i18n/dict";
+import type {Lang} from "@/lib/i18n/config";
 
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
-const TYPE_LABELS: Record<string, string> = {
-  MEETING:    "例会",
-  COURSE:     "公开课",
-  COMPETITION: "比赛",
-  GENERAL:    "普通活动",
+const ACTIVITY_TYPE_KEY: Record<string, DictKey> = {
+  MEETING: "activity.type.MEETING",
+  COURSE: "activity.type.COURSE",
+  COMPETITION: "activity.type.COMPETITION",
+  GENERAL: "activity.type.GENERAL",
 };
 
 async function getHomeActivities() {
@@ -45,18 +47,21 @@ async function getHomeActivities() {
   }
 }
 
-export default async function HomeActivities() {
+export default async function HomeActivities({lang = "cn"}: { lang?: Lang }) {
   const activities = await getHomeActivities();
   if (activities.length === 0) return null;
 
   const now = new Date();
+  const dateLocale = lang === "en" ? "en-US" : "zh-CN";
+
+  const typeLabel = (type: string) => t(lang, ACTIVITY_TYPE_KEY[type] ?? "activity.type.GENERAL");
 
   return (
     <section className="py-16 container mx-auto px-4">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold text-brand-navy">近期活动</h2>
+        <h2 className="text-2xl font-bold text-brand-navy">{t(lang, "home.recentActivities")}</h2>
         <Link href="/activities" className="text-sm hover:underline text-brand-blue">
-          查看全部 →
+          {t(lang, "home.viewAll")} →
         </Link>
       </div>
 
@@ -72,12 +77,12 @@ export default async function HomeActivities() {
                   <Image src={coverSrc} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, 33vw" />
                   <div className="absolute top-2 left-2 flex items-center gap-1.5">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
-                      {TYPE_LABELS[a.type] || a.type}
+                      {typeLabel(a.type)}
                     </span>
-                    {isOngoing && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80 text-white backdrop-blur-sm">进行中</span>}
+                    {isOngoing && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80 text-white backdrop-blur-sm">{t(lang, "activity.ongoing")}</span>}
                   </div>
                   {a.meetingUrl && (
-                    <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">🔗 线上</div>
+                    <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">{t(lang, "activity.online")}</div>
                   )}
                 </div>
                 {/* 信息 */}
@@ -86,9 +91,9 @@ export default async function HomeActivities() {
                     {a.title}
                   </h3>
                   <p className="text-xs text-brand-text-muted">
-                    {a.startTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
+                    {a.startTime.toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}
                     {" ~ "}
-                    {a.endTime.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })}
+                    {a.endTime.toLocaleDateString(dateLocale, { month: "short", day: "numeric" })}
                   </p>
                 </div>
               </div>

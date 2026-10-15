@@ -4,6 +4,8 @@ import { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { saveMeetingTalks } from "@/app/admin/activities/actions";
 import { parseBvId } from "@/lib/activities/constants";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 export type TalkDraft = {
   id?: string;
@@ -30,11 +32,12 @@ function emptyTalk(): TalkDraft {
   return { speaker: "", title: "", bvId: "", userId: null, linkedLabel: null };
 }
 
-function displayNameOf(u: UserHit): string {
-  return u.member?.displayName || u.name || "未命名用户";
+function displayNameOf(u: UserHit, fallback: string): string {
+  return u.member?.displayName || u.name || fallback;
 }
 
 export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Props) {
+  const { lang } = useLang();
   const [talks, setTalks] = useState<TalkDraft[]>(
     initialTalks.length > 0 ? initialTalks : [emptyTalk()],
   );
@@ -102,13 +105,13 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
   }
 
   function linkUser(i: number, user: UserHit) {
-    const name = displayNameOf(user);
+    const name = displayNameOf(user, t(lang, "meetingTalks.unnamedUser"));
     update(i, {
       speaker: name,
       userId: user.id,
       linkedLabel: user.member
-        ? `已关联成员 · ${user.member.displayName}`
-        : `已关联用户 · ${user.name || user.id.slice(0, 8)}`,
+        ? t(lang, "meetingTalks.linkedMember", { name: user.member.displayName })
+        : t(lang, "meetingTalks.linkedUser", { name: user.name || user.id.slice(0, 8) }),
     });
     setShowDropdown(false);
     setActiveSearch(null);
@@ -137,20 +140,20 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
         setMessage({ type: "err", text: result.error });
         return;
       }
-      setMessage({ type: "ok", text: "分享条目已保存" });
+      setMessage({ type: "ok", text: t(lang, "meetingTalks.saved") });
       if (result?.talks) {
         setTalks(
           result.talks.length > 0
-            ? result.talks.map((t) => ({
-                id: t.id,
-                speaker: t.speaker,
-                title: t.title,
-                bvId: t.bvId || "",
-                userId: t.userId || null,
-                linkedLabel: t.userId
-                  ? t.user?.member
-                    ? `已关联成员 · ${t.user.member.displayName}`
-                    : `已关联用户 · ${t.user?.name || t.userId}`
+            ? result.talks.map((tk) => ({
+                id: tk.id,
+                speaker: tk.speaker,
+                title: tk.title,
+                bvId: tk.bvId || "",
+                userId: tk.userId || null,
+                linkedLabel: tk.userId
+                  ? tk.user?.member
+                    ? t(lang, "meetingTalks.linkedMember", { name: tk.user.member.displayName })
+                    : t(lang, "meetingTalks.linkedUser", { name: tk.user?.name || tk.userId })
                   : null,
               }))
             : [emptyTalk()],
@@ -165,9 +168,9 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
       className="bg-card rounded-xl border p-6 space-y-4 shadow-sm border-brand-border-subtle"
     >
       <div>
-        <h2 className="text-lg font-semibold text-brand-navy">例会分享条目</h2>
+        <h2 className="text-lg font-semibold text-brand-navy">{t(lang, "meetingTalks.title")}</h2>
         <p className="text-xs mt-1 text-brand-text-secondary">
-          按「主讲 + 标题 + BV 号」逐条录入。主讲可搜索站内用户并关联；有录像时填 BV（或粘贴 B 站链接），前台会显示小电视跳转观看。
+          {t(lang, "meetingTalks.desc")}
         </p>
       </div>
 
@@ -186,7 +189,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
                   disabled={i === 0}
                   className="text-xs px-2 py-1 rounded border border-brand-border-subtle disabled:opacity-30"
                 >
-                  上移
+                  {t(lang, "meetingTalks.moveUp")}
                 </button>
                 <button
                   type="button"
@@ -194,7 +197,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
                   disabled={i === talks.length - 1}
                   className="text-xs px-2 py-1 rounded border border-brand-border-subtle disabled:opacity-30"
                 >
-                  下移
+                  {t(lang, "meetingTalks.moveDown")}
                 </button>
                 <button
                   type="button"
@@ -205,7 +208,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
                   }
                   className="text-xs px-2 py-1 rounded border border-red-200 text-red-600"
                 >
-                  删除
+                  {t(lang, "meetingTalks.remove")}
                 </button>
               </div>
             </div>
@@ -219,7 +222,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
                     setShowDropdown(true);
                     searchUsers(talk.speaker.trim());
                   }}
-                  placeholder="主讲（可搜索用户）"
+                  placeholder={t(lang, "meetingTalks.speakerPlaceholder")}
                   className="w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading"
                   autoComplete="off"
                 />
@@ -242,17 +245,17 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
                           />
                         ) : (
                           <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs shrink-0 bg-brand-orange">
-                            {displayNameOf(u)[0]}
+                            {displayNameOf(u, t(lang, "meetingTalks.unnamedUser"))[0]}
                           </span>
                         )}
                         <span className="min-w-0">
                           <span className="block text-brand-text-heading truncate">
-                            {displayNameOf(u)}
+                            {displayNameOf(u, t(lang, "meetingTalks.unnamedUser"))}
                           </span>
                           {u.member ? (
-                            <span className="text-[10px] text-brand-text-muted">社团成员</span>
+                            <span className="text-[10px] text-brand-text-muted">{t(lang, "role.member")}</span>
                           ) : (
-                            <span className="text-[10px] text-brand-text-muted">站内用户</span>
+                            <span className="text-[10px] text-brand-text-muted">{t(lang, "meetingTalks.siteUser")}</span>
                           )}
                         </span>
                       </button>
@@ -263,26 +266,26 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
               <input
                 value={talk.title}
                 onChange={(e) => update(i, { title: e.target.value })}
-                placeholder="专题标题"
+                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
                 className="rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading sm:col-span-2"
               />
             </div>
             {(talk.userId || talk.linkedLabel) && (
               <div className="flex items-center gap-2 text-xs text-brand-blue">
-                <span>{talk.linkedLabel || "已关联站内用户"}</span>
+                <span>{talk.linkedLabel || t(lang, "meetingTalks.linkedSiteUser")}</span>
                 <button
                   type="button"
                   onClick={() => clearLink(i)}
                   className="underline text-brand-text-muted"
                 >
-                  取消关联
+                  {t(lang, "meetingTalks.unlink")}
                 </button>
               </div>
             )}
             <input
               value={talk.bvId}
               onChange={(e) => update(i, { bvId: e.target.value })}
-              placeholder="BV 号或 B 站链接（可选）"
+              placeholder={t(lang, "meetingTalks.bvPlaceholder")}
               className="w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading"
             />
           </div>
@@ -295,15 +298,15 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
           onClick={() => setTalks((prev) => [...prev, emptyTalk()])}
           className="btn-secondary px-4 py-2 rounded-lg text-sm"
         >
-          + 添加一条
+          {t(lang, "meetingTalks.addRow")}
         </button>
         <SubmitButton
           type="submit"
           disabled={pending}
           className="btn-primary px-5 py-2 rounded-lg text-sm font-medium"
-          pendingText="保存中..."
+          pendingText={t(lang, "common.saving")}
         >
-          保存分享条目
+          {t(lang, "meetingTalks.save")}
         </SubmitButton>
         {message && (
           <span

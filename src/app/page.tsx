@@ -10,8 +10,13 @@ import HomeStats from "@/components/home/HomeStats";
 import LatestProjects from "@/components/home/LatestProjects";
 import HomeActivities from "@/components/home/HomeActivities";
 import LogoLoading from "@/components/ui/LogoLoading";
+import {getLang} from "@/lib/i18n/getLang";
+import {t} from "@/lib/i18n/dict";
 
-/** 寒蝉半圆体 — Hero 子集（「布谷工作室」+ official） */
+/** 寒蝉半圆体 — Hero 子集（「布谷工作室」+ official）。
+ *  注意：这是字形子集字体，只覆盖这几个字。英文模式下标题是
+ *  「Bugoo Studio」，大量字形缺失会导致逐字符回退、字体五花八门，
+ *  因此只在中文模式使用，英文模式走全局 Nunito（font-sans）。 */
 const chillRoundBold = localFont({
     src: "../fonts/ChillRoundM-hero.woff2",
     weight: "700",
@@ -20,64 +25,69 @@ const chillRoundBold = localFont({
     fallback: ["system-ui", "sans-serif"],
 });
 
-export const metadata = {title: "布谷工作室"};
+export async function generateMetadata() {
+    const lang = await getLang();
+    return { title: t(lang, "brand.name") };
+}
+
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
-export default function HomePage() {
+export default async function HomePage() {
+    const lang = await getLang();
     return (
         <div className="animate-fade-in">
             {/* Hero */}
             <section className="relative overflow-hidden px-4 py-20 md:py-28 text-center hero-gradient">
                 <div className="container mx-auto max-w-3xl relative">
-                    <Image src="/images/logo.png" alt="布谷工作室" width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg"
+                    <Image src="/images/logo.png" alt={t(lang, "brand.name")} width={96} height={96} className="mx-auto mb-6 rounded-xl shadow-lg"
                            priority/>
                     <h1
-                        className={`${chillRoundBold.className} text-4xl md:text-6xl font-bold mb-4 tracking-wide text-brand-navy`}
+                        className={`${lang === "cn" ? chillRoundBold.className : ""} text-4xl md:text-6xl font-bold mb-4 tracking-wide text-brand-navy`}
                     >
-                        布谷工作室
+                        {t(lang, "brand.name")}
                     </h1>
                     <p
-                        className={`${chillRoundBold.className} text-2xl md:text-3xl font-bold mb-3 tracking-wide text-brand-text-body`}
+                        className={`${lang === "cn" ? chillRoundBold.className : ""} text-2xl md:text-3xl font-bold mb-3 tracking-wide text-brand-text-body`}
                     >
                         official
                     </p>
-                    <p className="mb-8 max-w-xl mx-auto text-brand-text-secondary">
-                        我们是一群热爱游戏开发的同学，这里存档了社团的点点滴滴。
+                    <p className="mb-8 max-w-xl mx-auto text-sm leading-relaxed text-brand-text-secondary">
+                        {t(lang, "home.intro")}
                     </p>
                     <div className="flex justify-center gap-4">
-                        <Link href="/works" className="btn-primary px-6 py-3 rounded-lg font-medium text-sm">浏览作品</Link>
-                        <Link href="/members" className="btn-secondary px-6 py-3 rounded-lg font-medium text-sm">认识成员</Link>
+                        <Link href="/works" className="btn-primary px-6 py-3 rounded-lg font-medium text-sm">{t(lang, "home.browseWorks")}</Link>
+                        <Link href="/members" className="btn-secondary px-6 py-3 rounded-lg font-medium text-sm">{t(lang, "home.meetMembers")}</Link>
                     </div>
                 </div>
             </section>
 
             {/* 统计数据 — 直接加载（快） */}
             <Suspense fallback={<StatsSkeleton/>}>
-                <HomeStats/>
+                <HomeStats lang={lang}/>
             </Suspense>
 
             {/* 最新作品 — 流式加载（8 个 = 桌面 4 列两整行） */}
             <section className="py-16 container mx-auto px-4">
                 <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-brand-navy">最新作品</h2>
-                    <Link href="/works" className="text-sm hover:underline text-brand-blue">查看全部 →</Link>
+                    <h2 className="text-2xl font-bold text-brand-navy">{t(lang, "home.latestWorks")}</h2>
+                    <Link href="/works" className="text-sm hover:underline text-brand-blue">{t(lang, "home.viewAll")} →</Link>
                 </div>
-                <Suspense fallback={<LogoLoading text="正在加载最新作品..." compact />}>
-                    <LatestProjects/>
+                <Suspense fallback={<LogoLoading text={t(lang, "loading.latestWorks")} compact />}>
+                    <LatestProjects lang={lang}/>
                 </Suspense>
             </section>
 
             {/* 近期活动 */}
-            <Suspense fallback={<div className="py-10 text-center text-gray-400 text-sm">加载活动中…</div>}>
-                <HomeActivities/>
+            <Suspense fallback={<div className="py-10 text-center text-gray-400 text-sm">{t(lang, "loading.activities")}</div>}>
+                <HomeActivities lang={lang}/>
             </Suspense>
 
             {/* CTA */}
             <section className="py-16 text-center">
                 <div className="container mx-auto px-4 max-w-xl">
-                    <h2 className="text-2xl font-bold mb-3 text-brand-navy">想加入我们？</h2>
-                    <p className="mb-6 text-brand-text-secondary">每学年开放招新，欢迎对游戏开发充满热情的同学加入。</p>
-                    <Link href="/join" className="btn-primary inline-block px-8 py-3 rounded-lg font-medium text-sm">了解招新信息</Link>
+                    <h2 className="text-2xl font-bold mb-3 text-brand-navy">{t(lang, "home.joinTitle")}</h2>
+                    <p className="mb-6 text-brand-text-secondary">{t(lang, "home.joinDesc")}</p>
+                    <Link href="/join" className="btn-primary inline-block px-8 py-3 rounded-lg font-medium text-sm">{t(lang, "home.joinCta")}</Link>
                 </div>
             </section>
         </div>

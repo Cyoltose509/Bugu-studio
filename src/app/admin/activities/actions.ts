@@ -10,7 +10,10 @@ import { ActivityStatus, ProposalStatus } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/utils/upload";
 import { DEFAULT_ACTIVITY_LOCATION, parseBvId } from "@/lib/activities/constants";
 import { parseActivityDateTime } from "@/lib/activities/datetime";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 import { showcaseKey } from "@/lib/activities/showcase";
+import { canSubmitActivityTalk } from "@/lib/activities/capabilities";
 
 const TYPE_LABEL: Record<string, string> = {
   MEETING: "例会", COURSE: "公开课", COMPETITION: "比赛", GENERAL: "活动",
@@ -88,6 +91,7 @@ export async function createActivity(formData: FormData) {
   const endTime     = formData.get("endTime") as string;
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
   const regOpen     = formData.get("registrationOpen") === "on";
+  const talkSubmissionOpen = formData.get("talkSubmissionOpen") === "on";
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
@@ -115,6 +119,7 @@ export async function createActivity(formData: FormData) {
       endTime: parseActivityDateTime(endTime),
       maxParticipants,
       registrationOpen: regOpen,
+      talkSubmissionOpen,
       status: ActivityStatus.DRAFT,
       theme: theme || undefined,
       themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
@@ -154,6 +159,7 @@ export async function updateActivity(id: string, formData: FormData) {
   const endTime     = formData.get("endTime") as string;
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
   const regOpen     = formData.get("registrationOpen") === "on";
+  const talkSubmissionOpen = formData.get("talkSubmissionOpen") === "on";
   const status      = (formData.get("status") as string || "DRAFT");
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
@@ -184,6 +190,7 @@ export async function updateActivity(id: string, formData: FormData) {
       endTime: parseActivityDateTime(endTime),
       maxParticipants,
       registrationOpen: regOpen,
+      talkSubmissionOpen,
       status: status as ActivityStatus,
       theme: theme || undefined,
       themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
@@ -274,10 +281,11 @@ async function notifyAdminsOfActivity(params: {
   }
 }
 
-// ── 例会：提交分享/展示申请 ───────────────────────────────────
+// ── 活动：提交分享/展示申请 ───────────────────────────────────
 export async function submitProposal(formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user) throw new Error("请先登录");
+  if (!session?.user) throw new Error(t(lang, "meeting.errLoginFirst"));
 
   const userId = session.user.id;
 
@@ -286,15 +294,22 @@ export async function submitProposal(formData: FormData) {
   const description  = (formData.get("description") as string || "").trim();
   const proposalType = (formData.get("proposalType") as string || "SHARE");
 
-  if (!activityId) return { error: "无效的活动" };
-  if (!title)       return { error: "请填写标题" };
+  if (!activityId) return { error: t(lang, "meeting.errInvalidActivity") };
+  if (!title)       return { error: t(lang, "meeting.errTitleRequired") };
+  const activity = await prisma.activity.findUnique({
+    where: { id: activityId },
+    select: { talkSubmissionOpen: true, status: true, endTime: true },
+  });
+  if (!activity || !canSubmitActivityTalk(activity)) {
+    return { error: t(lang, "meeting.errTalkClosed") };
+  }
 
   // 检查是否已提交过申请（一人只能提交一份）
   const existing = await prisma.meetingProposal.findFirst({
     where: { activityId, userId },
   });
   if (existing) {
-    return { error: "你已提交过申请，不能重复提交" };
+    return { error: t(lang, "meeting.errAlreadySubmitted") };
   }
 
   const proposal = await prisma.meetingProposal.create({
@@ -361,7 +376,7 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
     type: "PROPOSAL_REVIEW",
     title: approved ? `${typeLabel}申请通过 ✅` : `${typeLabel}申请未通过 ❌`,
     content: approved
-      ? `你在例会中的${typeLabel}申请「${proposal.title}」已通过审核`
+      ? `你在活动中的${typeLabel}申请「${proposal.title}」已通过审核`
       : `你的${typeLabel}申请「${proposal.title}」未通过审核${adminNote ? `：${adminNote}` : ""}`,
     relatedId: proposal.activityId,
     relatedType: "Activity",
@@ -371,7 +386,7 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
   revalidatePath(`/admin/activities/${proposal.activityId}/edit`);
 }
 
-// ── 例会：整表保存分享条目（主讲 + 标题 + BV）────────────────
+// ── 活动：整表保存分享条目（主讲 + 标题 + BV）────────────────
 export async function saveMeetingTalks(
   activityId: string,
   talks: Array<{ speaker: string; title: string; bvId?: string; userId?: string | null }>,
@@ -381,7 +396,7 @@ export async function saveMeetingTalks(
 
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },
-    select: { id: true, type: true },
+    select: { id: true },
   });
   if (!activity) return { error: "活动不存在" };
 

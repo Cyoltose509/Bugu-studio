@@ -2,12 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { disbandTeam } from "@/lib/actions/teams";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export function DisbandTeamButton({ teamId, activityId }: { teamId: string; activityId: string }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
 
   function handleDisband() {
-    if (!confirm("确定解散队伍？此操作不可撤销。")) return;
+    if (!confirm(t("teams.confirmDisband"))) return;
     startTransition(async () => {
       await disbandTeam(teamId, activityId);
     });
@@ -20,7 +22,7 @@ export function DisbandTeamButton({ teamId, activityId }: { teamId: string; acti
       disabled={isPending}
       className="text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 text-[#bbb]"
     >
-      {isPending ? "解散中…" : "解散队伍"}
+      {isPending ? t("teams.disbanding") : t("teams.disband")}
     </button>
   );
 }

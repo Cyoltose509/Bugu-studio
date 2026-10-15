@@ -8,6 +8,9 @@ import { prisma } from "@/lib/db/prisma";
 import { ProjectStatus } from "@prisma/client";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { isMockDataEnabled, mockListProjects } from "@/lib/mock/frontend-data";
+import { cachedQuery } from "@/lib/db/cache";
+import { sortByNameAndSlice } from "@/lib/works/name-sort";
+import { PROJECT_SELECT } from "@/lib/works/project-select";
 
 const PAGE_SIZE = 16; // 4x4
 
@@ -76,52 +79,40 @@ export async function GET(request: NextRequest) {
     if (tag) where.tags = { some: { tag: { slug: tag } } };
 
     // 排序：时间/名称走索引友好字段；喜欢用 _count，并用 id 保底保证分页稳定
-    const orderBy: any = sort === "name"
-        ? [{ title: "asc" }, { id: "desc" }]
-        : sort === "likes"
-            ? [{ likes: { _count: "desc" } }, { id: "desc" }]
-            : [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
+    // 名称排序例外：数据库排不出拼音序，改成取全量后在内存里排（见 name-sort.ts）
+    const orderBy: any = sort === "likes"
+        ? [{ likes: { _count: "desc" } }, { id: "desc" }]
+        : [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
 
     const wantTotal = !cursor && searchParams.get("total") === "1";
+    const scopeKey = `${types || ''}:${yearNum || ''}:${tag || ''}:${q || ''}`;
 
     // 首屏带 total 时并行；翻页只查列表
+    // 列表与总数都走缓存：来回切换筛选/排序时不必每次都打数据库
+    const listKey = `works:api:v1:${scopeKey}:${sort}:${cursor || ''}`;
     const [projects, total] = await Promise.all([
-        prisma.project.findMany({
-            where,
-            orderBy,
-            take: PAGE_SIZE + 1,
-            ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            select: {
-                id: true,
-                slug: true,
-                title: true,
-                subtitle: true,
-                description: true,
-                coverImage: true,
-                type: true,
-                developYear: true,
-                publishedAt: true,
-                tags: { include: { tag: true } },
-                awards: true,
-                aiUsages: true,
-                _count: { select: { likes: true } },
-                images: {
-                    orderBy: { sortOrder: "asc" },
-                    take: 4,
-                    select: { url: true, altText: true },
-                },
-                members: {
-                    orderBy: { sortOrder: "asc" },
-                    include: {
-                        member: {
-                            select: { displayName: true, avatar: true, user: { select: { image: true } } },
-                        },
-                        user: { select: { id: true, name: true, image: true } },
-                    },
-                },
-            },
-        }),
-        wantTotal ? prisma.project.count({ where }) : Promise.resolve(null),
+        sort === "name"
+            ? cachedQuery(`works:api:byname:${scopeKey}`, () =>
+                  prisma.project.findMany({ where, select: PROJECT_SELECT }),
+                  60,
+              ).then((rows: any[]) => sortByNameAndSlice(rows, cursor, PAGE_SIZE + 1))
+            : cachedQuery(listKey, () =>
+                prisma.project.findMany({
+                    where,
+                    orderBy,
+                    take: PAGE_SIZE + 1,
+                    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+                    select: PROJECT_SELECT,
+                }),
+                60,
+            ),
+        wantTotal
+            ? cachedQuery(
+                  `works:api:total:${scopeKey}`,
+                  () => prisma.project.count({ where }),
+                  60,
+              )
+            : Promise.resolve(null),
     ]);
 
     const hasMore = projects.length > PAGE_SIZE;

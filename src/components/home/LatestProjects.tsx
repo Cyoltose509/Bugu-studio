@@ -9,6 +9,8 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { isMockDataEnabled, mockLatestProjects } from "@/lib/mock/frontend-data";
+import {t} from "@/lib/i18n/dict";
+import type {Lang} from "@/lib/i18n/config";
 
 /** 与下方 grid 的 lg:grid-cols-4 对齐：两整行 */
 const LATEST_COUNT = 8;
@@ -55,13 +57,13 @@ async function getProjects() {
   }
 }
 
-export default async function LatestProjects() {
+export default async function LatestProjects({lang = "cn"}: { lang?: Lang }) {
   const projects = await getProjects();
 
   if (projects.length === 0) {
     return (
       <p className="mt-8 text-center text-sm text-brand-text-muted">
-        暂无已发布作品
+        {t(lang, "home.noPublished")}
       </p>
     );
   }

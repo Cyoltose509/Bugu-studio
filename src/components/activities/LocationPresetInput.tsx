@@ -5,6 +5,7 @@ import {
   ACTIVITY_LOCATION_PRESETS,
   DEFAULT_ACTIVITY_LOCATION,
 } from "@/lib/activities/constants";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 const CUSTOM_VALUE = "__custom__";
 
@@ -23,6 +24,7 @@ export default function LocationPresetInput({
   defaultValue = DEFAULT_ACTIVITY_LOCATION,
   id,
 }: Props) {
+  const { t } = useLang();
   const autoId = useId();
   const selectId = id || autoId;
   const initial = (defaultValue || "").trim() || DEFAULT_ACTIVITY_LOCATION;
@@ -34,7 +36,7 @@ export default function LocationPresetInput({
   return (
     <div className="space-y-2">
       <label className="block text-sm text-brand-text-body" htmlFor={selectId}>
-        线下地点
+        {t("location.offlineLabel")}
       </label>
 
       <select
@@ -57,14 +59,14 @@ export default function LocationPresetInput({
             {preset}
           </option>
         ))}
-        <option value={CUSTOM_VALUE}>其他地点…</option>
+        <option value={CUSTOM_VALUE}>{t("location.other")}</option>
       </select>
 
       {custom && (
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="输入线下活动地点"
+          placeholder={t("location.customPlaceholder")}
           className="w-full rounded-lg border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading"
         />
       )}

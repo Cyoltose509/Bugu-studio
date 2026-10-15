@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { deleteOwnProject } from "@/app/works/actions";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
 
 export default function DeleteOwnProjectButton({
   projectId,
@@ -14,6 +16,7 @@ export default function DeleteOwnProjectButton({
 }) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { lang } = useLang();
   const [deleting, setDeleting] = useState(false);
 
   const userId = session?.user?.id;
@@ -23,7 +26,7 @@ export default function DeleteOwnProjectButton({
   if (!userId || (userId !== submitterId && !isAdmin)) return null;
 
   async function handleDelete() {
-    if (!confirm("确认删除此作品？此操作不可撤销，作品的图片、评论等数据将被永久删除。")) return;
+    if (!confirm(t(lang, "works.delete.confirm"))) return;
 
     setDeleting(true);
     try {
@@ -31,7 +34,7 @@ export default function DeleteOwnProjectButton({
       router.push("/works");
       router.refresh();
     } catch (err: any) {
-      alert(err.message || "删除失败");
+      alert(err.message || t(lang, "works.delete.failed"));
       setDeleting(false);
     }
   }
@@ -42,7 +45,7 @@ export default function DeleteOwnProjectButton({
       disabled={deleting}
       className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--ui-text-red)] text-white"
     >
-      {deleting ? "删除中..." : "🗑️ 删除作品"}
+      {deleting ? t(lang, "works.delete.deleting") : `🗑️ ${t(lang, "works.delete.button")}`}
     </button>
   );
 }

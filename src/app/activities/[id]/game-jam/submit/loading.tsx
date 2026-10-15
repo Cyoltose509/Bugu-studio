@@ -1,5 +1,8 @@
 import MascotLoading from "@/components/ui/MascotLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
-export default function JamSubmitLoading() {
-  return <MascotLoading text="正在加载提交页面..." />;
+export default async function JamSubmitLoading() {
+  const lang = await getLang();
+  return <MascotLoading text={t(lang, "loading.jamSubmit")} />;
 }

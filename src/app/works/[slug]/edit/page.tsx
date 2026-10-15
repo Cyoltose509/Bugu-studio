@@ -12,6 +12,8 @@ import { auth } from "@/lib/auth/auth";
 import { canEditProject } from "@/lib/auth/rbac";
 import { ensureDefaultTags } from "@/lib/db/tags";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 // 懒加载编辑表单，避免 react-easy-crop (~54KB gzip) 打包进主客户端 bundle
 const ProjectEditForm = nextDynamic(() => import("@/components/forms/ProjectEditForm"), {
@@ -25,7 +27,10 @@ const ProjectEditForm = nextDynamic(() => import("@/components/forms/ProjectEdit
   ),
 });
 
-export const metadata: Metadata = { title: "编辑作品" };
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getLang();
+  return { title: t(lang, "works.edit.title") };
+}
 export const dynamic = "force-dynamic";
 
 interface PageProps {
@@ -34,9 +39,10 @@ interface PageProps {
 
 /* ── 同步 Shell ── */
 
-export default function ProjectEditPage({ params }: PageProps) {
+export default async function ProjectEditPage({ params }: PageProps) {
+  const lang = await getLang();
   return (
-    <Suspense fallback={<LogoLoading text="正在加载编辑页面..." compact />}>
+    <Suspense fallback={<LogoLoading text={t(lang, "works.edit.loading")} compact />}>
       <EditContent params={params} />
     </Suspense>
   );
@@ -46,6 +52,7 @@ export default function ProjectEditPage({ params }: PageProps) {
 
 async function EditContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const lang = await getLang();
   const session = await auth();
   if (!session?.user) redirect("/auth/login?callbackUrl=/works/" + slug + "/edit");
 
@@ -108,10 +115,10 @@ async function EditContent({ params }: { params: Promise<{ slug: string }> }) {
     <div className="container mx-auto px-4 py-10 max-w-2xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-brand-navy">
-          编辑作品
+          {t(lang, "works.edit.title")}
         </h1>
         <p className="mt-2 text-brand-text-secondary">
-          编辑「{project.title}」的信息
+          {t(lang, "works.edit.subtitle", { title: project.title })}
         </p>
       </div>
 

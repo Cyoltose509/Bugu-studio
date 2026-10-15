@@ -7,8 +7,11 @@
  *
  * @vitest-environment happy-dom
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+// NotFoundPage 是 async Server Component：内部 getLang() 会读 next/headers 的 cookie，
+// 在测试环境没有请求上下文，需要提供空 cookie store 才能渲染。
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 import SafeImage from "@/components/ui/SafeImage";
 import { RichContentClient } from "@/components/ui/RichContentClient";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -147,20 +150,20 @@ describe("Footer", () => {
 // NotFound 组件 — 3 tests
 // ================================================================
 describe("NotFound", () => {
-  it("渲染 404 内容", () => {
-    render(<NotFoundPage />);
+  it("渲染 404 内容", async () => {
+    render(await NotFoundPage());
     const matches = screen.getAllByText(/404|未找到|页面不存在|not found/i);
     expect(matches.length).toBeGreaterThan(0);
   });
 
-  it("包含返回首页链接", () => {
-    render(<NotFoundPage />);
+  it("包含返回首页链接", async () => {
+    render(await NotFoundPage());
     const links = screen.getAllByRole("link");
     expect(links.some((l) => l.getAttribute("href") === "/")).toBe(true);
   });
 
-  it("有 role=alert 无障碍属性", () => {
-    const { container } = render(<NotFoundPage />);
+  it("有 role=alert 无障碍属性", async () => {
+    const { container } = render(await NotFoundPage());
     const alert = container.querySelector('[role="alert"]');
     expect(alert).toBeTruthy();
   });

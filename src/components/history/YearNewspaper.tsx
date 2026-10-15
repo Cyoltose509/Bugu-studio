@@ -6,6 +6,12 @@ import SafeImage from "@/components/ui/SafeImage";
 import {RichContentClient} from "@/components/ui/RichContentClient";
 import {saveElementAsPDF, saveElementAsImage} from "@/lib/print-utils";
 import {newspaperPositionLabel} from "@/lib/position";
+import {useLang} from "@/lib/i18n/LangProvider";
+import {t} from "@/lib/i18n/dict";
+import type {Lang} from "@/lib/i18n/config";
+import type {AwardEntry} from "@/lib/history/awards";
+import {tagDisplayName} from "@/lib/tags/tag-names";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 
 // ─── 类型 ────────────────────────────────────────────
 interface Member {
@@ -81,18 +87,24 @@ interface Props {
     activities: Activity[];
     activeMembers: ActiveMember[];
     presidents: Member[];
+    awards?: AwardEntry[];
     startYear: number;
     registerRef?: (el: HTMLDivElement | null) => void;
     sections: SectionVisibility;
 }
 
-const TYPE_DESC: Record<string, string> = {
-    IN_DEVELOPMENT: "开发中",
-    TRIAL_DEMO: "提供试玩",
-    MINI_GAME: "小游戏",
-    OFFICIAL_RELEASE: "正式上架",
+const TYPE_DESC: Record<string, { cn: string; en: string }> = {
+    IN_DEVELOPMENT: { cn: "开发中", en: "In Development" },
+    TRIAL_DEMO: { cn: "提供试玩", en: "Playable Demo" },
+    MINI_GAME: { cn: "小游戏", en: "Mini Game" },
+    OFFICIAL_RELEASE: { cn: "正式上架", en: "Official Release" },
 };
-const ACT_LABELS: Record<string, string> = {COMPETITION: "比赛", COURSE: "公开课", GENERAL: "普通活动", MEETING: "例会"};
+const ACT_LABELS: Record<string, { cn: string; en: string }> = {
+    COMPETITION: { cn: "比赛", en: "Competition" },
+    COURSE: { cn: "公开课", en: "Course" },
+    GENERAL: { cn: "普通活动", en: "Event" },
+    MEETING: { cn: "例会", en: "Meeting" },
+};
 const ACT_ORDER = ["COMPETITION", "COURSE", "GENERAL", "MEETING"] as const;
 
 // ─── 年度最佳作品选择 ─────────────────────────────────
@@ -128,20 +140,21 @@ function pickFeaturedWork(projects: Project[]): Project | null {
 }
 
 // ─── 叙事文案 ────────────────────────────────────────
-function generateLead(year: number, members: Member[], projects: Project[], activities: Activity[], events: EventItem[], yearIndex: number, activeMembers: ActiveMember[]): string {
+function generateLead(lang: Lang, year: number, members: Member[], projects: Project[], activities: Activity[], events: EventItem[], yearIndex: number, activeMembers: ActiveMember[]): string {
     const lines: string[] = [];
+    const sep = t(lang, "history.lead.listSep");
 
     if (yearIndex === 1) {
-        lines.push(`${year}年，是布谷工作室创社元年，一切从这里开始。`);
+        lines.push(t(lang, "history.lead.yearOne", { year }));
     } else {
-        lines.push(`${year}年是布谷工作室的第 ${yearIndex} 年。`);
+        lines.push(t(lang, "history.lead.yearN", { year, n: yearIndex }));
     }
 
     if (members.length > 0) {
-        lines.push(`这一年，${members.length} 位伙伴加入了布谷的大家庭。`);
+        lines.push(t(lang, "history.lead.newMembers", { n: members.length }));
     }
     if (activeMembers.length > 0) {
-        lines.push(`全年共有 ${activeMembers.length} 位成员活跃在创作一线。`);
+        lines.push(t(lang, "history.lead.activeMembersLine", { n: activeMembers.length }));
     }
 
     if (projects.length > 0) {
@@ -150,41 +163,42 @@ function generateLead(year: number, members: Member[], projects: Project[], acti
         const miniCount = projects.filter(p => p.type === "MINI_GAME").length;
         const devCount = projects.filter(p => p.type === "IN_DEVELOPMENT").length;
         const parts: string[] = [];
-        if (officialCount > 0) parts.push(`${officialCount} 款正式上架`);
-        if (trialCount > 0) parts.push(`${trialCount} 款提供试玩`);
-        if (miniCount > 0) parts.push(`${miniCount} 款小游戏`);
-        if (devCount > 0) parts.push(`${devCount} 款开发中`);
-        lines.push(`全年共产出 ${projects.length} 件作品（${parts.join("、")}）。`);
+        if (officialCount > 0) parts.push(t(lang, "history.lead.worksPartOfficial", { n: officialCount }));
+        if (trialCount > 0) parts.push(t(lang, "history.lead.worksPartTrial", { n: trialCount }));
+        if (miniCount > 0) parts.push(t(lang, "history.lead.worksPartMini", { n: miniCount }));
+        if (devCount > 0) parts.push(t(lang, "history.lead.worksPartDev", { n: devCount }));
+        lines.push(t(lang, "history.lead.worksSummary", { n: projects.length, parts: parts.join(sep) }));
     }
 
     if (activities.length > 0) {
         const actCounts: Record<string, number> = {};
         for (const a of activities) actCounts[a.type] = (actCounts[a.type] || 0) + 1;
         const parts: string[] = [];
-        for (const t of ACT_ORDER) {
-            if (actCounts[t]) parts.push(`${ACT_LABELS[t]} ${actCounts[t]} 场`);
+        for (const type of ACT_ORDER) {
+            if (actCounts[type]) parts.push(t(lang, "history.lead.activityPart", { label: ACT_LABELS[type][lang], n: actCounts[type] }));
         }
-        lines.push(`全年举办活动 ${activities.length} 场（${parts.join("、")}）。`);
+        lines.push(t(lang, "history.lead.activitiesSummary", { n: activities.length, parts: parts.join(sep) }));
     }
 
     if (events.length > 0) {
-        lines.push(`这一年，我们共同经历了 ${events.length} 件值得铭记的时刻。`);
+        lines.push(t(lang, "history.lead.eventsSummary", { n: events.length }));
     }
 
     return lines.join("");
 }
 
-function generateMemberHighlight(activeMembers: ActiveMember[]): string[] {
+function generateMemberHighlight(lang: Lang, activeMembers: ActiveMember[]): string[] {
     const top3 = activeMembers.slice(0, 3);
     if (top3.length === 0) return [];
+    const sep = t(lang, "history.lead.listSep");
     return top3.map(m => {
         const parts: string[] = [];
-        if (m.projects > 0) parts.push(`${m.projects} 件作品`);
-        if (m.competitions > 0) parts.push(`${m.competitions} 场比赛`);
-        if (m.courses > 0) parts.push(`${m.courses} 次公开课`);
-        if (m.meetings > 0) parts.push(`${m.meetings} 次例会分享`);
-        const detail = parts.join("、") || "活跃参与";
-        return `参与 ${detail}。`;
+        if (m.projects > 0) parts.push(t(lang, "history.lead.memberPartWorks", { n: m.projects }));
+        if (m.competitions > 0) parts.push(t(lang, "history.lead.memberPartCompetitions", { n: m.competitions }));
+        if (m.courses > 0) parts.push(t(lang, "history.lead.memberPartCourses", { n: m.courses }));
+        if (m.meetings > 0) parts.push(t(lang, "history.lead.memberPartMeetings", { n: m.meetings }));
+        const detail = parts.join(sep) || t(lang, "history.lead.memberActive");
+        return t(lang, "history.lead.memberParticipated", { detail });
     });
 }
 
@@ -211,43 +225,73 @@ const F_GEORGIA_TNR: React.CSSProperties = {fontFamily: "Georgia,'Times New Roma
 
 // ═══════════════════════════════════════════════════════
 //  橄榄枝（月桂叶）：程序化生成，左右对称，像括号一样包住奖项
+//  参考样式：小椭圆叶密集排列在弧线两侧，颜色用 --np-laurel（青色）
 // ═══════════════════════════════════════════════════════
-const LAUREL_VIEWBOX = "0 0 120 200";
+const LAUREL_VIEWBOX = "0 0 80 200";
 
 function LaurelBranch({flip = false, className = ""}: { flip?: boolean; className?: string }) {
-    const CX = 102, CY = 100, R = 76;
-    const rad = (d: number) => (d * Math.PI) / 180;
+    // 茎是一条左开口的二次贝塞尔曲线，像半个括号 "("
+    const P0 = { x: 54, y: 10 };
+    const P1 = { x: 2, y: 100 };
+    const P2 = { x: 54, y: 190 };
 
-    // 茎：沿圆弧采样（两端略微超出叶子范围，形成伸出的小尾巴）
-    const stemPts: string[] = [];
-    for (let d = 76; d <= 284; d += 4) {
-        stemPts.push(`${(CX + R * Math.cos(rad(d))).toFixed(1)},${(CY + R * Math.sin(rad(d))).toFixed(1)}`);
-    }
-    const stemPath = "M " + stemPts.join(" L ");
+    const bezier = (t: number) => {
+        const a = (1 - t) * (1 - t);
+        const b = 2 * (1 - t) * t;
+        const c = t * t;
+        return {
+            x: a * P0.x + b * P1.x + c * P2.x,
+            y: a * P0.y + b * P1.y + c * P2.y,
+        };
+    };
 
-    // 叶子：沿茎交错排列，长短轴向切线方向、交替外倾
+    // 切线角度（度）
+    const tangentDeg = (t: number) => {
+        const dx = 2 * (1 - t) * (P1.x - P0.x) + 2 * t * (P2.x - P1.x);
+        const dy = 2 * (1 - t) * (P1.y - P0.y) + 2 * t * (P2.y - P1.y);
+        return (Math.atan2(dy, dx) * 180) / Math.PI;
+    };
+
+    // 平滑的茎路径
+    const stemPath = `M ${P0.x},${P0.y} Q ${P1.x},${P1.y} ${P2.x},${P2.y}`;
+
+    // 叶片：带尖端的披针形（参考图不是钝椭圆，是两头尖的细叶）
+    const leafPath = (len: number, wid: number) =>
+        `M 0,0 C ${len * 0.28},${-wid} ${len * 0.72},${-wid * 0.85} ${len},0` +
+        ` C ${len * 0.72},${wid * 0.85} ${len * 0.28},${wid} 0,0 Z`;
+
+    // 羽状对生叶：每个节点沿茎两侧各出一片，密集交叠成一条粗羽枝
     const leaves: React.ReactElement[] = [];
-    const N = 10;
-    for (let i = 0; i < N; i++) {
-        const t = 96 + (174 * i) / (N - 1); // 96° → 270°
-        const leafR = R + 13 + (i % 2 ? 3 : 0);
-        const x = CX + leafR * Math.cos(rad(t));
-        const y = CY + leafR * Math.sin(rad(t));
-        // 切线角 = t + 90°，交替 ±26° 外倾，越靠尖端叶子越小
-        const tipFactor = 1 - Math.abs(i - (N - 1) / 2) / ((N - 1) / 2); // 中间 1，两端 0
-        const rx = 11.5 + tipFactor * 2.5;
-        const ry = 4.4 + tipFactor * 1.2;
-        const rot = t + 90 + (i % 2 ? 26 : -26);
+    const PAIRS = 16;
+    for (let i = 0; i < PAIRS; i++) {
+        const t = 0.04 + (i / (PAIRS - 1)) * 0.88;  // 0.04 ~ 0.92
+        const p = bezier(t);
+        const theta = tangentDeg(t);
+        // 中段叶最大，向两端渐小
+        const sizeFactor = 1 - 0.3 * Math.abs(t - 0.48) * 2;
+        const len = 16 * sizeFactor;
+        const wid = 6.0 * sizeFactor;
+        for (const side of [1, -1]) {
+            leaves.push(
+                <path key={`${i}-${side}`} d={leafPath(len, wid)}
+                      transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${(theta + side * 62).toFixed(1)})`}/>
+            );
+        }
+    }
+    // 两端各补一片沿茎延长线的顶叶
+    for (const t of [0, 1]) {
+        const p = bezier(t);
+        const theta = tangentDeg(t);
         leaves.push(
-            <ellipse key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} rx={rx.toFixed(1)} ry={ry.toFixed(1)}
-                     transform={`rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})`}/>,
+            <path key={`tip-${t}`} d={leafPath(7.5, 2.4)}
+                  transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${theta.toFixed(1)})`}/>
         );
     }
 
     return (
         <svg viewBox={LAUREL_VIEWBOX} className={className} aria-hidden="true"
              fill="currentColor" style={flip ? {transform: "scaleX(-1)"} : undefined}>
-            <path d={stemPath} fill="none" stroke="currentColor" strokeWidth={3.4} strokeLinecap="round"/>
+            <path d={stemPath} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round"/>
             {leaves}
         </svg>
     );
@@ -259,11 +303,11 @@ function LaurelBranch({flip = false, className = ""}: { flip?: boolean; classNam
 function LaurelBracket({children, gap = 10}: { children: React.ReactNode; gap?: number }) {
     return (
         <div className="flex items-stretch justify-center w-full" style={{columnGap: gap}}>
-            <LaurelBranch className="w-7 sm:w-8 shrink-0 self-stretch"/>
+            <LaurelBranch className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
             <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center py-1.5">
                 {children}
             </div>
-            <LaurelBranch flip className="w-7 sm:w-8 shrink-0 self-stretch"/>
+            <LaurelBranch flip className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
         </div>
     );
 }
@@ -354,7 +398,6 @@ const Q: Record<string, string> = {
     tlImgWrap: "relative w-[120px] h-[80px] rounded-[2px] overflow-hidden border np-border-l cursor-zoom-in shrink-0",
 
     colophon: "text-center text-[11px] np-line-fg leading-[1.8] tracking-[3px] pb-8",
-    colophonUrl: "text-[9px] tracking-[1px] opacity-70",
 };
 
 const QS: Record<string, React.CSSProperties> = {
@@ -378,7 +421,6 @@ const QS: Record<string, React.CSSProperties> = {
     tlTitle: F_SANS,
     tlDate: F_GEORGIA,
     colophon: F_SANS,
-    colophonUrl: F_GEORGIA,
     sidePanelTitle: F_SANS,
 };
 
@@ -446,6 +488,7 @@ function StatBox({num, label}: { num: number; label: string }) {
 function SaveMenu({onImage, onPdf, saving, savingPdf, year}: {
     onImage: () => void; onPdf: () => void; saving: boolean; savingPdf: boolean; year: number;
 }) {
+    const { lang } = useLang();
     const [open, setOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
 
@@ -466,27 +509,27 @@ function SaveMenu({onImage, onPdf, saving, savingPdf, year}: {
             {open ? (
                 <div className="flex items-center gap-2 animate-fade-in">
                     <button type="button" onClick={() => { setOpen(false); onPdf(); }} disabled={savingPdf}
-                            className={itemClass} aria-label={`保存 ${year} 年报为 PDF`}>
+                            className={itemClass} aria-label={t(lang, "history.saveAsPdf", { y: year })}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                             <polyline points="14 2 14 8 20 8"/>
                         </svg>
-                        {savingPdf ? "生成中…" : "PDF"}
+                        {savingPdf ? t(lang, "common.generating") : "PDF"}
                     </button>
                     <button type="button" onClick={() => { setOpen(false); onImage(); }} disabled={saving}
-                            className={itemClass} aria-label={`保存 ${year} 年报为长图`}>
+                            className={itemClass} aria-label={t(lang, "history.saveAsImage", { y: year })}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                             <circle cx="8.5" cy="8.5" r="1.5"/>
                             <polyline points="21 15 16 10 5 21"/>
                         </svg>
-                        {saving ? "生成中…" : "长图"}
+                        {saving ? t(lang, "common.generating") : t(lang, "history.saveImageLabel")}
                     </button>
                 </div>
             ) : (
                 <button type="button" onClick={() => setOpen(true)} disabled={saving || savingPdf}
                         className="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent text-[color:var(--np-ink3)] hover:text-[color:var(--np-ink)] hover:border-[color:var(--np-line)] transition-all duration-200 cursor-pointer"
-                        aria-label={`保存 ${year} 年报`} title="保存">
+                        aria-label={t(lang, "history.saveTitle", { y: year })} title={t(lang, "history.saveTitle", { y: year })}>
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
                          strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
@@ -510,10 +553,12 @@ function YearNewspaper({
     activities,
     activeMembers,
     presidents,
+    awards = [],
     startYear,
     registerRef,
     sections,
 }: Props) {
+    const { lang } = useLang();
     const paperRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
     const [savingPdf, setSavingPdf] = useState(false);
@@ -528,8 +573,8 @@ function YearNewspaper({
         }
     }, [registerRef]);
 
-    const topNarrative = generateMemberHighlight(activeMembers);
-    const leadText = generateLead(year, members, projects, activities, events, yearIndex, activeMembers);
+    const topNarrative = generateMemberHighlight(lang, activeMembers);
+    const leadText = generateLead(lang, year, members, projects, activities, events, yearIndex, activeMembers);
     const featuredWork = pickFeaturedWork(projects);
     // 过滤掉 hero 作品后的其余作品
     const otherWorks = featuredWork ? projects.filter(p => p.id !== featuredWork.id) : projects;
@@ -539,14 +584,15 @@ function YearNewspaper({
     const nonMeeting = activities.filter(a => a.type !== "MEETING");
     const meetingCount = activities.filter(a => a.type === "MEETING").length;
 
-    const awardProjects = projects.filter(p => (p.awards || []).length > 0);
+    // 奖项已按「获奖年份」在数据层归位（see lib/history/awards.ts）
+    const awardEntries = awards;
 
     // ── 保存图片（html-to-image: SVG foreignObject） ──
     const saveImage = useCallback(async () => {
         if (!paperRef.current || saving) return;
         setSaving(true);
         try {
-            await saveElementAsImage(paperRef.current, `布谷工作室·${year}年度回顾.png`);
+            await saveElementAsImage(paperRef.current, `${t(lang, "brand.name")}·${year}${lang === "en" ? " Annual Review" : "年度回顾"}.png`);
             // 保存完毕后强制刷新页面，杜绝第二次保存时图片错乱
             setTimeout(() => window.location.reload(), 300);
         } catch (e) {
@@ -560,7 +606,7 @@ function YearNewspaper({
         if (!paperRef.current || savingPdf) return;
         setSavingPdf(true);
         try {
-            await saveElementAsPDF(paperRef.current, `布谷工作室·${year}年度回顾.pdf`);
+            await saveElementAsPDF(paperRef.current, `${t(lang, "brand.name")}·${year}${lang === "en" ? " Annual Review" : "年度回顾"}.pdf`);
             // 刷新页面确保下次保存状态干净
             setTimeout(() => window.location.reload(), 300);
         } catch (e) {
@@ -578,7 +624,7 @@ function YearNewspaper({
     const showActivities = sections.activities && (nonMeeting.length > 0 || meetingCount > 0);
     const showEvents = sections.events && events.length > 0;
     const showStats = sections.stats;
-    const showAwards = sections.awards && awardProjects.length > 0;
+    const showAwards = sections.awards && awardEntries.length > 0;
     const showMembers = sections.members && members.length > 0;
     const showActive = sections.activeMembers && (activeMembers.length > 0 || presidents.length > 0);
 
@@ -599,11 +645,11 @@ function YearNewspaper({
                         </div>
 
                         <div className={Q.mastTitleBlock} style={MAST_BLOCK_STYLE}>
-                            <h1 className={Q.mastClubName} style={{...F_SANS, ...QS.clubName}}>布谷工作室</h1>
+                            <h1 className={Q.mastClubName} style={{...F_SANS, ...QS.clubName}}>{t(lang, "brand.name")}</h1>
                             <div className={Q.mastYearRow}>
                                 <span className={Q.mastYearEn} style={F_GEORGIA}>Annual Review</span>
                                 <span className={Q.mastYear} style={{...F_GEORGIA_TNR, textRendering: "geometricPrecision"}}>{year}</span>
-                                <span className={Q.mastYearCn} style={F_GEORGIA}>年度回顾</span>
+                                <span className={Q.mastYearCn} style={F_GEORGIA}>{t(lang, "history.annualReview")}</span>
                             </div>
                         </div>
 
@@ -625,9 +671,11 @@ function YearNewspaper({
                                 {showLead && (
                                     <>
                                         <div className="mb-5">
-                                            <h2 className="text-xl sm:text-2xl font-black np-ink leading-tight border-b-2 border-[color:var(--np-ink)] pb-2" style={F_SANS}>
-                                                {yearIndex <= 1 ? "创社元年：一切从这里开始" : `第 ${yearIndex} 年：保持热爱，持续创造`}
-                                            </h2>
+                                        <h2 className="text-xl sm:text-2xl font-black np-ink leading-tight border-b-2 border-[color:var(--np-ink)] pb-2" style={F_SANS}>
+                                            {yearIndex <= 1
+                                                ? t(lang, "history.leadFirst")
+                                                : t(lang, "history.leadN", { n: yearIndex })}
+                                        </h2>
                                             <p className={`${Q.leadText} mt-3`} style={F_SERIF}>{leadText}</p>
                                         </div>
                                         <div className={Q.rule} style={QS.rule}/>
@@ -637,7 +685,7 @@ function YearNewspaper({
                                 {/* 作品巡礼 */}
                                 {showProjects && (
                                     <>
-                                        <div className={Q.sectionTitle}>作 品 巡 礼</div>
+                                        <div className={Q.sectionTitle}>{t(lang, "history.worksSection")}</div>
 
                                         {/* 年度代表作（大头） */}
                                         {featuredWork && (
@@ -661,20 +709,20 @@ function YearNewspaper({
                                                     </div>
                                                     {featuredWork.subtitle && <div className={Q.featuredSubtitle}>{featuredWork.subtitle}</div>}
                                                     <div className={Q.featuredMeta}>
-                                                        <span className={Q.featuredTypeTag} style={F_SANS_SM}>{TYPE_DESC[featuredWork.type] || featuredWork.type}</span>
+                                                        <span className={Q.featuredTypeTag} style={F_SANS_SM}>{TYPE_DESC[featuredWork.type]?.[lang] || featuredWork.type}</span>
                                                         <span className={Q.featuredLikes} style={F_GEORGIA}>♥ {(featuredWork._count?.likes ?? 0)}</span>
                                                     </div>
                                                     {featuredWork.tags && featuredWork.tags.length > 0 && (
                                                         <div className={Q.workTagLine}>
                                                             {featuredWork.tags.slice(0, 4).map((t: any) => (
-                                                                <span key={t.tag.name} className={Q.workTag}>{t.tag.name}</span>
+                                                                <span key={t.tag.name} className={Q.workTag}>{tagDisplayName(t.tag.slug, t.tag.name, lang)}</span>
                                                             ))}
                                                         </div>
                                                     )}
                                                     {featuredWork.awards && featuredWork.awards.length > 0 && (
                                                         <div className="mt-2">
                                                             {featuredWork.awards.map((award, i) => (
-                                                                <span key={i} className={Q.awardTag}>🏆 {award}</span>
+                                                                <span key={i} className={Q.awardTag}><TrophyIcon size={12} className="mr-1 align-[-0.15em]" />{award}</span>
                                                             ))}
                                                         </div>
                                                     )}
@@ -705,12 +753,12 @@ function YearNewspaper({
                                                                 <Link href={`/works/${p.slug}`} className="text-inherit no-underline">
                                                                     {p.title}
                                                                 </Link>
-                                                                <span className={Q.workType} style={F_GEORGIA}>{TYPE_DESC[p.type] || p.type}</span>
+                                                                <span className={Q.workType} style={F_GEORGIA}>{TYPE_DESC[p.type]?.[lang] || p.type}</span>
                                                             </div>
                                                             {p.tags && p.tags.length > 0 && (
                                                                 <div className={Q.workTagLine}>
                                                                     {p.tags.slice(0, 3).map((t: any) => (
-                                                                        <span key={t.tag.name} className={Q.workTag}>{t.tag.name}</span>
+                                                                        <span key={t.tag.name} className={Q.workTag}>{tagDisplayName(t.tag.slug, t.tag.name, lang)}</span>
                                                                     ))}
                                                                 </div>
                                                             )}
@@ -730,11 +778,11 @@ function YearNewspaper({
                                 {/* 活动回顾 */}
                                 {showActivities && (
                                     <>
-                                        <div className={Q.sectionTitle}>活 动 回 顾</div>
+                                        <div className={Q.sectionTitle}>{t(lang, "history.activitiesSection")}</div>
 
                                         {meetingCount > 0 && (
                                             <p className="text-[13px] np-ink2 leading-loose text-justify mb-4">
-                                                全年共举办了 {meetingCount} 场例会。
+                                                {t(lang, "history.meetingsCount", { n: meetingCount })}
                                             </p>
                                         )}
 
@@ -747,13 +795,13 @@ function YearNewspaper({
                                                     return (
                                                         <div key={a.id} className={Q.activityItem}>
                                                             <div className={Q.activityHeader}>
-                                                                <span className={activityTypeTagClass(a.type)}>{ACT_LABELS[a.type] || a.type}</span>
+                                                                <span className={activityTypeTagClass(a.type)}>{ACT_LABELS[a.type]?.[lang] || a.type}</span>
                                                                 <Link href={`/activities/${a.id}`}
                                                                       className="text-inherit no-underline">
                                                                     <span className={Q.activityTitle} style={QS.activityTitle}>{a.title}</span>
                                                                 </Link>
                                                                 {a.status === "ARCHIVED" &&
-                                                                    <span className="text-[10px] np-ink3 italic">(已归档)</span>}
+                                                                    <span className="text-[10px] np-ink3 italic">({t(lang, "common.archived")})</span>}
                                                                 <span
                                                                     className={Q.activityDate} style={QS.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
                                                             </div>
@@ -773,7 +821,7 @@ function YearNewspaper({
                                 {/* 大事记 */}
                                 {showEvents && (
                                     <>
-                                        <div className={Q.sectionTitle}>大 事 记</div>
+                                        <div className={Q.sectionTitle}>{t(lang, "history.eventsSection")}</div>
                                         <div className={Q.timeline}>
                                             {events.map((e) => {
                                                 const d = e.eventDate ? new Date(e.eventDate) : null;
@@ -790,8 +838,8 @@ function YearNewspaper({
                                                                 <span className={Q.tlTitle} style={QS.tlTitle}>{e.title}</span>
                                                                 {d && <span className={Q.tlDate} style={QS.tlDate}>
                                                                   {showRange
-                                                                      ? `${d.getMonth() + 1}月${d.getDate()}日 至 ${de!.getMonth() + 1}月${de!.getDate()}日`
-                                                                      : `${d.getMonth() + 1}月${d.getDate()}日`}
+                                                                      ? t(lang, "history.dateRange", { m: d.getMonth() + 1, d: d.getDate(), m2: de!.getMonth() + 1, d2: de!.getDate() })
+                                                                      : t(lang, "history.dateSingle", { m: d.getMonth() + 1, d: d.getDate() })}
                                                                 </span>}
                                                             </div>
                                                             {e.bodyHtml ?
@@ -805,7 +853,7 @@ function YearNewspaper({
                                                                             type="button"
                                                                             className={Q.tlImgWrap}
                                                                             onClick={() => setLightboxSrc(img.url)}
-                                                                            aria-label="查看大图"
+                                                                            aria-label={t(lang, "common.viewImage")}
                                                                         >
                                                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                                                             <img
@@ -840,21 +888,21 @@ function YearNewspaper({
                                         <div className={Q.sidePanel}>
                                             <div className={Q.sidePanelTitle}>By The Numbers</div>
                                             <div className={Q.statGrid}>
-                                                {members.length > 0 && <StatBox num={members.length} label="新成员"/>}
-                                                {activeMembers.length > 0 && <StatBox num={activeMembers.length} label="活跃成员"/>}
-                                                {projects.length > 0 && <StatBox num={projects.length} label="件作品"/>}
-                                                {events.length > 0 && <StatBox num={events.length} label="条大事记"/>}
+                                                {members.length > 0 && <StatBox num={members.length} label={t(lang, "history.stat.newMembers")}/>}
+                                                {activeMembers.length > 0 && <StatBox num={activeMembers.length} label={t(lang, "history.stat.activeMembers")}/>}
+                                                {projects.length > 0 && <StatBox num={projects.length} label={t(lang, "history.stat.works")}/>}
+                                                {events.length > 0 && <StatBox num={events.length} label={t(lang, "history.stat.events")}/>}
                                             </div>
                                             {activities.length > 0 && (
                                                 <>
                                                     <div className="h-px my-4" style={{background: "var(--np-linel)"}}/>
-                                                    <div className={Q.sidePanelTitle} style={{border: "none", marginBottom: 0, paddingBottom: 0}}>活动概览</div>
+                                                    <div className={Q.sidePanelTitle} style={{border: "none", marginBottom: 0, paddingBottom: 0}}>{t(lang, "history.activityOverview")}</div>
                                                     <div className="flex flex-col gap-2 mt-3">
-                                                        {ACT_ORDER.filter(t => actCounts[t]).map(t => (
-                                                            <div key={t} className="flex items-center gap-[10px]">
-                                                                <span className={actDotClass(t)}/>
-                                                                <span className="text-[13px] np-ink2 flex-1 text-left">{ACT_LABELS[t]}</span>
-                                                                <span className="text-[15px] font-bold np-club" style={F_GEORGIA}>{actCounts[t]} 场</span>
+                                                        {ACT_ORDER.filter(k => actCounts[k]).map(k => (
+                                                            <div key={k} className="flex items-center gap-[10px]">
+                                                                <span className={actDotClass(k)}/>
+                                                                <span className="text-[13px] np-ink2 flex-1 text-left">{ACT_LABELS[k]?.[lang]}</span>
+                                                                <span className="text-[15px] font-bold np-club" style={F_GEORGIA}>{t(lang, "history.sessionsCount", { n: actCounts[k] })}</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -867,23 +915,21 @@ function YearNewspaper({
                                     {showAwards && (
                                         <div className="border-2 np-border-l px-4 py-5 text-center relative overflow-hidden"
                                              style={{background: "var(--np-award-bg)"}}>
-                                            <div className={Q.sidePanelTitle}>荣誉殿堂 · Honors</div>
+                                            <div className={Q.sidePanelTitle}>{t(lang, "history.honors")}</div>
                                             <div className="flex flex-col gap-5">
-                                                {awardProjects.map(p =>
-                                                    (p.awards || []).map((award, i) => (
-                                                        <LaurelBracket key={`${p.id}-${i}`} gap={10}>
-                                                            <Link href={`/works/${p.slug}`}
-                                                                  className="text-[15px] font-black np-ink no-underline hover:text-[color:var(--np-navy)] transition-colors"
-                                                                  style={F_SANS}>
-                                                                {p.title}
-                                                            </Link>
-                                                            <div className="w-10 h-px my-1.5 mx-auto opacity-50" style={{background: "var(--np-gold)"}}/>
-                                                            <p className="text-[11px] font-bold uppercase tracking-[1px] leading-snug np-gold" style={F_SANS}>
-                                                                {award}
-                                                            </p>
-                                                        </LaurelBracket>
-                                                    )),
-                                                )}
+                                                {awardEntries.map((entry, idx) => (
+                                                    <LaurelBracket key={`${entry.projectId}-${idx}`} gap={10}>
+                                                        <Link href={`/works/${entry.slug}`}
+                                                              className="text-[15px] font-black np-ink no-underline hover:text-[color:var(--np-navy)] transition-colors"
+                                                              style={F_SANS}>
+                                                            {entry.title}
+                                                        </Link>
+                                                        <div className="w-10 h-px my-1.5 mx-auto opacity-50" style={{background: "var(--np-gold)"}}/>
+                                                        <p className="text-[11px] font-bold uppercase tracking-[1px] leading-snug np-gold" style={F_SANS}>
+                                                            {entry.award}
+                                                        </p>
+                                                    </LaurelBracket>
+                                                ))}
                                             </div>
                                         </div>
                                     )}
@@ -891,7 +937,7 @@ function YearNewspaper({
                                     {/* 新血液 */}
                                     {showMembers && (
                                         <div>
-                                            <div className={Q.sectionTitle} style={{textAlign: "left"}}>这 一 年 的 新 血 液</div>
+                                            <div className={Q.sectionTitle} style={{textAlign: "left"}}>{t(lang, "history.newBlood")}</div>
                                             <div className={Q.roster}>
                                                 {members.map(m => {
                                                     const avatarUrl = m.avatar || m.user?.image;
@@ -918,7 +964,7 @@ function YearNewspaper({
                                     {/* 年度活跃成员 + 当年社长 */}
                                     {showActive && (
                                         <div>
-                                            <div className={Q.sectionTitle} style={{textAlign: "left"}}>年 度 活 跃 成 员</div>
+                                            <div className={Q.sectionTitle} style={{textAlign: "left"}}>{t(lang, "history.activeMembersSection")}</div>
 
                                             {activeMembers.length > 0 && (
                                                 <div className={Q.highlightList}>
@@ -944,7 +990,7 @@ function YearNewspaper({
                                             {presidents.length > 0 && (
                                                 <div className={activeMembers.length > 0 ? "mt-4" : ""}>
                                                     <div className="text-[12px] np-gold uppercase tracking-[4px] mb-2" style={F_SANS}>
-                                                        ◆ 当年社长
+                                                        {t(lang, "history.presidents")}
                                                     </div>
                                                     <div className={Q.roster}>
                                                         {presidents.map(m => {
@@ -987,9 +1033,7 @@ function YearNewspaper({
                     <div className="px-6 sm:px-10">
                         <div className={Q.rule} style={QS.rule}/>
                         <div className={Q.colophon} style={QS.colophon}>
-                            布谷工作室 · 保持热爱 · 持续创造
-                            <br/>
-                            <span className={Q.colophonUrl} style={QS.colophonUrl}>bugu.studio</span>
+                            {t(lang, "history.colophon")}
                         </div>
                     </div>
                 </div>

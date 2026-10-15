@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db/prisma";
 import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
 import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 // ============================================================
 // 辅助函数
@@ -116,8 +118,9 @@ async function invalidateWorksCaches() {
 // ============================================================
 
 export async function submitJamWork(activityId: string, formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user?.id) return { error: "请先登录" };
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
 
   const title = (formData.get("title") as string || "").trim();
   const description = (formData.get("description") as string || "").trim();
@@ -131,14 +134,14 @@ export async function submitJamWork(activityId: string, formData: FormData) {
   const projectType = (formData.get("projectType") as string || "TRIAL_DEMO").trim();
   const developYearStr = (formData.get("developYear") as string || "").trim();
 
-  if (!title) return { error: "请填写作品标题" };
-  if (!description || description.length < 10) return { error: "作品描述至少需要 10 个字" };
+  if (!title) return { error: t(lang, "gamejam.errTitle") };
+  if (!description || description.length < 10) return { error: t(lang, "gamejam.errDesc") };
 
   const membership = await prisma.jamTeamMember.findFirst({
     where: { userId: session.user.id, team: { activityId } },
     include: { team: true },
   });
-  if (!membership) return { error: "你还没有加入队伍" };
+  if (!membership) return { error: t(lang, "gamejam.errNoTeam") };
 
   let screenshots: string[] = [];
   let creators: { name: string; roles: string[] }[] = [];
@@ -153,7 +156,7 @@ export async function submitJamWork(activityId: string, formData: FormData) {
     tagIds = JSON.parse(tagIdsStr);
     customTags = JSON.parse(customTagsStr);
   } catch {
-    return { error: "表单数据格式错误" };
+    return { error: t(lang, "gamejam.errForm") };
   }
 
   const existing = await prisma.jamSubmission.findUnique({
@@ -181,7 +184,7 @@ export async function submitJamWork(activityId: string, formData: FormData) {
       await invalidateWorksCaches();
     } catch (err: any) {
       console.error("[submitJamWork] 作品库提交失败:", err);
-      return { error: `作品库提交失败: ${err.message}` };
+      return { error: t(lang, "gamejam.errWorksFail", { msg: err.message }) };
     }
   }
 
@@ -246,8 +249,9 @@ export async function submitJamWork(activityId: string, formData: FormData) {
 // ============================================================
 
 export async function deleteJamSubmission(activityId: string) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user?.id) return { error: "请先登录" };
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
 
   const isAdmin =
     (session.user.role as string) === "ADMIN" ||
@@ -258,7 +262,7 @@ export async function deleteJamSubmission(activityId: string) {
     include: { team: { include: { submission: true } } },
   });
 
-  if (!membership && !isAdmin) return { error: "你还没有加入队伍" };
+  if (!membership && !isAdmin) return { error: t(lang, "gamejam.errNoTeam") };
 
   const submission = isAdmin
     ? (await prisma.jamSubmission.findFirst({
@@ -268,12 +272,12 @@ export async function deleteJamSubmission(activityId: string) {
     : membership!.team.submission;
 
   if (!isAdmin) {
-    if (!submission) return { error: "该队伍还没有提交作品" };
+    if (!submission) return { error: t(lang, "gamejam.errNoSubmission") };
     const isLeader = membership!.role === "LEADER";
-    if (!isLeader) return { error: "只有队长或管理员可以删除作品" };
+    if (!isLeader) return { error: t(lang, "gamejam.errLeaderOnly") };
   }
 
-  if (!submission) return { error: "未找到参赛作品" };
+  if (!submission) return { error: t(lang, "gamejam.errNotFound") };
 
   // 捕获旧文件 URL
   const oldFiles = submission.files || [];
@@ -297,14 +301,15 @@ export async function deleteJamSubmission(activityId: string) {
 // ============================================================
 
 export async function submitToWorksLibrary(activityId: string, formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user?.id) return { error: "请先登录" };
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
 
   const submissionId = (formData.get("submissionId") as string || "").trim();
   const projectType = (formData.get("projectType") as string || "TRIAL_DEMO").trim();
   const developYearStr = (formData.get("developYear") as string || "").trim();
 
-  if (!submissionId) return { error: "缺少提交 ID" };
+  if (!submissionId) return { error: t(lang, "gamejam.errNoId") };
 
   const isAdmin =
     (session.user.role as string) === "ADMIN" ||
@@ -315,12 +320,12 @@ export async function submitToWorksLibrary(activityId: string, formData: FormDat
     include: { team: { include: { members: true } } },
   });
 
-  if (!submission) return { error: "参赛作品不存在" };
-  if (submission.projectId) return { error: "该作品已在作品库中" };
+  if (!submission) return { error: t(lang, "gamejam.errSubmissionNotFound") };
+  if (submission.projectId) return { error: t(lang, "gamejam.errAlreadyInWorks") };
 
   if (!isAdmin) {
     const isMember = submission.team.members.some((m) => m.userId === session.user.id);
-    if (!isMember) return { error: "只有队员或管理员可以执行此操作" };
+    if (!isMember) return { error: t(lang, "gamejam.errMemberOnly") };
   }
 
   const metadata = (submission.metadata || {}) as any;
@@ -355,6 +360,6 @@ export async function submitToWorksLibrary(activityId: string, formData: FormDat
     return { success: true, projectId };
   } catch (err: any) {
     console.error("[submitToWorksLibrary] 提交失败:", err);
-    return { error: `提交失败: ${err.message}` };
+    return { error: t(lang, "gamejam.errSubmitFail", { msg: err.message }) };
   }
 }

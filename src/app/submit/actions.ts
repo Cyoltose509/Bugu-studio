@@ -9,6 +9,8 @@ import { ProjectStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { invalidateCache } from "@/lib/db/cache";
 import { z } from "zod";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 function safeJsonParse<T>(str: string | null, fallback: T): T {
   if (!str) return fallback;
@@ -17,11 +19,12 @@ function safeJsonParse<T>(str: string | null, fallback: T): T {
 }
 
 export async function submitProject(formData: FormData) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user) return { success: false, error: "请先登录" };
+  if (!session?.user) return { success: false, error: t(lang, "profile.edit.loginFirst") };
 
   if (!isMemberOrAbove(session.user.role as any)) {
-    return { success: false, error: "仅社团成员可提交作品" };
+    return { success: false, error: t(lang, "submit.onlyMemberShort") };
   }
 
   // ── 基础字段 ──
@@ -87,7 +90,7 @@ export async function submitProject(formData: FormData) {
     const existingIds = new Set(existingMembers.map((m) => m.id));
     const invalid = memberIds.filter((id) => !existingIds.has(id));
     if (invalid.length > 0) {
-      return { success: false, error: `以下成员不存在: ${invalid.join(", ")}` };
+      return { success: false, error: t(lang, "submit.memberNotFound", { ids: invalid.join(", ") }) };
     }
   }
 
@@ -100,7 +103,7 @@ export async function submitProject(formData: FormData) {
     const existingTagIds = new Set(existingTags.map((t) => t.id));
     const invalid = tagIds.filter((id) => !existingTagIds.has(id));
     if (invalid.length > 0) {
-      return { success: false, error: `以下标签不存在: ${invalid.join(", ")}` };
+      return { success: false, error: t(lang, "submit.tagNotFound", { ids: invalid.join(", ") }) };
     }
   }
 

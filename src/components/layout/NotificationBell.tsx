@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 
 interface NotificationItem {
   id: string;
@@ -39,7 +42,7 @@ function getIcon(type: string) {
   if (type === "NEW_USER") return "👤";
   if (type === "ACTIVITY_PROPOSAL") return "🎤";
   if (type === "ACTIVITY_ENROLL") return "📚";
-  if (type === "ACTIVITY_SUBMISSION") return "🏆";
+  if (type === "ACTIVITY_SUBMISSION") return <TrophyIcon size={16} />;
   if (type === "JAM_APPLICATION") return "📨";
   if (type === "JAM_APPROVED") return "✅";
   if (type === "JAM_REJECTED") return "❌";
@@ -51,6 +54,7 @@ function getIcon(type: string) {
 }
 
 export default function NotificationBell() {
+  const { lang } = useLang();
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -242,9 +246,9 @@ export default function NotificationBell() {
 
           {/* 列表 */}
           {loading ? (
-            <div className="p-6 text-center text-xs text-brand-text-muted">加载中...</div>
+            <div className="p-6 text-center text-xs text-brand-text-muted">{t(lang, "common.loading")}</div>
           ) : items.length === 0 ? (
-            <div className="p-6 text-center text-xs text-brand-text-muted">暂无通知</div>
+            <div className="p-6 text-center text-xs text-brand-text-muted">{t(lang, "notification.empty")}</div>
           ) : (
             <div>
               {items.map((n) => (

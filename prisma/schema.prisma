@@ -678,6 +678,7 @@ model Activity {
   endTime          DateTime
   coverImage       String? // R2 URL
   registrationOpen Boolean        @default(false)
+  talkSubmissionOpen Boolean      @default(false)
   maxParticipants  Int?
   theme            String?        @db.Text // Game Jam — 比赛题目
   themeRevealedAt  DateTime?               // Game Jam — 题目公布时间

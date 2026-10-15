@@ -7,6 +7,8 @@ import { apiResponse, apiError } from "@/lib/utils";
 import { createNotification } from "@/lib/services/notification";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { withAuditContext } from "@/lib/db/audit-context";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 /** 递归收集某评论的所有子孙 ID */
 async function collectAllChildIds(commentId: string): Promise<string[]> {
@@ -79,32 +81,33 @@ const _postComment = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
+  const lang = await getLang();
   // 速率限制：每用户每分钟 10 条评论
   const ip = getClientIp(request);
   const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 10, prefix: "comment" });
   if (!rl.allowed) {
-    return apiError("发言过于频繁，请稍后再试", 429);
+    return apiError(t(lang, "api.comments.rateLimited"), 429);
   }
 
   const session = await auth();
-  if (!session?.user) return apiError("请先登录", 401);
-  if (session.user.role === UserRole.GUEST) return apiError("无权限发表留言", 403);
+  if (!session?.user) return apiError(t(lang, "profile.pleaseLogin"), 401);
+  if (session.user.role === UserRole.GUEST) return apiError(t(lang, "api.comments.noPermission"), 403);
 
   const { id: projectId } = await params;
 
   let body: { content?: string; parentId?: string };
-  try { body = await request.json(); } catch { return apiError("请求格式错误", 400); }
+  try { body = await request.json(); } catch { return apiError(t(lang, "api.comments.badRequest"), 400); }
 
   const content = body.content?.trim();
-  if (!content) return apiError("留言内容不能为空", 400);
-  if (content.length > 300) return apiError(`留言最多300字（当前${content.length}字）`, 400);
+  if (!content) return apiError(t(lang, "api.comments.emptyContent"), 400);
+  if (content.length > 300) return apiError(t(lang, "api.comments.tooLong", { n: content.length }), 400);
 
   // 验证项目存在
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { id: true, title: true, slug: true, submitterId: true },
   });
-  if (!project) return apiError("项目不存在", 404);
+  if (!project) return apiError(t(lang, "api.comments.projectNotFound"), 404);
 
   // 如果是回复，验证父留言存在且属于同一项目
   if (body.parentId) {
@@ -113,7 +116,7 @@ const _postComment = async (
       select: { id: true, projectId: true, userId: true },
     });
     if (!parent || parent.projectId !== projectId) {
-      return apiError("父留言不存在", 404);
+      return apiError(t(lang, "api.comments.parentNotFound"), 404);
     }
   }
 
@@ -139,8 +142,8 @@ const _postComment = async (
       await createNotification({
         userId: parentComment.userId,
         type: "COMMENT_REPLY",
-        title: "有人回复了你的留言",
-        content: `${session.user.name || "用户"} 在《${project.title}》中回复了你`,
+        title: t(lang, "api.comments.notifReplyTitle"),
+        content: t(lang, "api.comments.notifReplyBody", { name: session.user.name || t(lang, "api.comments.userFallback"), title: project.title }),
         relatedId: comment.id,
         relatedType: "Comment",
       });
@@ -152,8 +155,8 @@ const _postComment = async (
     await createNotification({
       userId: project.submitterId,
       type: "COMMENT_REPLY",
-      title: "你的作品收到了新留言",
-      content: `${session.user.name || "用户"} 评论了《${project.title}》`,
+      title: t(lang, "api.comments.notifCommentTitle"),
+      content: t(lang, "api.comments.notifCommentBody", { name: session.user.name || t(lang, "api.comments.userFallback"), title: project.title }),
       relatedId: comment.id,
       relatedType: "Comment",
     });
@@ -181,26 +184,27 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const lang = await getLang();
   const session = await auth();
-  if (!session?.user) return apiError("请先登录", 401);
+  if (!session?.user) return apiError(t(lang, "profile.pleaseLogin"), 401);
 
   const { id: projectId } = await params;
 
   let body: { commentId?: string; action?: string; content?: string };
-  try { body = await request.json(); } catch { return apiError("请求格式错误", 400); }
+  try { body = await request.json(); } catch { return apiError(t(lang, "api.comments.badRequest"), 400); }
 
-  if (!body.commentId) return apiError("缺少 commentId", 400);
+  if (!body.commentId) return apiError(t(lang, "api.comments.missingId"), 400);
 
   const comment = await prisma.comment.findUnique({
     where: { id: body.commentId },
     select: { id: true, userId: true, projectId: true },
   });
-  if (!comment || comment.projectId !== projectId) return apiError("留言不存在", 404);
+  if (!comment || comment.projectId !== projectId) return apiError(t(lang, "api.comments.notFound"), 404);
 
   // 仅作者或管理员可编辑/删除
   const isAdmin = session.user.role === UserRole.ADMIN;
   if (comment.userId !== session.user.id && !isAdmin) {
-    return apiError("无权操作此留言", 403);
+    return apiError(t(lang, "api.comments.forbidden"), 403);
   }
 
   if (body.action === "delete") {
@@ -215,8 +219,8 @@ export async function PATCH(
 
   // 编辑
   const newContent = body.content?.trim();
-  if (!newContent) return apiError("留言内容不能为空", 400);
-  if (newContent.length > 300) return apiError(`留言最多300字（当前${newContent.length}字）`, 400);
+  if (!newContent) return apiError(t(lang, "api.comments.emptyContent"), 400);
+  if (newContent.length > 300) return apiError(t(lang, "api.comments.tooLong", { n: newContent.length }), 400);
 
   const updated = await prisma.comment.update({
     where: { id: body.commentId },

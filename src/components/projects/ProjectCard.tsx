@@ -6,13 +6,18 @@ import MiniLikeButton from "./MiniLikeButton";
 import ProjectCardMedia, { type CardGalleryImage } from "./ProjectCardMedia";
 import { toPlainCardText } from "@/lib/rich-content";
 import { TagChip } from "@/components/tags/TagChip";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import { sortProjectTagsEngineFirst } from "@/lib/tags/engine-tags";
+import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
+import { workDisplayNames } from "@/lib/i18n/work-title";
+import type { DictKey } from "@/lib/i18n/dict";
 
-const TYPE_LABELS: Record<string, string> = {
-  IN_DEVELOPMENT: "开发阶段",
-  TRIAL_DEMO: "提供试玩",
-  MINI_GAME: "小游戏",
-  OFFICIAL_RELEASE: "正式上架",
+const TYPE_LABEL_KEYS: Record<string, DictKey> = {
+  IN_DEVELOPMENT: "work.status.IN_DEVELOPMENT",
+  TRIAL_DEMO: "work.status.TRIAL_DEMO",
+  MINI_GAME: "work.status.MINI_GAME",
+  OFFICIAL_RELEASE: "work.status.OFFICIAL_RELEASE",
 };
 
 export interface ProjectCardProject {
@@ -74,6 +79,8 @@ function ProjectCard({
   const link = href ?? `/works/${p.slug}`;
   const delay = `${Math.min(idx % 16, 15) * 50}ms`;
   const [hovering, setHovering] = useState(false);
+  const { lang } = useLang();
+  const display = workDisplayNames(p.title, p.subtitle, lang);
 
   const n = p.members?.length ?? 0;
   const avatarSize = 20;
@@ -122,7 +129,7 @@ function ProjectCard({
                 strokeLinecap="round"
               />
             </svg>
-            <span className="text-sm font-medium">加载中…</span>
+            <span className="text-sm font-medium">{t(lang, "common.loading")}</span>
           </div>
         </div>
       )}
@@ -142,7 +149,7 @@ function ProjectCard({
           data-awards={JSON.stringify(p.awards)}
         >
           {p.awards && p.awards.length > 0 && (
-            <span title={p.awards.join("、")}>🏆</span>
+            <TrophyIcon size={20} title={p.awards.join("、")} className="drop-shadow-md" />
           )}
           {p.aiUsages && p.aiUsages.length > 0 && (
             <span title="使用了 AI 技术">🤖</span>
@@ -165,17 +172,17 @@ function ProjectCard({
 
         <div className="absolute top-2 left-2 z-10">
           <span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">
-            {TYPE_LABELS[p.type] || p.type}
+            {TYPE_LABEL_KEYS[p.type] ? t(lang, TYPE_LABEL_KEYS[p.type]) : p.type}
           </span>
         </div>
       </div>
 
       <div className="flex flex-1 flex-col p-4 min-h-0">
         <h3 className="font-semibold group-hover:text-[#3388BB] transition-colors flex items-baseline gap-1.5 min-w-0 text-brand-text-heading">
-          <span className="truncate min-w-0">{p.title}</span>
-          {p.subtitle && (
+          <span className="truncate min-w-0">{display.main}</span>
+          {display.sub && (
             <span className="text-xs font-normal truncate max-w-[45%] text-brand-text-muted">
-              {p.subtitle}
+              {display.sub}
             </span>
           )}
         </h3>

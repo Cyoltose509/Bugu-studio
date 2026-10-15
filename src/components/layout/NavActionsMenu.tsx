@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 type Props = {
   canSubmit?: boolean;
@@ -81,6 +82,9 @@ export default function NavActionsMenu({
           role="menu"
           className="absolute right-0 top-[calc(100%+6px)] z-[60] w-44 rounded-xl border border-white/10 bg-[#1a3a52] dark:bg-[#121a26] shadow-xl py-1.5 overflow-hidden"
         >
+          <div className="mb-1 border-b border-white/10 pb-1">
+            <ThemeToggle variant="menu" />
+          </div>
           {items.map((item) => (
             <Link
               key={item.href + item.label}

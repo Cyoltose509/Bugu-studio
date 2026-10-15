@@ -18,11 +18,14 @@ import {createNotification, notifyNewProject, notifyProjectEdit, notifyMentions}
 import {cachedQuery} from "@/lib/db/cache";
 import {ProjectStatus} from "@prisma/client";
 import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 // GET /api/projects/[id]
 export async function GET(request: NextRequest, {params}: RouteParams) {
+    const lang = await getLang();
     const {id} = await params;
     const session = await auth();
 
@@ -61,22 +64,23 @@ export async function GET(request: NextRequest, {params}: RouteParams) {
             },
         }), 60);
 
-    if (!project) return apiError("作品不存在", 404);
+    if (!project) return apiError(t(lang, "works.edit.notFound"), 404);
 
     return apiResponse(project);
 }
 
 // PATCH /api/projects/[id]
 export async function PATCH(request: NextRequest, {params}: RouteParams) {
+    const lang = await getLang();
     const {id} = await params;
     const session = await auth();
-    if (!session?.user) return apiError("请先登录", 401);
+    if (!session?.user) return apiError(t(lang, "profile.edit.loginFirst"), 401);
 
     const project = await prisma.project.findUnique({
       where: {id},
       include: { images: { select: { url: true } } }
     });
-    if (!project) return apiError("作品不存在", 404);
+    if (!project) return apiError(t(lang, "works.edit.notFound"), 404);
 
     if (
         !canEditProject(
@@ -85,14 +89,14 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
             project.submitterId
         )
     ) {
-        return apiError("权限不足", 403);
+        return apiError(t(lang, "works.edit.forbidden"), 403);
     }
 
     let body: unknown;
     try {
         body = await request.json();
     } catch {
-        return apiError("请求体格式错误", 400);
+        return apiError(t(lang, "submit.bodyError"), 400);
     }
 
     // 检查是否是审核操作（管理员专用）
@@ -181,7 +185,7 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
     // 普通更新
     const parsed = projectUpdateSchema.safeParse(body);
     if (!parsed.success) {
-        return apiError("数据验证失败", 422, parsed.error.flatten());
+        return apiError(t(lang, "works.edit.validationFail"), 422, parsed.error.flatten());
     }
 
     // ── REJECTED 项目被提交者编辑 → 自动改为 PENDING（重新提交） ──
@@ -231,7 +235,7 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
                 });
                 customTagIds.push(tag.id);
             } catch (e: any) {
-                return apiError(`自定义标签「${name}」处理失败：${e.message || "未知错误"}`, 422);
+                return apiError(t(lang, "form.customTagFail", { name, msg: e.message || "未知错误" }), 422);
             }
         }
         // 合并已有标签和自定义标签（去重）
@@ -358,16 +362,17 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
 
 // DELETE /api/projects/[id]
 export async function DELETE(request: NextRequest, {params}: RouteParams) {
+    const lang = await getLang();
     const {id} = await params;
     const session = await auth();
-    if (!session?.user) return apiError("请先登录", 401);
-    if (!isAdmin(session.user.role as any)) return apiError("权限不足", 403);
+    if (!session?.user) return apiError(t(lang, "profile.edit.loginFirst"), 401);
+    if (!isAdmin(session.user.role as any)) return apiError(t(lang, "works.edit.forbidden"), 403);
 
     const project = await prisma.project.findUnique({
       where: {id},
       include: { images: { select: { url: true } } }
     });
-    if (!project) return apiError("作品不存在", 404);
+    if (!project) return apiError(t(lang, "works.edit.notFound"), 404);
 
     // ── 收集要清理的 R2 文件 ──
     const filesToCleanup: (string | null)[] = [project.coverImage];

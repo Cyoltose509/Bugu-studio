@@ -12,6 +12,8 @@ import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButt
 import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { resolveActivityId } from "@/lib/activities/resolve";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
 export default async function JamTeamDetailPage({
   params,
@@ -19,6 +21,7 @@ export default async function JamTeamDetailPage({
   params: Promise<{ id: string; teamId: string }>;
 }) {
   const session = await auth();
+  const lang = await getLang();
   const { id: activityKey, teamId } = await params;
   const activityId = await resolveActivityId(activityKey);
   if (!activityId) notFound();
@@ -72,7 +75,7 @@ export default async function JamTeamDetailPage({
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
         <Link href={`/activities/${activityId}`} className="text-sm hover:underline text-brand-text-muted">
-          ← 返回活动
+          ← {t(lang, "gamejam.backToActivity")}
         </Link>
       </div>
 
@@ -82,7 +85,7 @@ export default async function JamTeamDetailPage({
           <div>
             <h1 className="text-xl font-bold text-brand-navy">{team.name}</h1>
             <p className="text-sm mt-1 text-brand-text-muted">
-              👑 队长：{team.leader.name} · {team.members.length} 人
+              {t(lang, "teams.leaderLine", { name: team.leader.name ?? "", n: team.members.length })}
             </p>
           </div>
         </div>
@@ -90,13 +93,13 @@ export default async function JamTeamDetailPage({
         {/* 编辑队名（队长） */}
         {isLeader && (
           <details className="mb-6 block">
-            <summary className="text-xs cursor-pointer list-none text-brand-text-muted">✏️ 编辑队伍名称</summary>
+            <summary className="text-xs cursor-pointer list-none text-brand-text-muted">{t(lang, "teams.editName")}</summary>
             <EditTeamNameForm teamId={teamId} activityId={activityId} defaultName={team.name} />
           </details>
         )}
 
         {/* 成员列表 */}
-        <h2 className="text-sm font-semibold mb-3 text-brand-navy">队伍成员</h2>
+        <h2 className="text-sm font-semibold mb-3 text-brand-navy">{t(lang, "teams.members")}</h2>
         <div className="space-y-3">
           {team.members.map(m => (
             <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F8FAFB]">
@@ -107,7 +110,7 @@ export default async function JamTeamDetailPage({
                   <span className={`text-xs ml-2 px-1.5 py-0.5 rounded-full ${
                     m.role === "LEADER" ? "bg-[#FFF3E0] text-brand-orange" : "bg-[#F0F6FA] text-brand-text-muted"
                   }`}>
-                    {m.role === "LEADER" ? "队长" : "队员"}
+                    {m.role === "LEADER" ? t(lang, "activityDetail.leader") : t(lang, "teams.memberRole")}
                   </span>
                 </div>
               </div>
@@ -133,9 +136,9 @@ export default async function JamTeamDetailPage({
       {/* 入队申请（非成员、未在其他队伍中） */}
       {!isMember && !alreadyInAnotherTeam && session?.user && (
         <div className="bg-card rounded-xl border p-6 mb-6 border-brand-border-subtle">
-          <h2 className="text-sm font-semibold mb-3 text-brand-navy">申请加入</h2>
+          <h2 className="text-sm font-semibold mb-3 text-brand-navy">{t(lang, "teams.applyJoin")}</h2>
           {myApplication ? (
-            <p className="text-sm text-brand-orange">⏳ 申请已提交，等待队长审批</p>
+            <p className="text-sm text-brand-orange">{t(lang, "teams.applicationPending")}</p>
           ) : (
             <ApplyToTeamForm teamId={teamId} activityId={activityId} />
           )}
@@ -145,14 +148,14 @@ export default async function JamTeamDetailPage({
       {/* 已在其他队伍中，不能申请 */}
       {!isMember && alreadyInAnotherTeam && (
         <div className="bg-card rounded-xl border p-6 mb-6 border-brand-border-subtle">
-          <p className="text-sm text-brand-text-muted">🚫 你已加入其他队伍，请先退出当前队伍后再申请。</p>
+          <p className="text-sm text-brand-text-muted">{t(lang, "teams.alreadyInOther")}</p>
         </div>
       )}
 
       {/* 入队申请管理（队长） */}
       {isLeader && team.applications.length > 0 && (
         <div className="bg-card rounded-xl border p-6 mb-6 border-brand-border-subtle">
-          <h2 className="text-sm font-semibold mb-3 text-brand-navy">入队申请（{team.applications.length}）</h2>
+          <h2 className="text-sm font-semibold mb-3 text-brand-navy">{t(lang, "teams.applications", { n: team.applications.length })}</h2>
           <div className="space-y-3">
             {team.applications.map(app => (
               <div key={app.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F8FAFB]">
@@ -173,7 +176,7 @@ export default async function JamTeamDetailPage({
       {/* 邀请队员（队长） */}
       {isLeader && (
         <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
-          <h2 className="text-sm font-semibold mb-3 text-brand-navy">邀请队员</h2>
+          <h2 className="text-sm font-semibold mb-3 text-brand-navy">{t(lang, "teams.inviteMembers")}</h2>
           <InviteMemberForm
             teamId={teamId}
             activityId={activityId}

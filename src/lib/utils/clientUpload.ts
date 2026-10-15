@@ -31,6 +31,8 @@ import {
   AVATAR_LIMIT_BYTES,
   formatMB,
 } from "./uploadLimits";
+import { DEFAULT_LANG, type Lang } from "../i18n/config";
+import { t } from "../i18n/dict";
 
 export { UPLOAD_LIMIT_BYTES, UPLOAD_LIMIT_MB, AVATAR_LIMIT_BYTES, formatMB };
 
@@ -41,16 +43,16 @@ export function isAcceptedImage(file: File): boolean {
   return (ACCEPTED_MIME as readonly string[]).includes(file.type);
 }
 
-/** 上传前的类型/体积预检，抛中文错误 */
-export function assertImageFile(file: File): void {
+/** 上传前的类型/体积预检，抛本地化错误 */
+export function assertImageFile(file: File, lang: Lang = DEFAULT_LANG): void {
   if (!file.type.startsWith("image/")) {
-    throw new Error("请拖入图片文件");
+    throw new Error(t(lang, "upload.typeErr"));
   }
   if (file.type === "image/gif") {
-    throw new Error("暂不支持 GIF，请先转换为 JPG / PNG / WebP");
+    throw new Error(t(lang, "upload.gifErr"));
   }
   if (!isAcceptedImage(file)) {
-    throw new Error(`不支持的图片格式：${file.type || "未知"}，仅支持 JPG / PNG / WebP`);
+    throw new Error(t(lang, "upload.formatErr", { type: file.type || "未知" }));
   }
 }
 
@@ -170,6 +172,7 @@ export interface FitResult {
 export async function fitWithinLimit(
   file: File,
   limit: number = UPLOAD_LIMIT_BYTES,
+  lang: Lang = DEFAULT_LANG,
 ): Promise<FitResult> {
   if (file.size <= limit) {
     return { file, compressed: false, originalSize: file.size };
@@ -239,7 +242,10 @@ export async function fitWithinLimit(
       };
     }
     throw new Error(
-      `图片压缩后仍有 ${formatMB(best?.size ?? file.size)}MB，超过 ${formatMB(limit)}MB 上限，请换一张小一些的图`,
+      t(lang, "upload.tooLarge", {
+        size: formatMB(best?.size ?? file.size),
+        limit: formatMB(limit),
+      }),
     );
   } finally {
     decoded.dispose();
@@ -267,6 +273,8 @@ export interface UploadOptions {
   /** 该接口的体积上限，默认 4.2MB（头像接口传 1.9MB） */
   limit?: number;
   signal?: AbortSignal;
+  /** 当前语言，用于本地化上传过程中的错误提示（默认中文） */
+  lang?: Lang;
 }
 
 export interface UploadResult {
@@ -278,17 +286,20 @@ export interface UploadResult {
 
 export async function uploadImage(
   file: File,
-  { endpoint, type, limit = UPLOAD_LIMIT_BYTES, signal }: UploadOptions,
+  { endpoint, type, limit = UPLOAD_LIMIT_BYTES, signal, lang = DEFAULT_LANG }: UploadOptions,
 ): Promise<UploadResult> {
-  assertImageFile(file);
+  assertImageFile(file, lang);
 
-  const fitted = await fitWithinLimit(file, limit);
+  const fitted = await fitWithinLimit(file, limit, lang);
 
   // 压缩完仍然超限就不发了：Vercel 边缘会直接返回纯文本 413，
   // 用户只会看到莫名其妙的报错。这里拦下来给明确提示。
   if (fitted.file.size > limit) {
     throw new Error(
-      `图片压缩后仍有 ${formatMB(fitted.file.size)}MB，超过 ${formatMB(limit)}MB 上限，请换一张小一些的图`,
+      t(lang, "upload.tooLarge", {
+        size: formatMB(fitted.file.size),
+        limit: formatMB(limit),
+      }),
     );
   }
 
@@ -301,15 +312,18 @@ export async function uploadImage(
 
   if (res.status === 413) {
     throw new Error(
-      `图片过大（${formatMB(fitted.file.size)}MB），服务器最多接收 ${UPLOAD_LIMIT_MB}MB，请压缩后再试`,
+      t(lang, "upload.serverTooLarge", {
+        size: formatMB(fitted.file.size),
+        limit: UPLOAD_LIMIT_MB,
+      }),
     );
   }
   if (!res.ok) {
-    throw new Error(payload?.error || `上传失败（HTTP ${res.status}）`);
+    throw new Error(payload?.error || t(lang, "upload.httpErr", { status: res.status }));
   }
 
   const url: string | undefined = payload?.url || payload?.data?.url;
-  if (!url) throw new Error("上传失败：服务器未返回图片地址");
+  if (!url) throw new Error(t(lang, "upload.noUrl"));
 
   return {
     url,
@@ -320,7 +334,10 @@ export async function uploadImage(
 }
 
 /** 压缩过的话给一句提示文案，没压缩就返回空串 */
-export function compressionNote(result: UploadResult): string {
+export function compressionNote(result: UploadResult, lang: Lang = DEFAULT_LANG): string {
   if (!result.compressed) return "";
-  return `已压缩：${formatMB(result.originalSize)}MB → ${formatMB(result.uploadedSize)}MB`;
+  return t(lang, "upload.compressed", {
+    from: formatMB(result.originalSize),
+    to: formatMB(result.uploadedSize),
+  });
 }

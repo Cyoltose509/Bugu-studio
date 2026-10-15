@@ -4,6 +4,8 @@
 
 @layer base {
   :root {
+    /* 字体变量：默认（中文模式）用 Inter 渲染拉丁字符，英文模式整体切到 Nunito */
+    --font-sans: var(--font-inter);
     --background: 207 45% 94%;
     --background-end: 210 50% 96%;
     --foreground: 0 0% 20%;
@@ -79,7 +81,12 @@
   * {
     @apply border-border;
   }
+  /* 英文模式：整体切换到 Nunito（圆润友好，贴合品牌调性）。中文模式沿用 Inter + 系统中文。 */
+  html[lang="en"] {
+    --font-sans: var(--font-en);
+  }
   body {
+    font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     background: linear-gradient(135deg, #D6F0F8 0%, #F0F5F9 100%);
     min-height: 100vh;
     @apply text-foreground;
@@ -689,81 +696,6 @@ html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
   }
 }
 
-/*
- * 移动端竖屏修复：对整页快照做 clip-path 动画时，移动 GPU 会对快照做
- * 低精度重采样，整个已扫过区域的内容会糊掉/变形（桌面端无此问题）。
- * 改为：页面内容瞬时切换，由独立视图过渡层（view-transition-name）承载
- * 一道纯渐变「光刃」扫过——渐变层即使被重采样也不可见，内容始终清晰。
- */
-@media (pointer: coarse), (max-width: 768px) {
-  html.theme-cutting::view-transition-old(root),
-  html.theme-cutting::view-transition-new(root) {
-    animation: none !important;
-    clip-path: none !important;
-    filter: none !important;
-  }
-  html.theme-cutting::view-transition-old(root) {
-    opacity: 0 !important;
-  }
-
-  /* 光刃层：独立快照，纯渐变，扫过时不会带歪页面内容 */
-  html.theme-cutting::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    view-transition-name: theme-blade;
-  }
-  /* 入夜：冷色刃口（对应原 drop-shadow 配色） */
-  html.theme-cutting[data-theme-cut="to-dark"]::after {
-    background: linear-gradient(
-      135deg,
-      rgba(180, 210, 255, 0.55) 0%,
-      rgba(120, 160, 230, 0.28) 40%,
-      rgba(90, 130, 220, 0.12) 60%,
-      transparent 78%
-    );
-  }
-  /* 破晓：暖色刃口 */
-  html.theme-cutting[data-theme-cut="to-light"]::after {
-    background: linear-gradient(
-      135deg,
-      transparent 22%,
-      rgba(255, 180, 90, 0.12) 40%,
-      rgba(255, 200, 120, 0.28) 60%,
-      rgba(255, 236, 190, 0.55) 100%
-    );
-  }
-
-  html.theme-cutting::view-transition-old(theme-blade) {
-    display: none;
-  }
-  html.theme-cutting::view-transition-new(theme-blade) {
-    animation: theme-cut-blade 0.85s cubic-bezier(0.65, 0.05, 0.36, 1) both;
-  }
-  html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(theme-blade) {
-    animation-name: theme-cut-blade-rev;
-  }
-}
-
-/* 光刃扫过轨迹：与原 clip 动画同几何，只是作用对象从页面快照换成渐变层 */
-@keyframes theme-cut-blade {
-  from {
-    clip-path: polygon(-8% -8%, 0% -8%, -8% 0%);
-  }
-  to {
-    clip-path: polygon(-8% -8%, 220% -8%, -8% 220%);
-  }
-}
-@keyframes theme-cut-blade-rev {
-  from {
-    clip-path: polygon(108% 108%, 100% 108%, 108% 100%);
-  }
-  to {
-    clip-path: polygon(108% 108%, -120% 108%, 108% -120%);
-  }
-}
-
 /* Newspaper year-report: day / night skin */
 .newspaper-paper {
   --np-paper: #faf8f5;
@@ -777,6 +709,7 @@ html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
   --np-navy-2: #4488aa;
   --np-orange: #e38043;
   --np-green: #88c232;
+  --np-laurel: #2dd4bf;
   --np-award-bg: rgba(196, 168, 106, 0.12);
   --np-award-fg: #8b7355;
   --np-tag-bg: rgba(136, 194, 50, 0.08);
@@ -801,6 +734,7 @@ html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
   --np-navy-2: #3d7a9a;
   --np-orange: #f09055;
   --np-green: #9ad04a;
+  --np-laurel: #2dd4bf;
   --np-award-bg: rgba(212, 184, 122, 0.14);
   --np-award-fg: #e0c98a;
   --np-tag-bg: rgba(154, 208, 74, 0.12);
@@ -817,6 +751,7 @@ html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
 .newspaper-paper .np-line-fg { color: var(--np-line); }
 .newspaper-paper .np-orange { color: var(--np-orange); }
 .newspaper-paper .np-green { color: var(--np-green); }
+.newspaper-paper .np-laurel { color: var(--np-laurel); }
 .newspaper-paper .np-border { border-color: var(--np-line); }
 .newspaper-paper .np-border-l { border-color: var(--np-linel); }
 .newspaper-paper .np-panel {
@@ -849,4 +784,63 @@ html.theme-cutting[data-theme-cut="to-light"]::view-transition-new(root) {
 .newspaper-paper .np-act-tag-course { background: var(--np-navy); }
 .newspaper-paper .np-act-tag-general { background: var(--np-green); }
 .newspaper-paper .np-act-tag-meeting { background: var(--np-line); color: var(--np-ink); }
+
+/* 关系图谱视图：全屏专注模式，隐藏站点尾部卡片，避免滚轮缩放与页面滚动打架 */
+html.graph-fullscreen footer {
+  display: none !important;
+}
 .newspaper-paper .np-rich a { color: var(--np-navy); }
+
+/* 顶栏左上角 Logo：悬停/聚焦时沿 Y 轴翻转，背面显示「HOME」 */
+.nav-logo-flip {
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  perspective: 600px;
+}
+.nav-logo-flip-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-logo-flip:hover .nav-logo-flip-inner,
+.nav-logo-flip:focus-visible .nav-logo-flip-inner {
+  transform: rotateY(180deg);
+}
+.nav-logo-flip-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.nav-logo-flip-front img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  user-select: none;
+}
+.nav-logo-flip-back {
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #E38043, #F09055);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-logo-flip-inner { transition: none; }
+}

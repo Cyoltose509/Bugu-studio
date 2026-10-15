@@ -3,8 +3,13 @@ import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import SettingsForm from "@/components/forms/SettingsForm";
 import { Metadata } from "next";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
-export const metadata: Metadata = { title: "通知设置 | 布谷工作室" };
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getLang();
+  return { title: t(lang, "page.settings.title") };
+}
 
 export default async function SettingsPage() {
   const session = await auth();

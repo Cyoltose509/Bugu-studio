@@ -12,6 +12,15 @@ import WorksToolbar from "@/components/works/WorksToolbar";
 import WorksInfiniteGrid from "@/components/works/WorksInfiniteGrid";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
 import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
+import FilterLink from "@/components/works/FilterLink";
+import TagFilterChips from "@/components/works/TagFilterChips";
+import { PROJECT_SELECT } from "@/lib/works/project-select";
+import { sortByNameAndSlice } from "@/lib/works/name-sort";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
+import type { Lang } from "@/lib/i18n/config";
+import { typeLabel, TYPE_OPTIONS, buildUrl } from "@/lib/works/filters";
+import { tagDisplayName } from "@/lib/tags/tag-names";
 import {
     isMockDataEnabled,
     mockListProjects,
@@ -19,7 +28,10 @@ import {
     mockSidebarYears,
 } from "@/lib/mock/frontend-data";
 
-export const metadata: Metadata = {title: "作品库", description: "浏览历届社员创作的所有游戏作品"};
+export async function generateMetadata(): Promise<Metadata> {
+    const lang = await getLang();
+    return { title: t(lang, "page.works.title"), description: t(lang, "page.works.description") };
+}
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
 
 const PAGE_SIZE = 16; // 4x4
@@ -41,25 +53,26 @@ interface PageProps {
 export default async function WorksPage({searchParams}: PageProps) {
     // 仅解析 URL 参数 — 无 DB 操作，瞬间完成
     const params = await searchParams;
+    const lang = await getLang();
 
     return (
-        <div className="container mx-auto px-4 py-10 animate-fade-in">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-brand-navy">作品库</h1>
+        <div className="container mx-auto px-4 py-6 lg:py-10 animate-fade-in">
+            <div className="mb-6 lg:mb-8">
+                <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.works.title")}</h1>
             </div>
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex flex-col gap-0 lg:flex-row lg:gap-8">
                 {/* ── 侧栏：流式加载（tags/total/years 数据）── */}
-                <Suspense fallback={<LogoLoading text="正在加载筛选..." compact />}>
-                    <WorksSidebarData params={params} />
+                <Suspense fallback={<LogoLoading text={t(lang, "works.filter.loading")} compact />}>
+                    <WorksSidebarData params={params} lang={lang} />
                 </Suspense>
 
                 {/* ── 主区域：工具栏（含桌面已选胶囊）+ 作品网格── */}
                 <div className="flex-1 min-w-0">
-                    <Suspense fallback={<WorksToolbar currentQ={params.q} />}>
-                        <WorksToolbarData params={params} />
+                    <Suspense fallback={<WorksToolbar />}>
+                        <WorksToolbarData params={params} lang={lang} />
                     </Suspense>
 
-                    <Suspense fallback={<LogoLoading text="正在加载作品..." compact />}>
+                    <Suspense fallback={<LogoLoading text={t(lang, "works.grid.loading")} compact />}>
                         <WorksFirstPage params={params} />
                     </Suspense>
                 </div>
@@ -68,58 +81,8 @@ export default async function WorksPage({searchParams}: PageProps) {
     );
 }
 
-const TYPE_OPTIONS = [
-    { value: "OFFICIAL_RELEASE", label: "正式上架" },
-    { value: "TRIAL_DEMO", label: "提供试玩" },
-    { value: "MINI_GAME", label: "小游戏" },
-    { value: "IN_DEVELOPMENT", label: "开发阶段" },
-] as const;
-
-function buildActiveChips(
-    params: Record<string, any>,
-    tagNameBySlug: Map<string, string> | Record<string, string> = {},
-) {
-    const nameOf = (slug: string) =>
-        tagNameBySlug instanceof Map
-            ? tagNameBySlug.get(slug) || slug
-            : tagNameBySlug[slug] || slug;
-
-    const chips: { key: string; label: string; clearHref: string }[] = [];
-    if (params.types) {
-        const typeLabel =
-            TYPE_OPTIONS.find((t) => t.value === params.types)?.label || params.types;
-        chips.push({
-            key: "types",
-            label: typeLabel,
-            clearHref: buildUrl(params, { types: void 0 }),
-        });
-    }
-    if (params.year) {
-        chips.push({
-            key: "year",
-            label: `${params.year}年`,
-            clearHref: buildUrl(params, { year: void 0 }),
-        });
-    }
-    if (params.tag) {
-        chips.push({
-            key: "tag",
-            label: nameOf(params.tag),
-            clearHref: buildUrl(params, { tag: void 0 }),
-        });
-    }
-    if (params.q) {
-        chips.push({
-            key: "q",
-            label: `“${params.q}”`,
-            clearHref: buildUrl(params, { q: void 0 }),
-        });
-    }
-    return chips;
-}
-
 /** 主区工具栏 — 解析标签名后渲染桌面端已选胶囊 */
-async function WorksToolbarData({ params }: { params: Record<string, any> }) {
+async function WorksToolbarData({ params, lang }: { params: Record<string, any>; lang: Lang }) {
     const tags = isMockDataEnabled()
         ? mockSidebarTags()
         : await cachedQuery(
@@ -137,32 +100,19 @@ async function WorksToolbarData({ params }: { params: Record<string, any> }) {
             }),
         120,
     );
-    const tagMap = new Map(tags.map((t) => [t.slug, t.name]));
-    const chips = buildActiveChips(params, tagMap);
-    const clearAllHref =
-        chips.length > 0
-            ? buildUrl(params, {
-                  types: void 0,
-                  year: void 0,
-                  tag: void 0,
-                  q: void 0,
-              })
-            : undefined;
-
-    return (
-        <WorksToolbar
-            currentQ={params.q}
-            chips={chips}
-            clearAllHref={clearAllHref}
-        />
+    // 胶囊与高亮都由客户端按 URL 实时算（筛选不再触发 RSC 导航）
+    const tagNames = Object.fromEntries(
+        tags.map((t: any) => [t.slug, tagDisplayName(t.slug, t.name, lang)]),
     );
+
+    return <WorksToolbar tagNames={tagNames} />;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
    侧栏数据 — 异步组件（Suspense 包裹，流式加载）
    ═══════════════════════════════════════════════════════════════════ */
 
-async function WorksSidebarData({ params }: { params: Record<string, any> }) {
+async function WorksSidebarData({ params, lang }: { params: Record<string, any>; lang: Lang }) {
     const [tags, years] = isMockDataEnabled()
         ? [mockSidebarTags(), mockSidebarYears()]
         : await (async () => {
@@ -186,7 +136,7 @@ async function WorksSidebarData({ params }: { params: Record<string, any> }) {
         (acc[key] ??= []).push(tag);
         return acc;
     }, {});
-    const groupOrder = ["引擎", "大类", "要素", "其他"];
+    const groupOrder = ["引擎", "大类", "要素", "活动&赛事", "其他"];
     const sortedGroups = Object.keys(tagGroups).sort((a, b) => {
         const ia = groupOrder.indexOf(a);
         const ib = groupOrder.indexOf(b);
@@ -198,91 +148,61 @@ async function WorksSidebarData({ params }: { params: Record<string, any> }) {
 
     const typeOptions = TYPE_OPTIONS;
 
-    const tagMap = new Map(tags.map((t) => [t.slug, t.name]));
-    const activeChips = buildActiveChips(params, tagMap);
+    // 分组与排序在服务端算好，剩下的高亮/href 交给客户端按 URL 实时判定
+    const tagGroupsForUi = sortedGroups
+        .map((group) => ({
+            group,
+            tags: sortTagsEngineFirst(
+                (tagGroups[group] || []).filter((tag: any) => tag._count.projects > 0),
+            ).map((tag: any) => ({
+                slug: tag.slug,
+                name: tagDisplayName(tag.slug, tag.name, lang),
+                color: tag.color,
+                count: tag._count.projects,
+            })),
+        }))
+        .filter((g) => g.tags.length > 0);
 
     const filterContent = (
         <div className="space-y-6">
             <div>
-                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">类型</h3>
+                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.type")}</h3>
                 <div className="space-y-1.5">
-                    <FilterLink href={buildUrl(params, {types: void 0})} active={!params.types} label="全部类型"/>
+                    <FilterLink href={buildUrl(params, {types: void 0})} activeKeys={["types"]} label={t(lang, "works.filter.allTypes")}/>
                     {typeOptions.map(t => (
                         <FilterLink key={t.value}
                                     href={buildUrl(params, {types: t.value})}
-                                    active={params.types === t.value}
-                                    label={t.label}/>
+                                    activeKeys={["types"]}
+                                    label={typeLabel(t.value, lang)}/>
                     ))}
                 </div>
             </div>
             {years.length > 0 && (
                 <div>
-                    <h3 className="text-sm font-semibold mb-3 text-brand-text-body">年份</h3>
+                    <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.year")}</h3>
                     <div className="space-y-1.5">
-                        <FilterLink href={buildUrl(params, {year: void 0})} active={!params.year} label="全部年份"/>
+                        <FilterLink href={buildUrl(params, {year: void 0})} activeKeys={["year"]} label={t(lang, "works.filter.allYears")}/>
                         {years.map(y => <FilterLink key={y.developYear}
                                                     href={buildUrl(params, {year: String(y.developYear)})}
-                                                    active={params.year === String(y.developYear)}
+                                                    activeKeys={["year"]}
                                                     label={String(y.developYear)}/>)}
                     </div>
                 </div>
             )}
             <div>
-                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">标签</h3>
-                <div className="space-y-3">
-                    {sortedGroups.map((group) => {
-                        // 0 件作品的标签不展示，避免点进去空列表误以为筛选坏了
-                        const visible = sortTagsEngineFirst(
-                            (tagGroups[group] || []).filter((tag) => tag._count.projects > 0),
-                        );
-                        if (visible.length === 0) return null;
-                        return (
-                            <div key={group}>
-                                <h4 className="text-xs font-medium mb-1.5 text-brand-text-muted">{group}</h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {visible.map(tag => {
-                                        const engine = isEngineTagSlug(tag.slug);
-                                        const color = getEngineColor(tag.slug) || tag.color || "#88C232";
-                                        const active = params.tag === tag.slug;
-                                        return (
-                                        <FilterNavLink
-                                            key={tag.slug}
-                                            href={buildUrl(params, {
-                                                tag: active ? void 0 : tag.slug,
-                                            })}
-                                            active={active}
-                                            title={`${tag.name}（${tag._count.projects}）`}
-                                            className={`inline-flex items-center gap-1 text-xs px-2 py-1 transition-all ${
-                                                engine
-                                                    ? `rounded-full font-medium ${getEngineChipClass(tag.slug)}`
-                                                    : "rounded"
-                                            } ${active ? "ring-1 ring-offset-1 opacity-100" : "opacity-75 hover:opacity-100"}`}
-                                            style={
-                                                engine
-                                                    ? undefined
-                                                    : {
-                                                          color,
-                                                          backgroundColor: `${color}18`,
-                                                      }
-                                            }
-                                        >
-                                            {engine && <EngineTagIcon slug={tag.slug} />}
-                                            {tag.name}
-                                            <span className="opacity-70">({tag._count.projects})</span>
-                                        </FilterNavLink>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.tags")}</h3>
+                {/* 0 件作品的标签不展示，避免点进去空列表误以为筛选坏了 */}
+                <TagFilterChips groups={tagGroupsForUi} />
             </div>
         </div>
     );
 
+    const tagNames = Object.fromEntries(
+        tags.map((t: any) => [t.slug, tagDisplayName(t.slug, t.name, lang)]),
+    );
+
     return (
-        <FilterSidebarClient activeChips={activeChips}>
+        <FilterSidebarClient tagNames={tagNames}>
             {filterContent}
         </FilterSidebarClient>
     );
@@ -323,52 +243,35 @@ async function WorksFirstPage({ params }: { params: Record<string, any> }) {
     }
 
     // 与 /api/works 保持一致：喜欢排序用 id 保底，分页更稳
-    const orderBy: any = sort === "name"
-        ? [{title: "asc"}, {id: "desc"}]
-        : sort === "likes"
-            ? [{likes: {_count: "desc"}}, {id: "desc"}]
-            : [{developYear: "desc"}, {publishedAt: "desc"}, {id: "desc"}];
+    // 名称排序例外：Postgres 排不出拼音序，取全量后在内存排（见 lib/works/name-sort.ts）
+    const orderBy: any = sort === "likes"
+        ? [{likes: {_count: "desc"}}, {id: "desc"}]
+        : [{developYear: "desc"}, {publishedAt: "desc"}, {id: "desc"}];
 
     const where = buildWhere(params);
+    const scopeKey = `${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}`;
 
     // 并行获取作品列表 + 总数
     const [projects, total] = await Promise.all([
+        sort === "name"
+            ? cachedQuery(
+                  `works:byname:${scopeKey}`,
+                  () => prisma.project.findMany({where, select: PROJECT_SELECT}),
+                  60,
+              ).then((rows: any[]) => sortByNameAndSlice(rows, null, PAGE_SIZE + 1))
+            : cachedQuery(
+                `works:infinite:first:v2:${scopeKey}:${sort}`,
+                () =>
+                    prisma.project.findMany({
+                        where,
+                        take: PAGE_SIZE + 1,
+                        orderBy,
+                        select: PROJECT_SELECT,
+                    }),
+                60,
+            ),
         cachedQuery(
-            `works:infinite:first:v2:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}:${sort}`,
-            () =>
-                prisma.project.findMany({
-                    where,
-                    take: PAGE_SIZE + 1,
-                    orderBy,
-                    select: {
-                        id: true, slug: true, title: true, subtitle: true,
-                        description: true, coverImage: true, type: true,
-                        developYear: true, publishedAt: true,
-                        tags: {include: {tag: true}},
-                        awards: true,
-                        aiUsages: true,
-                        // 卡片悬停轮播：最多 4 张截图
-                        images: {
-                            orderBy: {sortOrder: "asc"},
-                            take: 4,
-                            select: {url: true, altText: true},
-                        },
-                        _count: {select: {likes: true}},
-                        members: {
-                            orderBy: {sortOrder: "asc"},
-                            include: {
-                                member: {
-                                    select: {displayName: true, avatar: true, user: {select: {image: true}}},
-                                },
-                                user: {select: {id: true, name: true, image: true}},
-                            },
-                        },
-                    },
-                }),
-            60,
-        ),
-        cachedQuery(
-            `works:total:${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}`,
+            `works:total:${scopeKey}`,
             () => prisma.project.count({where}),
             60,
         ),
@@ -432,27 +335,3 @@ function buildWhere(params: Record<string, any>) {
     return where;
 }
 
-function FilterLink({href, active, label}: { href: string; active: boolean; label: string }) {
-    return (
-        <FilterNavLink
-            href={href}
-            active={active}
-            className={`block text-sm px-3 py-1.5 rounded transition-colors ${active ? "font-medium bg-brand-navy/10 text-brand-navy" : "text-brand-text-secondary hover:bg-brand-surface"}`}
-        >
-            {label}
-        </FilterNavLink>
-    );
-}
-
-/** 合并当前 query 与覆盖项；undefined / 空串表示删除该参数 */
-function buildUrl(current: Record<string, any>, overrides: Record<string, any>): string {
-    const params = new URLSearchParams();
-    const merged = {...current, ...overrides};
-    // 无限滚动不用 page，避免 URL 里残留无用参数
-    delete merged.page;
-    for (const [k, v] of Object.entries(merged)) {
-        if (v !== void 0 && v !== null && v !== "") params.set(k, String(v));
-    }
-    const qs = params.toString();
-    return `/works${qs ? `?${qs}` : ""}`;
-}

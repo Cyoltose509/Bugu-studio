@@ -7,8 +7,10 @@ import {ProjectStatus} from "@prisma/client";
 import {isMockDataEnabled, mockStats} from "@/lib/mock/frontend-data";
 import {getClubAgeDays, getClubAgeYears} from "@/lib/club";
 import ClubAgeStat from "@/components/home/ClubAgeStat";
+import {t} from "@/lib/i18n/dict";
+import type {Lang} from "@/lib/i18n/config";
 
-export default async function HomeStats() {
+export default async function HomeStats({lang = "cn"}: { lang?: Lang }) {
     const years = getClubAgeYears();
     const days = getClubAgeDays();
     const [memberCount, projectCount, releasedCount] = isMockDataEnabled()
@@ -32,9 +34,9 @@ export default async function HomeStats() {
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                     <ClubAgeStat years={years} days={days} />
-                    <Stat value={`${memberCount}+`} label="历届成员"/>
-                    <Stat value={`${projectCount}+`} label="累计作品"/>
-                    <Stat value={`${releasedCount}`} label="正式上架"/>
+                    <Stat value={`${memberCount}+`} label={t(lang, "stat.alumni")}/>
+                    <Stat value={`${projectCount}+`} label={t(lang, "stat.totalWorks")}/>
+                    <Stat value={`${releasedCount}`} label={t(lang, "stat.released")}/>
                 </div>
             </div>
         </section>

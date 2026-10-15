@@ -1,6 +1,6 @@
 /**
  * 引擎标签展示：图标、品牌色、排序前置
- * slug 兼容 unreal / ue、game-maker / gamemaker
+ * slug 兼容 unreal / ue
  */
 
 export const ENGINE_SLUGS = [
@@ -25,14 +25,13 @@ export const ENGINE_TAG_COLORS: Record<EngineSlug, string> = {
 export const ENGINE_TAG_NAMES: Partial<Record<EngineSlug, string>> = {
   godot: "Godot",
   unity: "Unity",
-  gamemaker: "GameMaker",
+  gamemaker: "Game Maker",
   unreal: "Unreal Engine",
   ue: "Unreal Engine",
 };
 
 /** 正式站等可能用的别名 → 规范 slug */
 const ENGINE_ALIASES: Record<string, EngineSlug> = {
-  "game-maker": "gamemaker",
   gamemaker: "gamemaker",
   godot: "godot",
   unity: "unity",

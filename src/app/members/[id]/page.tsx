@@ -11,10 +11,15 @@ import MemberSensitiveInfo from "@/components/members/MemberSensitiveInfo";
 import MemberWorkHistory from "@/components/members/MemberWorkHistory";
 import AdminMemberEditor from "@/components/members/AdminMemberEditor";
 import { RichContent } from "@/components/ui/RichContent";
+import LinkIcon from "@/components/icons/LinkIcon";
 import { positionLabel, positionColor } from "@/lib/position";
 import ProjectCard from "@/components/projects/ProjectCard";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 import { isMockDataEnabled, mockMemberById } from "@/lib/mock/frontend-data";
+import ShareButton from "@/components/share/ShareButton";
+import { shareDescription, shareMetadata } from "@/lib/share";
 
 // ISR: 成员信息变化少，5 分钟缓存
 export const dynamic = "force-dynamic"; // cachedQuery 提供缓存，避免构建时连接池耗尽
@@ -28,29 +33,28 @@ interface PageProps {
 const getMemberMeta = cache(async (id: string) => {
   if (isMockDataEnabled()) {
     const m = mockMemberById(id);
-    return m ? { displayName: m.displayName, bio: m.bio } : null;
+    return m ? { displayName: m.displayName, bio: m.bio, avatar: m.avatar, user: m.user } : null;
   }
   return prisma.clubMember.findUnique({
     where: { id },
-    select: { displayName: true, bio: true },
+    select: { displayName: true, bio: true, avatar: true, user: { select: { image: true } } },
   });
 });
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
+  const lang = await getLang();
   const member = await getMemberMeta(id);
-  if (!member) return { title: "成员不存在" };
-  return {
-    title: member.displayName,
-    description: member.bio?.slice(0, 160) || `${member.displayName} 的成员页面`,
-  };
+  if (!member) return { title: t(lang, "members.notFound") };
+  return shareMetadata({ kind: "member", title: member.displayName, path: `/members/${id}`, image: member.user?.image || member.avatar, summary: shareDescription(member.bio) || t(lang, "members.pageTitle", { name: member.displayName }) });
 }
 
 /* ── 同步 Shell：首字节 < 50ms ── */
 
-export default function MemberDetailPage({ params }: PageProps) {
+export default async function MemberDetailPage({ params }: PageProps) {
+  const lang = await getLang();
   return (
-    <Suspense fallback={<LogoLoading text="正在加载成员信息..." compact />}>
+    <Suspense fallback={<LogoLoading text={t(lang, "members.loadingDetail")} compact />}>
       <MemberDetailContent params={params} />
     </Suspense>
   );
@@ -60,6 +64,7 @@ export default function MemberDetailPage({ params }: PageProps) {
 
 async function MemberDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const lang = await getLang();
 
   const member = isMockDataEnabled()
     ? mockMemberById(id)
@@ -158,78 +163,98 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
 
   if (!member) notFound();
 
-  const LINK_ICONS: Record<string, string> = {
-    "GitHub": "💻", "B站": "▶️", "个人网站": "🌐", "知乎": "📝",
-    "小红书": "📕", "微博": "📢", "抖音": "🎵", "CSDN": "📋",
-    "掘金": "💎", "Steam": "🎮", "itch.io": "🕹️",
-  };
-
-  const links = (member.socialLinks ?? []).map((l: { label: string; url: string | null }) => ({
-    label: l.label,
-    url: l.url,
-    icon: LINK_ICONS[l.label] || "🔗",
-  }));
+  const links = (member.socialLinks ?? [])
+    .filter((l: { label: string; url: string | null }) => l.url)
+    .map((l: { label: string; url: string | null }) => ({
+      label: l.label,
+      url: l.url as string,
+    }));
 
   return (
     <div className="container mx-auto px-4 py-10 animate-fade-in">
       {/* 面包屑 */}
-      <nav className="text-sm mb-8 text-brand-text-muted">
-        <Link href="/" className="hover:underline text-brand-text-secondary">首页</Link>
+      <div className="mb-8 flex items-center justify-between gap-3">
+      <nav className="min-w-0 text-sm text-brand-text-muted">
+        <Link href="/" className="hover:underline text-brand-text-secondary">{t(lang, "common.home")}</Link>
         <span className="mx-2">/</span>
-        <Link href="/members" className="hover:underline text-brand-text-secondary">成员列表</Link>
+        <Link href="/members" className="hover:underline text-brand-text-secondary">{t(lang, "page.members.title")}</Link>
         <span className="mx-2">/</span>
         <span className="text-brand-text-body">{member.displayName}</span>
       </nav>
+      <ShareButton data={{ kind: "member", title: member.displayName, path: `/members/${member.id}`, summary: shareDescription(member.bio || member.user?.bio), image: member.user?.image || member.avatar, tags: member.skills, works: member.projectMembers.map((item: { project: { slug: string; title: string; subtitle: string | null; description: string | null; coverImage: string | null; type: string; developYear: number | null; tags?: { tag: { slug: string; name: string; color?: string | null; group?: string | null } }[] } }) => ({ slug: item.project.slug, title: item.project.title, subtitle: item.project.subtitle, description: item.project.description, image: item.project.coverImage, type: item.project.type, year: item.project.developYear, tags: (item.project.tags || []).map(({ tag }) => tag) })) }} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* 左侧主区域 */}
         <div className="lg:col-span-2">
-          {/* 顶部信息卡片 */}
-          <div className="flex flex-col sm:flex-row items-start gap-6 mb-10 p-6 rounded-xl border bg-brand-surface-page border-brand-border-subtle">
-            {/* 头像 — 移动端缩小 */}
-            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full shrink-0 overflow-hidden">
-              {(member.user?.image || member.avatar) ? (
-                <Image src={(member.user?.image || member.avatar)!} alt={member.displayName} width={96} height={96} className="w-full h-full object-cover" referrerPolicy="no-referrer" sizes="(max-width: 640px) 64px, 96px" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white bg-[linear-gradient(135deg,#E38043,#F09055)]">
-                  {member.displayName[0]}
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h1 className="text-2xl font-bold text-brand-navy">{member.displayName}</h1>
-                {member.position && member.position !== "MEMBER" && (() => {
-                  const color = positionColor(member.position);
-                  return (
-                    <span className="text-xs px-2 py-1 rounded font-medium" style={{ background: color.bg, color: color.text }}>
-                      {positionLabel(member.position)}
-                    </span>
-                  );
-                })()}
-                {!member.graduated ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/15 text-brand-green">在读</span>
+          {/* 顶部信息卡片 — 移动端头像与信息纵向堆叠，外部链接固定在右上角（不随侧栏掉到页底）*/}
+          <div className="flex items-start gap-4 sm:gap-6 mb-10">
+            <div className="flex flex-1 min-w-0 flex-col sm:flex-row items-start gap-4 sm:gap-6">
+              {/* 头像 — 移动端缩小 */}
+              <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full shrink-0 overflow-hidden">
+                {(member.user?.image || member.avatar) ? (
+                  <Image src={(member.user?.image || member.avatar)!} alt={member.displayName} width={96} height={96} className="w-full h-full object-cover" referrerPolicy="no-referrer" sizes="(max-width: 640px) 64px, 96px" />
                 ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/[0.08] text-brand-text-muted">已毕业</span>
+                  <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white bg-[linear-gradient(135deg,#E38043,#F09055)]">
+                    {member.displayName[0]}
+                  </div>
                 )}
               </div>
-              <div className="text-sm space-y-1 text-brand-text-secondary">
-                {member.grade && <p>{member.grade}{member.graduated ? " · 已毕业" : ""}</p>}
-                {!member.grade && member.graduated && <p>已毕业</p>}
-              </div>
 
-              {/* 职能标签 */}
-              {member.skills.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {member.skills.map((skill: string) => (
-                    <span key={skill} className="text-xs px-2 py-0.5 rounded bg-brand-surface text-brand-blue">
-                      {skill}
-                    </span>
-                  ))}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1 flex-wrap">
+                  <h1 className="text-2xl font-bold text-brand-navy">{member.displayName}</h1>
+                  {member.position && member.position !== "MEMBER" && (() => {
+                    const color = positionColor(member.position);
+                    return (
+                      <span className="text-xs px-2 py-1 rounded font-medium" style={{ background: color.bg, color: color.text }}>
+                        {positionLabel(member.position)}
+                      </span>
+                    );
+                  })()}
+                  {!member.graduated ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/15 text-brand-green">{t(lang, "members.enrolled")}</span>
+                  ) : (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-brand-green/[0.08] text-brand-text-muted">{t(lang, "members.graduated")}</span>
+                  )}
                 </div>
-              )}
+                <div className="text-sm space-y-1 text-brand-text-secondary">
+                  {member.grade && <p>{member.grade}{member.graduated ? ` · ${t(lang, "members.graduated")}` : ""}</p>}
+                  {!member.grade && member.graduated && <p>{t(lang, "members.graduated")}</p>}
+                </div>
+
+                {/* 职能标签 */}
+                {member.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {member.skills.map((skill: string) => (
+                      <span key={skill} className="text-xs px-2 py-0.5 rounded bg-brand-surface text-brand-blue">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* 外部链接 */}
+            {links.length > 0 && (
+              <div className="flex flex-col gap-1.5 shrink-0 w-[7.5rem] sm:w-36">
+                {links.map((link: { label: string; url: string }) => (
+                  <a
+                    key={link.label}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={link.label}
+                    className="flex items-center gap-1.5 min-w-0 text-xs px-2 py-1.5 rounded-lg transition-colors hover:bg-[#D0DEE8] text-brand-text-heading bg-brand-surface"
+                  >
+                    <LinkIcon label={link.label} url={link.url} size={15} />
+                    <span className="truncate">{link.label}</span>
+                    <span className="ml-auto shrink-0 text-brand-text-muted">↗</span>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 个人简介 — 优先用成员 bio，兜底用户 bio */}
@@ -238,7 +263,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
             if (!bioText) return null;
             return (
               <div className="mb-10">
-                <h2 className="text-xl font-semibold mb-3 text-brand-navy">个人简介</h2>
+                <h2 className="text-xl font-semibold mb-3 text-brand-navy">{t(lang, "members.bioLabel")}</h2>
                 <p className="whitespace-pre-wrap leading-relaxed text-brand-text-body">
                   <RichContent text={bioText} />
                 </p>
@@ -250,7 +275,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
           {member.projectMembers.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4 text-brand-navy">
-                参与项目 <span className="text-sm font-normal text-brand-text-muted">共 {member.projectMembers.length} 个</span>
+                {t(lang, "members.joinedProjects")} <span className="text-sm font-normal text-brand-text-muted">{t(lang, "members.joinedProjectsCount", { n: member.projectMembers.length })}</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
                 {member.projectMembers.map(({ project }: { project: { id: string } }) => (
@@ -295,37 +320,15 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
           {/* 工作经历 — 仅社团成员可见 */}
           <MemberWorkHistory experiences={member.workExperiences} />
 
-          {/* 外部链接 */}
-          {links.length > 0 && (
-            <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
-              <h3 className="font-semibold mb-3 text-brand-navy">外部链接</h3>
-              <div className="space-y-2">
-                {links.map((link: { label: string; url: string | null; icon: string }) => (
-                  <a
-                    key={link.label}
-                    href={link.url!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors hover:bg-[#D0DEE8] text-brand-text-heading bg-brand-surface"
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.label}</span>
-                    <span className="ml-auto text-brand-text-muted">↗</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* 信息摘要 */}
           <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
-            <h3 className="font-semibold mb-3 text-brand-navy">个人信息</h3>
+            <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "members.personalInfo")}</h3>
             <dl className="space-y-2.5 text-sm">
-              {member.graduated && <InfoRow label="毕业状态" value="已毕业" />}
-              {!member.graduated && <InfoRow label="在读状态" value="在读" />}
-              {member.joinYear && <InfoRow label="入社年份" value={String(member.joinYear)} />}
-              {member.grade && <InfoRow label="年级" value={`${member.grade}级`} />}
-              <InfoRow label="参与项目数" value={String(member.projectMembers.length)} />
+              {member.graduated && <InfoRow label={t(lang, "members.graduated")} value={t(lang, "members.graduated")} />}
+              {!member.graduated && <InfoRow label={t(lang, "members.enrolled")} value={t(lang, "members.enrolled")} />}
+              {member.joinYear && <InfoRow label={t(lang, "members.joinYearLabel")} value={String(member.joinYear)} />}
+              {member.grade && <InfoRow label={t(lang, "members.gradeLabel")} value={t(lang, "profile.edit.gradeValue", { n: member.grade })} />}
+              <InfoRow label={t(lang, "members.projectCount")} value={String(member.projectMembers.length)} />
             </dl>
           </div>
         </aside>

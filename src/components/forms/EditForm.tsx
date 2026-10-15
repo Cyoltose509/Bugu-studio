@@ -10,6 +10,8 @@ import {getCroppedImg, readFileAsDataURL} from "@/lib/utils/imageCrop";
 import MentionEditor from "@/components/ui/MentionEditor";
 import {ImageDropZone} from "@/components/ui/ImageDropZone";
 import {uploadImage, ACCEPT_ATTR, AVATAR_LIMIT_BYTES} from "@/lib/utils/clientUpload";
+import {useLang} from "@/lib/i18n/LangProvider";
+import type {DictKey} from "@/lib/i18n/dict";
 
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false }) as any;
 
@@ -43,6 +45,24 @@ interface LinkEntry {
 
 const LINK_LABEL_PRESETS = ["GitHub", "Bilibili", "个人网站", "知乎", "Steam", "itch.io"];
 
+// 预设标签 → 词典键（值保持原样存储，仅本地化显示）
+const LINK_LABEL_KEYS: Record<string, DictKey> = {
+    "个人网站": "form.link.personalSite",
+    "知乎": "form.link.zhihu",
+};
+// 职能预设：值保持中文存储，仅本地化显示
+const SKILL_PRESET_KEYS: Record<string, DictKey> = {
+    "程序": "form.role.program",
+    "策划": "form.role.design",
+    "美术": "form.role.art",
+    "音效": "form.role.sound",
+    "音乐": "form.role.music",
+    "测试": "form.role.test",
+    "宣发": "form.role.pr",
+    "全栈": "form.role.fullstack",
+};
+const SKILL_PRESETS = Object.keys(SKILL_PRESET_KEYS);
+
 export default function EditForm({
                                      user,
                                      member,
@@ -56,6 +76,7 @@ export default function EditForm({
 }) {
     const {update: updateSession} = useSession();
     const router = useRouter();
+    const { t } = useLang();
 
     const [state, formAction, pending] = useActionState(
         async (_prev: any, formData: FormData) => {
@@ -136,6 +157,7 @@ export default function EditForm({
   const [newExpEnd, setNewExpEnd] = useState("");
   const [expSaving, setExpSaving] = useState(false);
   const [expMsg, setExpMsg] = useState("");
+  const [expError, setExpError] = useState(false);
 
     // dirty state 检测
     const hasChanged =
@@ -195,6 +217,7 @@ export default function EditForm({
     if (!company || !position || !startDate || !member) return;
     setExpSaving(true);
     setExpMsg("");
+    setExpError(false);
     try {
       const res = await fetch(`/api/members/${member.id}/work-experience`, {
         method: "POST",
@@ -203,7 +226,7 @@ export default function EditForm({
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || "添加失败");
+        throw new Error(json?.error || t("profile.edit.addFailed"));
       }
       const created = await res.json();
       setWorkExperiences((prev: MemberSnippet["workExperiences"]) => [...prev, created]);
@@ -211,10 +234,12 @@ export default function EditForm({
       setNewExpPosition("");
       setNewExpStart("");
       setNewExpEnd("");
-      setExpMsg("已添加");
+      setExpMsg(t("profile.edit.added"));
+      setExpError(false);
       setTimeout(() => setExpMsg(""), 2000);
     } catch (e: any) {
-      setExpMsg(e.message || "添加失败");
+      setExpError(true);
+      setExpMsg(t("profile.edit.addFailed"));
     } finally {
       setExpSaving(false);
     }
@@ -224,18 +249,21 @@ export default function EditForm({
     if (!member) return;
     setExpSaving(true);
     setExpMsg("");
+    setExpError(false);
     try {
       const res = await fetch(`/api/members/${member.id}/work-experience`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ experienceId: expId }),
       });
-      if (!res.ok) throw new Error("删除失败");
+      if (!res.ok) throw new Error(t("profile.edit.deleteFailed"));
       setWorkExperiences((prev: MemberSnippet["workExperiences"]) => prev.filter((e: MemberSnippet["workExperiences"][number]) => e.id !== expId));
-      setExpMsg("已删除");
+      setExpMsg(t("profile.edit.deleted"));
+      setExpError(false);
       setTimeout(() => setExpMsg(""), 2000);
     } catch {
-      setExpMsg("删除失败");
+      setExpError(true);
+      setExpMsg(t("profile.edit.deleteFailed"));
     } finally {
       setExpSaving(false);
     }
@@ -251,7 +279,7 @@ export default function EditForm({
             setCropSrc(dataUrl);
             setShowCrop(true);
         } catch {
-            setAvatarError("读取图片失败");
+            setAvatarError(t("profile.edit.readImageFailed"));
         } finally {
             if (fileRef.current) fileRef.current.value = "";
         }
@@ -276,10 +304,10 @@ export default function EditForm({
                 limit: AVATAR_LIMIT_BYTES,
             });
             setAvatarPreview(url);
-            setAvatarSuccess("头像已更新");
+            setAvatarSuccess(t("profile.edit.avatarUpdated"));
             await updateSession();
         } catch (err: any) {
-            setAvatarError(err.message || "上传失败");
+            setAvatarError(err.message || t("profile.edit.uploadFailed"));
         } finally {
             setAvatarUploading(false);
             setCropSrc(null);
@@ -307,7 +335,7 @@ export default function EditForm({
                 await updateSession();
             }
         } catch {
-            setInviteError("兑换失败，请稍后重试");
+            setInviteError(t("profile.edit.redeemFailed"));
         } finally {
             setInvitePending(false);
         }
@@ -341,11 +369,11 @@ export default function EditForm({
             >
                 {/* ══════════ 基本信息 ══════════ */}
                 <div className="border-b pb-6 border-brand-border-subtle">
-                  <h3 className="text-sm font-semibold mb-4 text-brand-navy">基本信息</h3>
+                  <h3 className="text-sm font-semibold mb-4 text-brand-navy">{t("profile.edit.basicInfo")}</h3>
                   {/* 头像 */}
                   <ImageDropZone
                     className="mb-5 rounded-xl p-1"
-                    hint="松开以更换头像"
+                    hint={t("profile.edit.avatarHint")}
                     disabled={avatarUploading || !avatarCooldown.canEdit}
                     onFile={(file) => openCropWith(file)}
                     onInvalid={(msg) => setAvatarError(msg)}
@@ -355,25 +383,25 @@ export default function EditForm({
                         {avatarPreview ? (
                             <img
                                 src={avatarPreview}
-                                alt="头像预览"
+                                alt={t("profile.edit.avatarPreviewAlt")}
                                 className="w-20 h-20 rounded-full object-cover border-2 border-brand-blue"
                             />
                         ) : (
                             <div
                                 className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold bg-brand-navy"
                             >
-                                {(user.name ?? "用")[0]}
+                                {(user.name ?? t("profile.edit.defaultInitial"))[0]}
                             </div>
                         )}
                     </div>
                     <div className="flex-1 space-y-1">
                         <p className="text-sm text-brand-text-body">
-                            头像{" "}
+                            {t("profile.edit.avatar")}{" "}
                             {avatarCooldown.canEdit ? (
-                                <span className="text-xs text-brand-text-muted">(7天内只能更换一次)</span>
+                                <span className="text-xs text-brand-text-muted">{t("profile.edit.avatarOnceHint")}</span>
                             ) : (
                                 <span className="text-xs font-medium text-brand-orange">
-                  冷却中 — {avatarCooldown.remainingDays} 天后可更换
+                  {t("profile.edit.avatarCooldown", { n: avatarCooldown.remainingDays })}
                 </span>
                             )}
                         </p>
@@ -391,14 +419,14 @@ export default function EditForm({
                                 disabled={avatarUploading || !avatarCooldown.canEdit}
                                 className={`px-3 py-1.5 rounded-lg text-sm font-medium text-white disabled:opacity-50 ${avatarCooldown.canEdit ? "bg-brand-blue" : "bg-muted"}`}
                             >
-                                {avatarUploading ? "处理中..." : "更换头像"}
+                                {avatarUploading ? t("profile.edit.processing") : t("profile.edit.changeAvatar")}
                             </button>
                             {avatarSuccess && (
                                 <span className="text-xs text-brand-green">✓ {avatarSuccess}</span>
                             )}
                         </div>
                         {avatarCooldown.canEdit && (
-                            <p className="text-xs text-brand-text-muted">也可以把图片直接拖到这里</p>
+                            <p className="text-xs text-brand-text-muted">{t("profile.edit.dragHint")}</p>
                         )}
                         {avatarError && (
                             <p className="text-xs text-brand-orange">{avatarError}</p>
@@ -410,7 +438,7 @@ export default function EditForm({
                 {/* 姓名 */}
                 <div>
                     <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="name">
-                        显示名称
+                        {t("profile.edit.displayName")}
                     </label>
                     <input
                         id="name"
@@ -425,7 +453,7 @@ export default function EditForm({
                 {/* 个人介绍 — 所有用户可编辑 */}
                 <div>
                     <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="bio">
-                        个人介绍
+                        {t("profile.edit.bio")}
                     </label>
                     <MentionEditor
                         id="bio"
@@ -433,7 +461,7 @@ export default function EditForm({
                         value={bioValue}
                         onChange={setBioValue}
                         rows={4}
-                        placeholder="介绍一下自己..."
+                        placeholder={t("profile.edit.bioPlaceholder")}
                         className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                     />
                 </div>
@@ -444,18 +472,18 @@ export default function EditForm({
                     <>
                         {/* ── 联系方式 ── */}
                         <div className="border-b pb-6 border-brand-border-subtle">
-                          <h3 className="text-sm font-semibold mb-4 text-brand-navy">联系方式与所在地</h3>
+                          <h3 className="text-sm font-semibold mb-4 text-brand-navy">{t("profile.edit.contact")}</h3>
                         {/* 所在地 */}
                         <div>
                             <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="location">
-                                所在地 <span className="text-xs text-brand-text-muted">(省份或国家)</span>
+                                {t("profile.edit.location")} <span className="text-xs text-brand-text-muted">{t("profile.edit.locationHint")}</span>
                             </label>
                             <input
                                 id="location"
                                 value={locationValue}
                                 onChange={(e) => setLocationValue(e.target.value)}
                                 className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                placeholder="如：广东 / 北京 / 日本"
+                                placeholder={t("profile.edit.locationPlaceholder")}
                             />
                         </div>
 
@@ -463,41 +491,41 @@ export default function EditForm({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="phone">
-                                    电话
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">敏感</span>
+                                    {t("profile.edit.phone")}
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">{t("profile.edit.sensitive")}</span>
                                 </label>
                                 <input
                                     id="phone"
                                     value={phoneValue}
                                     onChange={(e) => setPhoneValue(e.target.value)}
                                     className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                    placeholder="手机号"
+                                    placeholder={t("profile.edit.phonePlaceholder")}
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="wechat">
-                                    微信
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">敏感</span>
+                                    {t("profile.edit.wechat")}
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">{t("profile.edit.sensitive")}</span>
                                 </label>
                                 <input
                                     id="wechat"
                                     value={wechatValue}
                                     onChange={(e) => setWechatValue(e.target.value)}
                                     className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                    placeholder="微信号"
+                                    placeholder={t("profile.edit.wechatPlaceholder")}
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="qq">
-                                    QQ
-                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">敏感</span>
+                                    {t("profile.edit.qq")}
+                                    <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">{t("profile.edit.sensitive")}</span>
                                 </label>
                                 <input
                                     id="qq"
                                     value={qqValue}
                                     onChange={(e) => setQqValue(e.target.value)}
                                     className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                    placeholder="QQ号"
+                                    placeholder={t("profile.edit.qqPlaceholder")}
                                 />
                             </div>
                         </div>
@@ -506,14 +534,14 @@ export default function EditForm({
                         {/* 成员简介 */}
                         <div>
                             <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="memberBio">
-                                成员简介 <span className="text-xs text-brand-text-muted">(社团成员页展示，如留空则使用上方个人介绍)</span>
+                                {t("profile.edit.memberBio")} <span className="text-xs text-brand-text-muted">{t("profile.edit.memberBioHint")}</span>
                             </label>
                             <MentionEditor
                                 id="memberBio"
                                 name="memberBio"
                                 defaultValue={member.bio ?? ""}
                                 rows={4}
-                                placeholder="在成员页面展示的简介..."
+                                placeholder={t("profile.edit.memberBioPlaceholder")}
                                 className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                             />
                         </div>
@@ -522,7 +550,7 @@ export default function EditForm({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm mb-1.5 text-brand-text-body">
-                                    毕业情况
+                                    {t("profile.edit.graduation")}
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer select-none pt-2">
                                     <input
@@ -531,12 +559,12 @@ export default function EditForm({
                                         onChange={(e) => setGraduatedVal(e.target.checked)}
                                         className="w-4 h-4 rounded accent-brand-blue"
                                     />
-                                    <span className="text-sm text-brand-text-heading">已毕业</span>
+                                    <span className="text-sm text-brand-text-heading">{t("profile.edit.graduated")}</span>
                                 </label>
                             </div>
                             <div>
                                 <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="joinYear">
-                                    入社年份
+                                    {t("members.joinYearLabel")}
                                 </label>
                                 <div className="flex items-center gap-1.5">
                                     <button
@@ -558,12 +586,12 @@ export default function EditForm({
                                         onClick={() => setJoinYearVal(Math.min(2100, (joinYearVal ?? 2024) + 1))}
                                         className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
                                     >+</button>
-                                    <span className="text-xs flex-shrink-0 text-brand-text-secondary">{joinYearVal != null ? `${joinYearVal}年` : "未设置"}</span>
+                                    <span className="text-xs flex-shrink-0 text-brand-text-secondary">{joinYearVal != null ? t("profile.edit.yearValue", { n: joinYearVal }) : t("common.unset")}</span>
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="grade">
-                                    年级
+                                    {t("members.gradeLabel")}
                                 </label>
                                 <div className="flex items-center gap-1.5">
                                     <button
@@ -585,7 +613,7 @@ export default function EditForm({
                                         onClick={() => setGradeValue(Math.min(2100, (gradeValue ?? 2024) + 1))}
                                         className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
                                     >+</button>
-                                    <span className="text-xs flex-shrink-0 text-brand-text-secondary">{gradeValue != null ? `${gradeValue}级` : "未设置"}</span>
+                                    <span className="text-xs flex-shrink-0 text-brand-text-secondary">{gradeValue != null ? t("profile.edit.gradeValue", { n: gradeValue }) : t("common.unset")}</span>
                                 </div>
                             </div>
                         </div>
@@ -594,46 +622,46 @@ export default function EditForm({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="realName">
-                                    真名
+                                    {t("profile.edit.realName")}
                                     <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
-                                          title="仅成员可见">敏感</span>
+                                          title={t("profile.edit.sensitiveTitle")}>{t("profile.edit.sensitive")}</span>
                                 </label>
                                 <input
                                     id="realName"
                                     value={realNameVal}
                                     onChange={(e) => setRealNameVal(e.target.value)}
 className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                    placeholder="真实姓名"
+                                    placeholder={t("profile.edit.realNamePlaceholder")}
                                 />
                             </div>
                             {!graduatedVal ? (
                                 <>
                                     <div>
                                         <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="college">
-                                            学院
+                                            {t("profile.edit.college")}
                                             <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
-                                                  title="仅成员可见">敏感</span>
+                                                  title={t("profile.edit.sensitiveTitle")}>{t("profile.edit.sensitive")}</span>
                                         </label>
                                         <input
                                             id="college"
                                             value={collegeVal}
                                             onChange={(e) => setCollegeVal(e.target.value)}
 className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                            placeholder="如：计算机学院"
+                                            placeholder={t("profile.edit.collegePlaceholder")}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="major">
-                                            专业
+                                            {t("profile.edit.major")}
                                             <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
-                                                  title="仅成员可见">敏感</span>
+                                                  title={t("profile.edit.sensitiveTitle")}>{t("profile.edit.sensitive")}</span>
                                         </label>
                                         <input
                                             id="major"
                                             value={majorVal}
                                             onChange={(e) => setMajorVal(e.target.value)}
 className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                            placeholder="如：软件工程"
+                                            placeholder={t("profile.edit.majorPlaceholder")}
                                         />
                                     </div>
                                 </>
@@ -641,30 +669,30 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                 <>
                                     <div>
                                         <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="workLocation">
-                                            工作所在地
+                                            {t("profile.edit.workLocation")}
                                             <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
-                                                  title="仅成员可见">敏感</span>
+                                                  title={t("profile.edit.sensitiveTitle")}>{t("profile.edit.sensitive")}</span>
                                         </label>
                                         <input
                                             id="workLocation"
                                             value={workLocationVal}
                                             onChange={(e) => setWorkLocationVal(e.target.value)}
 className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                            placeholder="如：北京 / 深圳"
+                                            placeholder={t("profile.edit.workLocationPlaceholder")}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="workPosition">
-                                            工作岗位
+                                            {t("profile.edit.workPosition")}
                                             <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
-                                                  title="仅成员可见">敏感</span>
+                                                  title={t("profile.edit.sensitiveTitle")}>{t("profile.edit.sensitive")}</span>
                                         </label>
                                         <input
                                             id="workPosition"
                                             value={workPositionVal}
                                             onChange={(e) => setWorkPositionVal(e.target.value)}
 className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
-                                            placeholder="如：前端工程师"
+                                            placeholder={t("profile.edit.workPositionPlaceholder")}
                                         />
                                     </div>
                                 </>
@@ -673,17 +701,17 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
 
                         {/* 职能标签 */}
                         <div>
-                            <label className="block text-sm mb-1.5 text-brand-text-body">职能标签</label>
+                            <label className="block text-sm mb-1.5 text-brand-text-body">{t("profile.edit.skills")}</label>
                             {/* 快捷预设 */}
                             <div className="flex flex-wrap gap-1.5 mb-2">
-                                {["程序", "策划", "美术", "音效", "音乐", "测试", "宣发", "全栈"].filter(t => !skills.includes(t)).map((tag) => (
+                                {SKILL_PRESETS.filter(tag => !skills.includes(tag)).map((tag) => (
                                     <button
                                         key={tag}
                                         type="button"
                                         onClick={() => setSkills([...skills, tag])}
                                         className="text-xs px-2 py-0.5 rounded border transition-colors hover:bg-brand-surface hover:border-brand-blue hover:text-brand-blue border-brand-border-subtle text-brand-text-muted"
                                     >
-                                        + {tag}
+                                        + {t(SKILL_PRESET_KEYS[tag])}
                                     </button>
                                 ))}
                             </div>
@@ -695,7 +723,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                         className="text-xs px-2 py-0.5 rounded cursor-pointer select-none bg-brand-surface text-brand-blue"
                                         onClick={() => removeSkill(s)}
                                     >
-                    {s} ×
+                    {SKILL_PRESET_KEYS[s] ? t(SKILL_PRESET_KEYS[s]) : s} ×
                   </span>
                                 ))}
                             </div>
@@ -710,14 +738,14 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                         }
                                     }}
                                     className="flex-1 rounded-lg bg-card border px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent text-sm border-brand-border-subtle text-brand-text-heading"
-                                    placeholder="输入自定义职能后回车添加"
+                                    placeholder={t("profile.edit.skillPlaceholder")}
                                 />
                                 <button
                                     type="button"
                                     onClick={addSkill}
                                     className="px-3 py-2 rounded-lg text-sm font-medium text-white bg-brand-orange"
                                 >
-                                    添加
+                                    {t("profile.edit.add")}
                                 </button>
                             </div>
                         </div>
@@ -725,7 +753,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                         {/* ══════════ 自定义链接 ══════════ */}
                         <div>
                             <label className="block text-sm mb-1.5 text-brand-text-body">
-                                个人链接 <span className="text-xs text-brand-text-muted">(可添加多个，如 GitHub、B站、个人网站等)</span>
+                                {t("profile.edit.links")} <span className="text-xs text-brand-text-muted">{t("profile.edit.linksHint")}</span>
                             </label>
 
                             {/* 已添加的链接 */}
@@ -734,7 +762,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                     {socialLinks.map((link, i) => (
                                         <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border border-brand-border-subtle bg-muted text-sm">
                       <span className="text-xs px-2 py-0.5 rounded font-medium shrink-0 bg-brand-navy text-white">
-                        {link.label}
+                        {LINK_LABEL_KEYS[link.label] ? t(LINK_LABEL_KEYS[link.label]) : link.label}
                       </span>
                                             <span className="flex-1 truncate text-brand-text-secondary">{link.url}</span>
                                             <button
@@ -742,7 +770,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                                 onClick={() => removeLink(i)}
                                                 className="text-xs shrink-0 hover:underline text-brand-orange"
                                             >
-                                                移除
+                                                {t("profile.edit.remove")}
                                             </button>
                                         </div>
                                     ))}
@@ -757,7 +785,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                         <input
                                             value={newLinkLabel}
                                             onChange={(e) => setNewLinkLabel(e.target.value)}
-                                            placeholder="自定义标签"
+                                            placeholder={t("profile.edit.customLabelPlaceholder")}
                                             className="w-full rounded-lg bg-card border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter") {
@@ -778,11 +806,11 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                             }}
                                             className="w-full rounded-lg bg-card border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                         >
-                                            <option value="">选择标签</option>
+                                            <option value="">{t("profile.edit.selectLabel")}</option>
                                             {LINK_LABEL_PRESETS.map((l) => (
-                                                <option key={l} value={l}>{l}</option>
+                                                <option key={l} value={l}>{LINK_LABEL_KEYS[l] ? t(LINK_LABEL_KEYS[l]) : l}</option>
                                             ))}
-                                            <option value="__custom__">自定义...</option>
+                                            <option value="__custom__">{t("profile.edit.customLabel")}</option>
                                         </select>
                                     )}
                                 </div>
@@ -807,7 +835,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                     disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}
                                     className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 shrink-0 bg-brand-blue"
                                 >
-                                    添加
+                                    {t("profile.edit.add")}
                                 </button>
                             </div>
                         </div>
@@ -815,10 +843,10 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                         {/* ══════════ 经历（学习 + 工作）══════════ */}
                         <div className="border-t pt-5 border-[#E8F0F8]">
                           <label className="block text-sm mb-2 text-brand-text-body">
-                            经历
+                            {t("profile.edit.experience")}
                             <span className="text-[10px] ml-1 px-1 py-0.5 rounded bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]"
-                                  title="仅成员可见">敏感</span>
-                            <span className="text-xs ml-1 text-brand-text-muted">(学习经历与工作经历)</span>
+                                  title={t("profile.edit.sensitiveTitle")}>{t("profile.edit.sensitive")}</span>
+                            <span className="text-xs ml-1 text-brand-text-muted">{t("profile.edit.experienceHint")}</span>
                           </label>
 
                           {/* 已有经历列表 */}
@@ -828,12 +856,12 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                 const startStr = `${new Date(exp.startDate).getFullYear()}.${String(new Date(exp.startDate).getMonth() + 1).padStart(2, "0")}`;
                                 const endStr = exp.endDate
                                   ? `${new Date(exp.endDate).getFullYear()}.${String(new Date(exp.endDate).getMonth() + 1).padStart(2, "0")}`
-                                  : "至今";
+                  : t("profile.edit.present");
                                 const isStudy = exp.type === "学习";
                                 return (
                                   <div key={exp.id} className="flex items-center gap-3 p-3 rounded-lg border border-brand-border-subtle bg-muted text-sm">
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${isStudy ? "bg-brand-surface text-brand-blue" : "bg-[#FFF3E0] text-brand-orange"}`}>
-                                      {isStudy ? "学习" : "工作"}
+                                      {isStudy ? t("profile.edit.study") : t("profile.edit.work")}
                                     </span>
                                     <div className="flex-1 min-w-0">
                                       <span className="font-medium text-brand-text-heading">{exp.company}</span>
@@ -847,7 +875,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                       disabled={expSaving}
                                       className="text-xs shrink-0 hover:underline disabled:opacity-50 text-brand-orange"
                                     >
-                                      移除
+                                      {t("profile.edit.remove")}
                                     </button>
                                   </div>
                                 );
@@ -859,7 +887,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                           <div className="p-3 rounded-lg border border-brand-border-subtle bg-muted">
                             {/* 类型选择 */}
                             <div className="flex items-center gap-3 mb-3">
-                              <span className="text-xs text-brand-text-secondary">类型：</span>
+                              <span className="text-xs text-brand-text-secondary">{t("profile.edit.type")}</span>
                               <label className="flex items-center gap-1.5 cursor-pointer">
                                 <input
                                   type="radio"
@@ -868,7 +896,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                   onChange={() => setNewExpType("工作")}
                                   className="w-3.5 h-3.5 accent-brand-orange"
                                 />
-                                <span className="text-sm text-brand-text-heading">工作</span>
+                                <span className="text-sm text-brand-text-heading">{t("profile.edit.work")}</span>
                               </label>
                               <label className="flex items-center gap-1.5 cursor-pointer">
                                 <input
@@ -878,25 +906,25 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                   onChange={() => setNewExpType("学习")}
                                   className="w-3.5 h-3.5 accent-brand-blue"
                                 />
-                                <span className="text-sm text-brand-text-heading">学习</span>
+                                <span className="text-sm text-brand-text-heading">{t("profile.edit.study")}</span>
                               </label>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                               <input
                                 value={newExpCompany}
                                 onChange={(e) => setNewExpCompany(e.target.value)}
-                                placeholder={newExpType === "学习" ? "学校/机构名称" : "公司/组织名称"}
+                                placeholder={newExpType === "学习" ? t("profile.edit.schoolPlaceholder") : t("profile.edit.companyPlaceholder")}
                                 className="rounded-lg bg-card border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                               />
                               <input
                                 value={newExpPosition}
                                 onChange={(e) => setNewExpPosition(e.target.value)}
-                                placeholder={newExpType === "学习" ? "专业/学位" : "职位"}
+                                placeholder={newExpType === "学习" ? t("profile.edit.majorDegreePlaceholder") : t("profile.edit.positionPlaceholder")}
                                 className="rounded-lg bg-card border px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                               />
                               <div>
                                 <label className="block text-xs mb-0.5 text-brand-text-muted">
-                                  {newExpType === "学习" ? "入学时间" : "入职时间"}
+                                  {newExpType === "学习" ? t("profile.edit.enrollDate") : t("profile.edit.joinDate")}
                                 </label>
                                 <input
                                   type="month"
@@ -907,7 +935,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                               </div>
                               <div>
                                 <label className="block text-xs mb-0.5 text-brand-text-muted">
-                                  {newExpType === "学习" ? "毕业时间（留空=在读）" : "离职时间（留空=至今）"}
+                                  {newExpType === "学习" ? t("profile.edit.gradDate") : t("profile.edit.leaveDate")}
                                 </label>
                                 <input
                                   type="month"
@@ -924,10 +952,10 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                 disabled={expSaving || !newExpCompany.trim() || !newExpPosition.trim() || !newExpStart}
                                 className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 bg-brand-green"
                               >
-                                {expSaving ? "保存中..." : "+ 添加经历"}
+                                {expSaving ? t("common.saving") : t("profile.edit.addExperience")}
                               </button>
                               {expMsg && (
-                                <span className={`text-xs ${expMsg.includes("失败") ? "text-brand-orange" : "text-brand-green"}`}>
+                                <span className={`text-xs ${expError ? "text-brand-orange" : "text-brand-green"}`}>
                                   {expMsg}
                                 </span>
                               )}
@@ -941,13 +969,13 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                 {!isAdmin && !member && (
                     <div className="border-t pt-4 border-[#E8F0F8]">
                         <label className="block text-sm mb-1.5 text-brand-text-body">
-                            邀请码兑换 <span className="text-xs text-brand-text-muted">(升级为社团成员或管理员)</span>
+                            {t("profile.edit.invite")} <span className="text-xs text-brand-text-muted">{t("profile.edit.inviteHint")}</span>
                         </label>
                         <div className="flex gap-2">
                             <input
                                 value={inviteInput}
                                 onChange={(e) => setInviteInput(e.target.value)}
-                                placeholder="输入邀请码"
+                                placeholder={t("profile.edit.invitePlaceholder")}
                                 className="flex-1 rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent border-brand-border-subtle text-brand-text-heading"
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter") {
@@ -962,7 +990,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                 disabled={invitePending || !inviteInput.trim()}
                                 className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 whitespace-nowrap bg-brand-orange"
                             >
-                                {invitePending ? "兑换中..." : "兑换"}
+                                {invitePending ? t("profile.edit.redeeming") : t("profile.edit.redeem")}
                             </button>
                         </div>
                         {inviteMsg && <p className="text-xs mt-1 text-brand-green">{inviteMsg}</p>}
@@ -981,10 +1009,10 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                 <SubmitButton
                     type="submit"
                     disabled={!canSave}
-                    pendingText="保存中..."
+                    pendingText={t("common.saving")}
                     className="btn-primary w-full py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {!hasChanged ? "无修改" : "保存修改"}
+                    {!hasChanged ? t("profile.edit.noChange") : t("profile.edit.save")}
                 </SubmitButton>
             </form>
 
@@ -1010,7 +1038,7 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                         </div>
                         <div className="p-4 space-y-3">
                             <div className="flex items-center gap-3">
-                                <span className="text-xs text-gray-500">缩放</span>
+                                <span className="text-xs text-gray-500">{t("profile.edit.zoom")}</span>
                                 <input
                                     type="range" min={1} max={3} step={0.1}
                                     value={zoom}
@@ -1019,13 +1047,13 @@ className="w-full rounded-lg bg-card border px-4 py-2.5 placeholder-gray-400 foc
                                 />
                             </div>
                             <div className="flex gap-3 justify-end">
-                                <button type="button" onClick={handleCropCancel} className="px-4 py-2 rounded-lg border text-sm">取消
+                                <button type="button" onClick={handleCropCancel} className="px-4 py-2 rounded-lg border text-sm">{t("profile.edit.cancel")}
                                 </button>
                                 <button
                                     type="button" onClick={handleCropConfirm}
                                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-blue"
                                 >
-                                    确认裁剪
+                                    {t("profile.edit.confirmCrop")}
                                 </button>
                             </div>
                         </div>

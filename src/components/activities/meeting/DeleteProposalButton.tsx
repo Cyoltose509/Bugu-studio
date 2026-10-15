@@ -4,10 +4,12 @@ import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { deleteProposal } from "@/app/admin/activities/actions";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 const initialState = { error: "", success: false };
 
 function ConfirmDeleteButton() {
+  const { t } = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -15,12 +17,13 @@ function ConfirmDeleteButton() {
       disabled={pending}
       className="text-xs px-1.5 py-0.5 rounded text-white transition-colors disabled:opacity-60 bg-red-500"
     >
-      {pending ? "..." : "确认"}
+      {pending ? "..." : t("common.confirm")}
     </button>
   );
 }
 
 export default function DeleteProposalButton({ proposalId }: { proposalId: string }) {
+  const { t } = useLang();
   const router = useRouter();
   const [showConfirm, setShowConfirm] = useState(false);
   const [state, formAction] = useActionState(
@@ -45,14 +48,14 @@ export default function DeleteProposalButton({ proposalId }: { proposalId: strin
     return (
       <form action={formAction} className="inline-flex items-center gap-1 shrink-0">
         <input type="hidden" name="proposalId" value={proposalId} />
-        <span className="text-xs text-red-500">确认删除？</span>
+        <span className="text-xs text-red-500">{t("meeting.confirmDelete")}</span>
         <ConfirmDeleteButton />
         <button
           type="button"
           onClick={() => setShowConfirm(false)}
           className="text-xs px-1.5 py-0.5 rounded hover:bg-gray-100 transition-colors text-brand-text-secondary"
         >
-          取消
+          {t("common.cancel")}
         </button>
       </form>
     );
@@ -63,7 +66,7 @@ export default function DeleteProposalButton({ proposalId }: { proposalId: strin
       type="button"
       onClick={() => setShowConfirm(true)}
       className="text-xs px-2 py-1 rounded hover:bg-red-50 transition-colors shrink-0 text-red-500"
-      title="删除此议程项"
+      title={t("meeting.deleteAgendaItem")}
     >
       ✕
     </button>

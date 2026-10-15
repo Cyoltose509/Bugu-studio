@@ -4,19 +4,22 @@ import { prisma } from "@/lib/db/prisma";
 import { ensureDefaultTags } from "@/lib/db/tags";
 import SubmitForm from "@/components/forms/SubmitForm";
 import LogoLoading from "@/components/ui/LogoLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
-export const metadata: Metadata = {
-  title: "提交作品",
-  description: "向作品库提交你的游戏作品",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getLang();
+  return { title: t(lang, "page.submit.title"), description: t(lang, "page.submit.description") };
+}
 
 export const dynamic = "force-dynamic";
 
 /* ── 同步 Shell ── */
 
-export default function SubmitPage() {
+export default async function SubmitPage() {
+  const lang = await getLang();
   return (
-    <Suspense fallback={<LogoLoading text="正在加载提交页面..." compact />}>
+    <Suspense fallback={<LogoLoading text={t(lang, "submit.loading")} compact />}>
       <SubmitContent />
     </Suspense>
   );
@@ -26,6 +29,7 @@ export default function SubmitPage() {
 
 async function SubmitContent() {
   await ensureDefaultTags();
+  const lang = await getLang();
   const tags = await prisma.tag.findMany({
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true, slug: true, group: true, color: true, sortOrder: true },
@@ -35,10 +39,10 @@ async function SubmitContent() {
     <div className="container mx-auto px-4 py-10 max-w-2xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-brand-navy">
-          提交作品
+          {t(lang, "page.submit.title")}
         </h1>
         <p className="mt-2 text-brand-text-secondary">
-          将你的游戏作品提交到作品库。提交后将由管理员审核，通过后即可公开展示。
+          {t(lang, "submit.pageDesc")}
         </p>
       </div>
 

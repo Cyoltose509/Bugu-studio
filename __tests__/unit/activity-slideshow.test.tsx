@@ -33,9 +33,11 @@ describe("game slideshow", () => {
     fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
     expect(screen.getByRole("dialog")).toBeVisible();
     expect(document.body.style.overflow).toBe("hidden");
-    act(() => vi.advanceTimersByTime(6500));
+    act(() => vi.advanceTimersByTime(3199));
+    expect(screen.getByAltText("东方魔女夜市 · 封面")).toBeVisible();
+    act(() => vi.advanceTimersByTime(1));
     expect(screen.getByAltText("夜市战斗画面")).toBeVisible();
-    act(() => vi.advanceTimersByTime(6500));
+    act(() => vi.advanceTimersByTime(3200));
     expect(screen.getByRole("heading", { name: "铅雨2" })).toBeVisible();
     expect(screen.getByText("动作")).toBeVisible();
     expect(screen.getByText("高速横版动作游戏")).toBeVisible();
@@ -101,5 +103,85 @@ describe("game slideshow", () => {
     fireEvent.click(screen.getByRole("button", { name: "查看 夜市战斗画面" }));
     fireEvent.error(screen.getByAltText("夜市战斗画面"));
     expect(screen.getByAltText("夜市战斗画面")).toHaveAttribute("src", "/a-cover.png");
+  });
+  it("keeps a valid frame when a refresh shortens the catalogue", () => {
+    const { rerender } = render(<GameSlideshow projects={projects} />);
+    fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
+    fireEvent.click(screen.getByRole("button", { name: "浏览图片" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看 铅雨2 · 封面" }));
+    rerender(<GameSlideshow projects={[projects[0]]} />);
+    expect(screen.getByRole("heading", { name: "东方魔女夜市" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "退出全屏轮播" })).toBeVisible();
+  });
+  it("releases scrolling and playback when all works are removed", () => {
+    document.body.style.overflow = "auto";
+    const { rerender } = render(<GameSlideshow projects={projects} />);
+    fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
+    rerender(<GameSlideshow projects={[]} />);
+    expect(document.body.style.overflow).toBe("auto");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it("exits an owned fullscreen player when unmounted", async () => {
+    const { unmount } = render(<GameSlideshow projects={projects} />);
+    fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
+    const player = screen.getByRole("dialog").firstElementChild;
+    const exit = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => player });
+    Object.defineProperty(document, "exitFullscreen", { configurable: true, value: exit });
+    try { unmount(); expect(exit).toHaveBeenCalledOnce(); }
+    finally {
+      Reflect.deleteProperty(document, "fullscreenElement");
+      delete (document as Partial<Document>).exitFullscreen;
+    }
+  });
+  it("does not let an old close event shut down a newly opened player", () => {
+    render(<GameSlideshow projects={projects} />);
+    const start = screen.getByRole("button", { name: "全屏播放作品" });
+    fireEvent.click(start);
+    const modal = screen.getByRole("dialog");
+    fireEvent.click(screen.getByRole("button", { name: "退出全屏轮播" }));
+    fireEvent.click(start);
+    fireEvent(modal, new Event("close"));
+    expect(screen.getByRole("heading", { name: "东方魔女夜市" })).toBeVisible();
+  });
+  it("returns focus to the play entry after closing the slideshow", () => {
+    render(<GameSlideshow projects={projects} />);
+    fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
+    fireEvent.click(screen.getByRole("button", { name: "退出全屏轮播" }));
+    expect(screen.getByRole("button", { name: "全屏播放作品" })).toHaveFocus();
+  });
+  it("exits a delayed fullscreen request even after the player has unmounted", async () => {
+    let complete!: () => void;
+    const request = vi.fn(() => new Promise<void>(resolve => { complete = resolve; }));
+    const exit = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(HTMLDivElement.prototype, "requestFullscreen", { configurable: true, value: request });
+    Object.defineProperty(document, "exitFullscreen", { configurable: true, value: exit });
+    let fullscreenElement: Element | null = null;
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => fullscreenElement });
+    try {
+      const { unmount } = render(<GameSlideshow projects={projects} />);
+      fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
+      const player = screen.getByRole("dialog").firstElementChild;
+      unmount();
+      fullscreenElement = player;
+      await act(async () => { complete(); });
+      expect(exit).toHaveBeenCalledOnce();
+    } finally {
+      delete (HTMLDivElement.prototype as Partial<HTMLDivElement>).requestFullscreen;
+      Reflect.deleteProperty(document, "fullscreenElement");
+      delete (document as Partial<Document>).exitFullscreen;
+    }
+  });
+  it("keeps keyboard navigation available when the mouse leaves the drawer", () => {
+    render(<GameSlideshow projects={projects} />);
+    fireEvent.click(screen.getByRole("button", { name: "全屏播放作品" }));
+    const trigger = screen.getByRole("button", { name: "浏览图片" });
+    const matches = trigger.matches.bind(trigger);
+    vi.spyOn(trigger, "matches").mockImplementation(selector => selector === ":focus-visible" || matches(selector));
+    fireEvent.click(trigger);
+    act(() => trigger.focus());
+    fireEvent.pointerLeave(screen.getByLabelText("底边图片浏览区"), { pointerType: "mouse" });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "查看 夜市战斗画面" })).toBeVisible();
   });
 });

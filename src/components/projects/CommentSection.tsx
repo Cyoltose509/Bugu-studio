@@ -3,6 +3,8 @@
 import {useState, useCallback, useEffect, useRef} from "react";
 import {useSession} from "next-auth/react";
 import UserAvatar from "../ui/UserAvatar";
+import {useLang} from "@/lib/i18n/LangProvider";
+import {t} from "@/lib/i18n/dict";
 
 interface CommentUser {
     id: string;
@@ -28,17 +30,17 @@ function Avatar({user}: { user: CommentUser }) {
     return <UserAvatar src={user.image} name={user.name} size={28} />;
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, lang: "cn" | "en") {
     const d = new Date(iso);
     const now = new Date();
     const diff = (now.getTime() - d.getTime()) / 60000;
-    if (diff < 1) return "刚刚";
-    if (diff < 60) return `${Math.floor(diff)}分钟前`;
-    if (diff < 1440) return `${Math.floor(diff / 60)}小时前`;
-    return d.toLocaleDateString("zh-CN");
+    if (diff < 1) return t(lang, "comments.justNow");
+    if (diff < 60) return t(lang, "comments.minAgo", { n: Math.floor(diff) });
+    if (diff < 1440) return t(lang, "comments.hourAgo", { n: Math.floor(diff / 60) });
+    return d.toLocaleDateString(lang === "en" ? "en-US" : "zh-CN");
 }
 
-function CommentCard({c, isReply = false, session, canOperate, replyingTo, replyContent, submitting, onReplyToggle, onReplyChange, onReplySubmit, onDelete}: {
+function CommentCard({c, isReply = false, session, canOperate, replyingTo, replyContent, submitting, lang, onReplyToggle, onReplyChange, onReplySubmit, onDelete}: {
     c: Comment;
     isReply?: boolean;
     session: any;
@@ -46,6 +48,7 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
     replyingTo: string | null;
     replyContent: string;
     submitting: boolean;
+    lang: "cn" | "en";
     onReplyToggle: (id: string) => void;
     onReplyChange: (value: string) => void;
     onReplySubmit: (parentId: string) => void;
@@ -59,8 +62,8 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                 <Avatar user={c.user}/>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-brand-navy">{c.user.name || "匿名"}</span>
-                        <span className="text-xs text-brand-text-muted">{formatTime(c.createdAt)}</span>
+                        <span className="text-xs font-medium text-brand-navy">{c.user.name || t(lang, "comments.anonymous")}</span>
+                        <span className="text-xs text-brand-text-muted">{formatTime(c.createdAt, lang)}</span>
                     </div>
                     <p className="text-sm mt-0.5 whitespace-pre-wrap break-words text-[#444]">{c.content}</p>
                     {canOperate && (
@@ -68,24 +71,24 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                             <button
                                 onClick={() => onReplyToggle(c.id)}
                                 className={`text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70 ${replyingTo === c.id ? "text-brand-blue" : "text-brand-text-muted"}`}
-                                title="回复"
+                                title={t(lang, "comments.reply")}
                             >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                                 </svg>
-                                回复
+                                {t(lang, "comments.reply")}
                             </button>
                             {isMine && (
                                 <button
                                     onClick={() => onDelete(c.id)}
                                     className="text-xs inline-flex items-center gap-1 hover:underline transition-colors active:opacity-70 text-[#bbb]"
-                                    title="删除"
+                                    title={t(lang, "comments.delete")}
                                 >
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path
                                             d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14"/>
                                     </svg>
-                                    删除
+                                    {t(lang, "comments.delete")}
                                 </button>
                             )}
                         </div>
@@ -95,12 +98,12 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                         <div className="mt-2 flex gap-2">
                             <input value={replyContent} onChange={(e) => onReplyChange(e.target.value)}
                                    maxLength={300}
-                                   placeholder={`回复 ${c.user.name || "Ta"}...`}
+                                   placeholder={t(lang, "comments.replyPlaceholder", { name: c.user.name || t(lang, "comments.someone") })}
                                    className="flex-1 text-xs px-2 py-1.5 rounded border focus:outline-none focus:ring-1 focus:ring-[#3388BB] border-brand-border-subtle"/>
                             <button onClick={() => onReplySubmit(c.id)} disabled={!replyContent.trim() || submitting}
-                                    className="text-xs px-3 py-1.5 rounded text-white disabled:opacity-40 transition-all active:scale-95 inline-flex items-center gap-1 bg-brand-blue">{submitting ? <><svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>发送中</> : "发送"}</button>
+                                    className="text-xs px-3 py-1.5 rounded text-white disabled:opacity-40 transition-all active:scale-95 inline-flex items-center gap-1 bg-brand-blue">{submitting ? <><svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{t(lang, "comments.sending")}</> : t(lang, "comments.send")}</button>
                             <button onClick={() => onReplyToggle(c.id)}
-                                    className="text-xs px-2 py-1.5 rounded hover:text-[#25547A] transition-colors active:opacity-70 text-brand-text-muted">取消
+                                    className="text-xs px-2 py-1.5 rounded hover:text-[#25547A] transition-colors active:opacity-70 text-brand-text-muted">{t(lang, "common.cancel")}
                             </button>
                         </div>
                     )}
@@ -112,7 +115,7 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
                     {c.replies.map((r) => <CommentCard key={r.id} c={r} isReply={true}
                         session={session} canOperate={canOperate}
                         replyingTo={replyingTo} replyContent={replyContent}
-                        submitting={submitting}
+                        submitting={submitting} lang={lang}
                         onReplyToggle={onReplyToggle} onReplyChange={onReplyChange}
                         onReplySubmit={onReplySubmit} onDelete={onDelete}
                     />)}
@@ -124,6 +127,7 @@ function CommentCard({c, isReply = false, session, canOperate, replyingTo, reply
 
 export default function CommentSection({projectId, initialComments = []}: Props) {
     const {data: session} = useSession();
+    const {lang} = useLang();
     const isLoggedIn = !!session?.user;
     const canOperate = isLoggedIn && session.user.role !== "GUEST";
 
@@ -214,7 +218,7 @@ export default function CommentSection({projectId, initialComments = []}: Props)
     }
 
     async function deleteComment(commentId: string) {
-        if (!confirm("确定删除这条留言？")) return;
+        if (!confirm(t(lang, "comments.confirmDelete"))) return;
 
         // 乐观删除：立即从本地状态中移除
         setComments(prev => removeCommentById(prev, commentId));
@@ -260,7 +264,7 @@ export default function CommentSection({projectId, initialComments = []}: Props)
     return (
         <section className="mt-8">
             <h2 className="text-lg font-semibold mb-4 text-brand-navy">
-                留言板（{comments.reduce((s, c) => s + 1 + (c.replies?.length || 0), 0)} 条）
+                {t(lang, "comments.title", { n: comments.reduce((s, c) => s + 1 + (c.replies?.length || 0), 0) })}
             </h2>
 
             {/* 发表留言 */}
@@ -269,11 +273,11 @@ export default function CommentSection({projectId, initialComments = []}: Props)
                     <div className="flex gap-2">
             <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)}
                       maxLength={300} rows={2}
-                      placeholder="写下你的留言…（最多300字）"
+                      placeholder={t(lang, "comments.placeholder")}
                       className="flex-1 text-sm px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-1 focus:ring-[#3388BB] border-brand-border-subtle"/>
                         <button onClick={() => submitComment()} disabled={!newContent.trim() || submitting}
                                 className="self-end px-4 py-2 rounded-lg text-sm text-white disabled:opacity-40 transition-all active:scale-95 hover:opacity-90 bg-brand-navy">
-                            {submitting ? "发送中…" : "发表"}
+                            {submitting ? t(lang, "comments.sendingEllipsis") : t(lang, "comments.post")}
                         </button>
                     </div>
                     <div className="text-right text-xs mt-1 text-brand-text-muted">
@@ -282,14 +286,14 @@ export default function CommentSection({projectId, initialComments = []}: Props)
                 </div>
             )}
             {!isLoggedIn && (
-                <p className="text-xs mb-3 text-brand-text-muted">请登录后发表留言</p>
+                <p className="text-xs mb-3 text-brand-text-muted">{t(lang, "comments.loginToComment")}</p>
             )}
 
             {/* 留言列表 */}
             {loading ? (
-                <p className="text-xs text-brand-text-muted">加载中…</p>
+                <p className="text-xs text-brand-text-muted">{t(lang, "common.loading")}</p>
             ) : comments.length === 0 ? (
-                <p className="text-xs text-brand-text-muted">暂无留言，来抢沙发吧～</p>
+                <p className="text-xs text-brand-text-muted">{t(lang, "comments.empty")}</p>
             ) : (
                 <div className="space-y-1 divide-y divide-[#F0F0F0]">
                     {comments.map((c) => (
@@ -301,6 +305,7 @@ export default function CommentSection({projectId, initialComments = []}: Props)
                                 replyingTo={replyingTo}
                                 replyContent={replyContent}
                                 submitting={submitting}
+                                lang={lang}
                                 onReplyToggle={handleReplyToggle}
                                 onReplyChange={handleReplyChange}
                                 onReplySubmit={handleReplySubmit}

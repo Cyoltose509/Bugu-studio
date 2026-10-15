@@ -2,12 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { submitScore } from "@/lib/actions/judging";
-
-const DIMENSIONS = [
-  { key: "art", label: "🎨 美术", desc: "画面、UI、风格表现" },
-  { key: "story", label: "📖 剧情", desc: "故事、叙事、世界观" },
-  { key: "gameplay", label: "🎮 玩法", desc: "机制、手感、趣味性" },
-] as const;
+import { useLang } from "@/lib/i18n/LangProvider";
 
 const QUICK_SCORES = [50, 60, 70, 80, 90];
 
@@ -73,6 +68,7 @@ export function SubmitScoreForm({
   submissionId: string;
   myScore: any;
 }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
   const criteria = (myScore?.criteria || {}) as Record<string, number>;
 
@@ -93,7 +89,7 @@ export function SubmitScoreForm({
       <summary
         className={`text-xs cursor-pointer list-none inline-flex items-center gap-1.5 ${myScore ? "text-brand-blue" : "text-brand-orange"}`}
       >
-        {myScore ? "✏️ 修改评分" : "📝 打分"}
+        {myScore ? t("judging.editScore") : t("judging.score")}
       </summary>
       <form action={handleSubmit} className="mt-3 space-y-3 p-3 rounded-lg bg-[#F8FAFB]">
         <input type="hidden" name="submissionId" value={submissionId} />
@@ -103,14 +99,14 @@ export function SubmitScoreForm({
 
         {/* 三个维度滑块 */}
         <div className="space-y-3">
-          <ScoreSlider label="🎨 美术" desc="画面、UI、风格表现" value={art} onChange={setArt} disabled={isPending} />
-          <ScoreSlider label="📖 剧情" desc="故事、叙事、世界观" value={story} onChange={setStory} disabled={isPending} />
-          <ScoreSlider label="🎮 玩法" desc="机制、手感、趣味性" value={gameplay} onChange={setGameplay} disabled={isPending} />
+          <ScoreSlider label={t("judging.dim.art")} desc={t("judging.dim.artDesc")} value={art} onChange={setArt} disabled={isPending} />
+          <ScoreSlider label={t("judging.dim.story")} desc={t("judging.dim.storyDesc")} value={story} onChange={setStory} disabled={isPending} />
+          <ScoreSlider label={t("judging.dim.gameplay")} desc={t("judging.dim.gameplayDesc")} value={gameplay} onChange={setGameplay} disabled={isPending} />
         </div>
 
         {/* 快捷选分 */}
         <div className="flex items-center gap-1">
-          <span className="text-[10px] mr-1 text-[#bbb]">快捷：</span>
+          <span className="text-[10px] mr-1 text-[#bbb]">{t("judging.quickScores")}</span>
           {QUICK_SCORES.map((s) => (
             <button
               key={s}
@@ -137,7 +133,7 @@ export function SubmitScoreForm({
           className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#E8F4FD]"
         >
           <span className="text-xs font-medium text-brand-navy">
-            综合分（平均）
+            {t("judging.avgScore")}
           </span>
           <span
             className={`text-lg font-bold ${avgScore < 35 ? "text-[#e57373]" : avgScore < 65 ? "text-brand-orange" : "text-[var(--ui-text-green)]"}`}
@@ -149,14 +145,14 @@ export function SubmitScoreForm({
 
         {/* 评语 */}
         <div>
-          <label className="block text-xs mb-1 text-brand-text-secondary">评语（可选）</label>
+          <label className="block text-xs mb-1 text-brand-text-secondary">{t("judging.commentOptional")}</label>
           <textarea
             name="comment"
             rows={2}
             defaultValue={myScore?.comment || ""}
             disabled={isPending}
             className="w-full rounded-lg border border-brand-border-subtle px-3 py-1.5 text-sm resize-y disabled:opacity-50"
-            placeholder="可以写下对作品的评价、建议…"
+            placeholder={t("judging.commentPlaceholderWork")}
           />
         </div>
 
@@ -165,7 +161,7 @@ export function SubmitScoreForm({
           disabled={isPending}
           className="text-xs px-4 py-1.5 rounded-lg text-white disabled:opacity-50 transition-colors bg-brand-blue"
         >
-          {isPending ? "提交中…" : myScore ? "更新评分" : "提交评分"}
+          {isPending ? t("form.submitting") : myScore ? t("judging.updateScore") : t("judging.submitScore")}
         </button>
       </form>
     </details>

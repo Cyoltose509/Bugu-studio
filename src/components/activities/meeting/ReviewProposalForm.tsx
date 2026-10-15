@@ -4,10 +4,12 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { reviewProposal } from "@/app/admin/activities/actions";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 const initialState = { error: "", success: false };
 
 function ApproveButton() {
+  const { t } = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -17,12 +19,13 @@ function ApproveButton() {
       disabled={pending}
       className="text-xs px-3 py-1.5 rounded-lg text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed bg-brand-blue"
     >
-      {pending ? "处理中..." : "通过"}
+      {pending ? t("common.processing") : t("common.approve")}
     </button>
   );
 }
 
 function RejectButton() {
+  const { t } = useLang();
   const { pending } = useFormStatus();
   return (
     <button
@@ -32,7 +35,7 @@ function RejectButton() {
       disabled={pending}
       className="text-xs px-3 py-1.5 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed border-red-500 text-red-500"
     >
-      {pending ? "处理中..." : "拒绝"}
+      {pending ? t("common.processing") : t("common.reject")}
     </button>
   );
 }
@@ -50,6 +53,7 @@ export default function ReviewProposalForm({
   createdAt: string;
   description?: string | null;
 }) {
+  const { t } = useLang();
   const router = useRouter();
   const [state, formAction] = useActionState(
     async (_prev: typeof initialState, formData: FormData) => {
@@ -63,7 +67,7 @@ export default function ReviewProposalForm({
         router.refresh();
         return { error: "", success: true };
       } catch (e: any) {
-        return { error: e.message || "操作失败", success: false };
+        return { error: e.message || t("works.approve.failed"), success: false };
       }
     },
     initialState,
@@ -78,7 +82,7 @@ export default function ReviewProposalForm({
         <div>
           <div className="flex items-center gap-2">
             <span className="font-semibold text-brand-text-heading">{title}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">待审核</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{t("work.badge.PENDING")}</span>
           </div>
           <p className="text-xs mt-1 text-brand-text-secondary">by {userName} · {createdAt}</p>
           {description && <p className="text-sm mt-1 text-brand-text-body">{description}</p>}
@@ -94,7 +98,7 @@ export default function ReviewProposalForm({
         <RejectButton />
         <input
           name="adminNote"
-          placeholder="审核意见（可选）"
+          placeholder={t("meeting.reviewNotePlaceholder")}
           className="flex-1 min-w-[120px] rounded-lg border border-brand-border-subtle px-3 py-1.5 text-xs placeholder-gray-400"
         />
       </div>

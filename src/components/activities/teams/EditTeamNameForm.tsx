@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { updateTeam } from "@/lib/actions/teams";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export function EditTeamNameForm({
   teamId,
@@ -12,6 +13,7 @@ export function EditTeamNameForm({
   activityId: string;
   defaultName: string;
 }) {
+  const { t } = useLang();
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(formData: FormData) {
@@ -27,7 +29,7 @@ export function EditTeamNameForm({
         className="flex-1 rounded-lg border border-brand-border-subtle px-3 py-1.5 text-sm disabled:opacity-50" />
       <button type="submit" disabled={isPending}
         className="text-xs px-3 py-1.5 rounded-lg text-white disabled:opacity-50 bg-brand-blue">
-        {isPending ? "保存中…" : "保存"}
+        {isPending ? t("common.saving") : t("common.save")}
       </button>
     </form>
   );

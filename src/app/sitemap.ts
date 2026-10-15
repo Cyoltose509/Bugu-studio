@@ -13,50 +13,59 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/join`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
   ];
 
-  // 动态路由：已发布作品
-  const projects = await prisma.project.findMany({
-    where: { status: "PUBLISHED" },
-    select: { slug: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-    take: 500,
-  });
+  if (!process.env.DATABASE_URL) {
+    return staticRoutes;
+  }
 
-  const projectRoutes: MetadataRoute.Sitemap = projects.map((p) => ({
-    url: `${BASE_URL}/works/${p.slug}`,
-    lastModified: p.updatedAt,
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }));
+  try {
+    // 动态路由：已发布作品
+    const projects = await prisma.project.findMany({
+      where: { status: "PUBLISHED" },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: 500,
+    });
 
-  // 动态路由：成员
-  const members = await prisma.clubMember.findMany({
-    select: { id: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-    take: 300,
-  });
+    const projectRoutes: MetadataRoute.Sitemap = projects.map((p) => ({
+      url: `${BASE_URL}/works/${p.slug}`,
+      lastModified: p.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
 
-  const memberRoutes: MetadataRoute.Sitemap = members.map((m) => ({
-    url: `${BASE_URL}/members/${m.id}`,
-    lastModified: m.updatedAt,
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
-  }));
+    // 动态路由：成员
+    const members = await prisma.clubMember.findMany({
+      select: { id: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: 300,
+    });
 
-  // 动态路由：活动
-  const activities = await prisma.activity.findMany({
-    where: { status: "PUBLISHED" },
-    select: { id: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-    take: 200,
-  });
+    const memberRoutes: MetadataRoute.Sitemap = members.map((m) => ({
+      url: `${BASE_URL}/members/${m.id}`,
+      lastModified: m.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    }));
 
-  // 与前台链接一致：活动详情用 id（同时详情页也兼容 slug）
-  const activityRoutes: MetadataRoute.Sitemap = activities.map((a) => ({
-    url: `${BASE_URL}/activities/${a.id}`,
-    lastModified: a.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
-  }));
+    // 动态路由：活动
+    const activities = await prisma.activity.findMany({
+      where: { status: "PUBLISHED" },
+      select: { id: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+    });
 
-  return [...staticRoutes, ...projectRoutes, ...memberRoutes, ...activityRoutes];
+    // 与前台链接一致：活动详情用 id（同时详情页也兼容 slug）
+    const activityRoutes: MetadataRoute.Sitemap = activities.map((a) => ({
+      url: `${BASE_URL}/activities/${a.id}`,
+      lastModified: a.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+
+    return [...staticRoutes, ...projectRoutes, ...memberRoutes, ...activityRoutes];
+  } catch {
+    // 构建环境或 DB 暂不可达时仍允许完成构建
+    return staticRoutes;
+  }
 }

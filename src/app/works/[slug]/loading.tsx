@@ -1,5 +1,8 @@
 import MascotLoading from "@/components/ui/MascotLoading";
+import { getLang } from "@/lib/i18n/getLang";
+import { t } from "@/lib/i18n/dict";
 
-export default function WorkDetailLoading() {
-  return <MascotLoading text="正在加载作品详情..." />;
+export default async function WorkDetailLoading() {
+  const lang = await getLang();
+  return <MascotLoading text={t(lang, "works.detailLoading")} />;
 }
