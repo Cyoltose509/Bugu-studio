@@ -70,7 +70,9 @@ export default function HistoryClient({
   const [activeYear, setActiveYear] = useState(yearDetails[0]?.year);
   const { lang } = useLang();
   const sections = allSections(true);
-  const rollerRef = useRef<HTMLDivElement>(null);
+  const jumpingYearRef = useRef<number | null>(null);
+  const jumpGenRef = useRef(0);
+  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -83,6 +85,7 @@ export default function HistoryClient({
 
     const io = new IntersectionObserver(
       (entries) => {
+        if (jumpingYearRef.current != null) return;
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -97,18 +100,32 @@ export default function HistoryClient({
   }, [yearDetails]);
 
   useEffect(() => {
-    if (!sidebarOpen) return;
-    const btn = rollerRef.current?.querySelector<HTMLElement>(`[data-year-btn="${activeYear}"]`);
-    btn?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [activeYear, sidebarOpen]);
+    return () => {
+      if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current);
+    };
+  }, []);
 
   function jumpToYear(year: number) {
     setActiveYear(year);
     const el = document.getElementById(yearAnchorId(year));
     if (!el) return;
-    const headerOffset = 96;
-    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
-    window.scrollTo({ top, behavior: "smooth" });
+
+    const gen = ++jumpGenRef.current;
+    jumpingYearRef.current = year;
+
+    const finish = () => {
+      if (jumpGenRef.current !== gen) return;
+      jumpingYearRef.current = null;
+      if (jumpTimerRef.current) {
+        clearTimeout(jumpTimerRef.current);
+        jumpTimerRef.current = null;
+      }
+    };
+
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.addEventListener("scrollend", finish, { once: true });
+    if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current);
+    jumpTimerRef.current = setTimeout(finish, 1200);
   }
 
   return (
@@ -153,7 +170,7 @@ export default function HistoryClient({
           >
             <aside
               className={`
-                pointer-events-auto absolute left-0 top-0
+                pointer-events-auto absolute left-0 top-0 overflow-hidden
                 shadow-lg backdrop-blur-md
                 transition-[width,opacity] duration-200
                 ${sidebarOpen
@@ -178,16 +195,11 @@ export default function HistoryClient({
                   </div>
 
                   <div
-                    ref={rollerRef}
-                    className="relative max-h-[min(420px,60vh)] overflow-y-auto overscroll-contain py-6 [scrollbar-width:thin]"
+                    className="relative max-h-[min(420px,60vh)] overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:thin]"
                     role="listbox"
                     aria-label={t(lang, "history.yearJumpTitle")}
                   >
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-9 rounded-md bg-brand-navy/8 border border-brand-navy/10"
-                    />
-                    <div className="relative flex flex-col items-stretch">
+                    <div className="flex min-w-0 flex-col items-stretch">
                       {yearDetails.map(({ year }) => {
                         const active = activeYear === year;
                         return (
@@ -198,10 +210,10 @@ export default function HistoryClient({
                             role="option"
                             aria-selected={active}
                             onClick={() => jumpToYear(year)}
-                            className={`relative z-10 py-1.5 text-center tabular-nums tracking-wide transition-all duration-200 ${
+                            className={`py-1.5 text-center text-[13px] tabular-nums tracking-wide transition-colors duration-150 ${
                               active
-                                ? "text-xl font-black text-brand-navy scale-105"
-                                : "text-[13px] text-brand-text-muted hover:text-brand-text-heading"
+                                ? "font-bold text-brand-navy"
+                                : "font-medium text-brand-text-muted hover:text-brand-text-heading"
                             }`}
                           >
                             {year}
@@ -221,10 +233,7 @@ export default function HistoryClient({
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="9 18 15 12 9 6"/>
                   </svg>
-                  <span className="text-[11px] font-semibold tabular-nums leading-none">
-                    {activeYear ?? yearDetails[0]?.year}
-                  </span>
-                  <span className="text-[10px] leading-tight" style={{ writingMode: "vertical-rl" }}>
+                  <span className="text-[10px] font-semibold leading-tight" style={{ writingMode: "vertical-rl" }}>
                     {t(lang, "history.yearJump")}
                   </span>
                 </button>
