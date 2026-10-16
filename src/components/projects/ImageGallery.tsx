@@ -41,6 +41,8 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
     }
 
     const [lightbox, setLightbox] = useState<{ index: number } | null>(null);
+    // 缩略图 hover 只影响主视觉预览；离开后回到封面，点击仍通过灯箱查看。
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
     const [transform, setTransform] = useState<Transform>({scale: 1, x: 0, y: 0});
     const overlayRef = useRef<HTMLDivElement>(null);
@@ -182,6 +184,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
 
     const coverItem = allImages.find((i) => i.kind === "cover");
     const screenshotItems = allImages.filter((i) => i.kind === "screenshot");
+    const previewItem = allImages[hoveredIndex ?? 0];
     const isZoomed = transform.scale > 1;
 
     return (
@@ -191,15 +194,17 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                 <div
                     className="relative aspect-video rounded-xl overflow-hidden border cursor-zoom-in group border-brand-border-subtle"
                     onClick={() => open(0)}
+                    onMouseLeave={() => setHoveredIndex(null)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter") open(0); }}
                     aria-label={t(lang, "imageGallery.viewCover")}
                 >
                     <img
-                        src={coverItem.src}
-                        alt={coverItem.alt}
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        key={previewItem.src}
+                        src={previewItem.src}
+                        alt={previewItem.alt}
+                        className="absolute inset-0 w-full h-full object-cover transition-all duration-300 group-hover:scale-[1.02]"
                     />
                     <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                         🔍 {t(lang, "common.viewImage")}
@@ -217,6 +222,8 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                                 key={i}
                                 className="relative aspect-video rounded-lg overflow-hidden border hover:border-[#3388BB] transition-colors cursor-zoom-in group border-brand-border-subtle"
                                 onClick={() => open(globalIdx)}
+                                onMouseEnter={() => setHoveredIndex(globalIdx)}
+                                onMouseLeave={() => setHoveredIndex(null)}
                                 role="button"
                                 tabIndex={0}
                                 onKeyDown={(e) => { if (e.key === "Enter") open(globalIdx); }}

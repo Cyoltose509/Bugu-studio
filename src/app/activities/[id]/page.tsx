@@ -10,13 +10,15 @@ import { prisma } from "@/lib/db/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
-import { ActivityStatus, ProposalType, ProposalStatus } from "@prisma/client";
+import { ProposalStatus } from "@prisma/client";
 import SubmitProposalForm from "@/components/activities/meeting/SubmitProposalForm";
 import DeleteProposalButton from "@/components/activities/meeting/DeleteProposalButton";
 import { RichContent } from "@/components/ui/RichContent";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import ReviewProposalForm from "@/components/activities/meeting/ReviewProposalForm";
 import BilibiliTvLink from "@/components/activities/meeting/BilibiliTvLink";
+import AgendaManagePanel from "@/components/activities/meeting/AgendaManagePanel";
+import { AgendaSpeaker, AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
 import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
 import { InvitationButtons } from "@/components/activities/teams/InvitationButtons";
@@ -37,6 +39,7 @@ import type { Lang } from "@/lib/i18n/config";
 import ShareButton from "@/components/share/ShareButton";
 import { activityShareData, shareDescription, shareMetadata } from "@/lib/share";
 import { canSubmitActivityTalk, hasActivityTalkSection } from "@/lib/activities/capabilities";
+import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 
 // 活动类型 / 状态 → 双语标签
 const ACTIVITY_TYPE_KEYS: Record<string, DictKey> = {
@@ -193,7 +196,9 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   const isUpcoming  = now < activity.startTime;
   const isPast       = now > activity.endTime;
   const shareData = activityShareData(activity, lang);
-  const hasTalkSection = hasActivityTalkSection(activity);
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  // 管理员需要能在议程为空时直接打开管理面板，预先编排任何类型的活动。
+  const hasTalkSection = hasActivityTalkSection(activity) || isAdmin;
 
   // 仅本地：mock / DB 不可达时跳过，勿提交
   const userProposal =
@@ -225,14 +230,12 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
           sizes="(max-width: 768px) 100vw, 896px"
           priority
         />
+        <ActivityTypeCorner type={activity.type} label={activityTypeLabel(lang, activity.type)} />
       </div>
 
       {/* ── 标题区 ──────────────────────────────────── */}
       <div className="space-y-3 mb-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs px-2 py-0.5 rounded-full bg-brand-surface text-brand-blue">
-            {activityTypeLabel(lang, activity.type)}
-          </span>
           <span className={`text-xs px-2 py-0.5 rounded-full ${
             activity.status === "PUBLISHED" ? "bg-green-100 text-green-700" :
             activity.status === "DRAFT"      ? "bg-gray-100 text-gray-600" :
@@ -298,7 +301,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   if (hasTalkSection) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(16rem,22rem)] xl:items-start">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32rem)] xl:items-start">
           <div className="min-w-0">{mainColumn}</div>
           <aside className="min-w-0 xl:sticky xl:top-24">
             {talkColumn}
@@ -315,64 +318,15 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   );
 }
 
-// ── 例会主讲人：有成员档案 → /members；仅站内用户 → /profile?id=；否则纯文本 ──
-function TalkSpeaker({ talk, lang }: { talk: any; lang: Lang }) {
-  const name =
-    talk.speaker ||
-    talk.user?.member?.displayName ||
-    talk.user?.name ||
-    t(lang, "activityDetail.speakerFallback");
-  const memberId = talk.user?.member?.id as string | undefined;
-  const userId = (talk.userId || talk.user?.id) as string | undefined;
-
-  if (memberId) {
-    return (
-      <Link href={`/members/${memberId}`} className="text-brand-navy/80 hover:underline">
-        {name}
-      </Link>
-    );
-  }
-  if (userId) {
-    return (
-      <Link href={`/profile?id=${userId}`} className="text-brand-navy/80 hover:underline">
-        {name}
-      </Link>
-    );
-  }
-  return <span className="text-brand-navy/80">{name}</span>;
-}
-
-// ── 议程分享人：头像 + 名字，关联站内账号。有成员档案 → /members；仅站内用户 → /profile?id= ──
-function ProposalSpeaker({ proposal, lang }: { proposal: any; lang: Lang }) {
-  const user = proposal.user;
-  const name =
-    user?.member?.displayName ||
-    user?.name ||
-    t(lang, "activityDetail.speakerFallback");
+function speakerMeta(entity: any, lang: Lang, preferSpeakerField = false) {
+  const user = entity.user;
+  const name = preferSpeakerField
+    ? entity.speaker || user?.member?.displayName || user?.name || t(lang, "activityDetail.speakerFallback")
+    : user?.member?.displayName || user?.name || t(lang, "activityDetail.speakerFallback");
   const memberId = user?.member?.id as string | undefined;
-  const userId = (proposal.userId || user?.id) as string | undefined;
-
-  const inner = (
-    <>
-      <UserAvatar src={user?.image} name={name} size={24} />
-      <span className="text-xs font-medium text-brand-text-heading truncate max-w-[9rem]">{name}</span>
-    </>
-  );
-
+  const userId = (entity.userId || user?.id) as string | undefined;
   const href = memberId ? `/members/${memberId}` : userId ? `/profile?id=${userId}` : null;
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        title={name}
-        className="flex items-center gap-1.5 shrink-0 rounded-full pl-2 pr-2.5 py-1 -my-1 hover:bg-brand-surface transition-colors"
-      >
-        {inner}
-      </Link>
-    );
-  }
-  return <span className="flex items-center gap-1.5 shrink-0 pl-2 pr-2.5 py-1 -my-1">{inner}</span>;
+  return { name, href, image: (user?.image as string | undefined) || null };
 }
 
 // ── 例会 ───────────────────────────────────────────────────
@@ -405,6 +359,34 @@ async function ActivityTalkSection({
 
   return (
     <div id="meeting-agenda" className="scroll-mt-28 space-y-6">
+      {isAdmin && (
+        <AgendaManagePanel
+          activityId={activity.id}
+          unlistedProposals={approvedProposals.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            speaker:
+              p.user?.member?.displayName ||
+              p.user?.name ||
+              t(lang, "activityDetail.speakerFallback"),
+            proposalType: p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+          }))}
+          initialTalks={talks.map((tk: any) => ({
+            id: tk.id,
+            speaker: tk.speaker,
+            title: tk.title,
+            talkType: tk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+            bvId: tk.bvId || "",
+            userId: tk.userId || null,
+            linkedLabel: tk.userId
+              ? tk.user?.member
+                ? t(lang, "meetingTalks.linkedMember", { name: tk.user.member.displayName })
+                : t(lang, "meetingTalks.linkedUser", { name: tk.user?.name || tk.userId })
+              : null,
+          }))}
+        />
+      )}
+
       {/* ── 管理员审核待处理的申请 ──────────────── */}
       {isAdmin && pendingProposals.length > 0 && (
         <section>
@@ -424,64 +406,56 @@ async function ActivityTalkSection({
         </section>
       )}
 
-      {/* ── 结构化分享条目（主讲 + 标题 + BV）── */}
-      {talks.length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold mb-3 text-brand-navy">{t(lang, "activityDetail.thisSessionTalks")}</h2>
-          <ol className="space-y-2">
-            {talks.map((talk: any, i: number) => (
-              <li
-                key={talk.id}
-                className="bg-card rounded-xl border border-brand-border-subtle px-4 py-3 flex items-center gap-3"
-              >
-                <span className="w-7 h-7 rounded-full bg-brand-surface text-brand-blue text-xs font-semibold flex items-center justify-center shrink-0">
-                  {i + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-brand-text-heading truncate">{talk.title}</p>
-                  <p className="text-sm text-brand-text-secondary mt-0.5">
-                    <TalkSpeaker talk={talk} lang={lang} />
-                    {talk.bvId ? (
-                      <span className="text-brand-text-muted"> · {talk.bvId}</span>
-                    ) : null}
-                  </p>
-                </div>
-                {talk.bvId ? <BilibiliTvLink bvId={talk.bvId} /> : (
-                  <span className="text-xs text-brand-text-muted shrink-0 px-2">{t(lang, "activityDetail.awaitingUpload")}</span>
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-
-      {/* ── 已通过审核的报名分享（始终公开，不再被结构化条目挤掉）── */}
-      {approvedProposals.length > 0 && (
+      {(talks.length > 0 || approvedProposals.length > 0) && (
         <section>
           <h2 className="text-xl font-semibold mb-3 text-brand-navy">{t(lang, "activityDetail.agenda")}</h2>
-          <div className="space-y-3">
-            {approvedProposals.map((p: any) => (
-              <div key={p.id} className="bg-card rounded-xl border p-4 border-brand-border-subtle">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-brand-text-heading">{p.title}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full shrink-0 bg-brand-surface text-brand-blue">
-                        {p.proposalType === "SHARE" ? t(lang, "activityDetail.proposalShare") : t(lang, "activityDetail.proposalShowcase")}
-                      </span>
-                    </div>
-                    {p.description && <p className="text-sm mt-1 text-brand-text-body">{p.description}</p>}
+          <ol className="rounded-xl border border-brand-border-subtle bg-card divide-y divide-brand-border-subtle">
+            {talks.map((talk: any) => {
+              const speaker = speakerMeta(talk, lang, true);
+              const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+              return (
+                <li key={talk.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
+                  <AgendaTypeTag
+                    type={type}
+                    label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
+                  />
+                  <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy truncate">{talk.title}</p>
+                  {talk.bvId ? <BilibiliTvLink bvId={talk.bvId} /> : null}
+                  <AgendaSpeaker
+                    name={speaker.name}
+                    href={speaker.href}
+                    image={speaker.image}
+                    byLabel={t(lang, "meeting.by")}
+                  />
+                </li>
+              );
+            })}
+            {approvedProposals.map((p: any) => {
+              const speaker = speakerMeta(p, lang);
+              const type = p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+              return (
+                <li key={p.id} className="px-3.5 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <AgendaTypeTag
+                      type={type}
+                      label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
+                    />
+                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy truncate">{p.title}</p>
+                    <AgendaSpeaker
+                      name={speaker.name}
+                      href={speaker.href}
+                      image={speaker.image}
+                      byLabel={t(lang, "meeting.by")}
+                    />
+                    {isAdmin && <DeleteProposalButton proposalId={p.id} />}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <ProposalSpeaker proposal={p} lang={lang} />
-                    {isAdmin && (
-                      <DeleteProposalButton proposalId={p.id} />
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  {p.description && (
+                    <p className="mt-1 ml-[3.25rem] text-xs text-brand-text-secondary line-clamp-2">{p.description}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         </section>
       )}
 
@@ -492,6 +466,14 @@ async function ActivityTalkSection({
             /* 已提交申请 — 显示状态 */
             <div className="rounded-lg p-4 bg-[#F0F6FA]">
               <div className="flex items-center gap-2 mb-1">
+                <AgendaTypeTag
+                  type={userProposal.proposalType}
+                  label={agendaTypeLabel(
+                    userProposal.proposalType,
+                    t(lang, "activityDetail.proposalShare"),
+                    t(lang, "activityDetail.proposalShowcase"),
+                  )}
+                />
                 <span className="font-medium text-sm text-brand-text-heading">{userProposal.title}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   userProposal.status === "APPROVED" ? "bg-brand-surface text-green-800" :
@@ -1017,7 +999,7 @@ async function CompetitionSection({
   );
 }
 
-// ── 普通活动 ─────────────────────────────────────────────
+// ── 大事件 ─────────────────────────────────────────────
 function GeneralSection({ activity, lang }: { activity: any; lang: Lang }) {
   return (
     <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">

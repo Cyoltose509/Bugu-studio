@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 
 interface Member {
   id: string;
@@ -172,6 +172,20 @@ export default function MentionEditor({
   const backdropRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
+  const fitHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+    if (backdropRef.current) {
+      backdropRef.current.style.height = el.style.height;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    fitHeight();
+  }, [value, rows, fitHeight]);
+
   const [mentionQuery, setMentionQuery] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [showPopup, setShowPopup] = useState(false);
@@ -220,14 +234,6 @@ export default function MentionEditor({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showPopup]);
 
-  // ── 滚动同步 ──
-  const syncScroll = useCallback(() => {
-    if (backdropRef.current && textareaRef.current) {
-      backdropRef.current.scrollTop = textareaRef.current.scrollTop;
-      backdropRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    }
-  }, []);
-
   // ── 输入处理 ──
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -236,7 +242,7 @@ export default function MentionEditor({
     } else {
       setInternalValue(newValue);
     }
-    syncScroll();
+    requestAnimationFrame(fitHeight);
 
     // 检测 @mention 触发
     const pos = e.target.selectionStart;
@@ -250,7 +256,7 @@ export default function MentionEditor({
       setMentionQuery("");
       setMentionStart(-1);
     }
-  }, [isControlled, controlledOnChange, syncScroll]);
+  }, [isControlled, controlledOnChange, fitHeight]);
 
   // ── 选择提及成员 → 插入 @displayName(memberId) 格式 ──
   const selectMember = useCallback((member: Member) => {
@@ -312,31 +318,32 @@ export default function MentionEditor({
       }
       if (t.type === "mention") {
         const text = t.text;
-        // 解析 @displayName(memberId) 格式
         const rm = text.match(/^@([^(]+)\(([^)]+)\)$/);
         if (rm) {
-          // 新版格式：名字橙色，ID 半透明
-          return `<span style="color:var(--color-brand-orange,#E38043);font-weight:500">@${escHtml(rm[1])}</span><span style="opacity:0.55;font-size:0.85em">(${escHtml(rm[2])})</span>`;
+          return `<span style="color:var(--color-brand-orange,#E38043)">@${escHtml(rm[1])}</span><span style="opacity:0.55">(${escHtml(rm[2])})</span>`;
         }
-        // 旧版格式
-        return `<span style="color:var(--color-brand-orange,#E38043);font-weight:500">${escHtml(text)}</span>`;
+        return `<span style="color:var(--color-brand-orange,#E38043)">${escHtml(text)}</span>`;
       }
-      return `<span>${escHtml(t.text).replace(/\n/g, "<br>")}</span>`;
+      return `<span>${escHtml(t.text)}</span>`;
     }).join("");
   }, [value, richPreview]);
 
-  const sharedClassName = "font-[inherit] text-sm leading-[inherit] tracking-[inherit] [word-spacing:inherit] px-3 py-2 whitespace-pre-wrap break-words box-border w-full";
+  const layerClass =
+    "font-[inherit] text-sm leading-6 tracking-normal px-3 py-2 whitespace-pre-wrap break-words box-border w-full";
+  const minH = `${rows * 1.5 + 1}rem`;
+  const showOverlay = richPreview && value.length > 0;
 
   return (
-    <div className="relative isolate">
+    <div className={`relative isolate ${className}`}>
+      <div className="relative overflow-hidden rounded-lg border bg-card border-brand-border-subtle focus-within:ring-2 focus-within:ring-[#3388BB]">
       {richPreview && (
         <div
           ref={backdropRef}
           aria-hidden
-          className={`absolute inset-0 pointer-events-none overflow-auto ${sharedClassName} min-h-[var(--min-h)] z-[1]`}
-          style={{"--min-h": `${rows * 1.5 + 1.5}em`} as React.CSSProperties}
+          className={`absolute inset-0 pointer-events-none overflow-hidden text-brand-text-heading z-[1] ${layerClass}`}
+          style={{ minHeight: minH }}
         >
-          <div dangerouslySetInnerHTML={{ __html: highlightHtml + " " }} />
+          <div dangerouslySetInnerHTML={{ __html: highlightHtml }} />
         </div>
       )}
 
@@ -347,19 +354,18 @@ export default function MentionEditor({
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onScroll={syncScroll}
         placeholder={placeholder}
         rows={rows}
         disabled={disabled}
         required={required}
         minLength={minLength}
         maxLength={maxLength}
-        className={`relative resize-y ${sharedClassName} ${className} min-h-[var(--min-h)] bg-transparent caret-black z-[2]${richPreview ? " text-transparent" : ""}`}
-        style={{
-          ...style,
-          "--min-h": `${rows * 1.5 + 1.5}em`,
-        } as React.CSSProperties}
+        className={`relative z-[2] resize-none overflow-hidden bg-transparent caret-[#25547A] dark:caret-white placeholder-gray-400 ${layerClass} ${
+          showOverlay ? "text-transparent [-webkit-text-fill-color:transparent]" : "text-brand-text-heading"
+        }`}
+        style={{ ...style, minHeight: minH }}
       />
+      </div>
 
       {showPopup && members.length > 0 && (
         <div

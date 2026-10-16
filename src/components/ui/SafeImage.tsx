@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { isGifUrl } from "@/lib/utils/gifDuration";
 
 /**
  * 服务端安全的图片封装
@@ -42,8 +43,8 @@ export default function SafeImage({
     );
   }
 
-  // Blob/Data URLs 不经过 next/Image 优化
-  if (src.startsWith("blob:") || src.startsWith("data:")) {
+  // Blob/Data/GIF 用原图，保证动画能播
+  if (src.startsWith("blob:") || src.startsWith("data:") || isGifUrl(src)) {
     return (
       <img
         src={src}

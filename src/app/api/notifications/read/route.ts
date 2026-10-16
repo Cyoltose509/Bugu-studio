@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { invalidateUnreadCache } from "@/lib/cache/unread-count-cache";
+import { prismaTypeFilter } from "@/lib/notifications/buckets";
 
 /**
  * GET /api/notifications/read — 未读通知数量（轻量，供铃铛图标使用）
@@ -26,7 +27,7 @@ export async function PATCH(request: Request) {
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
 
-  let body: { id?: string } = {};
+  let body: { id?: string; bucket?: string } = {};
   try { body = await request.json(); } catch { /* ignore */ }
 
   if (body.id) {
@@ -36,7 +37,11 @@ export async function PATCH(request: Request) {
     });
   } else {
     await prisma.notification.updateMany({
-      where: { userId: session.user.id, read: false },
+      where: {
+        userId: session.user.id,
+        read: false,
+        ...prismaTypeFilter(body.bucket),
+      },
       data: { read: true },
     });
   }

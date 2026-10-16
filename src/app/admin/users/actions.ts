@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 const MEMBER_ROLES = ["MEMBER", "ADMIN"] as const;
 
 export async function updateUserRole(id: string, formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const role = formData.get("role") as string;
 
   // 先获取当前角色用于对比
@@ -24,6 +24,16 @@ export async function updateUserRole(id: string, formData: FormData) {
   if (!current) throw new Error("用户不存在");
 
   await prisma.user.update({ where: { id }, data: { role: role as any } });
+  await prisma.auditLog.create({
+    data: {
+      action: "USER_ROLE_CHANGE",
+      userId: session.user.id,
+      targetType: "User",
+      targetId: id,
+      metadata: { role, from: current.role },
+      ipAddress: "server-action",
+    },
+  }).catch((err) => console.error("[AuditLog] 角色变更写入失败:", err));
 
   const wasMember = MEMBER_ROLES.includes(current.role as any);
   const isMember = MEMBER_ROLES.includes(role as any);
@@ -71,8 +81,18 @@ export async function toggleUserActive(id: string, isActive: boolean) {
 }
 
 export async function toggleConfirmedNotMember(id: string, value: boolean) {
-  await requireAdmin();
+  const session = await requireAdmin();
   await prisma.user.update({ where: { id }, data: { confirmedNotMember: value } });
+  await prisma.auditLog.create({
+    data: {
+      action: "ADMIN_ACTION",
+      userId: session.user.id,
+      targetType: "User",
+      targetId: id,
+      metadata: { confirmedNotMember: value },
+      ipAddress: "server-action",
+    },
+  }).catch((err) => console.error("[AuditLog] 非成员标记写入失败:", err));
   revalidatePath("/admin/users");
 }
 

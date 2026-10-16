@@ -4,12 +4,18 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { auth } from "@/lib/auth/auth";
 import { signMonitoringToken } from "@/lib/monitoring-token";
 import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return NextResponse.json({ ok: false, error: "无权限" }, { status: 403 });
+    }
+
     // 速率限制：每 IP 每分钟最多 5 次密码尝试
     const ip = getClientIp(req);
     const rl = checkRateLimit(ip, { windowSeconds: 60, maxRequests: 5, prefix: "mon:verify" });

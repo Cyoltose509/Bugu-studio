@@ -1,21 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import YearNewspaper, { SectionVisibility } from "@/components/history/YearNewspaper";
 import type { AwardEntry } from "@/lib/history/awards";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
-
-const SECTION_LABEL_KEYS: { key: keyof SectionVisibility; dictKey: "history.section.lead" | "history.section.stats" | "history.section.projects" | "history.section.awards" | "history.section.members" | "history.section.activeMembers" | "history.section.activities" | "history.section.events" }[] = [
-  { key: "lead", dictKey: "history.section.lead" },
-  { key: "stats", dictKey: "history.section.stats" },
-  { key: "projects", dictKey: "history.section.projects" },
-  { key: "awards", dictKey: "history.section.awards" },
-  { key: "members", dictKey: "history.section.members" },
-  { key: "activeMembers", dictKey: "history.section.activeMembers" },
-  { key: "activities", dictKey: "history.section.activities" },
-  { key: "events", dictKey: "history.section.events" },
-];
 
 function allSections(value: boolean): SectionVisibility {
   return {
@@ -65,8 +54,9 @@ interface YearDetail {
   awards: AwardEntry[];
 }
 
-// ─── 样式工具 ────────────────────────────────────────
-// （保存入口已移到每个年报右下角的 SaveMenu，顶部不再放全局保存按钮）
+function yearAnchorId(year: number) {
+  return `history-year-${year}`;
+}
 
 // ═══════════════════════════════════════════════════════
 export default function HistoryClient({
@@ -76,14 +66,50 @@ export default function HistoryClient({
   startYear: number;
 }) {
   const [mounted, setMounted] = useState(false);
-  const [sections, setSections] = useState<SectionVisibility>(allSections(true));
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeYear, setActiveYear] = useState(yearDetails[0]?.year);
   const { lang } = useLang();
+  const sections = allSections(true);
+  const rollerRef = useRef<HTMLDivElement>(null);
 
-  // 等待客户端挂载后再显示按钮（避免 SSR 水合不匹配）
   useEffect(() => { setMounted(true); }, []);
 
-  const visibleCount = Object.values(sections).filter(Boolean).length;
+  useEffect(() => {
+    if (yearDetails.length === 0) return;
+    const nodes = yearDetails
+      .map(({ year }) => document.getElementById(yearAnchorId(year)))
+      .filter((el): el is HTMLElement => !!el);
+    if (nodes.length === 0) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        const year = Number(visible.target.getAttribute("data-year"));
+        if (year) setActiveYear(year);
+      },
+      { rootMargin: "-15% 0px -55% 0px", threshold: [0.08, 0.25, 0.5] },
+    );
+    nodes.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [yearDetails]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const btn = rollerRef.current?.querySelector<HTMLElement>(`[data-year-btn="${activeYear}"]`);
+    btn?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeYear, sidebarOpen]);
+
+  function jumpToYear(year: number) {
+    setActiveYear(year);
+    const el = document.getElementById(yearAnchorId(year));
+    if (!el) return;
+    const headerOffset = 96;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top, behavior: "smooth" });
+  }
 
   return (
     <>
@@ -119,7 +145,7 @@ export default function HistoryClient({
       `}</style>
 
       <div className="relative">
-        {/* ═══ 浮层栏目筛选（默认收起，展开不挤占年报宽度） ═══ */}
+        {/* ═══ 浮层年份滚轴（默认收起，展开不挤占年报宽度） ═══ */}
         {mounted && yearDetails.length > 0 && (
           <div
             data-history-sidebar
@@ -131,19 +157,19 @@ export default function HistoryClient({
                 shadow-lg backdrop-blur-md
                 transition-[width,opacity] duration-200
                 ${sidebarOpen
-                  ? "w-[200px] bg-card/95 border border-brand-border-subtle rounded-lg p-4"
+                  ? "w-[104px] bg-card/95 border border-brand-border-subtle rounded-lg p-3"
                   : "w-9"}
               `}
             >
               {sidebarOpen ? (
                 <>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-brand-navy">栏目筛选</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-brand-navy">{t(lang, "history.yearJump")}</span>
                     <button
                       type="button"
                       onClick={() => setSidebarOpen(false)}
                       className="text-brand-text-muted hover:text-brand-text-heading text-xs p-0.5"
-                      title="收起"
+                      title={t(lang, "history.yearJumpCollapse")}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="15 18 9 12 15 6"/>
@@ -151,55 +177,56 @@ export default function HistoryClient({
                     </button>
                   </div>
 
-                  <div className="flex gap-2 mb-3">
-                    <button
-                      type="button"
-                      onClick={() => setSections(allSections(true))}
-                      className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 8 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
-                    >
-                      全选
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSections(allSections(false))}
-                      className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${visibleCount === 0 ? "bg-brand-navy text-white border-brand-navy" : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue"}`}
-                    >
-                      {t(lang, "history.clear")}
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    {SECTION_LABEL_KEYS.map(({ key, dictKey }) => (
-                      <label
-                        key={key}
-                        className="flex items-center gap-2 py-1 px-1.5 rounded cursor-pointer hover:bg-brand-surface transition-colors text-sm text-brand-text-body"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={sections[key]}
-                          onChange={() => setSections(prev => ({ ...prev, [key]: !prev[key] }))}
-                          className="w-3.5 h-3.5 rounded accent-brand-navy cursor-pointer"
-                        />
-                        {t(lang, dictKey)}
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="mt-3 pt-2 border-t border-brand-border-subtle text-[11px] text-brand-text-muted">
-                    显示 {visibleCount}/8 个栏目
+                  <div
+                    ref={rollerRef}
+                    className="relative max-h-[min(420px,60vh)] overflow-y-auto overscroll-contain py-6 [scrollbar-width:thin]"
+                    role="listbox"
+                    aria-label={t(lang, "history.yearJumpTitle")}
+                  >
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-9 rounded-md bg-brand-navy/8 border border-brand-navy/10"
+                    />
+                    <div className="relative flex flex-col items-stretch">
+                      {yearDetails.map(({ year }) => {
+                        const active = activeYear === year;
+                        return (
+                          <button
+                            key={year}
+                            type="button"
+                            data-year-btn={year}
+                            role="option"
+                            aria-selected={active}
+                            onClick={() => jumpToYear(year)}
+                            className={`relative z-10 py-1.5 text-center tabular-nums tracking-wide transition-all duration-200 ${
+                              active
+                                ? "text-xl font-black text-brand-navy scale-105"
+                                : "text-[13px] text-brand-text-muted hover:text-brand-text-heading"
+                            }`}
+                          >
+                            {year}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               ) : (
                 <button
                   type="button"
                   onClick={() => setSidebarOpen(true)}
-                  className="w-9 h-20 flex flex-col items-center justify-center gap-1 rounded-lg border border-brand-border-subtle bg-card/95 text-brand-text-muted hover:text-brand-text-heading shadow-md"
-                  title="展开栏目筛选"
+                  className="w-9 min-h-[5rem] flex flex-col items-center justify-center gap-1 rounded-lg border border-brand-border-subtle bg-card/95 text-brand-text-muted hover:text-brand-text-heading shadow-md py-2"
+                  title={t(lang, "history.yearJumpExpand")}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="9 18 15 12 9 6"/>
                   </svg>
-                  <span className="text-[10px] leading-tight" style={{ writingMode: "vertical-rl" }}>栏目</span>
+                  <span className="text-[11px] font-semibold tabular-nums leading-none">
+                    {activeYear ?? yearDetails[0]?.year}
+                  </span>
+                  <span className="text-[10px] leading-tight" style={{ writingMode: "vertical-rl" }}>
+                    {t(lang, "history.yearJump")}
+                  </span>
                 </button>
               )}
             </aside>
@@ -208,7 +235,6 @@ export default function HistoryClient({
 
         {/* ═══ 主内容区 ═══ */}
         <div className="min-w-0">
-          {/* ═══ 报纸列表 ═══ */}
           {yearDetails.length === 0 ? (
             <div className="rounded-xl border border-brand-border-subtle bg-card px-6 py-16 text-center">
               <p className="text-lg font-medium text-brand-navy">{t(lang, "history.empty")}</p>
@@ -219,7 +245,12 @@ export default function HistoryClient({
           ) : (
           <div className="space-y-8">
             {yearDetails.map(({ year, members, projects, events, activities, activeMembers, presidents, awards }) => (
-              <div key={year} className="history-scroll-wrapper">
+              <div
+                key={year}
+                id={yearAnchorId(year)}
+                data-year={year}
+                className="history-scroll-wrapper scroll-mt-24"
+              >
                 <YearNewspaper
                   year={year}
                   members={members}

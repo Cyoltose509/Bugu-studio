@@ -9,11 +9,17 @@
 import { useSearchParams } from "next/navigation";
 import FilterNavLink from "./FilterNavLink";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
+import EventTagIcon from "@/components/tags/EventTagIcon";
 import {
     getEngineChipClass,
     getEngineColor,
     isEngineTagSlug,
 } from "@/lib/tags/engine-tags";
+import {
+    getEventChipClass,
+    getEventColor,
+    isEventTagSlug,
+} from "@/lib/tags/event-tags";
 import { buildUrl } from "@/lib/works/filters";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { tagDisplayName, tagGroupDisplayName } from "@/lib/tags/tag-names";
@@ -45,7 +51,9 @@ export default function TagFilterChips({
                     <div className="flex flex-wrap gap-2">
                         {tags.map((tag) => {
                             const engine = isEngineTagSlug(tag.slug);
-                            const color = getEngineColor(tag.slug) || tag.color || "#88C232";
+                            const event = isEventTagSlug(tag.slug);
+                            const branded = engine || event;
+                            const color = getEngineColor(tag.slug) || getEventColor(tag.slug) || tag.color || "#88C232";
                             const active = currentTag === tag.slug;
                             const displayName = tagDisplayName(tag.slug, tag.name, lang);
                             return (
@@ -57,17 +65,18 @@ export default function TagFilterChips({
                                     active={active}
                                     title={`${displayName}（${tag.count}）`}
                                     className={`inline-flex items-center gap-1 text-xs px-2 py-1 transition-all ${
-                                        engine
-                                            ? `rounded-full font-medium ${getEngineChipClass(tag.slug)}`
+                                        branded
+                                            ? `rounded-full font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}`
                                             : "rounded"
                                     } ${active ? "ring-1 ring-offset-1 opacity-100" : "opacity-75 hover:opacity-100"}`}
                                     style={
-                                        engine
+                                        branded
                                             ? undefined
                                             : { color, backgroundColor: `${color}18` }
                                     }
                                 >
                                     {engine && <EngineTagIcon slug={tag.slug} />}
+                                    {event && <EventTagIcon slug={tag.slug} />}
                                     {displayName}
                                     <span className="opacity-70">({tag.count})</span>
                                 </FilterNavLink>

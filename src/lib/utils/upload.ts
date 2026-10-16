@@ -19,9 +19,10 @@ export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/gif",
 ] as const;
 
-export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
 /**
  * 文件大小限制

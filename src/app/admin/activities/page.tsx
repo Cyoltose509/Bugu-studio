@@ -26,8 +26,8 @@ const STATUS_TABS = [
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",
   COURSE:     "公开课",
-  COMPETITION: "比赛",
-  GENERAL:    "普通活动",
+  COMPETITION: "Game Jam",
+  GENERAL:    "大事件",
 };
 
 const STATUS_LABELS: Record<string, string> = {

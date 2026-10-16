@@ -43,7 +43,7 @@ type Props = {
 
 /**
  * 可复用的活动试玩目录：长条作品卡 + 可选全屏放映 / 跳转作品库。
- * 创建「普通活动」并在后台启用海报与试玩专页后使用。
+ * 创建「大事件」并在后台启用海报与试玩专页后使用。
  */
 export default function PlayableCatalogue({
   projects,

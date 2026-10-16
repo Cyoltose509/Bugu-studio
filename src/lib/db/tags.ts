@@ -46,7 +46,8 @@ const DEFAULT_TAGS: {
   { name: "多人联机", slug: "multiplayer", color: "#ec4899", sortOrder: 42, group: "要素" },
   { name: "休闲", slug: "casual", color: "#10b981", sortOrder: 43, group: "要素" },
   { name: "Game Jam", slug: "gamejam", color: "#ef4444", sortOrder: 44, group: "要素" },
-  // 活动 & 赛事
+  // 活动 & 赛事（布谷Gamejam 与 GGJ / CiGA / CUSGA / 萌芽杯 同级预设）
+  { name: "布谷Gamejam", slug: "bugoo-gamejam", color: "#E38043", sortOrder: 49, group: "活动&赛事" },
   { name: "GGJ", slug: "ggj", color: "#3388BB", sortOrder: 50, group: "活动&赛事" },
   { name: "CiGA", slug: "ciga", color: "#E38043", sortOrder: 51, group: "活动&赛事" },
   { name: "CUSGA", slug: "cusga", color: "#88C232", sortOrder: 52, group: "活动&赛事" },
@@ -54,7 +55,8 @@ const DEFAULT_TAGS: {
 ];
 
 const ENGINE_SLUGS = ["godot", "unity", "gamemaker", "unreal"] as const;
-const EVENT_SLUGS = ["ggj", "ciga", "cusga", "mengyabei"] as const;
+const EVENT_SLUGS = ["bugoo-gamejam", "ggj", "ciga", "cusga", "mengyabei"] as const;
+const GAMEJAM_SLUG = "gamejam";
 
 let synced = false;
 
@@ -68,6 +70,24 @@ export async function ensureDefaultTags(): Promise<void> {
     let existing = await prisma.tag.findMany({
       select: { id: true, name: true, slug: true, color: true, group: true, sortOrder: true },
     });
+    // 先把误改成「布谷Gamejam」的通用 slug 改回 Game Jam，避免新建 bugoo-gamejam 时撞 name
+    const gamejamRow = existing.find((t) => t.slug === GAMEJAM_SLUG);
+    const gamejamDef = DEFAULT_TAGS.find((t) => t.slug === GAMEJAM_SLUG);
+    if (gamejamRow && gamejamDef && gamejamRow.name !== gamejamDef.name) {
+      await prisma.tag.update({
+        where: { slug: GAMEJAM_SLUG },
+        data: {
+          name: gamejamDef.name,
+          color: gamejamDef.color,
+          group: gamejamDef.group,
+          sortOrder: gamejamDef.sortOrder,
+        },
+      });
+      gamejamRow.name = gamejamDef.name;
+      gamejamRow.color = gamejamDef.color;
+      gamejamRow.group = gamejamDef.group;
+      gamejamRow.sortOrder = gamejamDef.sortOrder;
+    }
     const existingSlugs = new Set(existing.map((t) => t.slug));
     const missing = DEFAULT_TAGS.filter((t) => !existingSlugs.has(t.slug));
 
@@ -148,9 +168,9 @@ export async function ensureDefaultTags(): Promise<void> {
       }),
     );
 
-    // 活动 & 赛事标签：校正分组 / 颜色 / 排序 / 名称
+    // 活动 & 赛事 + 通用 Game Jam：校正分组 / 颜色 / 排序 / 名称
     await Promise.all(
-      EVENT_SLUGS.map(async (slug) => {
+      [...EVENT_SLUGS, GAMEJAM_SLUG].map(async (slug) => {
         const def = DEFAULT_TAGS.find((t) => t.slug === slug);
         if (!def) return;
         const row = existing.find((t) => t.slug === slug);

@@ -1,28 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useLang } from "@/lib/i18n/LangProvider";
+import { t } from "@/lib/i18n/dict";
+import type { Lang } from "@/lib/i18n/config";
 
 /**
  * 彩蛋：悬停「n年」翻面成「m天」
  * 触屏点击也可翻转
+ *
+ * 语言和数字格式都用服务端传入的 lang + 固定千分位，
+ * 避免 Node / 浏览器 toLocaleString 结果不一致导致水合失败。
  */
+function formatCount(n: number): string {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 export default function ClubAgeStat({
   years,
   days,
+  lang,
 }: {
   years: number;
   days: number;
+  lang: Lang;
 }) {
   const [pinned, setPinned] = useState(false);
-  const { lang, t } = useLang();
   const isEn = lang === "en";
 
   const yearUnit = isEn ? "yrs" : "年";
   const dayUnit = isEn ? "days" : "天";
-  const label = t("stat.clubHistory");
+  const daysText = formatCount(days);
+  const label = t(lang, "stat.clubHistory");
   const aria = isEn
-    ? `Club history: ${years} yrs, about ${days.toLocaleString("en-US")} days`
+    ? `Club history: ${years} yrs, about ${daysText} days`
     : `社团历史 ${years} 年，约 ${days} 天`;
 
   return (
@@ -38,7 +48,7 @@ export default function ClubAgeStat({
           className="invisible block text-3xl font-bold whitespace-nowrap"
           aria-hidden
         >
-          {days.toLocaleString(isEn ? "en-US" : "zh-CN")}
+          {daysText}
           {dayUnit}
         </span>
         <div
@@ -49,7 +59,7 @@ export default function ClubAgeStat({
             {yearUnit}
           </div>
           <div className="club-age-face club-age-back text-3xl font-bold text-brand-orange whitespace-nowrap">
-            {days.toLocaleString(isEn ? "en-US" : "zh-CN")}
+            {daysText}
             {dayUnit}
           </div>
         </div>

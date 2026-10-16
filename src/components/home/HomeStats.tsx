@@ -33,7 +33,7 @@ export default async function HomeStats({lang = "cn"}: { lang?: Lang }) {
         <section className="py-10 border-y stats-gradient border-brand-border-subtle">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                    <ClubAgeStat years={years} days={days} />
+                    <ClubAgeStat years={years} days={days} lang={lang} />
                     <Stat value={`${memberCount}+`} label={t(lang, "stat.alumni")}/>
                     <Stat value={`${projectCount}+`} label={t(lang, "stat.totalWorks")}/>
                     <Stat value={`${releasedCount}`} label={t(lang, "stat.released")}/>

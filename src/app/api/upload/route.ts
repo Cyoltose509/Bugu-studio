@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToR2, MAX_FILE_SIZE } from "@/lib/utils/upload";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/utils/rate-limit";
+import { gifUploadError } from "@/lib/utils/gifDuration";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -30,10 +31,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "未提供文件" }, { status: 400 });
   }
 
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
   if (!allowedTypes.includes(file.type)) {
     return NextResponse.json(
-      { error: "仅支持 JPG/PNG/WebP 格式" },
+      { error: "仅支持 JPG/PNG/WebP/GIF 格式" },
       { status: 400 }
     );
   }
@@ -46,6 +47,10 @@ export async function POST(req: NextRequest) {
   }
 
   const bytes = await file.arrayBuffer();
+  const gifErr = gifUploadError(bytes, file.type);
+  if (gifErr) {
+    return NextResponse.json({ error: gifErr }, { status: 400 });
+  }
   const buffer = Buffer.from(bytes);
 
   // ── 检查 R2 配置 ──

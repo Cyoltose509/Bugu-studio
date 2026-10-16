@@ -627,6 +627,19 @@ select:focus-visible {
 .dark .engine-chip-gamemaker { color: #8fd65a; background-color: rgba(143, 214, 90, 0.14); }
 .dark .engine-chip-unreal { color: #5b9ad8; background-color: rgba(91, 154, 216, 0.14); }
 
+/* ── 活动&赛事标签色 ──────────────────────────────────────── */
+.event-chip-bugoo { color: #E38043; background-color: rgba(227, 128, 67, 0.12); }
+.event-chip-ggj { color: #3388BB; background-color: rgba(51, 136, 187, 0.12); }
+.event-chip-ciga { color: #E38043; background-color: rgba(227, 128, 67, 0.12); }
+.event-chip-cusga { color: #88C232; background-color: rgba(136, 194, 50, 0.12); }
+.event-chip-mengyabei { color: #25547A; background-color: rgba(37, 84, 122, 0.12); }
+
+.dark .event-chip-bugoo { color: #f09055; background-color: rgba(240, 144, 85, 0.16); }
+.dark .event-chip-ggj { color: #5ba8d8; background-color: rgba(91, 168, 216, 0.16); }
+.dark .event-chip-ciga { color: #f09055; background-color: rgba(240, 144, 85, 0.16); }
+.dark .event-chip-cusga { color: #a4d85a; background-color: rgba(164, 216, 90, 0.16); }
+.dark .event-chip-mengyabei { color: #6aa0c8; background-color: rgba(106, 160, 200, 0.16); }
+
 /* ═══════════════════════════════════════════════════════════════════
    主题切换：「阴阳割昏晓」— 斜向分界线扫过
    依赖 View Transitions API；无支持时 ThemeToggle 会瞬时切换。
@@ -808,8 +821,8 @@ html.graph-fullscreen footer {
   transform-style: preserve-3d;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.nav-logo-flip:hover .nav-logo-flip-inner,
-.nav-logo-flip:focus-visible .nav-logo-flip-inner {
+.nav-logo:hover .nav-logo-flip-inner,
+.nav-logo:focus-visible .nav-logo-flip-inner {
   transform: rotateY(180deg);
 }
 .nav-logo-flip-face {
@@ -835,7 +848,7 @@ html.graph-fullscreen footer {
   place-items: center;
   background: linear-gradient(135deg, #E38043, #F09055);
   color: #fff;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
@@ -843,4 +856,61 @@ html.graph-fullscreen footer {
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-logo-flip-inner { transition: none; }
+}
+
+/* 窄屏菜单「退出登录」：站点砖红兑进菜单藏青，压饱和、贴品牌 */
+.nav-menu-signout {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, #C62828 62%, #1a3a52);
+  color: #F0D8D4;
+}
+.nav-menu-signout:hover {
+  background: color-mix(in srgb, #C62828 74%, #1a3a52);
+  color: #F7E6E3;
+}
+.dark .nav-menu-signout {
+  background: color-mix(in srgb, #C62828 55%, #121a26);
+}
+.dark .nav-menu-signout:hover {
+  background: color-mix(in srgb, #C62828 68%, #121a26);
+}
+
+/* 首页最新作品：列数与露出张数跟 src/lib/layout/homeWorksGrid.ts 对齐。
+   首屏用 nth-child 裁两行；水合后客户端按同一断点卸载多余卡片。 */
+.home-latest-works-grid {
+  --home-works-cols: 1;
+  grid-template-columns: repeat(var(--home-works-cols), minmax(0, 1fr));
+}
+.home-latest-works-grid > :nth-child(n + 3) {
+  display: none;
+}
+@media (min-width: 520px) {
+  .home-latest-works-grid {
+    --home-works-cols: 2;
+  }
+  .home-latest-works-grid > :nth-child(-n + 4) {
+    display: block;
+  }
+  .home-latest-works-grid > :nth-child(n + 5) {
+    display: none;
+  }
+}
+@media (min-width: 768px) {
+  .home-latest-works-grid {
+    --home-works-cols: 3;
+  }
+  .home-latest-works-grid > :nth-child(-n + 6) {
+    display: block;
+  }
+  .home-latest-works-grid > :nth-child(n + 7) {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .home-latest-works-grid {
+    --home-works-cols: 4;
+  }
+  .home-latest-works-grid > :nth-child(-n + 8) {
+    display: block;
+  }
 }

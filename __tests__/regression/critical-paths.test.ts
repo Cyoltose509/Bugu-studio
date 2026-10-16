@@ -78,7 +78,7 @@ describe("回归 — 监控页面密码验证 (#P1-3)", () => {
     }
     // 至少有一个 401 或 429
     expect(
-      results.some((s) => s === 429 || s === 401)
+      results.some((s) => s === 429 || s === 401 || s === 403)
     ).toBe(true);
   });
 
@@ -103,7 +103,7 @@ describe("回归 — 监控页面密码验证 (#P1-3)", () => {
       body: JSON.stringify({ password: "wrong" }),
     });
     // 拒绝错误密码
-    expect([401, 429]).toContain(res.status);
+    expect([401, 403, 429]).toContain(res.status);
   });
 });
 

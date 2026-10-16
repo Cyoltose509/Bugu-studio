@@ -7,9 +7,11 @@
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 export default function ThemeToggle({ variant = "icon" }: { variant?: "icon" | "menu" }) {
   const { resolvedTheme, setTheme } = useTheme();
+  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
   const busyRef = useRef(false);
 
@@ -69,10 +71,10 @@ export default function ThemeToggle({ variant = "icon" }: { variant?: "icon" | "
       className={
         variant === "menu"
           ? "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
-          : "w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
+          : "w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors hover:bg-white/10"
       }
-      title={isDark ? "切换日间模式" : "切换夜间模式"}
-      aria-label={isDark ? "切换日间模式" : "切换夜间模式"}
+      title={isDark ? t("nav.themeToLight") : t("nav.themeToDark")}
+      aria-label={isDark ? t("nav.themeToLight") : t("nav.themeToDark")}
     >
       {isDark ? (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5A623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -87,12 +89,12 @@ export default function ThemeToggle({ variant = "icon" }: { variant?: "icon" | "
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
         </svg>
       ) : (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
         </svg>
       )}
       {variant === "menu" && (
-        <span>{isDark ? "日间模式" : "夜间模式"}</span>
+        <span>{isDark ? t("nav.themeLight") : t("nav.themeDark")}</span>
       )}
     </button>
   );

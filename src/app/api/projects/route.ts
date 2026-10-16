@@ -20,6 +20,7 @@ import { apiResponse, apiError, generateSlug, getPagination } from "@/lib/utils"
 import { invalidateCache } from "@/lib/db/cache";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
+import { PROJECT_DATE_ORDER_BY } from "@/lib/works/date-sort";
 
 // GET /api/projects
 export async function GET(request: NextRequest) {
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
         where,
         skip,
         take,
-        orderBy: [{ publishedAt: "desc" }],
+        orderBy: PROJECT_DATE_ORDER_BY,
         select: {
           id: true,
           slug: true,

@@ -10,6 +10,7 @@ import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { isMockDataEnabled, mockListProjects } from "@/lib/mock/frontend-data";
 import { cachedQuery } from "@/lib/db/cache";
 import { sortByNameAndSlice } from "@/lib/works/name-sort";
+import { PROJECT_DATE_ORDER_BY } from "@/lib/works/date-sort";
 import { PROJECT_SELECT } from "@/lib/works/project-select";
 
 const PAGE_SIZE = 16; // 4x4
@@ -82,14 +83,14 @@ export async function GET(request: NextRequest) {
     // 名称排序例外：数据库排不出拼音序，改成取全量后在内存里排（见 name-sort.ts）
     const orderBy: any = sort === "likes"
         ? [{ likes: { _count: "desc" } }, { id: "desc" }]
-        : [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
+        : PROJECT_DATE_ORDER_BY;
 
     const wantTotal = !cursor && searchParams.get("total") === "1";
     const scopeKey = `${types || ''}:${yearNum || ''}:${tag || ''}:${q || ''}`;
 
     // 首屏带 total 时并行；翻页只查列表
     // 列表与总数都走缓存：来回切换筛选/排序时不必每次都打数据库
-    const listKey = `works:api:v1:${scopeKey}:${sort}:${cursor || ''}`;
+    const listKey = `works:api:v2:${scopeKey}:${sort}:${cursor || ''}`;
     const [projects, total] = await Promise.all([
         sort === "name"
             ? cachedQuery(`works:api:byname:${scopeKey}`, () =>

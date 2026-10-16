@@ -100,9 +100,9 @@ const TYPE_DESC: Record<string, { cn: string; en: string }> = {
     OFFICIAL_RELEASE: { cn: "正式上架", en: "Official Release" },
 };
 const ACT_LABELS: Record<string, { cn: string; en: string }> = {
-    COMPETITION: { cn: "比赛", en: "Competition" },
+    COMPETITION: { cn: "Game Jam", en: "Game Jam" },
     COURSE: { cn: "公开课", en: "Course" },
-    GENERAL: { cn: "普通活动", en: "Event" },
+    GENERAL: { cn: "大事件", en: "Major Event" },
     MEETING: { cn: "例会", en: "Meeting" },
 };
 const ACT_ORDER = ["COMPETITION", "COURSE", "GENERAL", "MEETING"] as const;
@@ -302,9 +302,9 @@ function LaurelBranch({flip = false, className = ""}: { flip?: boolean; classNam
  */
 function LaurelBracket({children, gap = 10}: { children: React.ReactNode; gap?: number }) {
     return (
-        <div className="flex items-stretch justify-center w-full" style={{columnGap: gap}}>
+        <div className="inline-flex items-stretch justify-center max-w-full" style={{columnGap: gap}}>
             <LaurelBranch className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
-            <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center py-1.5">
+            <div className="min-w-0 flex flex-col items-center justify-center text-center py-1.5">
                 {children}
             </div>
             <LaurelBranch flip className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
@@ -916,7 +916,7 @@ function YearNewspaper({
                                         <div className="border-2 np-border-l px-4 py-5 text-center relative overflow-hidden"
                                              style={{background: "var(--np-award-bg)"}}>
                                             <div className={Q.sidePanelTitle}>{t(lang, "history.honors")}</div>
-                                            <div className="flex flex-col gap-5">
+                                            <div className="flex flex-col items-center gap-5">
                                                 {awardEntries.map((entry, idx) => (
                                                     <LaurelBracket key={`${entry.projectId}-${idx}`} gap={10}>
                                                         <Link href={`/works/${entry.slug}`}

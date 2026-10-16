@@ -33,23 +33,39 @@ import {
 } from "./uploadLimits";
 import { DEFAULT_LANG, type Lang } from "../i18n/config";
 import { t } from "../i18n/dict";
+import { GIF_MAX_SECONDS, readGifDurationSeconds } from "./gifDuration";
 
 export { UPLOAD_LIMIT_BYTES, UPLOAD_LIMIT_MB, AVATAR_LIMIT_BYTES, formatMB };
 
-export const ACCEPTED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
-export const ACCEPT_ATTR = "image/jpeg,image/png,image/webp";
+export const ACCEPTED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+export const ACCEPT_ATTR = "image/jpeg,image/png,image/webp,image/gif";
 
 export function isAcceptedImage(file: File): boolean {
   return (ACCEPTED_MIME as readonly string[]).includes(file.type);
 }
 
 /** 上传前的类型/体积预检，抛本地化错误 */
-export function assertImageFile(file: File, lang: Lang = DEFAULT_LANG): void {
+export async function assertImageFile(file: File, lang: Lang = DEFAULT_LANG): Promise<void> {
   if (!file.type.startsWith("image/")) {
     throw new Error(t(lang, "upload.typeErr"));
   }
   if (file.type === "image/gif") {
-    throw new Error(t(lang, "upload.gifErr"));
+    if (file.size > UPLOAD_LIMIT_BYTES) {
+      throw new Error(
+        t(lang, "upload.tooLarge", {
+          size: formatMB(file.size),
+          limit: formatMB(UPLOAD_LIMIT_BYTES),
+        }),
+      );
+    }
+    const duration = readGifDurationSeconds(await file.arrayBuffer());
+    if (duration == null) {
+      throw new Error(t(lang, "upload.gifParseErr"));
+    }
+    if (duration > GIF_MAX_SECONDS) {
+      throw new Error(t(lang, "upload.gifTooLong", { n: GIF_MAX_SECONDS, seconds: duration.toFixed(1) }));
+    }
+    return;
   }
   if (!isAcceptedImage(file)) {
     throw new Error(t(lang, "upload.formatErr", { type: file.type || "未知" }));
@@ -174,6 +190,18 @@ export async function fitWithinLimit(
   limit: number = UPLOAD_LIMIT_BYTES,
   lang: Lang = DEFAULT_LANG,
 ): Promise<FitResult> {
+  if (file.type === "image/gif") {
+    if (file.size <= limit) {
+      return { file, compressed: false, originalSize: file.size };
+    }
+    throw new Error(
+      t(lang, "upload.tooLarge", {
+        size: formatMB(file.size),
+        limit: formatMB(limit),
+      }),
+    );
+  }
+
   if (file.size <= limit) {
     return { file, compressed: false, originalSize: file.size };
   }
@@ -288,7 +316,7 @@ export async function uploadImage(
   file: File,
   { endpoint, type, limit = UPLOAD_LIMIT_BYTES, signal, lang = DEFAULT_LANG }: UploadOptions,
 ): Promise<UploadResult> {
-  assertImageFile(file, lang);
+  await assertImageFile(file, lang);
 
   const fitted = await fitWithinLimit(file, limit, lang);
 

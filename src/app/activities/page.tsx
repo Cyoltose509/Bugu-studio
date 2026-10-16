@@ -10,9 +10,11 @@ import { cachedQuery } from "@/lib/db/cache";
 import { ActivityType, ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-data";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
+import { auth } from "@/lib/auth/auth";
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
@@ -81,17 +83,16 @@ function ActivityCard({ a, lang, badge, countdown }: {
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
-          {/* 类型标签 + 状态 */}
-          <div className="absolute top-2 left-2 flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
-              {activityTypeLabel(lang, a.type)}
-            </span>
-            {badge && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80 text-white backdrop-blur-sm">{STATUS_LABEL[badge][lang]}</span>
-            )}
-          </div>
-          {countdown && (
-            <div className="absolute top-2 right-2">{countdown}</div>
+          <ActivityTypeCorner type={a.type} label={activityTypeLabel(lang, a.type)} />
+          {(badge || countdown) && (
+            <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+              {badge && (
+                <span className={`text-xs px-2 py-0.5 rounded-full text-white backdrop-blur-sm ${
+                  badge === "past" ? "bg-black/50" : "bg-green-500/80"
+                }`}>{STATUS_LABEL[badge][lang]}</span>
+              )}
+              {countdown}
+            </div>
           )}
           {a.meetingUrl && (
             <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
@@ -146,7 +147,7 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-            {/* 状态角标 — 右上 */}
+            <ActivityTypeCorner type={a.type} label={activityTypeLabel(lang, a.type)} />
             <div className="absolute top-4 right-4">
               <span className={`text-xs px-3 py-1 rounded-full text-white backdrop-blur-sm ${statusBadge.cls}`}>
                 {statusBadge.label}
@@ -154,12 +155,6 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-              <div className="mb-2">
-              <span className="text-xs px-2 py-1 rounded-full bg-white/20 backdrop-blur">
-                {activityTypeLabel(lang, a.type)}
-              </span>
-              </div>
-
               <h2 className="text-2xl font-bold mb-2">
                 {a.title}
               </h2>
@@ -220,6 +215,8 @@ function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
 export default async function ActivitiesPage() {
   const now = new Date();
   const lang = await getLang();
+  const session = await auth();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   const raw = isMockDataEnabled()
     ? mockActivitiesBuckets()
@@ -284,9 +281,21 @@ export default async function ActivitiesPage() {
       <div className="container mx-auto px-4 py-10 animate-fade-in">
 
         {/* 页面头 */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.activities.title")}</h1>
-          <p className="mt-2 text-brand-text-secondary">{t(lang, "activities.intro")}</p>
+        <div className="mb-10 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.activities.title")}</h1>
+            <p className="mt-2 text-brand-text-secondary">{t(lang, "activities.intro")}</p>
+          </div>
+          {isAdmin && (
+            <Link
+              href="/admin/activities/create"
+              className="btn-primary shrink-0 w-11 h-11 rounded-xl text-[1.75rem] font-light leading-none flex items-center justify-center"
+              title={t(lang, "activities.create")}
+              aria-label={t(lang, "activities.create")}
+            >
+              +
+            </Link>
+          )}
         </div>
 
         {!hasAny && (

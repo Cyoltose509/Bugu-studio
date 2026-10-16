@@ -6,6 +6,7 @@ import { useLang } from "@/lib/i18n/LangProvider";
 import type { DictKey } from "@/lib/i18n/dict";
 import MentionEditor from "@/components/ui/MentionEditor";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
+import EventTagIcon from "@/components/tags/EventTagIcon";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import {
@@ -15,6 +16,7 @@ import {
   compressionNote,
 } from "@/lib/utils/clientUpload";
 import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
+import { getEventChipClass, getEventColor, isEventTagSlug } from "@/lib/tags/event-tags";
 import { tagDisplayName, tagGroupDisplayName } from "@/lib/tags/tag-names";
 
 // ── 作品类型 ──
@@ -302,7 +304,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
     setCoverError("");
     setCoverNote("");
     try {
-      assertImageFile(file, lang);
+      await assertImageFile(file, lang);
     } catch (err: any) {
       setCoverError(err.message);
       return;
@@ -334,7 +336,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
     setScreenshotError("");
     setScreenshotNote("");
     try {
-      assertImageFile(file, lang);
+      await assertImageFile(file, lang);
     } catch (err: any) {
       setScreenshotError(err.message);
       return;
@@ -358,6 +360,19 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
   function removeScreenshot(index: number) {
     setScreenshots((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  const screenshotDragFrom = useRef<number | null>(null);
+  const [screenshotDragOver, setScreenshotDragOver] = useState<number | null>(null);
+
+  function moveScreenshot(from: number, to: number) {
+    if (from === to) return;
+    setScreenshots((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
   }
 
   // ── 链接 ──
@@ -708,8 +723,40 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         {screenshots.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             {screenshots.map((img, i) => (
-              <div key={i} className="relative group rounded-lg overflow-hidden border border-brand-border-subtle">
-                <img src={img.url} alt={img.altText || t("form.screenshotAlt", { n: i + 1 })} className="w-full aspect-video object-cover" />
+              <div
+                key={`${img.url}-${i}`}
+                draggable
+                onDragStart={(e) => {
+                  screenshotDragFrom.current = i;
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(i));
+                  e.stopPropagation();
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (screenshotDragOver !== i) setScreenshotDragOver(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const from = screenshotDragFrom.current;
+                  screenshotDragFrom.current = null;
+                  setScreenshotDragOver(null);
+                  if (from == null) return;
+                  moveScreenshot(from, i);
+                }}
+                onDragEnd={() => {
+                  screenshotDragFrom.current = null;
+                  setScreenshotDragOver(null);
+                }}
+                className={`relative group rounded-lg overflow-hidden border cursor-grab active:cursor-grabbing ${
+                  screenshotDragOver === i
+                    ? "border-brand-blue ring-1 ring-brand-blue"
+                    : "border-brand-border-subtle"
+                }`}
+              >
+                <img src={img.url} alt={img.altText || t("form.screenshotAlt", { n: i + 1 })} className="w-full aspect-video object-cover pointer-events-none" />
                 <button type="button" onClick={() => removeScreenshot(i)}
                   className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
                   title={t("form.deleteScreenshot")}>×</button>
@@ -726,6 +773,9 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
           {screenshotError && <p className="text-xs mt-1 text-brand-orange">{screenshotError}</p>}
           {screenshotNote && <p className="text-xs mt-1 text-brand-text-muted">{screenshotNote}</p>}
           <p className="text-xs mt-1 text-brand-text-muted">{t("form.screenshotLimit")}</p>
+          {screenshots.length > 1 && (
+            <p className="text-xs mt-1 text-brand-text-muted">{t("form.screenshotReorder")}</p>
+          )}
         </div>
         </ImageDropZone>
       </section>
@@ -884,7 +934,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
               (acc[key] ??= []).push(tag);
               return acc;
             }, {});
-            const groupOrder = ["引擎", "大类", "要素", "其他"];
+            const groupOrder = ["引擎", "大类", "要素", "活动&赛事", "其他"];
             const sortedKeys = Object.keys(grouped).sort((a, b) => {
               const ia = groupOrder.indexOf(a), ib = groupOrder.indexOf(b);
               if (ia === -1 && ib === -1) return a.localeCompare(b);
@@ -897,22 +947,21 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                 <div className="flex flex-wrap gap-2">
                   {sortTagsEngineFirst(tags).map((tag) => {
                     const active = selectedTags.includes(tag.id);
-                    const engine = isEngineTagSlug(tag.slug);
-                    const color = getEngineColor(tag.slug) || tag.color || "#88C232";
+                    const branded = isEngineTagSlug(tag.slug) || isEventTagSlug(tag.slug);
+                    const color = getEngineColor(tag.slug) || getEventColor(tag.slug) || tag.color || "#88C232";
                     return (
                       <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                        className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer ${
-                          engine
-                            ? `rounded-full font-medium ${getEngineChipClass(tag.slug)}`
-                            : "rounded-full"
+                        className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer rounded-full ${
+                          branded ? `font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}` : ""
                         } ${active ? "ring-2 ring-offset-1 opacity-100" : "opacity-60 hover:opacity-100"}`}
                         style={
-                          engine
+                          branded
                             ? { ["--tw-ring-color" as string]: "currentColor" }
                             : { color, backgroundColor: `${color}18`, ["--tw-ring-color" as string]: color }
                         }
                         >
-                        {engine && <EngineTagIcon slug={tag.slug} />}
+                        {isEngineTagSlug(tag.slug) && <EngineTagIcon slug={tag.slug} />}
+                        {isEventTagSlug(tag.slug) && <EventTagIcon slug={tag.slug} />}
                         {tagDisplayName(tag.slug, tag.name, lang)}
                       </button>
                     );
@@ -928,22 +977,21 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     <div className="flex flex-wrap gap-2">
                       {sortTagsEngineFirst(grouped[group]).map((tag) => {
                         const active = selectedTags.includes(tag.id);
-                        const engine = isEngineTagSlug(tag.slug);
-                        const color = getEngineColor(tag.slug) || tag.color || "#88C232";
+                        const branded = isEngineTagSlug(tag.slug) || isEventTagSlug(tag.slug);
+                        const color = getEngineColor(tag.slug) || getEventColor(tag.slug) || tag.color || "#88C232";
                         return (
                           <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
-                            className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer ${
-                              engine
-                                ? `rounded-full font-medium ${getEngineChipClass(tag.slug)}`
-                                : "rounded-full"
+                            className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer rounded-full ${
+                              branded ? `font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}` : ""
                             } ${active ? "ring-2 ring-offset-1 opacity-100" : "opacity-60 hover:opacity-100"}`}
                             style={
-                              engine
+                              branded
                                 ? { ["--tw-ring-color" as string]: "currentColor" }
                                 : { color, backgroundColor: `${color}18`, ["--tw-ring-color" as string]: color }
                             }
                           >
-                            {engine && <EngineTagIcon slug={tag.slug} />}
+                            {isEngineTagSlug(tag.slug) && <EngineTagIcon slug={tag.slug} />}
+                            {isEventTagSlug(tag.slug) && <EventTagIcon slug={tag.slug} />}
                             {tagDisplayName(tag.slug, tag.name, lang)}
                           </button>
                         );

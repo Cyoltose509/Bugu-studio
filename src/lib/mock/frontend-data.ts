@@ -5,6 +5,7 @@
 import fs from "fs";
 import path from "path";
 import { nameSortKey } from "@/lib/works/name-sort";
+import { compareProjectsByDate } from "@/lib/works/date-sort";
 import { extractAwardYear, groupAwardsByYear } from "@/lib/history/awards";
 
 export type MockSnapshot = {
@@ -98,15 +99,7 @@ function sortProjects(list: any[], sort: string) {
         String(b.id).localeCompare(String(a.id)),
     );
   } else {
-    arr.sort((a, b) => {
-      const ya = a.developYear ?? 0;
-      const yb = b.developYear ?? 0;
-      if (yb !== ya) return yb - ya;
-      const pa = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const pb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      if (pb !== pa) return pb - pa;
-      return String(b.id).localeCompare(String(a.id));
-    });
+    arr.sort(compareProjectsByDate);
   }
   return arr;
 }
@@ -228,21 +221,19 @@ export function mockAdjacentProjects(slug: string, sort = "date") {
   };
 }
 
-export function mockHomeActivities(take = 3) {
+export function mockHomeActivities(take = 6) {
   const list = getMockSnapshot().activities || [];
   const now = Date.now();
-  return list
-    .filter((a) => {
-      const end = a.endTime ? new Date(a.endTime).getTime() : 0;
-      const start = a.startTime ? new Date(a.startTime).getTime() : 0;
-      return end >= now || start >= now;
-    })
-    .sort(
-      (a, b) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-    )
-    .slice(0, take)
-    .map((a) => withDates(a, ["startTime", "endTime", "themeRevealedAt"]));
+  const dated = list.map((a) => withDates(a, ["startTime", "endTime", "themeRevealedAt"]));
+  const live = dated
+    .filter((a) => a.status === "PUBLISHED" && a.endTime.getTime() >= now)
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+    .slice(0, Math.min(3, take));
+  const past = dated
+    .filter((a) => a.status === "ARCHIVED" || a.endTime.getTime() < now)
+    .sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
+    .slice(0, Math.max(0, take - live.length));
+  return [...live, ...past];
 }
 
 export function mockActivitiesBuckets() {

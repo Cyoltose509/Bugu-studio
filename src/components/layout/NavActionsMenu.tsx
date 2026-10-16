@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
+import { useLang } from "@/lib/i18n/LangProvider";
 
 type Props = {
   canSubmit?: boolean;
@@ -27,6 +28,7 @@ export default function NavActionsMenu({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
+  const { t } = useLang();
 
   useEffect(() => { setOpen(false); }, [pathname]);
 
@@ -50,14 +52,14 @@ export default function NavActionsMenu({
   const close = useCallback(() => setOpen(false), []);
 
   const items: Item[] = [];
-  if (canSubmit) items.push({ href: "/submit", label: "提交作品", primary: true });
-  if (isAdmin) items.push({ href: "/admin", label: "管理后台" });
+  if (canSubmit) items.push({ href: "/submit", label: t("nav.submit"), primary: true });
+  if (isAdmin) items.push({ href: "/admin", label: t("nav.admin") });
   if (isLoggedIn) {
-    items.push({ href: "/profile", label: "个人中心" });
-    items.push({ href: "/auth/signout", label: "退出登录", danger: true });
+    items.push({ href: "/profile", label: t("nav.profile") });
+    items.push({ href: "/auth/signout", label: t("nav.signOut"), danger: true });
   } else {
-    items.push({ href: "/auth/login", label: "登录" });
-    items.push({ href: "/auth/register", label: "注册", primary: true });
+    items.push({ href: "/auth/login", label: t("nav.login") });
+    items.push({ href: "/auth/register", label: t("nav.register"), primary: true });
   }
 
   return (
@@ -66,7 +68,7 @@ export default function NavActionsMenu({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="w-9 h-9 flex items-center justify-center rounded-lg text-white/85 hover:text-white hover:bg-white/10 transition-colors"
-        aria-label={open ? "关闭菜单" : "打开菜单"}
+        aria-label={open ? t("nav.menuClose") : t("nav.menuOpen")}
         aria-expanded={open}
         aria-haspopup="menu"
       >
@@ -80,7 +82,7 @@ export default function NavActionsMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-[calc(100%+6px)] z-[60] w-44 rounded-xl border border-white/10 bg-[#1a3a52] dark:bg-[#121a26] shadow-xl py-1.5 overflow-hidden"
+          className="absolute right-0 top-[calc(100%+6px)] z-[60] w-44 rounded-xl border border-white/10 bg-[#1a3a52] dark:bg-[#121a26] shadow-xl pt-1.5 overflow-hidden"
         >
           <div className="mb-1 border-b border-white/10 pb-1">
             <ThemeToggle variant="menu" />
@@ -93,7 +95,7 @@ export default function NavActionsMenu({
               onClick={close}
               className={`block px-3.5 py-2.5 text-sm font-medium transition-colors ${
                 item.danger
-                  ? "text-red-300 hover:bg-red-500/15 hover:text-red-200"
+                  ? "nav-menu-signout"
                   : item.primary
                   ? "text-brand-orange hover:bg-white/[0.06]"
                   : "text-white/85 hover:bg-white/[0.06] hover:text-white"

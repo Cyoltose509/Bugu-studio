@@ -1,6 +1,6 @@
 /**
  * 首页 - 近期活动区块
- * 显示最多 3 个进行中/即将开始的活动
+ * 进行中/即将开始在前，已结束的也展示并降调
  */
 
 import Link from "next/link";
@@ -13,6 +13,7 @@ import {t, type DictKey} from "@/lib/i18n/dict";
 import type {Lang} from "@/lib/i18n/config";
 
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
+import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
@@ -25,21 +26,35 @@ const ACTIVITY_TYPE_KEY: Record<string, DictKey> = {
 
 async function getHomeActivities() {
   if (isMockDataEnabled()) {
-    return mockHomeActivities(3);
+    return mockHomeActivities(6);
   }
   const now = new Date();
   try {
     return await cachedQuery(
-      "home:activities",
-      () =>
-        prisma.activity.findMany({
-          where: {
-            status: ActivityStatus.PUBLISHED,
-            OR: [{ endTime: { gte: now } }, { startTime: { gte: now } }],
-          },
-          orderBy: [{ startTime: "asc" }],
-          take: 3,
-        }),
+      "home:activities:v2",
+      async () => {
+        const [live, past] = await Promise.all([
+          prisma.activity.findMany({
+            where: {
+              status: ActivityStatus.PUBLISHED,
+              endTime: { gte: now },
+            },
+            orderBy: { startTime: "asc" },
+            take: 3,
+          }),
+          prisma.activity.findMany({
+            where: {
+              OR: [
+                { status: ActivityStatus.PUBLISHED, endTime: { lt: now } },
+                { status: ActivityStatus.ARCHIVED },
+              ],
+            },
+            orderBy: { endTime: "desc" },
+            take: 3,
+          }),
+        ]);
+        return [...live, ...past];
+      },
       300,
     );
   } catch {
@@ -68,19 +83,21 @@ export default async function HomeActivities({lang = "cn"}: { lang?: Lang }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {activities.map(a => {
           const isOngoing = now >= a.startTime && now <= a.endTime;
+          const isPast = a.status === ActivityStatus.ARCHIVED || now > a.endTime;
           const coverSrc = a.coverImage || DEFAULT_COVER;
           return (
             <Link key={a.id} href={`/activities/${a.id}`} className="group block">
-              <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all">
+              <div className={`bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all ${isPast ? "opacity-55" : ""}`}>
                 {/* 封面 */}
                 <div className="relative aspect-video overflow-hidden bg-brand-surface">
-                  <Image src={coverSrc} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, 33vw" />
-                  <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
-                      {typeLabel(a.type)}
-                    </span>
-                    {isOngoing && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80 text-white backdrop-blur-sm">{t(lang, "activity.ongoing")}</span>}
-                  </div>
+                  <Image src={coverSrc} alt={a.title} fill className={`object-cover group-hover:scale-105 transition-transform duration-300 ${isPast ? "grayscale-[40%]" : ""}`} sizes="(max-width: 768px) 100vw, 33vw" />
+                  <ActivityTypeCorner type={a.type} label={typeLabel(a.type)} />
+                  {(isOngoing || isPast) && (
+                    <div className="absolute top-2 right-2">
+                      {isOngoing && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80 text-white backdrop-blur-sm">{t(lang, "activity.ongoing")}</span>}
+                      {isPast && <span className="text-xs px-2 py-0.5 rounded-full bg-black/50 text-white/90 backdrop-blur-sm">{t(lang, "activity.past")}</span>}
+                    </div>
+                  )}
                   {a.meetingUrl && (
                     <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">{t(lang, "activity.online")}</div>
                   )}

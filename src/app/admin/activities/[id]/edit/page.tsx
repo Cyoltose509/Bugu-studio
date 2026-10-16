@@ -5,25 +5,16 @@
 import { Metadata } from "next";
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
-import { notFound, redirect } from "next/navigation";
-import { updateActivity } from "../../actions";
-import { ActivityType, ActivityStatus } from "@prisma/client";
-import CoverUploadInput from "@/components/activities/CoverUploadInput";
-import LocationPresetInput from "@/components/activities/LocationPresetInput";
-import MeetingTalksEditor from "@/components/activities/meeting/MeetingTalksEditor";
-import { SubmitButton } from "@/components/ui/SubmitButton";
-import TrophyIcon from "@/components/icons/TrophyIcon";
-import DescriptionEditor from "@/components/admin/DescriptionEditor";
-import { DEFAULT_ACTIVITY_LOCATION } from "@/lib/activities/constants";
+import { notFound } from "next/navigation";
 import { getActivityShowcase } from "@/lib/activities/showcase-data";
-import ShowcaseEditor from "@/components/activities/showcase/ShowcaseEditor";
 import { formatActivityDateTime } from "@/lib/activities/datetime";
+import EditActivityForm from "./EditActivityForm";
+import type { TalkDraft } from "@/components/activities/meeting/MeetingTalksEditor";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-/* React.cache 去重：generateMetadata 和页面共享同一查询 */
 const getActivity = cache(async (id: string) => {
   return prisma.activity.findUnique({
     where: { id },
@@ -55,169 +46,51 @@ export default async function EditActivityPage({ params }: PageProps) {
   const activity = await getActivity(id);
   if (!activity) notFound();
 
-  const [showcase, projects] = activity.type === "GENERAL" ? await Promise.all([
+  const [showcase, projects] = await Promise.all([
     getActivityShowcase(activity.id, activity.slug),
     prisma.project.findMany({ where: { status: "PUBLISHED" }, select: { id: true, title: true, slug: true }, orderBy: { title: "asc" } }),
-  ]) : [null, []];
+  ]);
 
   const fmt = formatActivityDateTime;
+  const talks: TalkDraft[] = activity.talks.map((t) => ({
+    id: t.id,
+    speaker: t.speaker,
+    title: t.title,
+    talkType: (t as { talkType?: string }).talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+    bvId: t.bvId || "",
+    userId: t.userId || null,
+    linkedLabel: t.userId
+      ? (t as { user?: { member?: { displayName: string }; name?: string | null } }).user?.member
+        ? `已关联成员 · ${(t as { user?: { member?: { displayName: string } } }).user?.member?.displayName}`
+        : `已关联用户 · ${(t as { user?: { name?: string | null } }).user?.name || t.userId}`
+      : null,
+  }));
 
   return (
-    <div className="animate-fade-in space-y-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <a href="/admin/activities" className="btn-secondary px-3 py-1.5 rounded-lg text-sm">← 返回列表</a>
-        <h1 className="text-2xl font-bold text-brand-navy">编辑活动</h1>
-      </div>
-
-      <form
-        action={async (formData: FormData) => {
-          "use server";
-          await updateActivity(id, formData);
-          redirect("/admin/activities");
+    <div className="animate-fade-in">
+      <EditActivityForm
+        activity={{
+          id: activity.id,
+          title: activity.title,
+          type: activity.type,
+          status: activity.status,
+          summary: activity.summary || "",
+          description: activity.description || "",
+          location: activity.location || "",
+          meetingUrl: activity.meetingUrl || "",
+          coverImage: activity.coverImage || "",
+          startTime: fmt(activity.startTime),
+          endTime: fmt(activity.endTime),
+          maxParticipants: activity.maxParticipants || "",
+          talkSubmissionOpen: activity.talkSubmissionOpen,
+          theme: activity.theme || "",
+          themeRevealedAt: activity.themeRevealedAt ? fmt(activity.themeRevealedAt) : "",
+          maxTeamSize: activity.maxTeamSize ?? 6,
         }}
-        className="bg-card rounded-xl border p-6 space-y-5 shadow-sm border-brand-border-subtle"
-      >
-        {/* 标题 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">标题 *</label>
-          <input name="title" defaultValue={activity.title} required
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-        </div>
-
-        {/* 类型 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">活动类型</label>
-          <select name="type" defaultValue={activity.type}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading bg-card">
-            <option value="MEETING">例会</option>
-            <option value="COURSE">公开课</option>
-            <option value="COMPETITION">比赛 / Game Jam</option>
-            <option value="GENERAL">普通活动</option>
-          </select>
-        </div>
-
-        {/* 状态 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">状态</label>
-          <select name="status" defaultValue={activity.status}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading bg-card">
-            <option value="DRAFT">草稿</option>
-            <option value="PUBLISHED">已发布</option>
-            <option value="ARCHIVED">已归档</option>
-          </select>
-        </div>
-
-        {/* 简介 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">简介</label>
-          <input name="summary" defaultValue={activity.summary || ""} maxLength={200}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-        </div>
-
-        {/* 描述 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">详细描述</label>
-          <DescriptionEditor defaultValue={activity.description || ""} />
-        </div>
-
-        {/* 封面 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">封面</label>
-          <CoverUploadInput defaultValue={activity.coverImage || undefined} />
-        </div>
-
-        {/* 地点 */}
-        <LocationPresetInput defaultValue={activity.location || DEFAULT_ACTIVITY_LOCATION} />
-
-        {/* 线上链接 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">线上链接 <span className="text-xs text-brand-text-muted">(腾讯会议等，可选)</span></label>
-          <input name="meetingUrl" type="url" defaultValue={activity.meetingUrl || ""} placeholder="https://meeting.tencent.com/…"
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-        </div>
-
-        {/* 开始 + 结束时间 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm mb-1.5 text-brand-text-body">开始时间</label>
-            <input name="startTime" type="datetime-local" defaultValue={fmt(activity.startTime)} required
-              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-          </div>
-          <div>
-            <label className="block text-sm mb-1.5 text-brand-text-body">结束时间</label>
-            <input name="endTime" type="datetime-local" defaultValue={fmt(activity.endTime)} required
-              className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-          </div>
-        </div>
-
-        {/* 最大人数 */}
-        <div>
-          <label className="block text-sm mb-1.5 text-brand-text-body">最大参与人数</label>
-          <input name="maxParticipants" type="number" min={1} defaultValue={activity.maxParticipants || ""}
-            className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading" />
-        </div>
-
-        {/* 开放报名 */}
-        <div className="flex items-center gap-2">
-          <input name="registrationOpen" type="checkbox" defaultChecked={activity.registrationOpen}
-            className="w-4 h-4 accent-brand-blue" />
-          <label className="text-sm text-brand-text-body">开放报名</label>
-        </div>
-        <div className="flex items-center gap-2">
-          <input name="talkSubmissionOpen" type="checkbox" defaultChecked={activity.talkSubmissionOpen}
-            className="w-4 h-4 accent-brand-blue" />
-          <label className="text-sm text-brand-text-body">开放报名分享</label>
-        </div>
-
-        {/* Game Jam 设置（仅 COMPETITION 类型显示） */}
-        {activity.type === "COMPETITION" && (
-        <div className="p-4 rounded-lg border border-[#FFF3E0] bg-[#FFFDF7]">
-          <p className="text-sm font-medium mb-3 text-brand-orange"><TrophyIcon size={15} className="mr-1 align-[-0.15em]" />Game Jam 设置</p>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs mb-1 text-brand-text-secondary">比赛题目</label>
-              <textarea name="theme" rows={3} defaultValue={activity.theme || ""}
-                className="w-full rounded-lg border px-3 py-2 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
-            </div>
-            <div>
-              <label className="block text-xs mb-1 text-brand-text-secondary">题目公布时间</label>
-              <input name="themeRevealedAt" type="datetime-local" defaultValue={activity.themeRevealedAt ? fmt(activity.themeRevealedAt) : ""}
-                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
-            </div>
-            <div>
-              <label className="block text-xs mb-1 text-brand-text-secondary">每队最大人数 <span className="text-xs text-brand-text-muted">(默认 6，缩小后将自动踢出超限成员)</span></label>
-              <input name="maxTeamSize" type="number" min={1} max={50} defaultValue={activity.maxTeamSize ?? 6}
-                className="w-32 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-orange border-brand-border-subtle text-brand-text-heading" />
-            </div>
-          </div>
-        </div>
-        )}
-
-        <div className="pt-2 flex gap-3">
-          <SubmitButton type="submit" className="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm" pendingText="保存中...">保存修改</SubmitButton>
-          <a href="/admin/activities" className="btn-secondary px-6 py-2.5 rounded-lg text-sm">取消</a>
-        </div>
-      </form>
-
-      {/* 分享条目编辑器只在「这次活动真的有分享」时出现：例会、或已勾选开放报名分享、或已录入过条目 */}
-      {(activity.type === "MEETING" || activity.talkSubmissionOpen || activity.talks.length > 0) && (
-        <MeetingTalksEditor
-          activityId={activity.id}
-          initialTalks={activity.talks.map((t) => ({
-            id: t.id,
-            speaker: t.speaker,
-            title: t.title,
-            bvId: t.bvId || "",
-            userId: t.userId || null,
-            linkedLabel: t.userId
-              ? (t as any).user?.member
-                ? `已关联成员 · ${(t as any).user.member.displayName}`
-                : `已关联用户 · ${(t as any).user?.name || t.userId}`
-              : null,
-          }))}
-        />
-      )}
-      {activity.type === "GENERAL" && <ShowcaseEditor activityId={activity.id} initial={showcase} projects={projects} />}
+        talks={talks}
+        showcase={showcase}
+        projects={projects}
+      />
     </div>
   );
 }

@@ -7,7 +7,6 @@ import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import Link from "next/link";
 import { ProjectStatus } from "@prisma/client";
-import MonitoringPasswordCard from "@/components/admin/MonitoringPasswordCard";
 import { isMockDataEnabled, mockAdminDashboard } from "@/lib/mock/frontend-data";
 
 export const dynamic = "force-dynamic";
@@ -116,17 +115,19 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="animate-fade-in space-y-8">
-      <h1 className="text-2xl font-bold text-brand-navy">仪表盘</h1>
+    <div className="animate-fade-in flex flex-col gap-8">
+      <div>
+        <h1 className="text-2xl font-bold text-brand-navy">仪表盘</h1>
 
-      {offline && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-          当前数据库不可达（或已启用本地 Mock）。以下为本地估算数据，写入类操作仍需连接正式库。
-        </div>
-      )}
+        {offline && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+            当前数据库不可达（或已启用本地 Mock）。以下为本地估算数据，写入类操作仍需连接正式库。
+          </div>
+        )}
+      </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="order-2 [@media(orientation:portrait)]:order-3 grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
           <Link
             key={s.label}
@@ -142,7 +143,7 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="order-3 [@media(orientation:portrait)]:order-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 最新用户 */}
         <div className="bg-card rounded-xl border p-5 shadow-sm border-brand-border-subtle">
           <h2 className="font-semibold mb-4 text-brand-navy">最新用户</h2>
@@ -219,10 +220,8 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {!offline && <MonitoringPasswordCard />}
-
-      {/* 快捷操作 */}
-      <div className="bg-card rounded-xl border p-5 shadow-sm border-brand-border-subtle">
+      {/* 快捷操作：竖屏时提到最上面一栏 */}
+      <div className="order-4 [@media(orientation:portrait)]:order-2 bg-card rounded-xl border p-5 shadow-sm border-brand-border-subtle">
         <h2 className="font-semibold mb-4 text-brand-navy">快捷操作</h2>
         <div className="flex flex-wrap gap-3 items-center">
           <Link href="/admin/projects" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">

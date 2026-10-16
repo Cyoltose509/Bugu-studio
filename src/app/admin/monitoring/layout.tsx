@@ -11,12 +11,9 @@ export default async function MonitoringLayout({ children }: { children: React.R
   const token = cookieStore.get("monitoring_access")?.value;
   const isGranted = token ? verifyMonitoringToken(token) : false;
 
-  // 读取环境变量用于自动填充密码框
-  const autoFillPassword = process.env.MONITORING_PASSWORD || undefined;
-
   if (isGranted) {
     return <>{children}</>;
   }
 
-  return <MonitorGate autoFillPassword={autoFillPassword}>{children}</MonitorGate>;
+  return <MonitorGate>{children}</MonitorGate>;
 }

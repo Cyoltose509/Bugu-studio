@@ -66,7 +66,7 @@ export default async function HomePage() {
                 <HomeStats lang={lang}/>
             </Suspense>
 
-            {/* 最新作品 — 流式加载（8 个 = 桌面 4 列两整行） */}
+            {/* 最新作品 — 流式加载；栅格始终两行 */}
             <section className="py-16 container mx-auto px-4">
                 <div className="flex items-center justify-between mb-8">
                     <h2 className="text-2xl font-bold text-brand-navy">{t(lang, "home.latestWorks")}</h2>

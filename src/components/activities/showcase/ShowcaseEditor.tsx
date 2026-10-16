@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { saveActivityShowcase } from "@/app/admin/activities/showcase-actions";
+import { useState } from "react";
 import type { ActivityShowcase } from "@/lib/activities/showcase";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import { uploadImage, ACCEPT_ATTR, formatMB } from "@/lib/utils/clientUpload";
@@ -18,9 +16,7 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const router = useRouter();
-  const disabled = uploading || pending;
+  const disabled = uploading;
   const markChanged = () => { setMessage(""); setError(""); };
   const available = projects.filter(p => !config.projectIds.includes(p.id) && p.title.toLowerCase().includes(query.toLowerCase()));
 
@@ -54,10 +50,11 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
   }
 
   return <section className="rounded-xl border border-brand-border-subtle bg-card p-6 shadow-sm space-y-5 text-brand-text-body">
+    <input type="hidden" name="showcaseJson" value={JSON.stringify(config)} />
     <div><h2 className="text-lg font-bold text-brand-text-heading">海报与试玩目录</h2>
       <p className="mt-2 text-sm text-brand-text-secondary">
         可复用模块：启用后详情页展示海报专页，并用试玩目录（长条作品卡 + 全屏放映 + 跳转作品页）。
-        内容独立保存；作品信息自动同步站内最新数据。
+        随活动一并保存；作品信息自动同步站内最新数据。
       </p></div>
     <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
       <label className="flex gap-2 items-center text-sm"><input type="checkbox" checked={config.enabled}
@@ -94,7 +91,7 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
 
       <div className="space-y-3">
         <h3 className="font-semibold">活动海报（{config.posters.length}/10）</h3>
-        <p className="text-xs text-brand-text-muted">第一张显示在页面首屏，其余显示在介绍区。图片保留完整比例。上传后请点击保存。</p>
+        <p className="text-xs text-brand-text-muted">第一张显示在页面首屏，其余显示在介绍区。图片保留完整比例。</p>
         {config.posters.map((poster, index) => <div key={`${poster.url}-${index}`} className="flex gap-3 rounded-lg bg-brand-surface p-3">
           <img src={poster.url} alt={poster.title} className="h-24 w-16 shrink-0 rounded object-contain" />
           <div className="min-w-0 flex-1 space-y-2">
@@ -122,17 +119,6 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
     {uploading && <p role="status" className="text-sm text-brand-blue">海报上传中…</p>}
     {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     {message && <p role="status" className="text-sm text-green-700">{message}</p>}
-    <div className="flex flex-wrap items-center gap-4">
-      <button type="button" disabled={disabled} className="btn-primary rounded-lg px-5 py-2.5 text-sm font-medium disabled:opacity-50"
-        onClick={() => startTransition(async () => {
-          markChanged();
-          try {
-            const result = await saveActivityShowcase(activityId, config);
-            if (result.error) setError(result.error);
-            else { setMessage("海报与试玩目录已保存"); router.refresh(); }
-          } catch { setError("保存失败，请稍后重试"); }
-        })}>{pending ? "保存中…" : "保存海报与试玩目录"}</button>
-      <a href={`/activities/${activityId}`} target="_blank" rel="noreferrer" className="text-sm text-brand-blue underline">预览活动页 ↗</a>
-    </div>
+    <a href={`/activities/${activityId}`} target="_blank" rel="noreferrer" className="text-sm text-brand-blue underline">预览活动页 ↗</a>
   </section>;
 }

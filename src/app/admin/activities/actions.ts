@@ -8,7 +8,7 @@ import { createNotification, notifyMentions } from "@/lib/services/notification"
 import { revalidatePath } from "next/cache";
 import { ActivityStatus, ProposalStatus } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/utils/upload";
-import { DEFAULT_ACTIVITY_LOCATION, parseBvId } from "@/lib/activities/constants";
+import { parseBvId } from "@/lib/activities/constants";
 import { parseActivityDateTime } from "@/lib/activities/datetime";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
@@ -16,7 +16,7 @@ import { showcaseKey } from "@/lib/activities/showcase";
 import { canSubmitActivityTalk } from "@/lib/activities/capabilities";
 
 const TYPE_LABEL: Record<string, string> = {
-  MEETING: "例会", COURSE: "公开课", COMPETITION: "比赛", GENERAL: "活动",
+  MEETING: "例会", COURSE: "公开课", COMPETITION: "Game Jam", GENERAL: "大事件",
 };
 
 /** 简单 slug 生成 */
@@ -73,7 +73,10 @@ async function invalidateActivityCaches(id?: string) {
   revalidatePath("/activities");
   revalidatePath("/admin/activities");
   revalidatePath("/history");
-  if (id) revalidatePath(`/activities/${id}`);
+  if (id) {
+    revalidatePath(`/activities/${id}`);
+    revalidatePath(`/admin/activities/${id}/edit`);
+  }
 }
 
 // ── 创建活动 ──────────────────────────────────────────────────
@@ -84,14 +87,14 @@ export async function createActivity(formData: FormData) {
   const type        = (formData.get("type") as string || "GENERAL");
   const summary     = (formData.get("summary") as string || "").trim();
   const description = (formData.get("description") as string || "").trim();
-  const location    = (formData.get("location") as string || "").trim() || DEFAULT_ACTIVITY_LOCATION;
+  const location    = (formData.get("location") as string || "").trim();
   const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
   const coverImage   = (formData.get("coverImage") as string || "").trim();
   const startTime   = formData.get("startTime") as string;
   const endTime     = formData.get("endTime") as string;
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
-  const regOpen     = formData.get("registrationOpen") === "on";
   const talkSubmissionOpen = formData.get("talkSubmissionOpen") === "on";
+  const publish     = formData.get("status") === "PUBLISHED";
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
@@ -112,15 +115,15 @@ export async function createActivity(formData: FormData) {
       type: type as any,
       summary: summary || undefined,
       description: description || undefined,
-      location,
+      location: location || null,
       meetingUrl: meetingUrl || undefined,
       coverImage: coverImage || undefined,
       startTime: parseActivityDateTime(startTime),
       endTime: parseActivityDateTime(endTime),
       maxParticipants,
-      registrationOpen: regOpen,
+      registrationOpen: true,
       talkSubmissionOpen,
-      status: ActivityStatus.DRAFT,
+      status: publish ? ActivityStatus.PUBLISHED : ActivityStatus.DRAFT,
       theme: theme || undefined,
       themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
       maxTeamSize,
@@ -152,13 +155,12 @@ export async function updateActivity(id: string, formData: FormData) {
   const type        = (formData.get("type") as string || "GENERAL");
   const summary     = (formData.get("summary") as string || "").trim();
   const description = (formData.get("description") as string || "").trim();
-  const location    = (formData.get("location") as string || "").trim() || DEFAULT_ACTIVITY_LOCATION;
+  const location    = (formData.get("location") as string || "").trim();
   const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
   const coverImage   = (formData.get("coverImage") as string || "").trim();
   const startTime   = formData.get("startTime") as string;
   const endTime     = formData.get("endTime") as string;
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
-  const regOpen     = formData.get("registrationOpen") === "on";
   const talkSubmissionOpen = formData.get("talkSubmissionOpen") === "on";
   const status      = (formData.get("status") as string || "DRAFT");
   const theme       = (formData.get("theme") as string || "").trim();
@@ -183,13 +185,12 @@ export async function updateActivity(id: string, formData: FormData) {
       type: type as any,
       summary: summary || undefined,
       description: description || undefined,
-      location,
+      location: location || null,
       meetingUrl: meetingUrl || undefined,
       coverImage: coverImage || undefined,
       startTime: parseActivityDateTime(startTime),
       endTime: parseActivityDateTime(endTime),
       maxParticipants,
-      registrationOpen: regOpen,
       talkSubmissionOpen,
       status: status as ActivityStatus,
       theme: theme || undefined,
@@ -219,6 +220,34 @@ export async function updateActivity(id: string, formData: FormData) {
   const oldCover = activity?.coverImage;
   if (oldCover && coverImage && oldCover !== coverImage) {
     deleteFromR2(oldCover).catch(() => {});
+  }
+
+  const talksRaw = formData.get("talksJson");
+  if (typeof talksRaw === "string") {
+    let talks: unknown;
+    try {
+      talks = JSON.parse(talksRaw);
+    } catch {
+      return { error: "议程数据无效" };
+    }
+    if (!Array.isArray(talks)) return { error: "议程数据无效" };
+    const talkResult = await saveMeetingTalks(id, talks);
+    if (talkResult && "error" in talkResult && talkResult.error) return { error: talkResult.error };
+  }
+
+  const showcaseRaw = formData.get("showcaseJson");
+  if (typeof showcaseRaw === "string" && type === "GENERAL") {
+    let showcase: unknown;
+    try {
+      showcase = JSON.parse(showcaseRaw);
+    } catch {
+      return { error: "海报数据无效" };
+    }
+    const { saveActivityShowcase } = await import("./showcase-actions");
+    const showcaseResult = await saveActivityShowcase(id, showcase);
+    if (showcaseResult && "error" in showcaseResult && showcaseResult.error) {
+      return { error: showcaseResult.error };
+    }
   }
 
   await invalidateActivityCaches(id);
@@ -293,6 +322,9 @@ export async function submitProposal(formData: FormData) {
   const title        = (formData.get("title") as string || "").trim();
   const description  = (formData.get("description") as string || "").trim();
   const proposalType = (formData.get("proposalType") as string || "SHARE");
+  if (proposalType !== "SHARE" && proposalType !== "SHOWCASE") {
+    return { error: t(lang, "meeting.errInvalidType") };
+  }
 
   if (!activityId) return { error: t(lang, "meeting.errInvalidActivity") };
   if (!title)       return { error: t(lang, "meeting.errTitleRequired") };
@@ -354,9 +386,70 @@ export async function deleteProposal(formData: FormData) {
   return { success: true };
 }
 
+function agendaTitleKey(title: string) {
+  return title.trim().toLowerCase();
+}
+
+/** 已通过的申请写入正式议程；标题已存在则跳过（可重试）。 */
+async function writeApprovedProposalToAgenda(proposalId: string) {
+  const proposal = await prisma.meetingProposal.findUnique({
+    where: { id: proposalId },
+    select: {
+      id: true,
+      activityId: true,
+      userId: true,
+      title: true,
+      proposalType: true,
+      status: true,
+      user: { select: { name: true, member: { select: { displayName: true } } } },
+    },
+  });
+  if (!proposal) return { error: "申请不存在" };
+  if (proposal.status !== ProposalStatus.APPROVED) {
+    return { error: "仅已通过的申请可以列入议程" };
+  }
+
+  const title = proposal.title.trim();
+  const titleKey = agendaTitleKey(title);
+  if (!title) return { error: "申请标题为空" };
+
+  const existing = await prisma.meetingTalk.findMany({
+    where: { activityId: proposal.activityId },
+    select: { title: true, userId: true, sortOrder: true },
+  });
+  const already = existing.some((tk) => agendaTitleKey(tk.title) === titleKey);
+  if (already) return { success: true as const, already: true };
+
+  const speaker =
+    proposal.user.member?.displayName?.trim() ||
+    proposal.user.name?.trim() ||
+    "主讲";
+  const maxSort = existing.reduce((m, tk) => Math.max(m, tk.sortOrder), -1);
+
+  await prisma.meetingTalk.create({
+    data: {
+      activityId: proposal.activityId,
+      speaker,
+      title,
+      talkType: proposal.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+      userId: proposal.userId,
+      sortOrder: maxSort + 1,
+    },
+  });
+
+  await invalidateActivityCaches(proposal.activityId);
+  return { success: true as const, already: false };
+}
+
+export async function promoteProposalToAgenda(proposalId: string) {
+  await requireAdmin();
+  if (!proposalId) return { error: "缺少申请 ID" };
+  return writeApprovedProposalToAgenda(proposalId);
+}
+
 // ── 审核：分享/展示申请 ──────────────────────────────────────
 export async function reviewProposal(id: string, status: ProposalStatus, adminNote?: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const proposal = await prisma.meetingProposal.findUnique({
     where: { id },
     select: { activityId: true, userId: true, title: true, proposalType: true },
@@ -367,6 +460,23 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
     where: { id },
     data: { status, adminNote: adminNote || undefined },
   });
+  await prisma.auditLog.create({
+    data: {
+      action: "ADMIN_ACTION",
+      userId: session.user.id,
+      targetType: "MeetingProposal",
+      targetId: id,
+      metadata: { status },
+      ipAddress: "server-action",
+    },
+  }).catch((err) => console.error("[AuditLog] 分享申请审核写入失败:", err));
+
+  if (status === ProposalStatus.APPROVED) {
+    const written = await writeApprovedProposalToAgenda(id);
+    if (written && "error" in written && written.error) {
+      console.error("[agenda] 通过后写入议程失败:", written.error);
+    }
+  }
 
   // ── 通知申请人审核结果 ──
   const approved = status === ProposalStatus.APPROVED;
@@ -376,20 +486,25 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
     type: "PROPOSAL_REVIEW",
     title: approved ? `${typeLabel}申请通过 ✅` : `${typeLabel}申请未通过 ❌`,
     content: approved
-      ? `你在活动中的${typeLabel}申请「${proposal.title}」已通过审核`
+      ? `你在活动中的${typeLabel}申请「${proposal.title}」已通过审核，已列入议程`
       : `你的${typeLabel}申请「${proposal.title}」未通过审核${adminNote ? `：${adminNote}` : ""}`,
     relatedId: proposal.activityId,
     relatedType: "Activity",
   });
 
-  revalidatePath(`/activities/${proposal.activityId}`);
-  revalidatePath(`/admin/activities/${proposal.activityId}/edit`);
+  await invalidateActivityCaches(proposal.activityId);
 }
 
 // ── 活动：整表保存分享条目（主讲 + 标题 + BV）────────────────
 export async function saveMeetingTalks(
   activityId: string,
-  talks: Array<{ speaker: string; title: string; bvId?: string; userId?: string | null }>,
+  talks: Array<{
+    speaker: string;
+    title: string;
+    talkType?: "SHARE" | "SHOWCASE";
+    bvId?: string;
+    userId?: string | null;
+  }>,
 ) {
   await requireAdmin();
   if (!activityId) return { error: "无效的活动" };
@@ -422,6 +537,7 @@ export async function saveMeetingTalks(
       return {
         speaker: (t.speaker || "").trim(),
         title: (t.title || "").trim(),
+        talkType: t.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
         bvId: parseBvId(t.bvId) || null,
         userId: userId && validUserIds.has(userId) ? userId : null,
         sortOrder: i,
@@ -433,7 +549,7 @@ export async function saveMeetingTalks(
     const speaker = (t.speaker || "").trim();
     const title = (t.title || "").trim();
     if ((speaker && !title) || (!speaker && title)) {
-      return { error: "每条分享需同时填写主讲与标题" };
+      return { error: "每条议程需同时填写主讲与内容" };
     }
     if (t.bvId && !parseBvId(t.bvId)) {
       return { error: `无法识别 BV 号：${t.bvId}` };
@@ -449,6 +565,7 @@ export async function saveMeetingTalks(
               activityId,
               speaker: t.speaker,
               title: t.title,
+              talkType: t.talkType,
               bvId: t.bvId,
               userId: t.userId,
               sortOrder: t.sortOrder,
@@ -465,6 +582,7 @@ export async function saveMeetingTalks(
       id: true,
       speaker: true,
       title: true,
+      talkType: true,
       bvId: true,
       sortOrder: true,
       userId: true,

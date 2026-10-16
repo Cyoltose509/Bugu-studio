@@ -1,19 +1,20 @@
 /**
  * 首页最新作品 — 独立服务器组件，可被 Suspense 包裹
  *
- * 展示数量必须能整除栅格列数，否则最后一行缺卡，看起来像「没什么作品」。
- * 桌面 4 列 → 取 8 条 = 两整行。
+ * 最多取 HOME_WORKS_MAX 条。露出张数由栅格断点决定，始终两行。
  */
-import ProjectCard, { ProjectCardProject } from "@/components/projects/ProjectCard";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { isMockDataEnabled, mockLatestProjects } from "@/lib/mock/frontend-data";
 import {t} from "@/lib/i18n/dict";
 import type {Lang} from "@/lib/i18n/config";
+import { PROJECT_DATE_ORDER_BY } from "@/lib/works/date-sort";
+import { HOME_WORKS_MAX } from "@/lib/layout/homeWorksGrid";
+import HomeLatestWorksGrid from "./HomeLatestWorksGrid";
+import type { ProjectCardProject } from "@/components/projects/ProjectCard";
 
-/** 与下方 grid 的 lg:grid-cols-4 对齐：两整行 */
-const LATEST_COUNT = 8;
+const LATEST_COUNT = HOME_WORKS_MAX;
 
 async function getProjects() {
   if (isMockDataEnabled()) {
@@ -21,11 +22,11 @@ async function getProjects() {
   }
   try {
     return await cachedQuery(
-      "projects:latest:v3",
+      "projects:latest:v4",
       () =>
         prisma.project.findMany({
           where: { status: ProjectStatus.PUBLISHED },
-          orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }],
+          orderBy: PROJECT_DATE_ORDER_BY,
           take: LATEST_COUNT,
           include: {
             tags: { include: { tag: true } },
@@ -69,15 +70,6 @@ export default async function LatestProjects({lang = "cn"}: { lang?: Lang }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 items-stretch">
-      {projects.map((p, i) => (
-        <ProjectCard
-          key={p.id}
-          project={p as unknown as ProjectCardProject}
-          compact
-          idx={i}
-        />
-      ))}
-    </div>
+    <HomeLatestWorksGrid projects={projects as unknown as ProjectCardProject[]} />
   );
 }

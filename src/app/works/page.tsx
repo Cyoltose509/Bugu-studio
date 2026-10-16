@@ -10,12 +10,14 @@ import FilterSidebarClient from "@/components/works/FilterSidebarClient";
 import FilterNavLink from "@/components/works/FilterNavLink";
 import WorksToolbar from "@/components/works/WorksToolbar";
 import WorksInfiniteGrid from "@/components/works/WorksInfiniteGrid";
-import EngineTagIcon from "@/components/tags/EngineTagIcon";
-import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
+import { sortTagsEngineFirst } from "@/lib/tags/engine-tags";
+import { isEventPresetSlug } from "@/lib/tags/event-tags";
 import FilterLink from "@/components/works/FilterLink";
+import FilterSection from "@/components/works/FilterSection";
 import TagFilterChips from "@/components/works/TagFilterChips";
 import { PROJECT_SELECT } from "@/lib/works/project-select";
 import { sortByNameAndSlice } from "@/lib/works/name-sort";
+import { PROJECT_DATE_ORDER_BY } from "@/lib/works/date-sort";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
@@ -86,7 +88,7 @@ async function WorksToolbarData({ params, lang }: { params: Record<string, any>;
     const tags = isMockDataEnabled()
         ? mockSidebarTags()
         : await cachedQuery(
-        "works:sidebar:tags",
+        "works:sidebar:tags:v4",
         () =>
             prisma.tag.findMany({
                 orderBy: { sortOrder: "asc" },
@@ -118,7 +120,7 @@ async function WorksSidebarData({ params, lang }: { params: Record<string, any>;
         : await (async () => {
             await ensureDefaultTags();
             return Promise.all([
-                cachedQuery('works:sidebar:tags', () =>
+                cachedQuery('works:sidebar:tags:v4', () =>
                         prisma.tag.findMany({
                             orderBy: {sortOrder: "asc"},
                             include: {_count: {select: {projects: {where: {project: {status: "PUBLISHED"}}}}}}
@@ -153,7 +155,9 @@ async function WorksSidebarData({ params, lang }: { params: Record<string, any>;
         .map((group) => ({
             group,
             tags: sortTagsEngineFirst(
-                (tagGroups[group] || []).filter((tag: any) => tag._count.projects > 0),
+                (tagGroups[group] || []).filter(
+                    (tag: any) => tag._count.projects > 0 || isEventPresetSlug(tag.slug),
+                ),
             ).map((tag: any) => ({
                 slug: tag.slug,
                 name: tagDisplayName(tag.slug, tag.name, lang),
@@ -164,10 +168,9 @@ async function WorksSidebarData({ params, lang }: { params: Record<string, any>;
         .filter((g) => g.tags.length > 0);
 
     const filterContent = (
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.type")}</h3>
-                <div className="space-y-1.5">
+        <div className="space-y-5">
+            <FilterSection title={t(lang, "works.filter.type")} activeParam="types">
+                <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-1">
                     <FilterLink href={buildUrl(params, {types: void 0})} activeKeys={["types"]} label={t(lang, "works.filter.allTypes")}/>
                     {typeOptions.map(t => (
                         <FilterLink key={t.value}
@@ -176,24 +179,22 @@ async function WorksSidebarData({ params, lang }: { params: Record<string, any>;
                                     label={typeLabel(t.value, lang)}/>
                     ))}
                 </div>
-            </div>
+            </FilterSection>
             {years.length > 0 && (
-                <div>
-                    <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.year")}</h3>
-                    <div className="space-y-1.5">
+                <FilterSection title={t(lang, "works.filter.year")} defaultOpen={false} activeParam="year">
+                    <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-1">
                         <FilterLink href={buildUrl(params, {year: void 0})} activeKeys={["year"]} label={t(lang, "works.filter.allYears")}/>
                         {years.map(y => <FilterLink key={y.developYear}
                                                     href={buildUrl(params, {year: String(y.developYear)})}
                                                     activeKeys={["year"]}
                                                     label={String(y.developYear)}/>)}
                     </div>
-                </div>
+                </FilterSection>
             )}
-            <div>
-                <h3 className="text-sm font-semibold mb-3 text-brand-text-body">{t(lang, "works.filter.tags")}</h3>
-                {/* 0 件作品的标签不展示，避免点进去空列表误以为筛选坏了 */}
+            <FilterSection title={t(lang, "works.filter.tags")} activeParam="tag">
+                {/* 0 件不展示；活动&赛事预设例外，保证栏目可见 */}
                 <TagFilterChips groups={tagGroupsForUi} />
-            </div>
+            </FilterSection>
         </div>
     );
 
@@ -246,7 +247,7 @@ async function WorksFirstPage({ params }: { params: Record<string, any> }) {
     // 名称排序例外：Postgres 排不出拼音序，取全量后在内存排（见 lib/works/name-sort.ts）
     const orderBy: any = sort === "likes"
         ? [{likes: {_count: "desc"}}, {id: "desc"}]
-        : [{developYear: "desc"}, {publishedAt: "desc"}, {id: "desc"}];
+        : PROJECT_DATE_ORDER_BY;
 
     const where = buildWhere(params);
     const scopeKey = `${params.types || ''}:${params.year || ''}:${params.tag || ''}:${params.q || ''}`;
@@ -260,7 +261,7 @@ async function WorksFirstPage({ params }: { params: Record<string, any> }) {
                   60,
               ).then((rows: any[]) => sortByNameAndSlice(rows, null, PAGE_SIZE + 1))
             : cachedQuery(
-                `works:infinite:first:v2:${scopeKey}:${sort}`,
+                `works:infinite:first:v3:${scopeKey}:${sort}`,
                 () =>
                     prisma.project.findMany({
                         where,
