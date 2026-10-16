@@ -196,7 +196,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   const isUpcoming  = now < activity.startTime;
   const isPast       = now > activity.endTime;
   const shareData = activityShareData(activity, lang);
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const isAdmin = session?.user?.role === "ADMIN";
   // 管理员需要能在议程为空时直接打开管理面板，预先编排任何类型的活动。
   const hasTalkSection = hasActivityTalkSection(activity) || isAdmin;
 

@@ -85,7 +85,7 @@ export async function ensureDefaultTags(): Promise<void> {
       });
       gamejamRow.name = gamejamDef.name;
       gamejamRow.color = gamejamDef.color;
-      gamejamRow.group = gamejamDef.group;
+      gamejamRow.group = gamejamDef.group ?? null;
       gamejamRow.sortOrder = gamejamDef.sortOrder;
     }
     const existingSlugs = new Set(existing.map((t) => t.slug));

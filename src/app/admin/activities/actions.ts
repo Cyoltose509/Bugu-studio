@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth/auth";
 import { invalidateCache } from "@/lib/db/cache";
 import { createNotification, notifyMentions } from "@/lib/services/notification";
 import { revalidatePath } from "next/cache";
-import { ActivityStatus, ProposalStatus } from "@prisma/client";
+import { ActivityStatus, ProposalStatus, ProposalType } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/utils/upload";
 import { parseBvId } from "@/lib/activities/constants";
 import { parseActivityDateTime } from "@/lib/activities/datetime";
@@ -537,7 +537,7 @@ export async function saveMeetingTalks(
       return {
         speaker: (t.speaker || "").trim(),
         title: (t.title || "").trim(),
-        talkType: t.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+        talkType: t.talkType === "SHOWCASE" ? ProposalType.SHOWCASE : ProposalType.SHARE,
         bvId: parseBvId(t.bvId) || null,
         userId: userId && validUserIds.has(userId) ? userId : null,
         sortOrder: i,

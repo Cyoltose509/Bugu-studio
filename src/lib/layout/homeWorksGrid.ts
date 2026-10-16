@@ -8,12 +8,14 @@ export const HOME_WORKS_BREAKPOINTS = [
 
 export const HOME_WORKS_MAX = HOME_WORKS_BREAKPOINTS[HOME_WORKS_BREAKPOINTS.length - 1].show;
 
+export type HomeWorksShow = (typeof HOME_WORKS_BREAKPOINTS)[number]["show"];
+
 export const HOME_WORKS_MQ = HOME_WORKS_BREAKPOINTS
   .filter((bp) => bp.minWidth > 0)
   .map((bp) => `(min-width: ${bp.minWidth}px)`);
 
-export function homeWorksShowAt(width: number): number {
-  let show: number = HOME_WORKS_BREAKPOINTS[0].show;
+export function homeWorksShowAt(width: number): HomeWorksShow {
+  let show: HomeWorksShow = HOME_WORKS_BREAKPOINTS[0].show;
   for (const bp of HOME_WORKS_BREAKPOINTS) {
     if (width >= bp.minWidth) show = bp.show;
   }

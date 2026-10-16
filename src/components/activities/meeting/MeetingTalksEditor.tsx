@@ -162,7 +162,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
     return talks.map((row) => ({
       speaker: row.speaker.trim(),
       title: row.title.trim(),
-      talkType: row.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+      talkType: (row.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE") as "SHARE" | "SHOWCASE",
       bvId: row.bvId,
       userId: row.userId || null,
     }));
