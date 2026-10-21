@@ -15,6 +15,8 @@ import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
 import { auth } from "@/lib/auth/auth";
+import { activityNewestFirstOrder, formatActivityDay, formatActivitySchedule } from "@/lib/activities/datetime";
+import { redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
@@ -25,9 +27,10 @@ export const dynamic = "force-dynamic";
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
 // 活动类型 / 状态 → 双语标签
-const ACTIVITY_TYPE_KEYS: Record<string, "activity.type.MEETING" | "activity.type.COURSE" | "activity.type.COMPETITION" | "activity.type.GENERAL"> = {
+const ACTIVITY_TYPE_KEYS: Record<string, "activity.type.MEETING" | "activity.type.COURSE" | "activity.type.ENGINE_COURSE" | "activity.type.COMPETITION" | "activity.type.GENERAL"> = {
   MEETING:     "activity.type.MEETING",
   COURSE:      "activity.type.COURSE",
+  ENGINE_COURSE: "activity.type.ENGINE_COURSE",
   COMPETITION: "activity.type.COMPETITION",
   GENERAL:     "activity.type.GENERAL",
 };
@@ -39,9 +42,6 @@ const STATUS_LABEL: Record<string, { cn: string; en: string }> = {
 function activityTypeLabel(lang: Lang, type: string): string {
   const k = ACTIVITY_TYPE_KEYS[type];
   return k ? t(lang, k) : type;
-}
-function dateLocale(lang: Lang): string {
-  return lang === "en" ? "en-US" : "zh-CN";
 }
 
 // ── 倒计时 ──────────────────────────────────────────────────
@@ -68,7 +68,6 @@ function ActivityCard({ a, lang, badge, countdown }: {
   a: any; lang: Lang; badge?: "ongoing" | "upcoming" | "past"; countdown?: React.ReactNode;
 }) {
   const coverSrc = a.coverImage || DEFAULT_COVER;
-  const locale = dateLocale(lang);
 
   return (
     <Link href={`/activities/${a.id}`} className="group h-full">
@@ -94,7 +93,7 @@ function ActivityCard({ a, lang, badge, countdown }: {
               {countdown}
             </div>
           )}
-          {a.meetingUrl && (
+          {a.meetingUrl && a.type !== "COURSE" && a.type !== "ENGINE_COURSE" && (
             <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
               {t(lang, "activity.online")}
             </div>
@@ -107,9 +106,7 @@ function ActivityCard({ a, lang, badge, countdown }: {
             {a.title}
           </h3>
           <p className="text-xs text-brand-text-muted line-clamp-1">
-            {a.startTime.toLocaleDateString(locale, { month: "short", day: "numeric" })}
-            {" ~ "}
-            {a.endTime.toLocaleDateString(locale, { month: "short", day: "numeric" })}
+            {formatActivitySchedule(a.startTime, a.endTime, lang, a.timePending, a.courseHasClock)}
             {a.location ? ` · ${a.location}` : ""}
           </p>
           <p className="text-xs line-clamp-1 text-brand-text-secondary min-h-[1rem]">
@@ -128,8 +125,6 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
     : status === "upcoming"
     ? { label: STATUS_LABEL.upcoming[lang], cls: "bg-orange-400/80" }
     : { label: STATUS_LABEL.past[lang], cls: "bg-gray-400/80" };
-  const locale = dateLocale(lang);
-
   return (
       <Link href={`/activities/${a.id}`} className="group block">
         <div
@@ -160,7 +155,7 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
               </h2>
 
               <p className="text-sm opacity-90">
-                {a.startTime.toLocaleDateString(locale)}
+                {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
                 {a.location ? ` · ${a.location}` : ""}
               </p>
 
@@ -177,7 +172,6 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
 }
 function UpcomingItem({ a, lang }: { a: any; lang: Lang }) {
   const thumbSrc = a.coverImage || DEFAULT_COVER;
-  const locale = dateLocale(lang);
   return (
       <Link href={`/activities/${a.id}`}>
         <div
@@ -194,10 +188,10 @@ function UpcomingItem({ a, lang }: { a: any; lang: Lang }) {
                 {a.title}
               </h3>
               <p className="text-xs mt-1 text-brand-text-muted">
-                {a.startTime.toLocaleDateString(locale)}
+                {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
               </p>
             </div>
-            <Countdown startTime={a.startTime} lang={lang} />
+            {!a.timePending && a.startTime ? <Countdown startTime={a.startTime} lang={lang} /> : null}
           </div>
         </div>
       </Link>
@@ -221,26 +215,29 @@ export default async function ActivitiesPage() {
   const raw = isMockDataEnabled()
     ? mockActivitiesBuckets()
     : await cachedQuery(
-    "activities:list",
+    "activities:list:v2",
     () =>
       Promise.all([
-        // 进行中
+        // 进行中，开始时间从新到旧
         prisma.activity.findMany({
-          where:  { status: ActivityStatus.PUBLISHED, startTime: { lte: now }, endTime: { gte: now } },
-          orderBy: { startTime: "asc" },
+          where:  { status: ActivityStatus.PUBLISHED, timePending: false, startTime: { lte: now }, endTime: { gte: now } },
+          orderBy: { startTime: "desc" },
           take: 6,
         }),
-        // 即将开始
+        // 即将开始：待定是最新一档，其余从新到旧
         prisma.activity.findMany({
-          where:  { status: ActivityStatus.PUBLISHED, startTime: { gt: now } },
-          orderBy: { startTime: "asc" },
+          where:  {
+            status: ActivityStatus.PUBLISHED,
+            OR: [{ timePending: true }, { startTime: { gt: now } }],
+          },
+          orderBy: activityNewestFirstOrder,
           take: 6,
         }),
-        // 已结束 / 归档（最近 12 条）
+        // 已结束 / 归档（最近 12 条，从新到旧）
         prisma.activity.findMany({
           where: {
             OR: [
-              { status: ActivityStatus.PUBLISHED, endTime: { lt: now } },
+              { status: ActivityStatus.PUBLISHED, timePending: false, endTime: { lt: now } },
               { status: ActivityStatus.ARCHIVED },
             ],
           },
@@ -252,9 +249,10 @@ export default async function ActivitiesPage() {
   ).catch(() => mockActivitiesBuckets());
   const [ongoing, upcoming, past] = Array.isArray(raw) ? raw : [[], [], []];
   // 每个子元素也做守卫，防止缓存返回异常数据
-  const safeOngoing  = Array.isArray(ongoing)  ? ongoing  : [];
-  const safeUpcoming = Array.isArray(upcoming) ? upcoming : [];
-  const safePast     = Array.isArray(past)     ? past     : [];
+  const stripCourseUrl = (activity: any) => redactCourseMeetingLinks(activity, false);
+  const safeOngoing  = Array.isArray(ongoing)  ? ongoing.map(stripCourseUrl)  : [];
+  const safeUpcoming = Array.isArray(upcoming) ? upcoming.map(stripCourseUrl) : [];
+  const safePast     = Array.isArray(past)     ? past.map(stripCourseUrl)     : [];
   const hero =
       safeOngoing[0] ??
       safeUpcoming[0] ??

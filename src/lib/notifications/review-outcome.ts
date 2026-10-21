@@ -14,7 +14,7 @@ export interface ReviewOutcome {
   handler?: ReviewHandler;
 }
 
-const REVIEW_SET = new Set<string>(REVIEW_TYPES);
+const OUTCOME_TYPES = new Set<string>([...REVIEW_TYPES, "JAM_APPLICATION"]);
 
 const EMOJI: Record<ReviewOutcomeResult, string> = {
   approved: "✅",
@@ -65,7 +65,7 @@ function pickLatestByTarget(logs: Array<{ targetId: string | null; user: UserLit
 
 export async function attachReviewOutcomes(items: NotifRow[]): Promise<Map<string, ReviewOutcome>> {
   const result = new Map<string, ReviewOutcome>();
-  const reviewItems = items.filter((item) => REVIEW_SET.has(item.type) && item.relatedId);
+  const reviewItems = items.filter((item) => OUTCOME_TYPES.has(item.type) && item.relatedId);
   if (reviewItems.length === 0) return result;
 
   const projectIds = [

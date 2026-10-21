@@ -113,3 +113,11 @@ export function TagChipLink({
     </Link>
   );
 }
+
+/** Editor selection uses the same brand chip surface, with its border drawn inside the pill. */
+export function TagChipButton({ tag, active, onClick }: { tag: TagLike; active: boolean; onClick: () => void }) {
+  const { lang } = useLang();
+  return <button type="button" aria-pressed={active} onClick={onClick}
+    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 ${usesChipClass(tag.slug) ? brandChipClass(tag.slug) : ""} ${active ? "opacity-100" : "opacity-75 hover:opacity-100"}`}
+    style={chipStyle(tag, active)}><TagMark slug={tag.slug} /><span>{tagDisplayName(tag.slug, tag.name, lang)}</span></button>;
+}

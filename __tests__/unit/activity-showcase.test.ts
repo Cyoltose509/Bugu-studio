@@ -26,11 +26,12 @@ describe("activity showcase", () => {
     expect(parseShowcase("{broken")).toBeNull();
     expect(parseShowcase(JSON.stringify({ enabled: true }))).toBeNull();
   });
-  it("roundtrips the event time independently of server timezone", () => {
+  it("roundtrips the event day independently of server timezone", () => {
     const date = parseActivityDateTime("2026-10-11T09:00");
     expect(date.toISOString()).toBe("2026-10-11T01:00:00.000Z");
-    expect(formatActivityDateTime(date)).toBe("2026-10-11T09:00");
-    expect(parseActivityDateTime("2026-10-11T01:00:00Z").getTime()).toBe(date.getTime());
+    expect(formatActivityDateTime(date)).toBe("2026-10-11");
+    expect(parseActivityDateTime("2026-10-18", "start").toISOString()).toBe("2026-10-17T16:00:00.000Z");
+    expect(parseActivityDateTime("2026-10-18", "end").toISOString()).toBe("2026-10-18T15:59:59.000Z");
   });
   it("preserves an existing event and edited configuration on repeat setup", async () => {
     const existing = { id: "existing", status: "PUBLISHED" };

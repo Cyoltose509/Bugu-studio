@@ -12,7 +12,7 @@ export const productionMeeting = {
   location: "总图书馆未来学习中心",
   summary: "欢迎新人来线下体验工作室最日常活动之双周例会~",
   description: "【百团招新特别辑】社团介绍、游戏制作工具、职能、流程科普；【专题展示】正在成员群募集中。",
-  registrationOpen: true,
+  registrationOpen: false,
   talkSubmissionOpen: true,
   talks: [{ title: "了解游戏的制作与上线", speaker: "吃药图书" }],
 };

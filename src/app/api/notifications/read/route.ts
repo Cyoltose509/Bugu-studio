@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { invalidateUnreadCache } from "@/lib/cache/unread-count-cache";
-import { prismaTypeFilter } from "@/lib/notifications/buckets";
+import { visibleTypeFilter } from "@/lib/notifications/buckets";
 
 /**
  * GET /api/notifications/read — 未读通知数量（轻量，供铃铛图标使用）
@@ -30,9 +30,10 @@ export async function PATCH(request: Request) {
   let body: { id?: string; bucket?: string } = {};
   try { body = await request.json(); } catch { /* ignore */ }
 
+  const isAdmin = session.user.role === "ADMIN";
   if (body.id) {
     await prisma.notification.updateMany({
-      where: { id: body.id, userId: session.user.id },
+      where: { id: body.id, userId: session.user.id, ...visibleTypeFilter(isAdmin, null) },
       data: { read: true },
     });
   } else {
@@ -40,7 +41,7 @@ export async function PATCH(request: Request) {
       where: {
         userId: session.user.id,
         read: false,
-        ...prismaTypeFilter(body.bucket),
+        ...visibleTypeFilter(isAdmin, isAdmin ? body.bucket : null),
       },
       data: { read: true },
     });

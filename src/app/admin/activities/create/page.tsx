@@ -10,13 +10,15 @@ import Link from "next/link";
 import { createActivity } from "../actions";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import LocationPresetInput from "@/components/activities/LocationPresetInput";
+import ActivityTimeChoice from "@/components/activities/ActivityTimeChoice";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import MentionEditor from "@/components/ui/MentionEditor";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",     label: "例会",     hint: "议程与分享报名" },
-  { value: "COURSE",      label: "公开课",   hint: "课程与讲题" },
+  { value: "COURSE",      label: "公开课", hint: "策划分享或引擎教学" },
+  { value: "ENGINE_COURSE", label: "引擎教学公开课", hint: "分班教学与作品大赏" },
   { value: "COMPETITION", label: "Game Jam", hint: "组队、题目与提交" },
   { value: "GENERAL",     label: "大事件",   hint: "海报与试玩目录" },
 ];
@@ -26,32 +28,14 @@ export default function CreateActivityPage() {
   const [type, setType] = useState("GENERAL");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [timePending, setTimePending] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
 
-  // 辅助：解析 datetime-local 字符串 "YYYY-MM-DDTHH:mm" 为本地时间
-  function parseLocal(val: string): Date {
-    const [datePart, timePart] = val.split("T");
-    const [year, month, day] = datePart.split("-").map(Number);
-    const [hour, minute] = timePart.split(":").map(Number);
-    return new Date(year, month - 1, day, hour, minute);
-  }
-
-  // 辅助：格式化 Date 为 datetime-local 值（本地时间，不带时区）
-  function formatLocal(d: Date): string {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  // 例会：开始时间变更时自动设置结束时间 = 开始时间 + 2 小时
   function handleStartTimeChange(val: string) {
     setStartTime(val);
-    if (type === "MEETING" && val) {
-      const start = parseLocal(val);
-      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-      setEndTime(formatLocal(end));
-    }
+    if (val && !endTime) setEndTime(val.slice(0, 10));
   }
 
   // 生成默认标题
@@ -65,7 +49,7 @@ export default function CreateActivityPage() {
 
   async function handleSubmit(formData: FormData) {
     // 标题为空时自动生成
-    if (!(formData.get("title") as string).trim() && startTime) {
+    if (!(formData.get("title") as string).trim() && startTime && !timePending) {
       formData.set("title", getDefaultTitle());
     }
     const result = await createActivity(formData);
@@ -74,7 +58,7 @@ export default function CreateActivityPage() {
     } else if (result && "success" in result && result.id) {
       // 例会创建后进入编辑页，方便录入分享条目
       router.push(
-        type === "MEETING"
+        type === "MEETING" || type === "COURSE" || type === "ENGINE_COURSE"
           ? `/admin/activities/${result.id}/edit`
           : "/admin/activities",
       );
@@ -101,8 +85,8 @@ export default function CreateActivityPage() {
         <div>
           <p className={label}>活动类型 *</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {TYPE_OPTIONS.map((opt) => {
-              const active = type === opt.value;
+            {TYPE_OPTIONS.filter((option) => option.value !== "ENGINE_COURSE").map((opt) => {
+              const active = type === opt.value || (opt.value === "COURSE" && type === "ENGINE_COURSE");
               return (
                 <button
                   key={opt.value}
@@ -122,8 +106,11 @@ export default function CreateActivityPage() {
               );
             })}
           </div>
+          {(type === "COURSE" || type === "ENGINE_COURSE") && <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-brand-border-subtle bg-card p-2">
+            {TYPE_OPTIONS.filter((option) => option.value === "COURSE" || option.value === "ENGINE_COURSE").map((option) => <button key={option.value} type="button" onClick={() => setType(option.value)} className={`rounded-lg px-3 py-2 text-left text-sm ${type === option.value ? "bg-brand-blue text-white" : "text-brand-text-body hover:bg-brand-blue/10"}`}><strong className="block">{option.value === "COURSE" ? "策划公开课" : option.label}</strong><span className="text-xs opacity-75">{option.value === "COURSE" ? "组队分享与评分" : option.hint}</span></button>)}
+          </div>}
           {type === "MEETING" && (
-            <p className="text-xs mt-2 text-brand-text-muted">修改开始时间时，结束时间将自动设为 +2 小时</p>
+            <p className="text-xs mt-2 text-brand-text-muted">只需选择日期，同一天开始和结束即可</p>
           )}
           {type === "GENERAL" && (
             <p className="text-xs mt-2 text-brand-text-muted">创建后可在编辑页启用海报与试玩目录</p>
@@ -132,16 +119,20 @@ export default function CreateActivityPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] gap-8 lg:gap-10">
           <aside className="space-y-5 order-2 lg:order-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-              <div>
-                <label className={label} htmlFor="startTime">开始时间 *</label>
-                <input id="startTime" name="startTime" type="datetime-local" required value={startTime} onChange={e => handleStartTimeChange(e.target.value)} className={field} />
-              </div>
-              <div>
-                <label className={label} htmlFor="endTime">结束时间 *</label>
-                <input id="endTime" name="endTime" type="datetime-local" required value={endTime} onChange={e => setEndTime(e.target.value)} className={field} />
-              </div>
-            </div>
+            <ActivityTimeChoice
+              pending={timePending}
+              onPendingChange={setTimePending}
+              start={startTime}
+              end={endTime}
+              onStartChange={handleStartTimeChange}
+              onEndChange={setEndTime}
+              fieldClass={field}
+              labelClass={label}
+            />
+            {(type === "COURSE" || type === "ENGINE_COURSE") && !timePending && <div className="space-y-3 rounded-lg border border-brand-border-subtle p-3">
+              <label className="flex items-center gap-2 text-sm text-brand-text-body"><input type="checkbox" name="courseHasClock" className="accent-brand-blue" />精确到时分</label>
+              <div className="grid grid-cols-2 gap-2"><label className={label}>开始时间<input type="time" name="startClock" className={field} /></label><label className={label}>结束时间（可选）<input type="time" name="endClock" className={field} /></label></div>
+            </div>}
 
             <LocationPresetInput />
 
@@ -170,8 +161,8 @@ export default function CreateActivityPage() {
                   <MentionEditor id="theme" name="theme" rows={3} richPreview={false} placeholder="如：主题是「时光倒流」—— 创作一个围绕时间回溯玩法的游戏" className="w-full" />
                 </div>
                 <div>
-                  <label className={label} htmlFor="themeRevealedAt">题目公布时间 <span className="text-xs text-brand-text-muted">(默认为开始时间)</span></label>
-                  <input id="themeRevealedAt" name="themeRevealedAt" type="datetime-local" className={field} />
+                  <label className={label} htmlFor="themeRevealedAt">题目公布日期 <span className="text-xs text-brand-text-muted">(默认为开始日期)</span></label>
+                  <input id="themeRevealedAt" name="themeRevealedAt" type="date" className={field} />
                 </div>
                 <div>
                   <label className={label} htmlFor="maxTeamSize">每队最大人数 <span className="text-xs text-brand-text-muted">(默认 6)</span></label>
@@ -187,7 +178,7 @@ export default function CreateActivityPage() {
                 标题 <span className="text-xs text-brand-text-muted">(不填则自动生成为「年月日 + 活动类型」)</span>
               </label>
               <input id="title" name="title" placeholder="输入活动标题或留空自动生成…" value={title} onChange={e => setTitle(e.target.value)} className={field} />
-              {startTime && !title && (
+              {startTime && !title && !timePending && (
                 <p className="text-xs mt-1 text-[#93B3C8]">将自动生成为：{getDefaultTitle()}</p>
               )}
             </div>
@@ -217,6 +208,7 @@ export default function CreateActivityPage() {
                 title={title.trim() || getDefaultTitle()}
                 summary={summary}
                 activityType={type}
+                allowFocalPoint={type === "COURSE" || type === "ENGINE_COURSE"}
                 typeLabel={TYPE_OPTIONS.find(t => t.value === type)?.label}
               />
             </div>

@@ -3,7 +3,7 @@ import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { getCachedUnread, setCachedUnread } from "@/lib/cache/unread-count-cache";
-import { splitUnreadByType } from "@/lib/notifications/buckets";
+import { splitUnreadByType, unreadForViewer, visibleTypeFilter } from "@/lib/notifications/buckets";
 
 /**
  * GET /api/notifications/unread-count — 未读通知数量（轻量，供铃铛图标使用）
@@ -18,16 +18,18 @@ export async function GET(request: NextRequest) {
   if (!token?.id) return apiError("请先登录", 401);
 
   const uid = token.id as string;
+  const isAdmin = token.role === "ADMIN";
   const cached = getCachedUnread(uid);
   if (cached !== null) return apiResponse(cached);
 
   const rows = await prisma.notification.groupBy({
     by: ["type"],
-    where: { userId: uid, read: false },
+    where: { userId: uid, read: false, ...visibleTypeFilter(isAdmin, null) },
     _count: { _all: true },
   });
-  const payload = splitUnreadByType(
-    rows.map((r) => ({ type: r.type, _count: r._count._all })),
+  const payload = unreadForViewer(
+    splitUnreadByType(rows.map((r) => ({ type: r.type, _count: r._count._all }))),
+    isAdmin,
   );
   setCachedUnread(uid, payload);
   return apiResponse(payload);

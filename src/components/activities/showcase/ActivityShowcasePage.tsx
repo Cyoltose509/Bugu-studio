@@ -10,10 +10,11 @@ import { getLang } from "@/lib/i18n/getLang";
 import type { Lang } from "@/lib/i18n/config";
 import ShareButton from "@/components/share/ShareButton";
 import { activityShareData } from "@/lib/share";
+import { activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
 
 interface Props {
   activity: { id: string; slug: string; title: string; summary: string | null; description: string | null;
-    startTime: Date; endTime: Date; location: string | null; status: string; coverImage?: string | null;
+    startTime: Date | null; endTime: Date | null; timePending?: boolean; location: string | null; status: string; coverImage?: string | null;
     talkSubmissionOpen?: boolean; talks?: { title: string; speaker: string }[];
     proposals?: { title: string; user?: { name?: string | null; member?: { displayName?: string | null } | null } | null }[] };
   config: ActivityShowcase;
@@ -23,18 +24,14 @@ interface Props {
 export default async function ActivityShowcasePage({ activity, config, isAdmin }: Props) {
   const lang: Lang = await getLang();
   const projects = await getShowcaseProjects(config.projectIds);
-  const start = new Date(activity.startTime);
-  const end = new Date(activity.endTime);
   const now = new Date();
-  const status = now < start
+  const phase = activityPhase(activity, now);
+  const status = phase === "upcoming"
     ? t(lang, "showcase.status.upcoming")
-    : now <= end
+    : phase === "ongoing"
       ? t(lang, "showcase.status.ongoing")
       : t(lang, "showcase.status.ended");
-  // 日期文案随语言走；时段统一 24 小时制
-  const dateLocale = lang === "en" ? "en-US" : "zh-CN";
-  const date = new Intl.DateTimeFormat(dateLocale, { timeZone: "Asia/Shanghai", month: "numeric", day: "numeric" }).format(start);
-  const time = (d: Date) => new Intl.DateTimeFormat(dateLocale, { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+  const date = formatActivitySchedule(activity.startTime, activity.endTime, lang, activity.timePending);
   const isBaituan = activity.slug === BAITUAN_SLUG;
 
   return <div className="bg-[#f6f7f8] dark:bg-[#141a22]">
@@ -74,8 +71,7 @@ export default async function ActivityShowcasePage({ activity, config, isAdmin }
           <h1 className="text-3xl sm:text-5xl font-black leading-tight text-brand-text-heading">{activity.title}</h1>
           <p className="my-6 text-base sm:text-lg leading-relaxed text-brand-text-body">{activity.summary || t(lang, "showcase.summaryFallback")}</p>
           <div className="grid grid-cols-2 gap-3 rounded-2xl bg-brand-surface p-5">
-            <div><p className="mb-1 text-xs text-brand-text-muted">{t(lang, "showcase.dateLabel")}</p><p className="text-lg font-bold text-brand-text-heading">{date}</p></div>
-            <div><p className="mb-1 text-xs text-brand-text-muted">{t(lang, "showcase.playtimeLabel")}</p><p className="text-lg font-bold text-brand-text-heading">{time(start)}–{time(end)}</p></div>
+            <div className="col-span-2"><p className="mb-1 text-xs text-brand-text-muted">{t(lang, "showcase.dateLabel")}</p><p className="text-lg font-bold text-brand-text-heading">{date}</p></div>
             <div className="col-span-2 border-t border-brand-border-subtle pt-3"><p className="mb-1 text-xs text-brand-text-muted">{t(lang, "showcase.locationLabel")}</p><p className="font-bold text-brand-blue">{activity.location || t(lang, "showcase.locationTbd")}</p></div>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">

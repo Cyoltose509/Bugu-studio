@@ -23,6 +23,8 @@ interface MentionEditorProps {
   maxLength?: number;
   /** 显示 inline 富文本预览（高亮链接 + @mention） */
   richPreview?: boolean;
+  /** 不自带边框，交给外层卡片 */
+  bare?: boolean;
 }
 
 import { COMMON_TLDS } from "@/lib/rich-content";
@@ -164,6 +166,7 @@ export default function MentionEditor({
   minLength,
   maxLength,
   richPreview = true,
+  bare = false,
 }: MentionEditorProps) {
   const isControlled = controlledValue !== undefined;
   const [internalValue, setInternalValue] = useState(defaultValue || "");
@@ -328,14 +331,15 @@ export default function MentionEditor({
     }).join("");
   }, [value, richPreview]);
 
-  const layerClass =
-    "font-[inherit] text-sm leading-6 tracking-normal px-3 py-2 whitespace-pre-wrap break-words box-border w-full";
+  const layerClass = bare
+    ? "font-[inherit] text-sm leading-6 tracking-normal py-2 whitespace-pre-wrap break-words box-border w-full"
+    : "font-[inherit] text-sm leading-6 tracking-normal px-3 py-2 whitespace-pre-wrap break-words box-border w-full";
   const minH = `${rows * 1.5 + 1}rem`;
   const showOverlay = richPreview && value.length > 0;
 
   return (
     <div className={`relative isolate ${className}`}>
-      <div className="relative overflow-hidden rounded-lg border bg-card border-brand-border-subtle focus-within:ring-2 focus-within:ring-[#3388BB]">
+      <div className={bare ? "relative overflow-hidden" : "relative overflow-hidden rounded-lg border bg-card border-brand-border-subtle focus-within:ring-2 focus-within:ring-[#3388BB]"}>
       {richPreview && (
         <div
           ref={backdropRef}

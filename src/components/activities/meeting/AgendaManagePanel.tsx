@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import MeetingTalksEditor, {
   type TalkDraft,
@@ -15,6 +15,26 @@ export type UnlistedProposal = {
   speaker: string;
   proposalType: "SHARE" | "SHOWCASE";
 };
+
+function PencilIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 20h9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function PromoteButton({ proposalId }: { proposalId: string }) {
   const { t } = useLang();
@@ -51,38 +71,51 @@ export default function AgendaManagePanel({
   activityId,
   initialTalks,
   unlistedProposals = [],
+  isAdmin = false,
+  title,
+  children,
 }: {
   activityId: string;
   initialTalks: TalkDraft[];
   unlistedProposals?: UnlistedProposal[];
+  isAdmin?: boolean;
+  title: string;
+  children?: ReactNode;
 }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const editorKey = initialTalks.map((tk) => tk.id || "").join(",");
+  const manageLabel = open ? t("activityDetail.exitManage") : t("activityDetail.enterManage");
 
   return (
-    <div className="space-y-3">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-          open
-            ? "border-brand-orange text-brand-orange bg-[#FFF8F0]"
-            : "border-brand-border-subtle text-brand-navy hover:border-brand-blue hover:text-brand-blue"
-        }`}
-      >
-        {open ? t("activityDetail.exitManage") : t("activityDetail.enterManage")}
-      </button>
-      {open && (
-        <div className="space-y-3">
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold text-brand-navy">{title}</h2>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            title={manageLabel}
+            aria-label={manageLabel}
+            aria-pressed={open}
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition-colors ${
+              open ? "bg-brand-orange" : "bg-brand-navy hover:bg-brand-navy/90"
+            }`}
+          >
+            <PencilIcon />
+          </button>
+        )}
+      </div>
+      {open && isAdmin && (
+        <div className="mb-3 space-y-3">
           {unlistedProposals.length > 0 && (
-            <div className="rounded-xl border border-brand-border-subtle bg-card p-3 space-y-2">
+            <div className="space-y-2">
               <p className="text-xs font-medium text-brand-text-secondary">
                 {t("meeting.promotePending")}
               </p>
-              <ul className="space-y-2">
+              <ul className="rounded-xl border border-brand-border-subtle bg-card divide-y divide-brand-border-subtle">
                 {unlistedProposals.map((p) => (
-                  <li key={p.id} className="flex items-center gap-2">
+                  <li key={p.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
                     <AgendaTypeTag
                       type={p.proposalType}
                       label={agendaTypeLabel(
@@ -91,7 +124,7 @@ export default function AgendaManagePanel({
                         t("activityDetail.proposalShowcase"),
                       )}
                     />
-                    <span className="min-w-0 flex-1 text-sm text-brand-navy truncate">
+                    <span className="min-w-0 flex-1 text-sm font-medium text-brand-navy truncate">
                       {p.title}
                     </span>
                     <span className="text-xs text-brand-text-muted shrink-0 truncate max-w-[7rem]">
@@ -107,9 +140,11 @@ export default function AgendaManagePanel({
             key={editorKey}
             activityId={activityId}
             initialTalks={initialTalks}
+            framed={false}
           />
         </div>
       )}
-    </div>
+      {open ? null : children}
+    </section>
   );
 }

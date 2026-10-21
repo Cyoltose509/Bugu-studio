@@ -29,10 +29,10 @@ const WORK_TYPE_KEYS: Record<string, DictKey> = {
 export default function SharePoster({ data, lang, header, qr }: { data: ShareCardData; lang: Lang; header: ShareHeader; qr: string }) {
   const en = lang === "en";
   const member = data.kind === "member";
-  const imageHeader = !member && header.kind === "image";
-  return <article data-share-poster className={styles.poster} data-header-color={header.kind === "color" ? header.color : "blue"}>
+  const imageHeader = header.kind === "image";
+  return <article data-share-poster className={styles.poster} data-header-color={header.kind === "color" ? header.color : "blue"} data-header-mode={imageHeader ? "image" : "color"} data-card={member ? "member" : "activity"}>
     <div className={styles.hero}>
-      {imageHeader ? <><PosterImage key={header.url} src={header.url} alt="" className={styles.heroImage} /><div className={styles.heroShade} aria-hidden /></> : <div className={styles.pattern} aria-hidden />}
+      {imageHeader ? <><PosterImage key={header.url} src={header.url} alt="" className={member ? `${styles.heroImage} ${styles.heroImageFit}` : styles.heroImage} /><div className={member ? styles.heroShadeFit : styles.heroShade} aria-hidden /></> : <div className={styles.pattern} aria-hidden />}
       <header className={styles.brand}>
         <img src="/images/logo.png" width="34" height="34" alt="" />
         <span>{en ? "Bugoo Studio" : "布谷工作室"}</span>
@@ -52,9 +52,8 @@ export default function SharePoster({ data, lang, header, qr }: { data: ShareCar
 
     <div className={styles.body}>
       {member ? !!data.works?.length && <div>
-        <p className={styles.label}>{en ? "Works" : "参与作品"}<span className={styles.workCount}>{data.works.length}</span></p>
         <div className={styles.works}>{data.works.map((work, index) => <a key={`${work.slug}-${index}`} href={`/works/${encodeURIComponent(work.slug)}`} className={styles.workCard}>
-          {work.image ? <PosterImage src={work.image} alt={work.title} className={styles.workImage} /> : <div className={[styles.workImage, styles.initial].join(" ")}>🎮</div>}
+          <div className={styles.workMedia}>{work.image ? <PosterImage src={work.image} alt={work.title} className={styles.workImage} /> : <div className={[styles.workImage, styles.workFallback].join(" ")}>🎮</div>}</div>
           <div className={styles.workInfo}>
             <div className={styles.workHeading}><p className={styles.workTitle}>{work.title}</p>{work.subtitle && <span className={styles.workSubtitle}>{work.subtitle}</span>}</div>
             {work.description && <p className={styles.workDescription}>{toPlainCardText(work.description)}</p>}
@@ -64,7 +63,7 @@ export default function SharePoster({ data, lang, header, qr }: { data: ShareCar
         </a>)}</div>
       </div> : <>
         <div className={styles.details}>
-          <div className={styles.detail}><DetailIcon /><p className={styles.date}>{data.date}<span className={styles.dateSeparator} aria-hidden> · </span><span className={styles.time}>{data.time}</span></p></div>
+          <div className={styles.detail}><DetailIcon /><p className={styles.date}>{data.date}{data.time ? <><span className={styles.dateSeparator} aria-hidden> · </span><span className={styles.time}>{data.time}</span></> : null}</p></div>
           <div className={styles.detail}><DetailIcon location /><p className={styles.location}>{data.location}</p></div>
         </div>
         {(!!data.agenda?.length || !!data.summary || data.talkSubmissionOpen) && <div className={styles.agenda}>

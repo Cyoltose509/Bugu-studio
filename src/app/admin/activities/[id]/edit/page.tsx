@@ -7,7 +7,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { notFound } from "next/navigation";
 import { getActivityShowcase } from "@/lib/activities/showcase-data";
-import { formatActivityDateTime } from "@/lib/activities/datetime";
+import { formatActivityClock, formatActivityDateTime } from "@/lib/activities/datetime";
 import EditActivityForm from "./EditActivityForm";
 import type { TalkDraft } from "@/components/activities/meeting/MeetingTalksEditor";
 
@@ -31,6 +31,11 @@ const getActivity = cache(async (id: string) => {
           },
         },
       },
+      courseParticipants: {
+        orderBy: { sortOrder: "asc" },
+        include: { member: { select: { id: true, displayName: true, avatar: true } } },
+      },
+      courseAttachments: { orderBy: { sortOrder: "asc" } },
     },
   });
 });
@@ -79,8 +84,14 @@ export default async function EditActivityPage({ params }: PageProps) {
           location: activity.location || "",
           meetingUrl: activity.meetingUrl || "",
           coverImage: activity.coverImage || "",
-          startTime: fmt(activity.startTime),
-          endTime: fmt(activity.endTime),
+          startTime: activity.startTime ? fmt(activity.startTime) : "",
+          endTime: activity.endTime ? fmt(activity.endTime) : "",
+          timePending: activity.timePending,
+          courseHasClock: activity.courseHasClock,
+          startClock: activity.startTime && activity.courseHasClock ? formatActivityClock(activity.startTime) : "",
+          endClock: activity.endTime && activity.courseHasClock && formatActivityClock(activity.endTime) !== "23:59" ? formatActivityClock(activity.endTime) : "",
+          courseCoverFocusX: activity.courseCoverFocusX,
+          courseCoverFocusY: activity.courseCoverFocusY,
           maxParticipants: activity.maxParticipants || "",
           talkSubmissionOpen: activity.talkSubmissionOpen,
           theme: activity.theme || "",
@@ -90,6 +101,19 @@ export default async function EditActivityPage({ params }: PageProps) {
         talks={talks}
         showcase={showcase}
         projects={projects}
+        courseParticipants={activity.courseParticipants.map((item) => ({
+          memberId: item.memberId,
+          externalName: item.externalName,
+          role: item.role === "INSTRUCTOR" ? "INSTRUCTOR" as const : "STUDENT" as const,
+          displayName: item.member?.displayName || item.externalName || "",
+          avatar: item.member?.avatar || null,
+        }))}
+        courseAttachments={activity.courseAttachments.map((file) => ({
+          name: file.name,
+          url: file.url,
+          mimeType: file.mimeType,
+          sizeBytes: file.sizeBytes,
+        }))}
       />
     </div>
   );

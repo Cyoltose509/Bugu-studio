@@ -7,6 +7,7 @@ import { invalidateCache } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { createNotification, notifyNewProject } from "@/lib/services/notification";
+import { courseActivityIdsForProject, invalidateCourseActivities } from "@/lib/activities/course-showcase-cache";
 
 async function invalidateProjectCaches(id?: string) {
   await Promise.all([
@@ -61,6 +62,7 @@ export async function updateProjectStatus(id: string, status: ProjectStatus) {
   ]);
 
   await invalidateProjectCaches(project.slug);
+  await invalidateCourseActivities(await courseActivityIdsForProject(id));
   revalidatePath("/admin/projects");
   revalidatePath("/members");
   revalidatePath("/works");
@@ -92,9 +94,11 @@ export async function updateProjectStatus(id: string, status: ProjectStatus) {
 
 export async function deleteProject(id: string) {
   await requireAdmin();
+  const courseActivityIds = await courseActivityIdsForProject(id);
   const project = await prisma.project.findUnique({ where: { id }, select: { slug: true } });
   await prisma.project.delete({ where: { id } });
   await invalidateProjectCaches(project?.slug);
+  await invalidateCourseActivities(courseActivityIds);
   revalidatePath("/admin/projects");
   revalidatePath("/members");
   revalidatePath("/works");

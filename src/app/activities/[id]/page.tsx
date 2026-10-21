@@ -24,6 +24,9 @@ import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
 import { InvitationButtons } from "@/components/activities/teams/InvitationButtons";
 import { CreateTeamForm } from "@/components/activities/teams/CreateTeamForm";
 import EditTopicForm from "@/components/activities/course/EditTopicForm";
+import CourseMaterials from "@/components/activities/course/CourseMaterials";
+import EngineCoursePage from "@/components/activities/course/EngineCoursePage";
+import { canViewCourseMeetingLinks, getCourseMeetingVisibility, isCourseActivity, redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
 import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksButton";
 import { cachedQuery } from "@/lib/db/cache";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -39,12 +42,14 @@ import type { Lang } from "@/lib/i18n/config";
 import ShareButton from "@/components/share/ShareButton";
 import { activityShareData, shareDescription, shareMetadata } from "@/lib/share";
 import { canSubmitActivityTalk, hasActivityTalkSection } from "@/lib/activities/capabilities";
+import { activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 
 // 活动类型 / 状态 → 双语标签
 const ACTIVITY_TYPE_KEYS: Record<string, DictKey> = {
   MEETING:    "activity.type.MEETING",
   COURSE:     "activity.type.COURSE",
+  ENGINE_COURSE: "activity.type.ENGINE_COURSE",
   COMPETITION: "activityDetail.typeCompetition",
   GENERAL:    "activity.type.GENERAL",
 };
@@ -141,6 +146,19 @@ const getActivity = cache(async (id: string) => {
               },
             },
             jamJudges: { include: { user: { select: { id: true, name: true, image: true } } } },
+            courseParticipants: {
+              orderBy: { sortOrder: "asc" },
+              include: { member: { select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } } },
+            },
+            courseAttachments: { orderBy: { sortOrder: "asc" } },
+            courseClasses: {
+              orderBy: { sortOrder: "asc" },
+              include: {
+                tags: { include: { tag: true } },
+                lessons: { orderBy: { sortOrder: "asc" } },
+                showcase: { orderBy: { sortOrder: "asc" }, include: { project: { select: { slug: true, status: true } } } },
+              },
+            },
             jamSubmissions: {
               select: {
                 id: true,
@@ -182,19 +200,28 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   if (!id) notFound();
   const now = new Date();
 
-  const activity = await getActivity(id);
+  const rawActivity = await getActivity(id);
 
-  if (!activity) notFound();
+  if (!rawActivity) notFound();
 
   // 草稿仅管理员可见
-  if (activity.status === "DRAFT") {
+  if (rawActivity.status === "DRAFT") {
     const role = session?.user?.role;
     if (role !== "ADMIN") notFound();
   }
 
-  const isOngoing   = now >= activity.startTime && now <= activity.endTime;
-  const isUpcoming  = now < activity.startTime;
-  const isPast       = now > activity.endTime;
+  const courseMeetingVisibility = isCourseActivity(rawActivity.type)
+    ? await getCourseMeetingVisibility().catch(() => "HIDDEN" as const)
+    : "PUBLIC" as const;
+  const canViewMeetingLinks = !isCourseActivity(rawActivity.type) || canViewCourseMeetingLinks(courseMeetingVisibility, session?.user || null);
+  // Server-component props also appear in the RSC payload. Strip protected URLs
+  // before passing the activity to any component, including cards and dialogs.
+  const activity = redactCourseMeetingLinks(rawActivity, canViewMeetingLinks);
+
+  const phase = activityPhase(activity, now);
+  const isOngoing   = phase === "ongoing";
+  const isUpcoming  = phase === "upcoming";
+  const isPast       = phase === "past";
   const shareData = activityShareData(activity, lang);
   const isAdmin = session?.user?.role === "ADMIN";
   // 管理员需要能在议程为空时直接打开管理面板，预先编排任何类型的活动。
@@ -202,7 +229,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
 
   // 仅本地：mock / DB 不可达时跳过，勿提交
   const userProposal =
-    hasTalkSection && session?.user && !isMockDataEnabled()
+    hasTalkSection && activity.type !== "ENGINE_COURSE" && session?.user && !isMockDataEnabled()
       ? await prisma.meetingProposal
           .findFirst({
             where: { activityId: id, userId: session.user.id },
@@ -216,6 +243,28 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
       <ActivityShowcasePage activity={activity} config={showcase} isAdmin={session?.user?.role === "ADMIN"} />
       {hasTalkSection && <div className="mx-auto max-w-4xl px-4 py-8"><ActivityTalkSection activity={activity} session={session} isOngoing={isOngoing} isUpcoming={isUpcoming} userProposal={userProposal} lang={lang} /></div>}
     </>;
+  }
+
+  if (activity.type === "ENGINE_COURSE") {
+    const course = activity as any;
+    const engineActivity = {
+      id: course.id, title: course.title, summary: course.summary, description: course.description,
+      coverImage: course.coverImage, courseCoverFocusX: course.courseCoverFocusX ?? 50, courseCoverFocusY: course.courseCoverFocusY ?? 50,
+      startTime: course.startTime, endTime: course.endTime, timePending: course.timePending, courseHasClock: course.courseHasClock,
+      meetingUrl: course.meetingUrl,
+      courseParticipants: (course.courseParticipants || []).map((person: any) => ({
+        role: person.role, externalName: person.externalName,
+        member: person.member ? { id: person.member.id, displayName: person.member.displayName, avatar: person.member.avatar, user: person.member.user ? { image: person.member.user.image } : null } : null,
+      })),
+      courseAttachments: (course.courseAttachments || []).map((file: any) => ({ id: file.id, name: file.name, url: file.url, mimeType: file.mimeType, sizeBytes: file.sizeBytes })),
+      courseClasses: (course.courseClasses || []).map((item: any) => ({
+        id: item.id, scheduleImage: item.scheduleImage, name: item.name, description: item.description, coverImage: item.coverImage, coverFocusX: item.coverFocusX, coverFocusY: item.coverFocusY,
+        tags: (item.tags || []).map((row: any) => ({ tag: { id: row.tag.id, name: row.tag.name, slug: row.tag.slug, color: row.tag.color, group: row.tag.group } })),
+        lessons: (item.lessons || []).map((lesson: any) => ({ id: lesson.id, instructorName: lesson.instructorName, topic: lesson.topic, title: lesson.title, date: lesson.date, startMinute: lesson.startMinute, endMinute: lesson.endMinute, meetingUrl: lesson.meetingUrl, videoUrl: lesson.videoUrl })),
+        showcase: (item.showcase || []).map((work: any) => ({ id: work.id, authorName: work.authorName, title: work.title, imageUrl: work.imageUrl, project: work.project ? { slug: work.project.slug, status: work.project.status } : null })),
+      })),
+    };
+    return <EngineCoursePage activity={engineActivity} canViewMeetingLinks={canViewMeetingLinks} isAdmin={isAdmin} lang={lang} shareData={activity.status !== "DRAFT" ? shareData : null} />;
   }
 
   const mainColumn = (
@@ -252,10 +301,9 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
         </div>
 
         <p className="text-sm text-brand-text-secondary">
-          📅 {activity.startTime.toLocaleString(dateLocale(lang))} ~ {activity.endTime.toLocaleString(dateLocale(lang))}
+          📅 {formatActivitySchedule(activity.startTime, activity.endTime, lang, activity.timePending, activity.courseHasClock)}
           {activity.location ? ` · 📍 ${activity.location}` : ""}
-          {activity.meetingUrl ? ` · ${t(lang, "activity.online")}` : ""}
-          {activity.registrationOpen ? ` · ${t(lang, "activityDetail.registrationOpen")}` : ""}
+          {canViewMeetingLinks && activity.meetingUrl ? ` · ${t(lang, "activity.online")}` : ""}
         </p>
 
         {activity.summary && (
@@ -273,7 +321,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
       )}
 
       {/* ── 线上链接 ────────────────────────────────── */}
-      {activity.meetingUrl && (
+      {canViewMeetingLinks && activity.meetingUrl && (
         <div className="mb-6 p-4 rounded-xl border bg-[#F0F8FF] border-brand-border-subtle">
           <span className="text-sm font-medium text-brand-navy">{t(lang, "activityDetail.onlineLink")}</span>
           <a href={activity.meetingUrl} target="_blank" rel="noreferrer" className="text-sm ml-1 hover:underline text-brand-blue">{activity.meetingUrl}</a>
@@ -297,11 +345,11 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
     />
   ) : null;
 
-  // 有议程/报名时：宽屏左右分栏；窄屏自然单列叠放，不硬写死右侧
+  // 有议程/报名时：宽屏左主右窄；窄屏单列叠放
   if (hasTalkSection) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32rem)] xl:items-start">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] xl:items-start">
           <div className="min-w-0">{mainColumn}</div>
           <aside className="min-w-0 xl:sticky xl:top-24">
             {talkColumn}
@@ -335,7 +383,7 @@ async function ActivityTalkSection({
 }: { activity: any; session: any; isOngoing: boolean; isUpcoming: boolean; userProposal: any; lang: Lang }) {
   const talks = activity.talks || [];
   const proposals = activity.proposals || [];
-  const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
+  const isAdmin = session?.user?.role === "ADMIN";
 
   // 管理员把某条已通过申请整理成结构化条目后，标题会对上；按标题去重，避免同一分享显示两遍
   const talkTitles = new Set(
@@ -357,36 +405,10 @@ async function ActivityTalkSection({
       .catch(() => []);
   }
 
+  const hasAgendaItems = talks.length > 0 || approvedProposals.length > 0;
+
   return (
     <div id="meeting-agenda" className="scroll-mt-28 space-y-6">
-      {isAdmin && (
-        <AgendaManagePanel
-          activityId={activity.id}
-          unlistedProposals={approvedProposals.map((p: any) => ({
-            id: p.id,
-            title: p.title,
-            speaker:
-              p.user?.member?.displayName ||
-              p.user?.name ||
-              t(lang, "activityDetail.speakerFallback"),
-            proposalType: p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
-          }))}
-          initialTalks={talks.map((tk: any) => ({
-            id: tk.id,
-            speaker: tk.speaker,
-            title: tk.title,
-            talkType: tk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
-            bvId: tk.bvId || "",
-            userId: tk.userId || null,
-            linkedLabel: tk.userId
-              ? tk.user?.member
-                ? t(lang, "meetingTalks.linkedMember", { name: tk.user.member.displayName })
-                : t(lang, "meetingTalks.linkedUser", { name: tk.user?.name || tk.userId })
-              : null,
-          }))}
-        />
-      )}
-
       {/* ── 管理员审核待处理的申请 ──────────────── */}
       {isAdmin && pendingProposals.length > 0 && (
         <section>
@@ -406,9 +428,36 @@ async function ActivityTalkSection({
         </section>
       )}
 
-      {(talks.length > 0 || approvedProposals.length > 0) && (
-        <section>
-          <h2 className="text-xl font-semibold mb-3 text-brand-navy">{t(lang, "activityDetail.agenda")}</h2>
+      {(isAdmin || hasAgendaItems) && (
+        <AgendaManagePanel
+          activityId={activity.id}
+          isAdmin={isAdmin}
+          title={t(lang, "activityDetail.agenda")}
+          unlistedProposals={approvedProposals.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            speaker:
+              p.user?.member?.displayName ||
+              p.user?.name ||
+              t(lang, "activityDetail.speakerFallback"),
+            proposalType: p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+          }))}
+          initialTalks={talks.map((tk: any) => ({
+            id: tk.id,
+            speaker: tk.speaker,
+            title: tk.title,
+            talkType: tk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+            bvId: tk.bvId || "",
+            userId: tk.userId || null,
+            image: tk.user?.image || null,
+            linkedLabel: tk.userId
+              ? tk.user?.member
+                ? t(lang, "meetingTalks.linkedMember", { name: tk.user.member.displayName })
+                : t(lang, "meetingTalks.linkedUser", { name: tk.user?.name || tk.userId })
+              : null,
+          }))}
+        >
+          {hasAgendaItems ? (
           <ol className="rounded-xl border border-brand-border-subtle bg-card divide-y divide-brand-border-subtle">
             {talks.map((talk: any) => {
               const speaker = speakerMeta(talk, lang, true);
@@ -456,16 +505,16 @@ async function ActivityTalkSection({
               );
             })}
           </ol>
-        </section>
+          ) : null}
+        </AgendaManagePanel>
       )}
 
       {(isOngoing || isUpcoming) && canSubmitActivityTalk(activity) && (
-        <section id="meeting-signup" className="scroll-mt-28 bg-card rounded-xl border p-6 border-brand-border-subtle">
-          <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
+        <section id="meeting-signup" className="scroll-mt-28 bg-card rounded-xl border px-3.5 py-3 border-brand-border-subtle">
           {userProposal ? (
-            /* 已提交申请 — 显示状态 */
-            <div className="rounded-lg p-4 bg-[#F0F6FA]">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
                 <AgendaTypeTag
                   type={userProposal.proposalType}
                   label={agendaTypeLabel(
@@ -474,26 +523,27 @@ async function ActivityTalkSection({
                     t(lang, "activityDetail.proposalShowcase"),
                   )}
                 />
-                <span className="font-medium text-sm text-brand-text-heading">{userProposal.title}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  userProposal.status === "APPROVED" ? "bg-brand-surface text-green-800" :
-                  userProposal.status === "REJECTED" ? "bg-red-50 text-red-700" :
-                  "bg-[#FFF8E1] text-[#F57F17]"
+                <span className={`ml-auto shrink-0 text-[11px] px-2 py-0.5 rounded-full ${
+                  userProposal.status === "APPROVED" ? "agenda-chip-share" :
+                  userProposal.status === "REJECTED" ? "bg-red-500/10 text-red-600 dark:text-red-400" :
+                  "agenda-chip-showcase"
                 }`}>
                   {userProposal.status === "APPROVED" ? t(lang, "activityDetail.statusApproved") : userProposal.status === "REJECTED" ? t(lang, "activityDetail.statusRejected") : t(lang, "activityDetail.statusPendingReview")}
                 </span>
               </div>
+              <p className="text-sm font-medium text-brand-navy">{userProposal.title}</p>
               {userProposal.description && <p className="text-xs text-brand-text-secondary">{userProposal.description}</p>}
               {userProposal.status === "REJECTED" && userProposal.adminNote && (
-                <p className="text-xs mt-1 text-red-700">{t(lang, "activityDetail.adminNote", { note: userProposal.adminNote })}</p>
+                <p className="text-xs text-red-600 dark:text-red-400">{t(lang, "activityDetail.adminNote", { note: userProposal.adminNote })}</p>
               )}
             </div>
+          ) : session?.user ? (
+            <SubmitProposalForm activityId={activity.id} />
           ) : (
-            /* 未提交 — 显示表单 */
-            <>
-              <p className="text-xs mb-3 text-brand-text-secondary">{t(lang, "activityDetail.proposalHint")}</p>
-              {session?.user ? <SubmitProposalForm activityId={activity.id} /> : <Link href={`/auth/login?callbackUrl=${encodeURIComponent(`/activities/${activity.id}#meeting-signup`)}`} className="btn-primary inline-flex rounded-lg px-4 py-2.5 text-sm font-semibold">{lang === "en" ? "Sign in to submit a talk" : "登录后报名分享"}</Link>}
-            </>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
+              <Link href={`/auth/login?callbackUrl=${encodeURIComponent(`/activities/${activity.id}#meeting-signup`)}`} className="btn-primary shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold">{lang === "en" ? "Sign in" : "登录后报名"}</Link>
+            </div>
           )}
         </section>
       )}
@@ -557,6 +607,31 @@ async function CourseSection({
           </div>
         )}
       </div>
+
+      <CourseMaterials
+        lang={lang}
+        instructors={(activity.courseParticipants || [])
+          .filter((item: any) => item.role === "INSTRUCTOR")
+          .map((item: any) => ({
+            id: item.member?.id || null,
+            displayName: item.member?.displayName || item.externalName || "",
+            avatar: item.member?.avatar || item.member?.user?.image || null,
+          }))}
+        students={(activity.courseParticipants || [])
+          .filter((item: any) => item.role === "STUDENT")
+          .map((item: any) => ({
+            id: item.member?.id || null,
+            displayName: item.member?.displayName || item.externalName || "",
+            avatar: item.member?.avatar || item.member?.user?.image || null,
+          }))}
+        attachments={(activity.courseAttachments || []).map((file: any) => ({
+          id: file.id,
+          name: file.name,
+          url: file.url,
+          mimeType: file.mimeType,
+          sizeBytes: file.sizeBytes,
+        }))}
+      />
 
       {/* ── 我的队伍 ──────────────────────────── */}
       {myTeam ? (

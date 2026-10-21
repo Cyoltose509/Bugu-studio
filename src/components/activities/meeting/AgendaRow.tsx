@@ -20,7 +20,7 @@ export function AgendaTypeTag({
   return (
     <span
       className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${
-        showcase ? "bg-[#FFF3E0] text-brand-orange" : "bg-[#E8F4FD] text-brand-blue"
+        showcase ? "agenda-chip-showcase" : "agenda-chip-share"
       }`}
     >
       {label}

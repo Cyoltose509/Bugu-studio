@@ -16,6 +16,9 @@ interface Props {
   summary?: string;
   activityType?: string;
   typeLabel?: string;
+  allowFocalPoint?: boolean;
+  initialFocusX?: number;
+  initialFocusY?: number;
 }
 
 export default function CoverUploadInput({
@@ -26,10 +29,15 @@ export default function CoverUploadInput({
   summary,
   activityType,
   typeLabel,
+  allowFocalPoint = false,
+  initialFocusX = 50,
+  initialFocusY = 50,
 }: Props) {
   const { t, lang } = useLang();
   const [preview, setPreview] = useState<string | null>(defaultValue || null);
   const [coverUrl, setCoverUrl] = useState(defaultValue || "");
+  const [focusX, setFocusX] = useState(initialFocusX);
+  const [focusY, setFocusY] = useState(initialFocusY);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
@@ -152,6 +160,7 @@ export default function CoverUploadInput({
             dragging || uploading ? "scale-[1.03] blur-[1px]" : "group-hover:scale-[1.02]",
           ].join(" ")}
           draggable={false}
+          style={allowFocalPoint ? { objectPosition: `${focusX}% ${focusY}%` } : undefined}
         />
 
         {typeLabel && <ActivityTypeCorner type={activityType || ""} label={typeLabel} />}
@@ -209,6 +218,11 @@ export default function CoverUploadInput({
         onChange={onFileInput}
       />
       <input type="hidden" name={name} value={coverUrl} />
+      {allowFocalPoint && <div className="grid grid-cols-2 gap-3 rounded-lg border border-brand-border-subtle p-3">
+        <label className="text-xs text-brand-text-muted">封面焦点 · 横向<input type="range" min={0} max={100} value={focusX} onChange={(event) => setFocusX(Number(event.target.value))} className="mt-1 block w-full accent-brand-blue" /></label>
+        <label className="text-xs text-brand-text-muted">封面焦点 · 纵向<input type="range" min={0} max={100} value={focusY} onChange={(event) => setFocusY(Number(event.target.value))} className="mt-1 block w-full accent-brand-blue" /></label>
+        <input type="hidden" name="courseCoverFocusX" value={focusX} /><input type="hidden" name="courseCoverFocusY" value={focusY} />
+      </div>}
     </div>
   );
 }

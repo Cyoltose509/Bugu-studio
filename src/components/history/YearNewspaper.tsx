@@ -11,6 +11,7 @@ import {t} from "@/lib/i18n/dict";
 import type {Lang} from "@/lib/i18n/config";
 import type {AwardEntry} from "@/lib/history/awards";
 import {tagDisplayName} from "@/lib/tags/tag-names";
+import {activityCalendar} from "@/lib/activities/datetime";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 
 // ─── 类型 ────────────────────────────────────────────
@@ -102,10 +103,11 @@ const TYPE_DESC: Record<string, { cn: string; en: string }> = {
 const ACT_LABELS: Record<string, { cn: string; en: string }> = {
     COMPETITION: { cn: "Game Jam", en: "Game Jam" },
     COURSE: { cn: "公开课", en: "Course" },
+    ENGINE_COURSE: { cn: "引擎教学公开课", en: "Engine Course" },
     GENERAL: { cn: "大事件", en: "Major Event" },
     MEETING: { cn: "例会", en: "Meeting" },
 };
-const ACT_ORDER = ["COMPETITION", "COURSE", "GENERAL", "MEETING"] as const;
+const ACT_ORDER = ["COMPETITION", "COURSE", "ENGINE_COURSE", "GENERAL", "MEETING"] as const;
 
 // ─── 年度最佳作品选择 ─────────────────────────────────
 function pickFeaturedWork(projects: Project[]): Project | null {
@@ -448,6 +450,7 @@ function actDotClass(t: string): string {
     const map: Record<string, string> = {
         COMPETITION: "np-act-dot-competition",
         COURSE: "np-act-dot-course",
+        ENGINE_COURSE: "np-act-dot-course",
         GENERAL: "np-act-dot-general",
         MEETING: "np-act-dot-meeting",
     };
@@ -470,6 +473,7 @@ function activityTypeTagClass(t: string): string {
     const map: Record<string, string> = {
         COMPETITION: "np-act-tag-competition",
         COURSE: "np-act-tag-course",
+        ENGINE_COURSE: "np-act-tag-course",
         GENERAL: "np-act-tag-general",
         MEETING: "np-act-tag-meeting",
     };
@@ -789,7 +793,8 @@ function YearNewspaper({
                                         {nonMeeting.length > 0 && (
                                             <div className={Q.activityList}>
                                                 {nonMeeting.map(a => {
-                                                    const d = new Date(a.startTime);
+                                                    if (!a.startTime) return null;
+                                                    const d = activityCalendar(a.startTime);
                                                     const desc = narrateActivity(a);
                                                     const descHtml = a.descriptionHtml;
                                                     return (
@@ -803,7 +808,7 @@ function YearNewspaper({
                                                                 {a.status === "ARCHIVED" &&
                                                                     <span className="text-[10px] np-ink3 italic">({t(lang, "common.archived")})</span>}
                                                                 <span
-                                                                    className={Q.activityDate} style={QS.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
+                                                                    className={Q.activityDate} style={QS.activityDate}>{d.year}.{String(d.month).padStart(2, "0")}.{String(d.day).padStart(2, "0")}</span>
                                                             </div>
                                                             {descHtml ?
                                                                 <div className={Q.activityDesc} style={QS.activityDesc}><RichContentClient html={descHtml}/></div> : desc &&

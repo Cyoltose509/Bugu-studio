@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import UserAvatar from "@/components/ui/UserAvatar";
-import type { NotifBucket } from "@/lib/notifications/buckets";
+import { bucketOf, notificationTabs, type NotifBucket } from "@/lib/notifications/buckets";
 
 interface NotificationItem {
   id: string;
@@ -51,7 +51,8 @@ function getIcon(type: string) {
   if (type === "PROPOSAL_REVIEW") return "📋";
   if (type === "COMMENT_REPLY" || type === "COMMENT_LIKE") return "💬";
   if (type === "ROLE_CHANGE") return "🏷️";
-  if (type === "NEW_PROJECT") return "🎮";
+  if (type === "NEW_PROJECT" || type === "PROJECT_PUBLISHED") return "🎮";
+  if (type === "PROJECT_UPDATE" || type === "PROJECT_RESUBMIT") return "🔄";
   if (type === "NEW_USER") return "👤";
   if (type === "ACTIVITY_PROPOSAL") return "🎤";
   if (type === "ACTIVITY_ENROLL") return "📚";
@@ -114,6 +115,9 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotifBucket>("review");
   const [unread, setUnread] = useState<UnreadBuckets>(EMPTY_UNREAD);
+  const tabRef = useRef(tab);
+  const requestSeq = useRef(0);
+  tabRef.current = tab;
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -129,20 +133,23 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
         const data = json.data || {};
         setUnread({
           count: data.count ?? 0,
-          review: data.review ?? 0,
+          review: isAdmin ? (data.review ?? 0) : 0,
           activity: data.activity ?? 0,
-          bug: data.bug ?? 0,
+          bug: isAdmin ? (data.bug ?? 0) : 0,
         });
       }
     } catch { /* ignore */ }
-  }, []);
+  }, [isAdmin]);
 
   const fetchItems = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    const requested = isAdmin ? tab : null;
     setLoading(true);
     try {
       const qs = new URLSearchParams({ page: "1", unreadOnly: "false" });
-      if (isAdmin) qs.set("bucket", tab);
+      if (requested) qs.set("bucket", requested);
       const res = await fetch(`/api/notifications?${qs}`);
+      if (seq !== requestSeq.current) return;
       if (res.ok) {
         const json = await res.json();
         setItems(json.data?.items ?? []);
@@ -150,15 +157,17 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
         if (u) {
           setUnread({
             count: u.count ?? 0,
-            review: u.review ?? 0,
+            review: isAdmin ? (u.review ?? 0) : 0,
             activity: u.activity ?? 0,
-            bug: u.bug ?? 0,
+            bug: isAdmin ? (u.bug ?? 0) : 0,
           });
         } else {
           setUnread((prev) => ({ ...prev, count: json.data?.unreadCount ?? prev.count }));
         }
       }
-    } finally { setLoading(false); }
+    } finally {
+      if (seq === requestSeq.current) setLoading(false);
+    }
   }, [isAdmin, tab]);
 
   useEffect(() => { fetchUnreadCount(); }, [fetchUnreadCount]);
@@ -184,18 +193,19 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
 
   useEffect(() => {
     if (open || unread.count === 0) return;
+    const bucket = tabRef.current;
     fetch("/api/notifications/read", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(isAdmin ? { bucket: tab } : {}),
+      body: JSON.stringify(isAdmin ? { bucket } : {}),
     }).catch(() => {});
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnread((prev) => {
       if (!isAdmin) return EMPTY_UNREAD;
-      const cleared = tab === "review" ? prev.review : tab === "bug" ? prev.bug : prev.activity;
+      const cleared = bucket === "review" ? prev.review : bucket === "bug" ? prev.bug : prev.activity;
       return {
         ...prev,
-        [tab]: 0,
+        [bucket]: 0,
         count: Math.max(0, prev.count - cleared),
       };
     });
@@ -210,11 +220,7 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
     });
     setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
     setUnread((prev) => {
-      const b = item.type === "ERROR_REPORT" || item.type === "CSP_VIOLATION"
-        ? "bug"
-        : ["NEW_PROJECT", "PROJECT_UPDATE", "ACTIVITY_PROPOSAL", "JAM_APPLICATION", "NEW_USER"].includes(item.type)
-          ? "review"
-          : "activity";
+      const b = isAdmin ? bucketOf(item.type) : "activity";
       return {
         count: Math.max(0, prev.count - 1),
         review: b === "review" ? Math.max(0, prev.review - 1) : prev.review,
@@ -222,7 +228,7 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
         bug: b === "bug" ? Math.max(0, prev.bug - 1) : prev.bug,
       };
     });
-  }, []);
+  }, [isAdmin]);
 
   const handleClick = useCallback(async (item: NotificationItem) => {
     await markOneRead(item);
@@ -280,11 +286,16 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
     });
   }
 
-  const tabs: { id: NotifBucket; label: string; count: number }[] = [
-    { id: "review", label: t(lang, "notification.tab.review"), count: unread.review },
-    { id: "activity", label: t(lang, "notification.tab.activity"), count: unread.activity },
-    { id: "bug", label: t(lang, "notification.tab.bug"), count: unread.bug },
-  ];
+  const tabLabel: Record<NotifBucket, string> = {
+    review: t(lang, "notification.tab.review"),
+    activity: t(lang, "notification.tab.activity"),
+    bug: t(lang, "notification.tab.bug"),
+  };
+  const tabs = notificationTabs(isAdmin).map((id) => ({
+    id,
+    label: tabLabel[id],
+    count: id === "review" ? unread.review : id === "bug" ? unread.bug : unread.activity,
+  }));
 
   const list = (
     <>
@@ -415,7 +426,7 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
       </button>
 
       {open && (
-        <div className={`absolute right-0 top-full mt-2 ${isAdmin ? "w-[22.5rem] sm:w-[26rem]" : "w-80"} max-h-[420px] rounded-xl border bg-card shadow-xl z-50 border-brand-border-subtle overflow-hidden`}>
+        <div className={`absolute right-0 top-full mt-2 ${isAdmin ? "w-[min(26rem,calc(100vw-1rem))]" : "w-80"} max-h-[420px] rounded-xl border bg-card shadow-xl z-50 border-brand-border-subtle overflow-hidden`}>
           {isAdmin ? (
             <div className="flex max-h-[420px]">
               <aside className="w-[4.25rem] shrink-0 border-r border-brand-border-subtle py-2 flex flex-col gap-0.5">
@@ -423,7 +434,14 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
                   <button
                     key={tb.id}
                     type="button"
-                    onClick={() => { setTab(tb.id); setExpandedId(null); }}
+                    onClick={() => {
+                      if (tb.id === tab) return;
+                      requestSeq.current += 1;
+                      setTab(tb.id);
+                      setItems([]);
+                      setLoading(true);
+                      setExpandedId(null);
+                    }}
                     className={`mx-1 px-1.5 py-2 rounded-lg text-xs leading-tight text-center transition-colors ${
                       tab === tb.id
                         ? "bg-[#E8F4FD] text-brand-blue font-medium"
@@ -441,7 +459,7 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
               </aside>
               <div className="min-w-0 flex-1 flex flex-col max-h-[420px]">
                 <div className="flex items-center justify-between px-3 py-2.5 border-b border-brand-border-subtle shrink-0">
-                  <span className="font-semibold text-sm text-brand-navy">{t(lang, "notification.title")}</span>
+                  <span className="font-semibold text-sm text-brand-navy">{tabLabel[tab]}</span>
                   <div className="flex items-center gap-2">
                     {unread.count > 0 && (
                       <button onClick={markAllRead} className="text-xs hover:underline text-brand-blue">

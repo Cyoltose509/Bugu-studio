@@ -8,6 +8,7 @@ import {isMockDataEnabled, mockHistoryYearDetails} from "@/lib/mock/frontend-dat
 import {getLang} from "@/lib/i18n/getLang";
 import {t} from "@/lib/i18n/dict";
 import {extractAwardYear, groupAwardsByYear} from "@/lib/history/awards";
+import {activityCalendar} from "@/lib/activities/datetime";
 import type {AwardEntry} from "@/lib/history/awards";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -34,7 +35,7 @@ export default async function HistoryPage() {
         );
     }
 
-    const currentYear = new Date().getFullYear();
+    const currentYear = activityCalendar(new Date()).year;
 
     // 从四个数据源收集所有有数据的年份（历史数据几乎不变，缓存1小时）
     const [projectYearRows, memberGradeRows, eventYearRows, activityRows] = await Promise.all([
@@ -49,7 +50,7 @@ export default async function HistoryPage() {
             3600),
         cachedQuery("history:activityYears", () =>
                 prisma.activity.findMany({
-                    where: {status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, type: {not: "MEETING"}},
+                    where: {status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, type: {not: "MEETING"}, timePending: false, startTime: { not: null }},
                     select: {startTime: true},
                 }),
             3600),
@@ -65,7 +66,7 @@ export default async function HistoryPage() {
 
     // 从 activity 的 startTime 提取年份
     const activityYearSet = new Set(
-        activityRows.map((a) => a.startTime.getFullYear()).filter((y) => y >= 2000 && y <= currentYear)
+        activityRows.flatMap((a) => a.startTime ? [activityCalendar(a.startTime).year] : []).filter((y) => y >= 2000 && y <= currentYear)
     );
 
     // 合并所有年份
@@ -102,6 +103,7 @@ export default async function HistoryPage() {
       allEvents,
       allActivities,
       allJamMembers,
+      allCourseParticipants,
       allMeetingShares,
     ] = await Promise.all([
       cachedQuery('history:allProjects', () =>
@@ -127,7 +129,7 @@ export default async function HistoryPage() {
         }), 3600),
       cachedQuery('history:allActivities', () =>
         prisma.activity.findMany({
-          where: { status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] } },
+          where: { status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, timePending: false, startTime: { not: null } },
           select: { id: true, title: true, type: true, status: true, startTime: true, endTime: true, summary: true, description: true, coverImage: true },
           orderBy: { startTime: "asc" }
         }), 3600),
@@ -135,6 +137,11 @@ export default async function HistoryPage() {
       cachedQuery('history:jamMembers', () =>
         prisma.jamTeamMember.findMany({
           select: { userId: true, team: { select: { activity: { select: { startTime: true, type: true } } } } }
+        }), 3600),
+      cachedQuery('history:courseParticipants', () =>
+        prisma.courseParticipant.findMany({
+          where: { memberId: { not: null }, activity: { type: "ENGINE_COURSE", status: { in: ["PUBLISHED", "ARCHIVED"] } } },
+          select: { memberId: true, activity: { select: { startTime: true } } },
         }), 3600),
       // 活跃度计算 — 例会分享（MeetingProposal APPROVED）
       cachedQuery('history:meetingShares', () =>
@@ -193,7 +200,8 @@ export default async function HistoryPage() {
 
     const activitiesByYear = new Map<number, any[]>();
     for (const a of allActivities) {
-      const y = new Date(a.startTime).getFullYear();
+      if (!a.startTime) continue;
+      const y = activityCalendar(a.startTime).year;
       if (!activitiesByYear.has(y)) activitiesByYear.set(y, []);
       activitiesByYear.get(y)!.push(a);
     }
@@ -224,7 +232,7 @@ export default async function HistoryPage() {
       // 比赛参与：该年 COMPETITION 活动中，JamTeamMember 通过 userId → memberId
       const competitionContrib = new Map<string, number>();
       for (const jm of allJamMembers) {
-        const actYear = jm.team?.activity?.startTime ? new Date(jm.team.activity.startTime).getFullYear() : null;
+        const actYear = jm.team?.activity?.startTime ? activityCalendar(jm.team.activity.startTime).year : null;
         if (actYear === year && jm.team?.activity?.type === "COMPETITION") {
           const member = userIdToMember.get(jm.userId);
           if (member) {
@@ -232,11 +240,10 @@ export default async function HistoryPage() {
           }
         }
       }
-      
       // 公开课参与：该年 COURSE 活动中，JamTeamMember 通过 userId → memberId（与比赛同一套报名系统）
       const courseContrib = new Map<string, number>();
       for (const jm of allJamMembers) {
-        const actYear = jm.team?.activity?.startTime ? new Date(jm.team.activity.startTime).getFullYear() : null;
+        const actYear = jm.team?.activity?.startTime ? activityCalendar(jm.team.activity.startTime).year : null;
         if (actYear === year && jm.team?.activity?.type === "COURSE") {
           const member = userIdToMember.get(jm.userId);
           if (member) {
@@ -244,11 +251,17 @@ export default async function HistoryPage() {
           }
         }
       }
+      for (const participant of allCourseParticipants) {
+        const actYear = participant.activity.startTime ? activityCalendar(participant.activity.startTime).year : null;
+        if (actYear === year && participant.memberId) {
+          courseContrib.set(participant.memberId, (courseContrib.get(participant.memberId) || 0) + 1);
+        }
+      }
       
       // 例会分享：该年 MEETING 活动中 APPROVED 的 MeetingProposal
       const meetingContrib = new Map<string, number>();
       for (const mp of allMeetingShares) {
-        const actYear = mp.activity?.startTime ? new Date(mp.activity.startTime).getFullYear() : null;
+        const actYear = mp.activity?.startTime ? activityCalendar(mp.activity.startTime).year : null;
         if (actYear === year && mp.activity?.type === "MEETING") {
           const member = userIdToMember.get(mp.userId);
           if (member) {

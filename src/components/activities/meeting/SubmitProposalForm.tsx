@@ -46,7 +46,7 @@ function Spinner() {
 
 export default function SubmitProposalForm({ activityId }: { activityId: string }) {
   const { t } = useLang();
-  const [proposalType, setProposalType] = useState<"SHARE" | "SHOWCASE">("SHARE");
+  const [proposalType, setProposalType] = useState<"SHARE" | "SHOWCASE" | null>(null);
   const [state, formAction] = useActionState(
     async (_prev: typeof initialState, formData: FormData) => {
       const result = await submitProposal(formData);
@@ -58,62 +58,62 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
     initialState,
   );
 
+  const chip = (active: boolean, kind: "SHARE" | "SHOWCASE") =>
+    `text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${
+      active
+        ? kind === "SHOWCASE" ? "agenda-chip-showcase" : "agenda-chip-share"
+        : "text-brand-text-muted hover:text-brand-text-heading"
+    }`;
+
   return (
-    <form action={formAction} className="space-y-3">
+    <form action={formAction} className="space-y-2.5">
       <input type="hidden" name="activityId" value={activityId} />
-      <input type="hidden" name="proposalType" value={proposalType} />
+      {proposalType ? <input type="hidden" name="proposalType" value={proposalType} /> : null}
 
       {state.error && (
-        <p className="text-xs px-3 py-2 rounded-lg bg-red-50 text-red-600">{state.error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{state.error}</p>
       )}
 
       {state.success ? (
-        <p className="text-xs px-3 py-2 rounded-lg bg-green-50 text-green-700 font-medium">
+        <p className="text-xs font-medium text-green-700 dark:text-green-400">
           {t("meeting.proposalSubmitted")}
         </p>
       ) : (
         <>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setProposalType("SHARE")}
-              className={`flex-1 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                proposalType === "SHARE"
-                  ? "border-brand-blue bg-[#E8F4FD] text-brand-blue"
-                  : "border-brand-border-subtle text-brand-text-secondary"
-              }`}
-            >
-              {t("activityDetail.proposalShare")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setProposalType("SHOWCASE")}
-              className={`flex-1 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                proposalType === "SHOWCASE"
-                  ? "border-brand-orange bg-[#FFF3E0] text-brand-orange"
-                  : "border-brand-border-subtle text-brand-text-secondary"
-              }`}
-            >
-              {t("activityDetail.proposalShowcase")}
-            </button>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-semibold text-brand-navy">{t("activityDetail.signUpShare")}</h3>
+            <div className="flex shrink-0 items-center gap-1">
+              <button type="button" onClick={() => setProposalType("SHARE")} className={chip(proposalType === "SHARE", "SHARE")}>
+                {t("activityDetail.proposalShare")}
+              </button>
+              <button type="button" onClick={() => setProposalType("SHOWCASE")} className={chip(proposalType === "SHOWCASE", "SHOWCASE")}>
+                {t("activityDetail.proposalShowcase")}
+              </button>
+            </div>
           </div>
-          <input
-            name="title"
-            placeholder={
-              proposalType === "SHOWCASE"
-                ? t("meeting.topicPlaceholderShowcase")
-                : t("meeting.topicPlaceholder")
-            }
-            required
-            className="w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm"
-          />
-          <MentionEditor
-            name="description"
-            placeholder={t("meeting.descOptionalPlaceholder")}
-            rows={2}
-            className="w-full rounded-lg border border-brand-border-subtle px-3 py-2 text-sm"
-          />
-          <SubmitButton />
+          {proposalType ? (
+            <>
+              <p className="text-[11px] leading-snug text-brand-text-muted">{t("activityDetail.proposalHint")}</p>
+              <input
+                name="title"
+                placeholder={
+                  proposalType === "SHOWCASE"
+                    ? t("meeting.topicPlaceholderShowcase")
+                    : t("meeting.topicPlaceholder")
+                }
+                required
+                className="w-full bg-transparent py-1 text-sm font-medium text-brand-navy placeholder:text-brand-text-muted focus:outline-none"
+              />
+              <MentionEditor
+                bare
+                name="description"
+                placeholder={t("meeting.descOptionalPlaceholder")}
+                rows={2}
+                className="border-t border-brand-border-subtle"
+              />
+              <SubmitButton />
+            </>
+          ) : null}
         </>
       )}
     </form>

@@ -640,6 +640,24 @@ select:focus-visible {
 .dark .event-chip-cusga { color: #a4d85a; background-color: rgba(164, 216, 90, 0.16); }
 .dark .event-chip-mengyabei { color: #6aa0c8; background-color: rgba(106, 160, 200, 0.16); }
 
+/* 议程/报名：「分享」「展示」胶囊，随昼夜切换 */
+.agenda-chip-share {
+  color: #3388BB;
+  background-color: rgba(51, 136, 187, 0.12);
+}
+.agenda-chip-showcase {
+  color: #E38043;
+  background-color: rgba(227, 128, 67, 0.12);
+}
+.dark .agenda-chip-share {
+  color: #5ba8d8;
+  background-color: rgba(91, 168, 216, 0.16);
+}
+.dark .agenda-chip-showcase {
+  color: #f09055;
+  background-color: rgba(240, 144, 85, 0.16);
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    主题切换：「阴阳割昏晓」— 斜向分界线扫过
    依赖 View Transitions API；无支持时 ThemeToggle 会瞬时切换。

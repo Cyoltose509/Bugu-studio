@@ -6,8 +6,10 @@ import { auth } from "@/lib/auth/auth";
 import { invalidateCache } from "@/lib/db/cache";
 import { createNotification, notifyMentions } from "@/lib/services/notification";
 import { revalidatePath } from "next/cache";
-import { ActivityStatus, ProposalStatus, ProposalType } from "@prisma/client";
-import { deleteFromR2 } from "@/lib/utils/upload";
+import { ActivityStatus, CourseParticipantRole, ProposalStatus, ProposalType } from "@prisma/client";
+import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
+import { isCourseAttachmentUrl, parseCourseMaterials } from "@/lib/activities/course-materials";
+import { withoutCourseMediaReferences } from "@/lib/activities/course-media";
 import { parseBvId } from "@/lib/activities/constants";
 import { parseActivityDateTime } from "@/lib/activities/datetime";
 import { getLang } from "@/lib/i18n/getLang";
@@ -16,12 +18,19 @@ import { showcaseKey } from "@/lib/activities/showcase";
 import { canSubmitActivityTalk } from "@/lib/activities/capabilities";
 
 const TYPE_LABEL: Record<string, string> = {
-  MEETING: "例会", COURSE: "公开课", COMPETITION: "Game Jam", GENERAL: "大事件",
+  MEETING: "例会", COURSE: "策划公开课", ENGINE_COURSE: "引擎教学公开课", COMPETITION: "Game Jam", GENERAL: "大事件",
 };
 
 /** 简单 slug 生成 */
 function toSlug(title: string): string {
   return title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "").slice(0, 60);
+}
+
+function readFocus(formData: FormData): { x: number; y: number } | { error: string } {
+  const x = Number(formData.get("courseCoverFocusX") ?? 50);
+  const y = Number(formData.get("courseCoverFocusY") ?? 50);
+  if (!Number.isInteger(x) || x < 0 || x > 100 || !Number.isInteger(y) || y < 0 || y > 100) return { error: "封面焦点无效" };
+  return { x, y };
 }
 
 /** 当 maxTeamSize 缩小时，自动移除超限队伍的成员（保留队长和最早加入的成员） */
@@ -50,10 +59,34 @@ async function trimTeamMembers(activityId: string, maxTeamSize: number) {
   }
 }
 
+function readSchedule(formData: FormData):
+  | { error: string }
+  | { timePending: true; courseHasClock: false; startTime: null; endTime: null; startRaw?: undefined }
+  | { timePending: false; courseHasClock: boolean; startTime: Date; endTime: Date; startRaw: string } {
+  if (formData.get("timePending") === "on") {
+    return { timePending: true, courseHasClock: false, startTime: null, endTime: null };
+  }
+  const startTime = ((formData.get("startTime") as string) || "").trim();
+  const endTime = ((formData.get("endTime") as string) || "").trim();
+  if (!startTime || !endTime) return { error: "请选择开始和结束日期，或改为待定" };
+  const courseHasClock = formData.get("courseHasClock") === "on";
+  const startClock = String(formData.get("startClock") || "");
+  const endClock = String(formData.get("endClock") || "");
+  if (courseHasClock && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startClock) || (endClock && !/^([01]\d|2[0-3]):[0-5]\d$/.test(endClock)))) {
+    return { error: "请填写有效的开始时间，结束时间可以留空" };
+  }
+  const parsedStart = parseActivityDateTime(courseHasClock ? `${startTime}T${startClock}` : startTime, "start");
+  const parsedEnd = parseActivityDateTime(courseHasClock && endClock ? `${endTime}T${endClock}` : endTime, "end");
+  if (Number.isNaN(parsedStart.getTime()) || Number.isNaN(parsedEnd.getTime()) || parsedStart >= parsedEnd) {
+    return { error: "开始日期必须早于或等于结束日期" };
+  }
+  return { timePending: false, courseHasClock, startTime: parsedStart, endTime: parsedEnd, startRaw: startTime };
+}
+
 /** 如果标题为空，生成默认标题：YYYY年MM月DD日 + 活动类型 */
 function defaultTitle(type: string, startTime?: string): string {
   if (!startTime) return `新${TYPE_LABEL[type] || "活动"}`;
-  // 直接从 datetime-local 字符串解析，避免 new Date() 的时区歧义
+  // 日期字符串按北京时间的日历日解析，避免 new Date() 的时区歧义
   const [datePart] = startTime.split("T");
   const [year, month, day] = datePart.split("-").map(Number);
   return `${year}年${month}月${day}日 ${TYPE_LABEL[type] || "活动"}`;
@@ -90,20 +123,19 @@ export async function createActivity(formData: FormData) {
   const location    = (formData.get("location") as string || "").trim();
   const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
   const coverImage   = (formData.get("coverImage") as string || "").trim();
-  const startTime   = formData.get("startTime") as string;
-  const endTime     = formData.get("endTime") as string;
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
   const talkSubmissionOpen = formData.get("talkSubmissionOpen") === "on";
   const publish     = formData.get("status") === "PUBLISHED";
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
+  const schedule = readSchedule(formData);
+  if ("error" in schedule) return schedule;
+  const focus = readFocus(formData);
+  if ("error" in focus) return focus;
 
-  if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
-  if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
-
-  // 标题默认：年月日 + 活动类型
-  const finalTitle = title || defaultTitle(type, startTime);
+  // 标题默认：年月日 + 活动类型；待定则只用类型
+  const finalTitle = title || defaultTitle(type, schedule.startRaw);
   const slug = toSlug(finalTitle);
   const maxParticipants = maxStr ? parseInt(maxStr, 10) : undefined;
   const maxTeamSize = maxTeamSizeStr ? parseInt(maxTeamSizeStr, 10) : 6;
@@ -118,14 +150,18 @@ export async function createActivity(formData: FormData) {
       location: location || null,
       meetingUrl: meetingUrl || undefined,
       coverImage: coverImage || undefined,
-      startTime: parseActivityDateTime(startTime),
-      endTime: parseActivityDateTime(endTime),
+      timePending: schedule.timePending,
+      courseHasClock: schedule.courseHasClock,
+      courseCoverFocusX: focus.x,
+      courseCoverFocusY: focus.y,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
       maxParticipants,
-      registrationOpen: true,
+      registrationOpen: false,
       talkSubmissionOpen,
       status: publish ? ActivityStatus.PUBLISHED : ActivityStatus.DRAFT,
       theme: theme || undefined,
-      themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
+      themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
       maxTeamSize,
     },
   });
@@ -158,18 +194,18 @@ export async function updateActivity(id: string, formData: FormData) {
   const location    = (formData.get("location") as string || "").trim();
   const meetingUrl  = (formData.get("meetingUrl") as string || "").trim();
   const coverImage   = (formData.get("coverImage") as string || "").trim();
-  const startTime   = formData.get("startTime") as string;
-  const endTime     = formData.get("endTime") as string;
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
   const talkSubmissionOpen = formData.get("talkSubmissionOpen") === "on";
   const status      = (formData.get("status") as string || "DRAFT");
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
+  const schedule = readSchedule(formData);
+  const focus = readFocus(formData);
 
   if (!title) return { error: "请填写活动标题" };
-  if (!startTime || !endTime) return { error: "请选择开始和结束时间" };
-  if (new Date(startTime) >= new Date(endTime)) return { error: "开始时间必须早于结束时间" };
+  if ("error" in schedule) return schedule;
+  if ("error" in focus) return focus;
 
   const activity = await prisma.activity.findUnique({ where: { id }, select: { slug: true, maxTeamSize: true, coverImage: true } });
   const slug = activity ? activity.slug : toSlug(title);
@@ -188,13 +224,18 @@ export async function updateActivity(id: string, formData: FormData) {
       location: location || null,
       meetingUrl: meetingUrl || undefined,
       coverImage: coverImage || undefined,
-      startTime: parseActivityDateTime(startTime),
-      endTime: parseActivityDateTime(endTime),
+      timePending: schedule.timePending,
+      courseHasClock: schedule.courseHasClock,
+      courseCoverFocusX: focus.x,
+      courseCoverFocusY: focus.y,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
       maxParticipants,
+      registrationOpen: false,
       talkSubmissionOpen,
       status: status as ActivityStatus,
       theme: theme || undefined,
-      themeRevealedAt: themeRevealedAt ? new Date(themeRevealedAt) : undefined,
+      themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
       maxTeamSize: newMaxTeamSize,
     },
   });
@@ -235,6 +276,20 @@ export async function updateActivity(id: string, formData: FormData) {
     if (talkResult && "error" in talkResult && talkResult.error) return { error: talkResult.error };
   }
 
+  if (type === "COURSE" || type === "ENGINE_COURSE") {
+    const courseRaw = formData.get("courseJson");
+    if (typeof courseRaw === "string") {
+      let course: unknown;
+      try {
+        course = JSON.parse(courseRaw);
+      } catch {
+        return { error: "公开课资料无效" };
+      }
+      const courseResult = await saveCourseMaterials(id, course);
+      if (courseResult && "error" in courseResult && courseResult.error) return { error: courseResult.error };
+    }
+  }
+
   const showcaseRaw = formData.get("showcaseJson");
   if (typeof showcaseRaw === "string" && type === "GENERAL") {
     let showcase: unknown;
@@ -259,8 +314,13 @@ export async function deleteActivity(id: string) {
   await requireAdmin();
 
   // 捕获旧封面 URL
-  const activity = await prisma.activity.findUnique({ where: { id }, select: { coverImage: true } });
+  const activity = await prisma.activity.findUnique({
+    where: { id },
+    select: { coverImage: true, courseAttachments: { select: { url: true } }, courseClasses: { select: { scheduleImage: true, coverImage: true, showcase: { select: { imageUrl: true } } } } },
+  });
   const oldCover = activity?.coverImage;
+  const attachmentUrls = activity?.courseAttachments.map((file) => file.url) || [];
+  const programUrls = activity?.courseClasses.flatMap((item) => [item.coverImage, item.scheduleImage, ...item.showcase.map((work) => work.imageUrl)]) || [];
 
   await prisma.$transaction([
     prisma.siteSetting.deleteMany({ where: { key: showcaseKey(id) } }),
@@ -268,9 +328,8 @@ export async function deleteActivity(id: string) {
   ]);
 
   // ── 清理 R2 旧封面（best-effort）──
-  if (oldCover) {
-    deleteFromR2(oldCover).catch(() => {});
-  }
+  const disposable = await withoutCourseMediaReferences([oldCover, ...attachmentUrls, ...programUrls]);
+  if (disposable.length) deleteManyFromR2(disposable).catch(() => {});
 
   await invalidateActivityCaches(id);
   return { success: true };
@@ -281,6 +340,58 @@ export async function updateActivityStatus(id: string, status: ActivityStatus) {
   await requireAdmin();
   await prisma.activity.update({ where: { id }, data: { status } });
   await invalidateActivityCaches(id);
+}
+
+async function saveCourseMaterials(activityId: string, raw: unknown) {
+  const parsed = parseCourseMaterials(raw);
+  if ("error" in parsed) return parsed;
+  const memberIds = parsed.participants.flatMap((item) => item.memberId ? [item.memberId] : []);
+  const members = memberIds.length
+    ? await prisma.clubMember.findMany({ where: { id: { in: memberIds } }, select: { id: true } })
+    : [];
+  if (members.length !== memberIds.length) return { error: "有成员不存在或已删除" };
+
+  const publicBase = process.env.R2_PUBLIC_URL || "";
+  for (const file of parsed.attachments) {
+    if (!isCourseAttachmentUrl(file.url, publicBase)) return { error: "附件地址无效" };
+  }
+
+  const previous = await prisma.courseAttachment.findMany({ where: { activityId }, select: { url: true } });
+  await prisma.$transaction([
+    prisma.courseParticipant.deleteMany({ where: { activityId } }),
+    prisma.courseAttachment.deleteMany({ where: { activityId } }),
+    ...(parsed.participants.length
+      ? [prisma.courseParticipant.createMany({
+          data: parsed.participants.map((item, index) => ({
+            activityId,
+            memberId: item.memberId,
+            externalName: item.externalName,
+            role: item.role === "INSTRUCTOR" ? CourseParticipantRole.INSTRUCTOR : CourseParticipantRole.STUDENT,
+            sortOrder: index,
+          })),
+        })]
+      : []),
+    ...(parsed.attachments.length
+      ? [prisma.courseAttachment.createMany({
+          data: parsed.attachments.map((file, index) => ({
+            activityId,
+            name: file.name,
+            url: file.url,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            sortOrder: index,
+          })),
+        })]
+      : []),
+  ]);
+
+  const kept = new Set(parsed.attachments.map((file) => file.url));
+  const removed = previous.map((file) => file.url).filter((url) => !kept.has(url));
+  if (removed.length) {
+    const disposable = await withoutCourseMediaReferences(removed);
+    if (disposable.length) deleteManyFromR2(disposable).catch(() => {});
+  }
+  return { success: true as const };
 }
 
 // ── 通知管理员：活动有新动态 ─────────────────────────────────
@@ -330,7 +441,7 @@ export async function submitProposal(formData: FormData) {
   if (!title)       return { error: t(lang, "meeting.errTitleRequired") };
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },
-    select: { talkSubmissionOpen: true, status: true, endTime: true },
+    select: { talkSubmissionOpen: true, status: true, endTime: true, timePending: true },
   });
   if (!activity || !canSubmitActivityTalk(activity)) {
     return { error: t(lang, "meeting.errTalkClosed") };
@@ -590,6 +701,7 @@ export async function saveMeetingTalks(
         select: {
           id: true,
           name: true,
+          image: true,
           member: { select: { id: true, displayName: true } },
         },
       },

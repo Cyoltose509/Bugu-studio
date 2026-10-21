@@ -7,6 +7,7 @@ import path from "path";
 import { nameSortKey } from "@/lib/works/name-sort";
 import { compareProjectsByDate } from "@/lib/works/date-sort";
 import { extractAwardYear, groupAwardsByYear } from "@/lib/history/awards";
+import { compareActivitiesNewestFirst } from "@/lib/activities/datetime";
 
 export type MockSnapshot = {
   fetchedAt: string;
@@ -226,11 +227,11 @@ export function mockHomeActivities(take = 6) {
   const now = Date.now();
   const dated = list.map((a) => withDates(a, ["startTime", "endTime", "themeRevealedAt"]));
   const live = dated
-    .filter((a) => a.status === "PUBLISHED" && a.endTime.getTime() >= now)
-    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+    .filter((a) => a.status === "PUBLISHED" && (a.timePending || a.endTime.getTime() >= now))
+    .sort(compareActivitiesNewestFirst)
     .slice(0, Math.min(3, take));
   const past = dated
-    .filter((a) => a.status === "ARCHIVED" || a.endTime.getTime() < now)
+    .filter((a) => !a.timePending && (a.status === "ARCHIVED" || a.endTime.getTime() < now))
     .sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
     .slice(0, Math.max(0, take - live.length));
   return [...live, ...past];
@@ -242,18 +243,20 @@ export function mockActivitiesBuckets() {
     withDates({ ...a }, ["startTime", "endTime", "themeRevealedAt"]),
   );
   const ongoing = list
-    .filter((a) => a.status === "PUBLISHED" && a.startTime.getTime() <= now && a.endTime.getTime() >= now)
-    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+    .filter((a) => a.status === "PUBLISHED" && !a.timePending && a.startTime.getTime() <= now && a.endTime.getTime() >= now)
+    .sort(compareActivitiesNewestFirst)
     .slice(0, 6);
   const upcoming = list
-    .filter((a) => a.status === "PUBLISHED" && a.startTime.getTime() > now)
-    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+    .filter((a) => a.status === "PUBLISHED" && (a.timePending || a.startTime.getTime() > now))
+    .sort(compareActivitiesNewestFirst)
     .slice(0, 6);
   const past = list
     .filter(
       (a) =>
-        (a.status === "PUBLISHED" && a.endTime.getTime() < now) ||
-        a.status === "ARCHIVED",
+        !a.timePending && (
+          (a.status === "PUBLISHED" && a.endTime.getTime() < now) ||
+          a.status === "ARCHIVED"
+        ),
     )
     .sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
     .slice(0, 12);
@@ -337,7 +340,7 @@ export function mockHistoryYearDetails() {
     if (m.joinYear) years.add(m.joinYear);
   }
   for (const e of events) years.add(e.year);
-  for (const a of activities) years.add(new Date(a.startTime).getFullYear());
+  for (const a of activities) if (a.startTime && !a.timePending) years.add(new Date(a.startTime).getFullYear());
   // 奖项文本里的年份也纳入年份集合
   for (const p of projects) {
     for (const award of (p.awards || [])) {
@@ -358,7 +361,7 @@ export function mockHistoryYearDetails() {
     const newBlood = members.filter((m) => m.joinYear === year);
     const yearEvents = events.filter((e) => e.year === year);
     const yearActivities = activities.filter(
-      (a) => new Date(a.startTime).getFullYear() === year,
+      (a) => !!a.startTime && !a.timePending && new Date(a.startTime).getFullYear() === year,
     );
     const yearAwards = awardByYear.get(year) || [];
     if (

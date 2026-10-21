@@ -6,17 +6,21 @@ import Link from "next/link";
 import { updateActivity } from "../../actions";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import LocationPresetInput from "@/components/activities/LocationPresetInput";
+import ActivityTimeChoice from "@/components/activities/ActivityTimeChoice";
 import MeetingTalksEditor, { type TalkDraft } from "@/components/activities/meeting/MeetingTalksEditor";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import DescriptionEditor from "@/components/admin/DescriptionEditor";
 import MentionEditor from "@/components/ui/MentionEditor";
 import ShowcaseEditor from "@/components/activities/showcase/ShowcaseEditor";
+import CourseMaterialsEditor from "@/components/activities/course/CourseMaterialsEditor";
+import type { CourseAttachmentDraft, CourseParticipantDraft } from "@/lib/activities/course-materials";
 import type { ActivityShowcase } from "@/lib/activities/showcase";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",     label: "例会",     hint: "议程与分享报名" },
-  { value: "COURSE",      label: "公开课",   hint: "课程与讲题" },
+  { value: "COURSE",      label: "公开课", hint: "策划分享或引擎教学" },
+  { value: "ENGINE_COURSE", label: "引擎教学公开课", hint: "分班教学与作品大赏" },
   { value: "COMPETITION", label: "Game Jam", hint: "组队、题目与提交" },
   { value: "GENERAL",     label: "大事件",   hint: "海报与试玩目录" },
 ] as const;
@@ -41,6 +45,12 @@ export type EditActivityValues = {
   coverImage: string;
   startTime: string;
   endTime: string;
+  timePending: boolean;
+  courseHasClock: boolean;
+  startClock: string;
+  endClock: string;
+  courseCoverFocusX: number;
+  courseCoverFocusY: number;
   maxParticipants: number | "";
   talkSubmissionOpen: boolean;
   theme: string;
@@ -109,17 +119,24 @@ export default function EditActivityForm({
   talks,
   showcase,
   projects,
+  courseParticipants,
+  courseAttachments,
 }: {
   activity: EditActivityValues;
   talks: TalkDraft[];
   showcase: ActivityShowcase | null;
   projects: ProjectOption[];
+  courseParticipants: CourseParticipantDraft[];
+  courseAttachments: CourseAttachmentDraft[];
 }) {
   const router = useRouter();
   const [type, setType] = useState(activity.type);
   const [status, setStatus] = useState(activity.status);
   const [title, setTitle] = useState(activity.title);
   const [summary, setSummary] = useState(activity.summary);
+  const [timePending, setTimePending] = useState(activity.timePending);
+  const [startTime, setStartTime] = useState(activity.startTime);
+  const [endTime, setEndTime] = useState(activity.endTime);
   const [error, setError] = useState("");
 
   const field =
@@ -159,8 +176,8 @@ export default function EditActivityForm({
       <div>
         <p className={label}>活动类型</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          {TYPE_OPTIONS.map((opt) => {
-            const active = type === opt.value;
+          {TYPE_OPTIONS.filter((option) => option.value !== "ENGINE_COURSE").map((opt) => {
+            const active = type === opt.value || (opt.value === "COURSE" && type === "ENGINE_COURSE");
             return (
               <button
                 key={opt.value}
@@ -180,6 +197,9 @@ export default function EditActivityForm({
             );
           })}
         </div>
+        {(type === "COURSE" || type === "ENGINE_COURSE") && <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-brand-border-subtle bg-card p-2">
+          {TYPE_OPTIONS.filter((option) => option.value === "COURSE" || option.value === "ENGINE_COURSE").map((option) => <button key={option.value} type="button" onClick={() => setType(option.value)} className={`rounded-lg px-3 py-2 text-left text-sm ${type === option.value ? "bg-brand-blue text-white" : "text-brand-text-body hover:bg-brand-blue/10"}`}><strong className="block">{option.value === "COURSE" ? "策划公开课" : option.label}</strong><span className="text-xs opacity-75">{option.value === "COURSE" ? "组队分享与评分" : option.hint}</span></button>)}
+        </div>}
       </div>
 
       <StatusTimeline value={status} onChange={setStatus} />
@@ -187,16 +207,20 @@ export default function EditActivityForm({
       <div className="bg-card rounded-xl border p-4 sm:p-6 shadow-sm border-brand-border-subtle">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] gap-8 lg:gap-10">
           <aside className="space-y-5 order-2 lg:order-1 lg:sticky lg:top-6 lg:self-start">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-              <div>
-                <label className={label}>开始时间</label>
-                <input name="startTime" type="datetime-local" defaultValue={activity.startTime} required className={field} />
-              </div>
-              <div>
-                <label className={label}>结束时间</label>
-                <input name="endTime" type="datetime-local" defaultValue={activity.endTime} required className={field} />
-              </div>
-            </div>
+            <ActivityTimeChoice
+              pending={timePending}
+              onPendingChange={setTimePending}
+              start={startTime}
+              end={endTime}
+              onStartChange={setStartTime}
+              onEndChange={setEndTime}
+              fieldClass={field}
+              labelClass={label}
+            />
+            {(type === "COURSE" || type === "ENGINE_COURSE") && !timePending && <div className="space-y-3 rounded-lg border border-brand-border-subtle p-3">
+              <label className="flex items-center gap-2 text-sm text-brand-text-body"><input type="checkbox" name="courseHasClock" defaultChecked={activity.courseHasClock} className="accent-brand-blue" />精确到时分</label>
+              <div className="grid grid-cols-2 gap-2"><label className={label}>开始时间<input type="time" name="startClock" defaultValue={activity.startClock} className={field} /></label><label className={label}>结束时间（可选）<input type="time" name="endClock" defaultValue={activity.endClock} className={field} /></label></div>
+            </div>}
 
             <LocationPresetInput defaultValue={activity.location} />
 
@@ -258,10 +282,10 @@ export default function EditActivityForm({
                   />
                 </div>
                 <div>
-                  <label className={label}>题目公布时间</label>
+                  <label className={label}>题目公布日期</label>
                   <input
                     name="themeRevealedAt"
-                    type="datetime-local"
+                    type="date"
                     defaultValue={activity.themeRevealedAt}
                     className={field}
                   />
@@ -312,6 +336,9 @@ export default function EditActivityForm({
                 title={title}
                 summary={summary}
                 activityType={type}
+                allowFocalPoint={type === "COURSE" || type === "ENGINE_COURSE"}
+                initialFocusX={activity.courseCoverFocusX}
+                initialFocusY={activity.courseCoverFocusY}
                 typeLabel={TYPE_OPTIONS.find((t) => t.value === type)?.label}
               />
             </div>
@@ -319,7 +346,17 @@ export default function EditActivityForm({
         </div>
       </div>
 
-      <MeetingTalksEditor activityId={activity.id} initialTalks={talks} embedded />
+      {(type === "COURSE" || type === "ENGINE_COURSE") && (
+        <CourseMaterialsEditor participants={courseParticipants} attachments={courseAttachments} showStudents={type === "COURSE"} />
+      )}
+
+      {type === "ENGINE_COURSE" && <div className="rounded-xl border border-brand-border-subtle bg-card p-5">
+        <h2 className="text-lg font-semibold text-brand-navy">班级、课程安排与作品大赏</h2>
+        <p className="mt-1 text-sm text-brand-text-secondary">先保存活动信息，再进入课程编排管理班级和课次。</p>
+        <Link href={`/admin/activities/${activity.id}/program`} className="mt-3 inline-flex rounded-lg bg-brand-blue px-4 py-2 text-sm font-medium text-white">编辑课程编排 →</Link>
+      </div>}
+
+      {type !== "ENGINE_COURSE" && <MeetingTalksEditor activityId={activity.id} initialTalks={talks} embedded />}
 
       {type === "GENERAL" && (
         <ShowcaseEditor activityId={activity.id} initial={showcase} projects={projects} />

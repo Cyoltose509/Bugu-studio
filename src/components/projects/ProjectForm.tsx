@@ -166,6 +166,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const [customRoleInput, setCustomRoleInput] = useState("");
   const memberDropdownRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const memberSearchRequestRef = useRef(0);
 
   // ── 外部成员 ──
   const [externalName, setExternalName] = useState("");
@@ -207,12 +208,13 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
 
   // ── 成员搜索 ──
   const searchMembers = useCallback(async (q: string) => {
+    const requestId = ++memberSearchRequestRef.current;
     try {
       const [memberRes, userRes] = await Promise.all([
         fetch(`/api/members/search?q=${encodeURIComponent(q)}`),
         fetch(`/api/users/search?q=${encodeURIComponent(q)}`),
       ]);
-      let results: any[] = [];
+      const results: any[] = [];
       if (memberRes.ok) {
         const data = await memberRes.json();
         const members = (Array.isArray(data) ? data : data.data || []).map((m: any) => ({
@@ -222,19 +224,31 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       }
       if (userRes.ok) {
         const data = await userRes.json();
-        const users = (Array.isArray(data) ? data : data.data || []).map((u: any) => ({
-          id: u.id, displayName: u.name, image: u.image, _type: "user" as const
-        }));
-        // 过滤掉已经是社团成员的（避免与上面的结果重复）
-        const memberIds = new Set(results.map((r: any) => r.id));
-        results.push(...users.filter((u: any) => !memberIds.has(u.id)));
+        const users = (Array.isArray(data) ? data : data.data || []).map((u: any) =>
+          u.member
+            ? { id: u.member.id, userId: u.id, displayName: u.member.displayName, avatar: u.image, _type: "member" as const }
+            : { id: u.id, displayName: u.name, image: u.image, _type: "user" as const },
+        );
+        results.push(...users);
       }
-      setMemberResults(results);
-    } catch {}
+      // 两个接口统一用 ClubMember.id 识别社团成员；同名的不同人仍各自保留。
+      const seen = new Set<string>();
+      const unique = results.filter((item: any) => {
+        const key = `${item._type}:${item.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      if (requestId === memberSearchRequestRef.current) setMemberResults(unique);
+    } catch {
+      if (requestId === memberSearchRequestRef.current) setMemberResults([]);
+    }
   }, []);
 
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    memberSearchRequestRef.current += 1;
+    setMemberResults([]);
     if (memberQuery.length >= 1) {
       searchTimerRef.current = setTimeout(() => searchMembers(memberQuery), 200);
     } else {
@@ -257,7 +271,10 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
     const isUser = member._type === "user";
     const id = member.id;
     // 防止重复：memberId 和 userId 都检查
-    if (selectedMembers.some((m) => (isUser ? m.userId === id : m.memberId === id))) return;
+    if (selectedMembers.some((m) =>
+      (isUser ? m.userId === id : m.memberId === id) ||
+      (!!member.userId && m.userId === member.userId)
+    )) return;
     const roles = [...selectedRoles];
     if (customRoleInput.trim()) roles.push(customRoleInput.trim());
     setSelectedMembers((prev) => [
@@ -788,7 +805,11 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
         <div className="flex flex-col gap-2" ref={memberDropdownRef}>
           <div className="relative">
             <input type="text" value={memberQuery}
-              onChange={(e) => { setMemberQuery(e.target.value); setShowMemberDropdown(true); }}
+              onChange={(e) => {
+                delete (memberDropdownRef.current as any).__selectedMember;
+                setMemberQuery(e.target.value);
+                setShowMemberDropdown(true);
+              }}
               onFocus={() => setShowMemberDropdown(true)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") { e.preventDefault(); addExternalMember(); }

@@ -18,6 +18,11 @@ datasource db {
 // 枚举类型
 // ============================================================
 
+enum CourseParticipantRole {
+  INSTRUCTOR // 讲师
+  STUDENT // 学员
+}
+
 enum UserRole {
   GUEST // 游客（未注册，概念性）
   USER // 注册用户
@@ -69,7 +74,8 @@ enum AuditAction {
 
 enum ActivityType {
   MEETING // 例会
-  COURSE // 公开课
+  COURSE // 策划公开课（保留旧组队、评分数据）
+  ENGINE_COURSE // 引擎教学公开课
   COMPETITION // Game Jam 等比赛
   GENERAL // 普通社团活动
 }
@@ -125,6 +131,7 @@ model User {
   errorReports           ErrorReport[]
   projectLikes           ProjectLike[]
   meetingProposals       MeetingProposal[]
+  showcaseAuthorships    CourseShowcaseItem[] @relation("ShowcaseAuthor")
   meetingTalks           MeetingTalk[]
 
   // Game Jam
@@ -267,6 +274,7 @@ model ClubMember {
   projectMembers ProjectMember[]
   socialLinks    MemberLink[]
   workExperiences WorkExperience[]
+  courseParticipations CourseParticipant[]
 
   @@index([joinYear])
 }
@@ -399,6 +407,7 @@ model Project {
   comments               Comment[]
   likes                  ProjectLike[]
   jamSubmissions         JamSubmission[]
+  courseShowcaseItems    CourseShowcaseItem[]
 
   @@index([status])
   @@index([type])
@@ -474,6 +483,7 @@ model Tag {
   createdAt   DateTime @default(now())
 
   projects ProjectTag[]
+  courseClasses CourseClassTag[]
 
   @@index([slug])
   @@index([group])
@@ -674,9 +684,15 @@ model Activity {
   type             ActivityType   @default(GENERAL)
   location         String?
   meetingUrl       String?                      // 线上链接（腾讯会议等）
-  startTime        DateTime
-  endTime          DateTime
+  /// 不设具体日期。前台视为即将开始，排序上算最新一档。
+  timePending      Boolean        @default(false)
+  courseHasClock   Boolean        @default(false)
+  courseCoverFocusX Int           @default(50)
+  courseCoverFocusY Int           @default(50)
+  startTime        DateTime?
+  endTime          DateTime?
   coverImage       String? // R2 URL
+  /// 停用。在线不提供活动报名，保持 false；分享征集用 talkSubmissionOpen。
   registrationOpen Boolean        @default(false)
   talkSubmissionOpen Boolean      @default(false)
   maxParticipants  Int?
@@ -694,7 +710,10 @@ model Activity {
   jamTeams       JamTeam[]
   jamJudges      JamJudge[]
   jamSubmissions JamSubmission[]
+  courseClasses CourseClass[]
   courseScores   CourseScore[] @relation("CourseScoreActivity")
+  courseParticipants CourseParticipant[]
+  courseAttachments  CourseAttachment[]
 
   @@index([status])
   @@index([type])
@@ -702,6 +721,111 @@ model Activity {
   @@index([endTime])
   @@index([status, startTime])
   @@index([status, endTime])
+}
+
+// 公开课 — 学员关联社团成员；讲师可以关联成员，也可以填写社外姓名。
+model CourseParticipant {
+  id         String                @id @default(cuid())
+  activityId String
+  memberId   String?
+  externalName String?
+  role       CourseParticipantRole
+  sortOrder  Int                   @default(0)
+  createdAt  DateTime              @default(now())
+
+  activity Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  member   ClubMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, memberId])
+  @@index([activityId, role, sortOrder])
+  @@index([memberId])
+}
+
+// 公开课 — 资料附件（PDF、幻灯片等），地址必须落在本站附件存储
+model CourseAttachment {
+  id         String   @id @default(cuid())
+  activityId String
+  name       String
+  url        String
+  mimeType   String?
+  sizeBytes  Int?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId, sortOrder])
+}
+
+// 引擎教学公开课按班级组织课次与学员作品。作品关联可空，保留原始大赏图片。
+model CourseClass {
+  id          String @id @default(cuid())
+  activityId  String
+  name        String
+  description String? @db.Text
+  scheduleImage String?
+  coverImage  String?
+  coverFocusX Int @default(50)
+  coverFocusY Int @default(50)
+  sortOrder   Int @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  tags CourseClassTag[]
+  lessons CourseLesson[]
+  showcase CourseShowcaseItem[]
+
+  @@unique([activityId, sortOrder])
+}
+
+model CourseClassTag {
+  classId String
+  tagId String
+  courseClass CourseClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([classId, tagId])
+  @@index([tagId])
+}
+
+model CourseLesson {
+  id String @id @default(cuid())
+  classId String
+  instructorName String
+  topic String
+  title String
+  date DateTime @db.Date
+  startMinute Int?
+  endMinute Int?
+  meetingUrl String?
+  videoUrl String?
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courseClass CourseClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  @@unique([classId, sortOrder])
+}
+
+model CourseShowcaseItem {
+  id String @id @default(cuid())
+  classId String
+  title String
+  imageUrl String
+  authorName String @default("")
+  authorUserId String?
+  author User? @relation("ShowcaseAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  projectId String?
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courseClass CourseClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  @@unique([classId, sortOrder])
+  @@index([authorUserId])
+  @@index([projectId])
 }
 
 // 例会 — 结构化分享条目（主讲 + 标题 + BV）

@@ -100,7 +100,8 @@ export const dict = {
 
   // 活动类目
   "activity.type.MEETING": { cn: "例会", en: "Meeting" },
-  "activity.type.COURSE": { cn: "公开课", en: "Course" },
+  "activity.type.COURSE": { cn: "策划公开课", en: "Planning Course" },
+  "activity.type.ENGINE_COURSE": { cn: "引擎教学公开课", en: "Engine Course" },
   "activity.type.COMPETITION": { cn: "Game Jam", en: "Game Jam" },
   "activity.type.GENERAL": { cn: "大事件", en: "Major Event" },
   "activity.ongoing": { cn: "进行中", en: "Ongoing" },
@@ -714,7 +715,6 @@ export const dict = {
   "activityDetail.metaTitle": { cn: "{title} - 活动 - 布谷工作室", en: "{title} - Activity - Bugoo Studio" },
   "activityDetail.typeCompetition": { cn: "Game Jam", en: "Game Jam" },
   "activityDetail.statusPublished": { cn: "已发布", en: "Published" },
-  "activityDetail.registrationOpen": { cn: "✅ 开放报名", en: "✅ Registration open" },
   "activityDetail.onlineLink": { cn: "🔗 线上链接：", en: "🔗 Online link:" },
   "activityDetail.speakerFallback": { cn: "主讲", en: "Speaker" },
   "activityDetail.pendingProposals": { cn: "待审核分享申请", en: "Pending Share Proposals" },
@@ -733,6 +733,10 @@ export const dict = {
   "activityDetail.adminNote": { cn: "审核意见：{note}", en: "Review note: {note}" },
   "activityDetail.proposalHint": { cn: "选择分享或展示并填写内容，经管理员审核后将列入议程。每人限提交一份。", en: "Choose Share or Showcase and fill in the content; once approved it will be added to the agenda. One submission per person." },
   "activityDetail.courseTitle": { cn: "📚 公开课", en: "📚 Course" },
+  "activityDetail.courseInstructors": { cn: "讲师", en: "Instructors" },
+  "activityDetail.courseStudents": { cn: "学员", en: "Students" },
+  "activityDetail.courseAttachments": { cn: "附件", en: "Attachments" },
+  "activityDetail.courseImages": { cn: "图片", en: "Images" },
   "activityDetail.courseUpcoming": { cn: "报名组队中 · 课程尚未开始", en: "Team registration open · Course hasn't started" },
   "activityDetail.courseOngoing": { cn: "课程进行中 · 组队报名 · 提交讲题", en: "Course in progress · Team up · Submit topic" },
   "activityDetail.coursePast": { cn: "课程已结束 · 评审阶段", en: "Course ended · Judging phase" },

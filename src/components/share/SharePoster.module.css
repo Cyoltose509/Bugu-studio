@@ -23,9 +23,14 @@
 .pattern { position: absolute; inset: 0; background: url('/images/geo_pattern.png') center / 460px; opacity: .075; pointer-events: none; }
 .hero:has(.heroImage) { background: #25547A; }
 .heroImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; clip-path: inset(0 0 0 38%); }
+.heroImageFit { clip-path: none; object-fit: cover; object-position: center; }
 .heroShade { position: absolute; inset: 0; background: linear-gradient(90deg, #25547A 10%, rgba(37, 84, 122, .97) 38%, rgba(20, 58, 83, .64) 100%), linear-gradient(0deg, rgba(16, 44, 65, .72), transparent 70%); }
+.heroShadeFit { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12, 32, 48, .58) 0%, rgba(12, 32, 48, .28) 45%, rgba(12, 32, 48, .82) 100%); }
+.poster[data-card="member"][data-header-mode="image"] .hero { min-height: 252px; background: #1b3348; }
 .hero:has(.heroImage) { color: white; }
 .hero:has(.heroImage) .title { text-shadow: 0 2px 10px rgba(10, 38, 60, .8); }
+.hero:has(.heroImageFit) .bio { color: rgba(255, 255, 255, .88); }
+.hero:has(.heroImageFit) .tags span { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .28); color: #fff; }
 .brand { position: relative; display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 700; letter-spacing: .03em; }
 .brand img { border-radius: 7px; }
 .poster[data-header-color="orange"] .brand img { padding: 1px; background: #F8F2E9; }
@@ -70,10 +75,11 @@
 .tags span:nth-child(3n+2) { color: #B95C27; background: #E3804315; border-color: #E3804330; }
 .tags span:nth-child(3n+3) { color: #547F20; background: #88C23215; border-color: #88C23230; }
 .poster .bio { margin-top: 6px; font-size: 12px; line-height: 1.65; color: #526C7D; }
-.workCount { margin-left: 6px; color: var(--share-blue); }
 .works { display: grid; gap: 10px; }
-.workCard { display: grid; grid-template-columns: 112px minmax(0, 1fr); overflow: hidden; border: 1px solid #E2EBF0; border-radius: 11px; background: #fff; color: inherit; text-decoration: none; }
-.workImage { width: 112px; height: 100%; min-height: 104px; object-fit: cover; background: #E6F0F8; }
+.workCard { display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; border: 1px solid #E2EBF0; border-radius: 11px; background: #fff; color: inherit; text-decoration: none; }
+.workMedia { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #E6F0F8; }
+.workImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #E6F0F8; }
+.workFallback { display: flex; align-items: center; justify-content: center; font-size: 28px; }
 .workInfo { display: flex; min-width: 0; flex-direction: column; gap: 5px; padding: 9px 10px; }
 .workHeading { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .poster .workTitle { min-width: 0; overflow: hidden; color: var(--share-navy); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }

@@ -12,6 +12,7 @@ import { deleteActivity, updateActivityStatus } from "./actions";
 import DeleteButton from "@/components/admin/ActivityDeleteButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import CreateBaituanButton from "@/components/activities/showcase/CreateBaituanButton";
+import { activityNewestFirstOrder, activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
 
 export const metadata: Metadata = { title: "活动管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -25,7 +26,8 @@ const STATUS_TABS = [
 
 const TYPE_LABELS: Record<string, string> = {
   MEETING:    "例会",
-  COURSE:     "公开课",
+  COURSE:     "策划公开课",
+  ENGINE_COURSE: "引擎教学公开课",
   COMPETITION: "Game Jam",
   GENERAL:    "大事件",
 };
@@ -62,7 +64,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
       Promise.all([
         prisma.activity.findMany({
           where,
-          orderBy: { startTime: "desc" },
+          orderBy: activityNewestFirstOrder,
           skip,
           take: pageSize,
           include: { _count: { select: { proposals: true } } },
@@ -82,6 +84,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
         <h1 className="text-2xl font-bold text-brand-navy">活动管理</h1>
         <div className="flex flex-wrap gap-2">
           <CreateBaituanButton />
+          <Link href="/admin/activities/course-settings" className="btn-secondary px-4 py-2 rounded-lg text-sm">公开课链接权限</Link>
           <Link href="/admin" className="btn-secondary px-4 py-2 rounded-lg text-sm">← 返回仪表盘</Link>
           <Link href="/admin/activities/create" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">+ 创建活动</Link>
         </div>
@@ -110,8 +113,10 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
         {activities.map(activity => {
           const now = new Date();
           let timeLabel = "";
-          if (now < activity.startTime)        timeLabel = "即将开始";
-          else if (now > activity.endTime)      timeLabel = "已结束";
+          const phase = activityPhase(activity, now);
+          if (activity.timePending)             timeLabel = "待定";
+          else if (phase === "upcoming")        timeLabel = "即将开始";
+          else if (phase === "past")            timeLabel = "已结束";
           else                                  timeLabel = "进行中";
 
           return (
@@ -138,9 +143,9 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
                   <span className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E0] text-brand-orange">{timeLabel}</span>
                 </div>
                 <p className="text-xs mt-1 truncate text-brand-text-secondary">
-                  {activity.startTime.toLocaleDateString("zh-CN")} ~ {activity.endTime.toLocaleDateString("zh-CN")}
+                  {formatActivitySchedule(activity.startTime, activity.endTime, "cn", activity.timePending)}
                   {activity.location ? ` · ${activity.location}` : ""}
-                  {activity.registrationOpen ? " · 开放报名" : ""}
+                  {activity.talkSubmissionOpen ? " · 报名分享" : ""}
                 </p>
                 <p className="text-xs mt-0.5 text-brand-text-muted">
                   申请 {activity._count.proposals}
