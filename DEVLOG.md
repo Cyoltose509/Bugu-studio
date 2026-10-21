@@ -120,3 +120,21 @@
 - 修复管理后台备份清单漏掉的 7 张公开课和例会议程表，并用单元测试检查 Prisma 模型覆盖和恢复顺序。
 - `npm run build` 完成；单元测试 70 项通过。构建期间本地到 Supabase 连接池偶发不可达，页面生成仍完成。
 - 迁移步骤及尚需核对的生产项目 ref 见 `docs/PRODUCTION-DB-MIGRATION-2026-10-21.md`；截至记录时未写入远程数据库。
+
+## 2026-10-22 — 生产数据库迁移完成，等待 Vercel 部署
+
+- 用户确认 Vercel Production 仍连接 Supabase 项目 `bgdecuoksmriilpulbxc`。
+- 迁移前重新制作并解密校验本地加密数据快照：`backups/pre-course-migration-2026-10-21T17-40-19-745Z.json.gz.enc`（41 张表、3,850 条记录；文件时间为 UTC）。此为数据与列元数据快照，并非 `pg_dump` 完整 DDL 备份。
+- 对已存在的前 10 条 Prisma 迁移使用 `migrate resolve --applied` 建立基线；随后 `migrate deploy` 成功应用剩余 5 条迁移。`migrate status` 报告 15 条全部完成。
+- 迁移后核验：原有 41 张表的记录数均未减少；新增 4 张课程表均启用 RLS；课程和作者所需的 8 个关键字段齐全，迁移失败记录为 0。11 月 1 日例会的 `registrationOpen=true` 保留，未在建基线时重放旧数据更新。
+- Prisma schema 对比仅剩 `MeetingTalk.updatedAt` 的历史默认值差异，本次迁移未修改它。官网首页、活动、作品、成员页均返回 HTTP 200。
+- 截至本次核查，GitHub 部署记录仍只有旧版本 Production（`048cc41`），未见 PR #7 合并提交 `19a92ab` 的 Production 部署。需要 Vercel 项目持有人从 `main` 的该提交创建 Production 部署并验收。
+
+## 2026-10-22 — 生产数据库冗余审计与保守清理
+
+- 清理前制作并解密校验加密数据快照：`backups/pre-course-migration-2026-10-21T17-46-43-553Z.json.gz.enc`（46 张表、3,865 条记录；文件时间为 UTC，非完整 DDL 备份）。
+- 删除 53 条已过期超过 24 小时的 `VerificationToken`；最近的验证码、登录尝试和其他业务记录均未删除。
+- 7 个普通 B-tree 索引与现有唯一键或主键索引重复，已用带 5 秒锁超时的事务删除，并从 Prisma schema 移除对应声明：`ErrorReport.reportId`、`InviteCode.code`、`Project.slug`、`RateLimit.key`、`SiteSetting.key`、`Tag.slug`、`User.email`。原唯一键和主键保持完好。
+- 新迁移 `20261022020000_drop_redundant_unique_indexes` 已在当前生产库应用；16 条迁移均完成。复查无重复索引或缺失的唯一索引，Prisma schema 仍仅有先前存在的 `MeetingTalk.updatedAt` 默认值差异。
+- 旧作品类型枚举虽暂无数据，代码仍引用；42 条超过 30 天的登录尝试有审计价值；部分设置和报名状态仍在使用，因此均保留。未发现可以安全删除的冗余业务字段。
+- `prisma validate` 和 70 项单元测试通过；代码中的 schema 与迁移需随下一次部署一同发布。
