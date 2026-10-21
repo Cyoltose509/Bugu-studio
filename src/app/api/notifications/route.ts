@@ -3,27 +3,32 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { invalidateCache, cachedQuery } from "@/lib/db/cache";
+import { invalidateUnreadCache } from "@/lib/cache/unread-count-cache";
+import { splitUnreadByType, unreadForViewer, visibleTypeFilter } from "@/lib/notifications/buckets";
+import { attachReviewOutcomes } from "@/lib/notifications/review-outcome";
 
 const PAGE_SIZE = 20;
 
 /**
  * GET /api/notifications — 获取当前用户通知列表
- * Query: ?page=1&unreadOnly=false
+ * Query: ?page=1&unreadOnly=false&bucket=review|activity|bug
  */
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
 
+  const isAdmin = session.user.role === "ADMIN";
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, Number(searchParams.get("page") || 1));
   const unreadOnly = searchParams.get("unreadOnly") === "true";
+  const bucket = isAdmin ? searchParams.get("bucket") : null;
 
-  const where: any = { userId: session.user.id };
+  const where: any = { userId: session.user.id, ...visibleTypeFilter(isAdmin, bucket) };
   if (unreadOnly) where.read = false;
 
-  const cacheKey = `api:notifications:${session.user.id}:${page}:${unreadOnly}`;
+  const cacheKey = `api:notifications:${session.user.id}:${isAdmin ? "admin" : "member"}:${page}:${unreadOnly}:${bucket || "all"}`;
 
-  const [items, total, unreadCount] = await cachedQuery(cacheKey, () =>
+  const [items, total, unreadRows] = await cachedQuery(cacheKey, () =>
     Promise.all([
       prisma.notification.findMany({
         where,
@@ -32,10 +37,16 @@ export async function GET(request: NextRequest) {
         take: PAGE_SIZE,
       }),
       prisma.notification.count({ where }),
-      prisma.notification.count({
-        where: { userId: session.user.id, read: false },
+      prisma.notification.groupBy({
+        by: ["type"],
+        where: { userId: session.user.id, read: false, ...visibleTypeFilter(isAdmin, null) },
+        _count: { _all: true },
       }),
     ]), 15);
+  const unread = unreadForViewer(
+    splitUnreadByType(unreadRows.map((r) => ({ type: r.type, _count: r._count._all }))),
+    isAdmin,
+  );
 
   // 批量获取 Project 类型通知对应的 slug
   const projectIds = items
@@ -50,6 +61,8 @@ export async function GET(request: NextRequest) {
     for (const p of projects) slugMap.set(p.id, p.slug);
   }
 
+  const outcomes = await attachReviewOutcomes(items);
+
   return apiResponse({
     items: items.map((n) => ({
       id: n.id,
@@ -61,6 +74,7 @@ export async function GET(request: NextRequest) {
       relatedSlug: n.relatedType === "Project" ? (slugMap.get(n.relatedId!) ?? n.relatedId) : undefined,
       read: n.read,
       createdAt: n.createdAt,
+      outcome: outcomes.get(n.id) ?? null,
     })),
     pagination: {
       page,
@@ -68,7 +82,8 @@ export async function GET(request: NextRequest) {
       total,
       totalPages: Math.ceil(total / PAGE_SIZE),
     },
-    unreadCount,
+    unreadCount: unread.count,
+    unread: unread,
   });
 }
 
@@ -80,27 +95,33 @@ export async function PATCH(request: NextRequest) {
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
 
-  let body: { ids?: string[] } = {};
+  let body: { ids?: string[]; bucket?: string } = {};
   try { body = await request.json(); } catch { /* ignore */ }
 
+  const isAdmin = session.user.role === "ADMIN";
   if (body.ids && body.ids.length > 0) {
     await prisma.notification.updateMany({
       where: {
         id: { in: body.ids },
         userId: session.user.id, // 安全：只能改自己的
+        ...visibleTypeFilter(isAdmin, null),
       },
       data: { read: true },
     });
   } else {
-    // 标记全部已读
     await prisma.notification.updateMany({
-      where: { userId: session.user.id, read: false },
+      where: {
+        userId: session.user.id,
+        read: false,
+        ...visibleTypeFilter(isAdmin, isAdmin ? body.bucket : null),
+      },
       data: { read: true },
     });
   }
 
   await invalidateCache(`api:notifications:${session.user.id}`);
   await invalidateCache(`notifications:${session.user.id}`);
+  invalidateUnreadCache(session.user.id);
   return apiResponse({ success: true });
 }
 
@@ -112,21 +133,22 @@ export async function DELETE(request: NextRequest) {
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
 
-  let body: { ids?: string[] } = {};
+  let body: { ids?: string[]; bucket?: string } = {};
   try { body = await request.json(); } catch { /* ignore */ }
 
+  const isAdmin = session.user.role === "ADMIN";
   if (body.ids && body.ids.length > 0) {
     await prisma.notification.deleteMany({
-      where: { id: { in: body.ids }, userId: session.user.id },
+      where: { id: { in: body.ids }, userId: session.user.id, ...visibleTypeFilter(isAdmin, null) },
     });
   } else {
-    // 删除当前用户的全部通知
     await prisma.notification.deleteMany({
-      where: { userId: session.user.id },
+      where: { userId: session.user.id, ...visibleTypeFilter(isAdmin, isAdmin ? body.bucket : null) },
     });
   }
 
   await invalidateCache(`api:notifications:${session.user.id}`);
   await invalidateCache(`notifications:${session.user.id}`);
+  invalidateUnreadCache(session.user.id);
   return apiResponse({ success: true });
 }

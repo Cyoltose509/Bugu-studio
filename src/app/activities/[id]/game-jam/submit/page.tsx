@@ -6,6 +6,7 @@ import { JamSubmitForm } from "@/components/activities/submit/JamSubmitForm";
 import DeleteSubmissionButton from "@/components/activities/submit/DeleteSubmissionButton";
 import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksButton";
 import { resolveActivityId } from "@/lib/activities/resolve";
+import { activityPhase } from "@/lib/activities/datetime";
 
 export default async function JamSubmitPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -45,8 +46,7 @@ export default async function JamSubmitPage({ params }: { params: Promise<{ id: 
     where: { teamId: membership.teamId },
   });
 
-  const now = new Date();
-  const isOngoing = now >= activity.startTime && now <= activity.endTime;
+  const isOngoing = activityPhase(activity) === "ongoing";
   const isLeader = membership.role === "LEADER";
   const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
   const sub = existing || membership.team.submission;

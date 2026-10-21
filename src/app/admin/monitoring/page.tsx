@@ -3,6 +3,7 @@
  */
 
 import Link from "next/link";
+import MonitoringPasswordCard from "@/components/admin/MonitoringPasswordCard";
 
 const cards = [
   {
@@ -66,6 +67,10 @@ export default function MonitoringPage() {
             </p>
           </Link>
         ))}
+      </div>
+
+      <div className="mt-10">
+        <MonitoringPasswordCard mode="change" />
       </div>
     </div>
   );

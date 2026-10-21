@@ -11,6 +11,7 @@ import {t} from "@/lib/i18n/dict";
 import type {Lang} from "@/lib/i18n/config";
 import type {AwardEntry} from "@/lib/history/awards";
 import {tagDisplayName} from "@/lib/tags/tag-names";
+import {activityCalendar} from "@/lib/activities/datetime";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 
 // ─── 类型 ────────────────────────────────────────────
@@ -100,12 +101,13 @@ const TYPE_DESC: Record<string, { cn: string; en: string }> = {
     OFFICIAL_RELEASE: { cn: "正式上架", en: "Official Release" },
 };
 const ACT_LABELS: Record<string, { cn: string; en: string }> = {
-    COMPETITION: { cn: "比赛", en: "Competition" },
+    COMPETITION: { cn: "Game Jam", en: "Game Jam" },
     COURSE: { cn: "公开课", en: "Course" },
-    GENERAL: { cn: "普通活动", en: "Event" },
+    ENGINE_COURSE: { cn: "引擎教学公开课", en: "Engine Course" },
+    GENERAL: { cn: "大事件", en: "Major Event" },
     MEETING: { cn: "例会", en: "Meeting" },
 };
-const ACT_ORDER = ["COMPETITION", "COURSE", "GENERAL", "MEETING"] as const;
+const ACT_ORDER = ["COMPETITION", "COURSE", "ENGINE_COURSE", "GENERAL", "MEETING"] as const;
 
 // ─── 年度最佳作品选择 ─────────────────────────────────
 function pickFeaturedWork(projects: Project[]): Project | null {
@@ -302,9 +304,9 @@ function LaurelBranch({flip = false, className = ""}: { flip?: boolean; classNam
  */
 function LaurelBracket({children, gap = 10}: { children: React.ReactNode; gap?: number }) {
     return (
-        <div className="flex items-stretch justify-center w-full" style={{columnGap: gap}}>
+        <div className="inline-flex items-stretch justify-center max-w-full" style={{columnGap: gap}}>
             <LaurelBranch className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
-            <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center py-1.5">
+            <div className="min-w-0 flex flex-col items-center justify-center text-center py-1.5">
                 {children}
             </div>
             <LaurelBranch flip className="w-7 sm:w-8 shrink-0 self-stretch text-[color:var(--np-laurel)]"/>
@@ -448,6 +450,7 @@ function actDotClass(t: string): string {
     const map: Record<string, string> = {
         COMPETITION: "np-act-dot-competition",
         COURSE: "np-act-dot-course",
+        ENGINE_COURSE: "np-act-dot-course",
         GENERAL: "np-act-dot-general",
         MEETING: "np-act-dot-meeting",
     };
@@ -470,6 +473,7 @@ function activityTypeTagClass(t: string): string {
     const map: Record<string, string> = {
         COMPETITION: "np-act-tag-competition",
         COURSE: "np-act-tag-course",
+        ENGINE_COURSE: "np-act-tag-course",
         GENERAL: "np-act-tag-general",
         MEETING: "np-act-tag-meeting",
     };
@@ -789,7 +793,8 @@ function YearNewspaper({
                                         {nonMeeting.length > 0 && (
                                             <div className={Q.activityList}>
                                                 {nonMeeting.map(a => {
-                                                    const d = new Date(a.startTime);
+                                                    if (!a.startTime) return null;
+                                                    const d = activityCalendar(a.startTime);
                                                     const desc = narrateActivity(a);
                                                     const descHtml = a.descriptionHtml;
                                                     return (
@@ -803,7 +808,7 @@ function YearNewspaper({
                                                                 {a.status === "ARCHIVED" &&
                                                                     <span className="text-[10px] np-ink3 italic">({t(lang, "common.archived")})</span>}
                                                                 <span
-                                                                    className={Q.activityDate} style={QS.activityDate}>{d.getFullYear()}.{String(d.getMonth() + 1).padStart(2, "0")}.{String(d.getDate()).padStart(2, "0")}</span>
+                                                                    className={Q.activityDate} style={QS.activityDate}>{d.year}.{String(d.month).padStart(2, "0")}.{String(d.day).padStart(2, "0")}</span>
                                                             </div>
                                                             {descHtml ?
                                                                 <div className={Q.activityDesc} style={QS.activityDesc}><RichContentClient html={descHtml}/></div> : desc &&
@@ -916,7 +921,7 @@ function YearNewspaper({
                                         <div className="border-2 np-border-l px-4 py-5 text-center relative overflow-hidden"
                                              style={{background: "var(--np-award-bg)"}}>
                                             <div className={Q.sidePanelTitle}>{t(lang, "history.honors")}</div>
-                                            <div className="flex flex-col gap-5">
+                                            <div className="flex flex-col items-center gap-5">
                                                 {awardEntries.map((entry, idx) => (
                                                     <LaurelBracket key={`${entry.projectId}-${idx}`} gap={10}>
                                                         <Link href={`/works/${entry.slug}`}

@@ -44,6 +44,7 @@ export const TAG_EN_NAMES: Record<string, string> = {
   multiplayer: "Multiplayer",
   casual: "Casual",
   gamejam: "Game Jam",
+  "bugoo-gamejam": "Bugoo Game Jam",
   ggj: "GGJ",
   ciga: "CiGA",
   cusga: "CUSGA",

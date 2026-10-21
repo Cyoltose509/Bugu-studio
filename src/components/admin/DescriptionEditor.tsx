@@ -7,9 +7,9 @@ export default function DescriptionEditor({ defaultValue }: { defaultValue: stri
     <MentionEditor
       name="description"
       defaultValue={defaultValue}
-      rows={5}
-      placeholder="活动详细说明"
-      className="w-full rounded-lg border border-brand-border-subtle text-brand-text-heading placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3388BB]"
+      rows={8}
+      placeholder="活动详细说明，支持 @成员 与链接高亮"
+      className="w-full"
     />
   );
 }

@@ -2,7 +2,7 @@
  * 作品详情页 — 流式渲染，首字节 < 50ms
  *
  * 架构：同步 Shell（立即发送 HTML）→ Suspense 包裹异步数据组件
- * navQuery 使用游标相邻查询代替全表扫描
+ * 相邻作品按当前列表排序（时间 / 名称）在内存里定位，避免和列表顺序再次分叉
  */
 
 import { cache } from "react";
@@ -28,6 +28,7 @@ import PrefetchNav from "@/components/works/PrefetchNav";
 import { TagChipLink } from "@/components/tags/TagChip";
 import { sortProjectTagsEngineFirst } from "@/lib/tags/engine-tags";
 import { sortByNameAndSlice } from "@/lib/works/name-sort";
+import { compareProjectsByDate } from "@/lib/works/date-sort";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { DictKey } from "@/lib/i18n/dict";
@@ -120,13 +121,7 @@ const getProject = cache(async (slug: string) => {
 
 /* ── 高效的相邻作品查询（与 /api/works 排序完全一致） ── */
 
-async function getAdjacentProjects(
-  title: string,
-  developYear: number,
-  publishedAt: Date | null,
-  id: string,
-  sort: string,
-) {
+async function getAdjacentProjects(id: string, sort: string) {
   if (isMockDataEnabled()) {
     const current = getMockSnapshot().projects.find((p) => p.id === id);
     if (!current) return { prev: null, next: null };
@@ -158,68 +153,23 @@ async function getAdjacentProjects(
     return { prev: pick(idx - 1), next: pick(idx + 1) };
   }
 
-  // date 排序（默认）: developYear DESC, publishedAt DESC NULLS LAST, id DESC
-  if (publishedAt === null) {
-    // publishedAt 为空时，跳过 publishedAt 比较（避免 Prisma null 校验错误）
-    // NULLS LAST → 同一年份中有日期的作品在前
-    const [prev, next] = await Promise.all([
-      prisma.project.findFirst({
-        where: {
-          status: ProjectStatus.PUBLISHED,
-          OR: [
-            { developYear: { gt: developYear } },
-            { AND: [{ developYear }, { publishedAt: { not: null } }] },
-            { AND: [{ developYear }, { publishedAt: null }, { id: { gt: id } }] },
-          ],
-        },
-        orderBy: [{ developYear: "asc" }, { publishedAt: "asc" }, { id: "asc" }],
-        select: { slug: true, title: true },
+  const rows = await cachedQuery(
+    "works:adjacent:bydate:v1",
+    () =>
+      prisma.project.findMany({
+        where: { status: ProjectStatus.PUBLISHED },
+        select: { id: true, slug: true, title: true, publishedAt: true, createdAt: true },
       }),
-      prisma.project.findFirst({
-        where: {
-          status: ProjectStatus.PUBLISHED,
-          OR: [
-            { developYear: { lt: developYear } },
-            { AND: [{ developYear }, { publishedAt: null }, { id: { lt: id } }] },
-          ],
-        },
-        orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
-        select: { slug: true, title: true },
-      }),
-    ]);
-    return { prev, next };
-  }
-
-  // publishedAt 非空时的正常三级级联比较
-  const [prev, next] = await Promise.all([
-    // prev = 列表中当前之前（更靠近开头 = 更新的作品）
-    prisma.project.findFirst({
-      where: {
-        status: ProjectStatus.PUBLISHED,
-        OR: [
-          { developYear: { gt: developYear } },
-          { AND: [{ developYear }, { publishedAt: { gt: publishedAt } }] },
-          { AND: [{ developYear }, { publishedAt }, { id: { gt: id } }] },
-        ],
-      },
-      orderBy: [{ developYear: "asc" }, { publishedAt: "asc" }, { id: "asc" }],
-      select: { slug: true, title: true },
-    }),
-    // next = 列表中当前之后（更靠近结尾 = 更旧的作品）
-    prisma.project.findFirst({
-      where: {
-        status: ProjectStatus.PUBLISHED,
-        OR: [
-          { developYear: { lt: developYear } },
-          { AND: [{ developYear }, { publishedAt: { lt: publishedAt } }] },
-          { AND: [{ developYear }, { publishedAt }, { id: { lt: id } }] },
-        ],
-      },
-      orderBy: [{ developYear: "desc" }, { publishedAt: "desc" }, { id: "desc" }],
-      select: { slug: true, title: true },
-    }),
-  ]);
-  return { prev, next };
+    60,
+  );
+  const ordered = [...rows].sort(compareProjectsByDate);
+  const idx = ordered.findIndex((r) => r.id === id);
+  if (idx === -1) return { prev: null, next: null };
+  const pick = (i: number) =>
+    i >= 0 && i < ordered.length
+      ? { slug: ordered[i].slug, title: ordered[i].title }
+      : null;
+  return { prev: pick(idx - 1), next: pick(idx + 1) };
 }
 
 /* ── Shell（同步，立即渲染） ── */
@@ -298,7 +248,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           select: { id: true },
         }).catch(() => null)
       : Promise.resolve(null),
-    getAdjacentProjects(project.title, project.developYear, project.publishedAt, project.id, sort)
+    getAdjacentProjects(project.id, sort)
       .catch((err) => {
         console.error("[WorkDetail] getAdjacentProjects failed:", err);
         return { prev: null, next: null } as const;

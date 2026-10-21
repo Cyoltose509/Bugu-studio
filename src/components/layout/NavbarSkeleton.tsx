@@ -12,14 +12,14 @@ export function NavbarSkeleton({ lang }: { lang: Lang }) {
   return (
     <header className="sticky top-0 z-50 shadow-md bg-brand-navy/90">
       <div className="container mx-auto px-2.5 sm:px-4 py-2.5 sm:py-3 grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-3">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg text-white hover:opacity-85 transition-opacity nav-link shrink-0">
+        <Link href="/" className="nav-logo flex items-center gap-2 font-bold text-lg text-white hover:opacity-85 transition-opacity nav-link shrink-0">
           <span className="nav-logo-flip">
             <span className="nav-logo-flip-inner">
               <span className="nav-logo-flip-face nav-logo-flip-front">
                 <Image src="/images/logo.png" alt="BUGOO STUDIO" width={32} height={32} />
               </span>
               <span className="nav-logo-flip-face nav-logo-flip-back" aria-hidden="true">
-                {t(lang, "common.home")}
+                HOME
               </span>
             </span>
           </span>

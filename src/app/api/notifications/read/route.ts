@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import { apiResponse, apiError } from "@/lib/utils";
 import { invalidateUnreadCache } from "@/lib/cache/unread-count-cache";
+import { visibleTypeFilter } from "@/lib/notifications/buckets";
 
 /**
  * GET /api/notifications/read — 未读通知数量（轻量，供铃铛图标使用）
@@ -26,17 +27,22 @@ export async function PATCH(request: Request) {
   const session = await auth();
   if (!session?.user) return apiError("请先登录", 401);
 
-  let body: { id?: string } = {};
+  let body: { id?: string; bucket?: string } = {};
   try { body = await request.json(); } catch { /* ignore */ }
 
+  const isAdmin = session.user.role === "ADMIN";
   if (body.id) {
     await prisma.notification.updateMany({
-      where: { id: body.id, userId: session.user.id },
+      where: { id: body.id, userId: session.user.id, ...visibleTypeFilter(isAdmin, null) },
       data: { read: true },
     });
   } else {
     await prisma.notification.updateMany({
-      where: { userId: session.user.id, read: false },
+      where: {
+        userId: session.user.id,
+        read: false,
+        ...visibleTypeFilter(isAdmin, isAdmin ? body.bucket : null),
+      },
       data: { read: true },
     });
   }

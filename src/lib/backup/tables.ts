@@ -40,6 +40,13 @@ export const BACKUP_TABLES = [
   "eventImage",
   // 活动 / Game Jam
   "activity",
+  "courseParticipant",
+  "courseAttachment",
+  "courseClass",
+  "courseClassTag",
+  "courseLesson",
+  "courseShowcaseItem",
+  "meetingTalk",
   "meetingProposal",
   "jamTeam",
   "jamTeamMember",

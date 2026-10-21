@@ -84,7 +84,7 @@ export function useImageDrop({
     }
   };
 
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = async (e: React.DragEvent) => {
     if (!hasFiles(e)) return;
     e.preventDefault();
     e.stopPropagation();
@@ -97,7 +97,7 @@ export function useImageDrop({
     if (!file) return;
 
     try {
-      assertImageFile(file);
+      await assertImageFile(file);
     } catch (err) {
       onInvalidRef.current?.(err instanceof Error ? err.message : "不支持的文件");
       return;
@@ -150,7 +150,7 @@ export function ImageDropZone({
           )}
         >
           <span>{hint}</span>
-          <span className="text-xs opacity-75">JPG / PNG / WebP</span>
+          <span className="text-xs opacity-75">JPG / PNG / WebP / GIF</span>
         </div>
       )}
     </div>

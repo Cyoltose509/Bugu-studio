@@ -3,10 +3,37 @@ import type { Lang } from "@/lib/i18n/config";
 import { toPlainCardText } from "@/lib/rich-content";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { canSubmitActivityTalk } from "@/lib/activities/capabilities";
+import { formatActivitySchedule } from "@/lib/activities/datetime";
 
 export type ShareHeader =
   | { kind: "color"; color: "blue" | "orange" | "green" | "navy" }
   | { kind: "image"; url: string };
+
+export const SHARE_HEADER_COLORS = {
+  blue: "#3388BB",
+  orange: "#D96F3E",
+  green: "#88C232",
+  navy: "#25547A",
+} as const;
+
+export const SHARE_HEADER_COLOR_LABELS: Record<keyof typeof SHARE_HEADER_COLORS, { cn: string; en: string }> = {
+  blue: { cn: "蓝色", en: "Blue" },
+  orange: { cn: "橙色", en: "Orange" },
+  green: { cn: "绿色", en: "Green" },
+  navy: { cn: "深蓝色", en: "Navy" },
+};
+
+/** 卡头第二排：活动图或成员已上传作品封面，按 URL 去重。 */
+export function shareHeaderImages(data: ShareCardData): { title: string; url: string }[] {
+  const fromData = (data.headerImages || []).filter(item => item.url);
+  if (fromData.length) {
+    return fromData.filter((item, index, all) => all.findIndex(candidate => candidate.url === item.url) === index);
+  }
+  return (data.works || [])
+    .filter((work): work is typeof work & { image: string } => Boolean(work.image))
+    .filter((work, index, all) => all.findIndex(item => item.image === work.image) === index)
+    .map(work => ({ title: work.title, url: work.image }));
+}
 
 export type ShareCardData = {
   kind: "activity" | "member";
@@ -46,24 +73,16 @@ export function shareDescription(text: string | null | undefined, limit = 140): 
 export function activityShareData(activity: {
   id: string; title: string; summary?: string | null; description?: string | null; coverImage?: string | null;
   relatedImages?: { title: string; url: string }[];
-  startTime: Date | string; endTime: Date | string; location: string | null;
-  status: string; talkSubmissionOpen?: boolean | null;
+  startTime?: Date | string | null; endTime?: Date | string | null; location: string | null;
+  status: string; timePending?: boolean | null; courseHasClock?: boolean | null; talkSubmissionOpen?: boolean | null;
   talks?: { title: string; speaker?: string | null; user?: { name?: string | null; member?: { displayName?: string | null } | null } | null }[];
   proposals?: { title: string; user?: { name?: string | null; member?: { displayName?: string | null } | null } | null }[];
 }, lang: Lang, asOf = new Date()): ShareCardData {
-  const start = new Date(activity.startTime);
-  const end = new Date(activity.endTime);
-  const locale = lang === "en" ? "en-GB" : "zh-CN";
-  // 与活动详情页完全同一套规则（不指定 timeZone，跟随服务器时区），
-  // 否则分享卡上的时间会和它指向的页面不一致。
-  const date = (value: Date) => new Intl.DateTimeFormat(locale, { year: "numeric", month: "2-digit", day: "2-digit" }).format(value);
-  const shortDate = (value: Date) => lang === "en"
-    ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(value)
-    : new Intl.DateTimeFormat(locale, { month: "2-digit", day: "2-digit" }).format(value);
-  const year = (value: Date) => new Intl.DateTimeFormat(locale, { year: "numeric" }).format(value);
-  const time = (value: Date) => new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hour12: false }).format(value);
-  const ended = asOf.getTime() > end.getTime() || activity.status === "ARCHIVED";
-  const ongoing = !ended && asOf.getTime() >= start.getTime();
+  const pending = !!activity.timePending || !activity.startTime || !activity.endTime;
+  const start = activity.startTime ? new Date(activity.startTime) : null;
+  const end = activity.endTime ? new Date(activity.endTime) : null;
+  const ended = !pending && (activity.status === "ARCHIVED" || (!!end && asOf.getTime() > end.getTime()));
+  const ongoing = !pending && !ended && !!start && asOf.getTime() >= start.getTime();
   const headerImages = [
     ...(activity.coverImage ? [{ title: lang === "en" ? "Activity cover" : "活动封面", url: activity.coverImage }] : []),
     ...(activity.relatedImages || []),
@@ -81,8 +100,7 @@ export function activityShareData(activity: {
     kind: "activity", title: activity.title, path: `/activities/${encodeURIComponent(activity.id)}`,
     summary: shareDescription(activity.summary || activity.description), image: activity.coverImage || DEFAULT_ACTIVITY_COVER,
     headerImages,
-    date: date(start) === date(end) ? date(start) : year(start) === year(end) ? (lang === "en" ? `${year(start)} · ${shortDate(start)}–${shortDate(end)}` : `${year(start)}·${shortDate(start)}–${shortDate(end)}`) : `${date(start)}–${date(end)}`,
-    time: `${time(start)} – ${time(end)}`,
+    date: formatActivitySchedule(start, end, lang, pending, !!activity.courseHasClock),
     location: activity.location || (lang === "en" ? "Location to be confirmed" : "地点待定"),
     status: lang === "en" ? (ended ? "Ended" : ongoing ? "In progress" : "Upcoming") : (ended ? "已结束" : ongoing ? "进行中" : "即将开始"),
     talkSubmissionOpen: canSubmitActivityTalk(activity, asOf),

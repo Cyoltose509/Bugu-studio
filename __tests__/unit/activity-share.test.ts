@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityShareData } from "@/lib/share";
+import { activityShareData, shareHeaderImages, type ShareCardData } from "@/lib/share";
 import { canSubmitActivityTalk, hasActivityTalkSection } from "@/lib/activities/capabilities";
 import { productionMeeting, productionRecruitment } from "@/app/dev/share-preview/production-samples";
 
@@ -26,5 +26,22 @@ describe("activity sharing capabilities", () => {
     expect(canSubmitActivityTalk({ ...event, talkSubmissionOpen: false })).toBe(false);
     expect(canSubmitActivityTalk({ ...event, status: "DRAFT" })).toBe(false);
     expect(canSubmitActivityTalk({ ...event, endTime: "2020-01-01T00:00:00.000Z" })).toBe(false);
+  });
+});
+
+describe("shareHeaderImages", () => {
+  it("uses published work covers for a member card", () => {
+    const data: ShareCardData = {
+      kind: "member",
+      title: "小布",
+      path: "/members/x",
+      summary: "",
+      works: [
+        { slug: "a", title: "铅雨2", image: "https://cdn.example/a.png" },
+        { slug: "b", title: "无封面", image: null },
+        { slug: "c", title: "铅雨2 复用", image: "https://cdn.example/a.png" },
+      ],
+    };
+    expect(shareHeaderImages(data)).toEqual([{ title: "铅雨2", url: "https://cdn.example/a.png" }]);
   });
 });

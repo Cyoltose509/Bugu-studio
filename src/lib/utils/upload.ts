@@ -19,9 +19,10 @@ export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/gif",
 ] as const;
 
-export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+export const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
 /**
  * 文件大小限制
@@ -118,6 +119,66 @@ export async function uploadToR2(
   return { url, key };
 }
 
+const ATTACHMENT_MIME_BY_EXT: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".zip": "application/zip",
+  ".ppt": "application/vnd.ms-powerpoint",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".doc": "application/msword",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".txt": "text/plain",
+  ".md": "text/markdown",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+};
+
+/** 公开课资料。扩展名决定类型，避免只信浏览器上报的 MIME。 */
+export function attachmentContentType(originalName: string): { ext: string; mimeType: string } | null {
+  const ext = extname(originalName).toLowerCase();
+  const mimeType = ATTACHMENT_MIME_BY_EXT[ext];
+  if (!mimeType) return null;
+  return { ext, mimeType };
+}
+
+export function attachmentStorageName(originalName: string): string {
+  const base = originalName.split(/[/\\]/).pop() || "附件";
+  const cleaned = base.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 120);
+  return cleaned || "附件";
+}
+
+/** 上传公开课附件。对象名随机，展示名由调用方另存。 */
+export async function uploadAttachmentToR2(buffer: Buffer, originalName: string): Promise<UploadResult & { mimeType: string; name: string }> {
+  const typed = attachmentContentType(originalName);
+  if (!typed) throw new Error("不支持的附件类型");
+  if (buffer.length <= 0 || buffer.length > MAX_FILE_SIZE.screenshot) {
+    throw new Error(`文件大小超出限制 (最大 ${Math.floor(MAX_FILE_SIZE.screenshot / 1024 / 1024)}MB)`);
+  }
+  const name = attachmentStorageName(originalName);
+  const key = `attachments/${randomBytes(16).toString("hex")}${typed.ext}`;
+  const asciiName = name.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "") || "file";
+  const client = getR2Client();
+  await client.send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+      Body: buffer,
+      ContentType: typed.mimeType,
+      ContentDisposition: `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+      Metadata: {
+        "upload-type": "attachment",
+        "upload-time": new Date().toISOString(),
+      },
+    })
+  );
+  const url = `${process.env.R2_PUBLIC_URL}/${key}`;
+  return { url, key, mimeType: typed.mimeType, name };
+}
+
 /**
  * 从 R2 删除文件（best-effort，静默失败）
  * @param urlOrKey - 完整 URL 或 R2 key
@@ -144,7 +205,8 @@ export async function deleteFromR2(urlOrKey: string): Promise<boolean> {
       key = urlOrKey.slice(publicUrl.length + 1); // +1 for the "/"
     } else {
       // 尝试匹配 avatars/、covers/、screenshots/ 路径
-      const match = urlOrKey.match(/\/((?:avatar|covers?|screenshot)s?\/[^?#]+)/);
+      const match = urlOrKey.match(/\/((?:avatars|covers|screenshots|attachments)\/[^?#]+)/)
+        || urlOrKey.match(/\/((?:avatar|covers?|screenshot)s?\/[^?#]+)/);
       if (match) {
         key = match[1];
       } else {
@@ -155,7 +217,7 @@ export async function deleteFromR2(urlOrKey: string): Promise<boolean> {
   }
 
   // 安全校验：key 必须以 avatars/、covers/、screenshots/ 开头
-  if (!/^(avatars|covers|screenshots)\//.test(key)) {
+  if (!/^(avatars|covers|screenshots|attachments)\//.test(key)) {
     console.warn("[R2 delete] Refusing to delete key outside allowed prefixes:", key);
     return false;
   }

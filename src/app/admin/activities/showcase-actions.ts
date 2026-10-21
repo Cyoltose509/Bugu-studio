@@ -25,7 +25,7 @@ export async function saveActivityShowcase(activityId: string, input: unknown) {
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   try {
     const activity = await prisma.activity.findUnique({ where: { id: activityId }, select: { slug: true, type: true } });
-    if (!activity || activity.type !== "GENERAL") return { error: "仅普通活动支持海报与试玩目录" };
+    if (!activity || activity.type !== "GENERAL") return { error: "仅大事件支持海报与试玩目录" };
     const validCount = await prisma.project.count({ where: { id: { in: parsed.data.projectIds }, status: "PUBLISHED" } });
     if (validCount !== parsed.data.projectIds.length) return { error: "部分作品已下架或不存在，请移除后重试" };
     await prisma.siteSetting.upsert({

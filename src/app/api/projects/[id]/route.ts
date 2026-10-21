@@ -18,6 +18,8 @@ import {createNotification, notifyNewProject, notifyProjectEdit, notifyMentions}
 import {cachedQuery} from "@/lib/db/cache";
 import {ProjectStatus} from "@prisma/client";
 import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
+import { withoutCourseMediaReferences } from "@/lib/activities/course-media";
+import { courseActivityIdsForProject, invalidateCourseActivities } from "@/lib/activities/course-showcase-cache";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 
@@ -335,13 +337,15 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
     revalidatePath("/works");
     revalidatePath(`/works/${updated.slug}`);
     revalidatePath("/admin/projects");
+    await invalidateCourseActivities(await courseActivityIdsForProject(id));
 
     // ── 清理 R2 旧文件（best-effort）──
     // 只删「真正被替换掉」的文件；保留下来的 URL 绝不能删，否则库里还有记录、CDN 已 404
     const oldCover = project.coverImage;
     const newCover = projectData.coverImage;
     if (oldCover && newCover !== undefined && oldCover !== newCover) {
-      deleteFromR2(oldCover).catch(() => {});
+      const disposable = await withoutCourseMediaReferences([oldCover]);
+      if (disposable.length) deleteFromR2(oldCover).catch(() => {});
     }
     if (images !== undefined && project.images.length > 0) {
       const keep = new Set(
@@ -353,7 +357,8 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
         .map((img) => img.url)
         .filter((url): url is string => !!url && !keep.has(url));
       if (removedUrls.length > 0) {
-        deleteManyFromR2(removedUrls).catch(() => {});
+        const disposable = await withoutCourseMediaReferences(removedUrls);
+        if (disposable.length) deleteManyFromR2(disposable).catch(() => {});
       }
     }
 
@@ -377,6 +382,7 @@ export async function DELETE(request: NextRequest, {params}: RouteParams) {
     // ── 收集要清理的 R2 文件 ──
     const filesToCleanup: (string | null)[] = [project.coverImage];
     project.images.forEach((img) => filesToCleanup.push(img.url));
+    const courseActivityIds = await courseActivityIdsForProject(id);
 
     await prisma.project.delete({where: {id}});
 
@@ -407,9 +413,11 @@ export async function DELETE(request: NextRequest, {params}: RouteParams) {
     revalidatePath("/works");
     revalidatePath(`/works/${project.slug}`);
     revalidatePath("/admin/projects");
+    await invalidateCourseActivities(courseActivityIds);
 
     // ── 清理 R2 文件（best-effort，不阻塞响应）──
-    deleteManyFromR2(filesToCleanup).catch(() => {});
+    const disposable = await withoutCourseMediaReferences(filesToCleanup);
+    if (disposable.length) deleteManyFromR2(disposable).catch(() => {});
 
     return apiResponse({deleted: true});
 }

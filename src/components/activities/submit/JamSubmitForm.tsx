@@ -117,10 +117,12 @@ export function JamSubmitForm({
 
   const coverFileRef = useRef<HTMLInputElement>(null);
   const screenshotFileRef = useRef<HTMLInputElement>(null);
+  const screenshotDragFrom = useRef<number | null>(null);
+  const [screenshotDragOver, setScreenshotDragOver] = useState<number | null>(null);
 
   /** 统一的上传内核：原图在限额内就直传，超了才压缩；失败时给本地化提示 */
   const uploadFile = async (file: File, type: "cover" | "screenshot") => {
-    assertImageFile(file, lang);
+    await assertImageFile(file, lang);
     const result = await uploadImage(file, {
       endpoint: "/api/upload",
       type,
@@ -390,13 +392,47 @@ export function JamSubmitForm({
           <div className="grid grid-cols-3 gap-3">
             {screenshots.map((img, i) => (
               <div
-                key={i}
-                className="relative group rounded-lg overflow-hidden border border-brand-border-subtle"
+                key={`${img.url}-${i}`}
+                draggable={isOngoing && !loading}
+                onDragStart={(e) => {
+                  screenshotDragFrom.current = i;
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(i));
+                  e.stopPropagation();
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (screenshotDragOver !== i) setScreenshotDragOver(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const from = screenshotDragFrom.current;
+                  screenshotDragFrom.current = null;
+                  setScreenshotDragOver(null);
+                  if (from == null || from === i) return;
+                  setScreenshots((prev) => {
+                    const next = [...prev];
+                    const [item] = next.splice(from, 1);
+                    next.splice(i, 0, item);
+                    return next;
+                  });
+                }}
+                onDragEnd={() => {
+                  screenshotDragFrom.current = null;
+                  setScreenshotDragOver(null);
+                }}
+                className={`relative group rounded-lg overflow-hidden border cursor-grab active:cursor-grabbing ${
+                  screenshotDragOver === i
+                    ? "border-brand-blue ring-1 ring-brand-blue"
+                    : "border-brand-border-subtle"
+                }`}
               >
                 <img
                   src={img.url}
                   alt={t("form.screenshotAlt", { n: i + 1 })}
-                  className="w-full aspect-video object-cover"
+                  className="w-full aspect-video object-cover pointer-events-none"
                 />
                 <button
                   type="button"

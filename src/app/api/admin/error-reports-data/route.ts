@@ -20,41 +20,51 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get("pageSize") || "20")));
+    const pageSize = Math.min(200, Math.max(1, parseInt(searchParams.get("pageSize") || "20")));
     const status = searchParams.get("status") || undefined;
+    const highlightReportId = parseInt(searchParams.get("reportId") || "", 10);
 
     const where: any = {};
     if (status && ["UNREAD", "READ", "RESOLVED"].includes(status)) {
       where.status = status;
     }
 
-    const [reports, total] = await Promise.all([
+    const reportSelect = {
+      id: true,
+      reportId: true,
+      message: true,
+      stack: true,
+      url: true,
+      userId: true,
+      userAgent: true,
+      status: true,
+      count: true,
+      firstSeenAt: true,
+      lastSeenAt: true,
+      createdAt: true,
+      user: { select: { name: true, email: true } },
+    } as const;
+
+    const [reports, total, highlight] = await Promise.all([
       prisma.errorReport.findMany({
         where,
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        select: {
-          id: true,
-          reportId: true,
-          message: true,
-          stack: true,
-          url: true,
-          userId: true,
-          userAgent: true,
-          status: true,
-          count: true,
-          firstSeenAt: true,
-          lastSeenAt: true,
-          createdAt: true,
-          user: { select: { name: true, email: true } },
-        },
+        select: reportSelect,
       }),
       prisma.errorReport.count({ where }),
+      Number.isFinite(highlightReportId)
+        ? prisma.errorReport.findUnique({
+            where: { reportId: highlightReportId },
+            select: reportSelect,
+          })
+        : Promise.resolve(null),
     ]);
 
     return NextResponse.json({
       reports,
+      highlight,
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (err) {

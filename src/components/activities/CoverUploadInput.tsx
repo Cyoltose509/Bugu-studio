@@ -4,16 +4,40 @@ import { useCallback, useRef, useState } from "react";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { uploadImage, ACCEPT_ATTR, compressionNote, assertImageFile } from "@/lib/utils/clientUpload";
 import { useLang } from "@/lib/i18n/LangProvider";
+import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 
 interface Props {
   defaultValue?: string;
   name?: string;
+  previewClassName?: string;
+  /** 叠在封面上的标题（活动卡合成预览） */
+  title?: string;
+  /** 叠在封面上的简介；空则不渲染 */
+  summary?: string;
+  activityType?: string;
+  typeLabel?: string;
+  allowFocalPoint?: boolean;
+  initialFocusX?: number;
+  initialFocusY?: number;
 }
 
-export default function CoverUploadInput({ defaultValue, name = "coverImage" }: Props) {
+export default function CoverUploadInput({
+  defaultValue,
+  name = "coverImage",
+  previewClassName,
+  title,
+  summary,
+  activityType,
+  typeLabel,
+  allowFocalPoint = false,
+  initialFocusX = 50,
+  initialFocusY = 50,
+}: Props) {
   const { t, lang } = useLang();
   const [preview, setPreview] = useState<string | null>(defaultValue || null);
   const [coverUrl, setCoverUrl] = useState(defaultValue || "");
+  const [focusX, setFocusX] = useState(initialFocusX);
+  const [focusY, setFocusY] = useState(initialFocusY);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
@@ -23,7 +47,7 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
 
   const uploadFile = useCallback(async (file: File) => {
     try {
-      assertImageFile(file, lang);
+      await assertImageFile(file, lang);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("upload.selectImage"));
       return;
@@ -97,6 +121,9 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
 
   const displaySrc = preview || DEFAULT_ACTIVITY_COVER;
   const hasCustom = Boolean(coverUrl || (preview && preview !== DEFAULT_ACTIVITY_COVER));
+  const overlayTitle = title?.trim() || "";
+  const overlaySummary = summary?.trim() || "";
+  const showComposite = Boolean(overlayTitle || overlaySummary || typeLabel);
 
   return (
     <div className="space-y-2">
@@ -116,7 +143,7 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
         onDragOver={onDragOver}
         onDrop={onDrop}
         className={[
-          "group relative w-full max-w-md aspect-video overflow-hidden rounded-xl border cursor-pointer",
+          `group relative w-full ${previewClassName ?? "max-w-md"} aspect-video overflow-hidden rounded-xl border cursor-pointer`,
           "bg-brand-surface outline-none transition-[box-shadow,border-color,transform] duration-200",
           "focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2",
           dragging
@@ -133,38 +160,48 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
             dragging || uploading ? "scale-[1.03] blur-[1px]" : "group-hover:scale-[1.02]",
           ].join(" ")}
           draggable={false}
+          style={allowFocalPoint ? { objectPosition: `${focusX}% ${focusY}%` } : undefined}
         />
 
-        {/* 悬停 / 拖拽遮罩 */}
-        <div
-          className={[
-            "absolute inset-0 flex flex-col items-center justify-center gap-1.5",
-            "bg-black/0 text-white transition-all duration-200",
-            dragging
-              ? "bg-black/45 opacity-100"
-              : "opacity-0 group-hover:bg-black/40 group-hover:opacity-100",
-            uploading ? "bg-black/50 opacity-100" : "",
-          ].join(" ")}
-        >
-          {uploading ? (
-            <span className="text-sm font-medium tracking-wide">{t("form.uploading")}</span>
-          ) : dragging ? (
-            <>
-              <span className="text-sm font-semibold">{t("upload.dropToUpload")}</span>
-              <span className="text-xs text-white/80">JPG / PNG / WebP</span>
-            </>
-          ) : (
-            <>
-              <span className="text-sm font-semibold">
-                {hasCustom ? t("form.changeCover") : t("upload.uploadCover")}
-              </span>
-              <span className="text-xs text-white/80">{t("upload.dragImageHere")}</span>
-            </>
-          )}
-        </div>
+        {typeLabel && <ActivityTypeCorner type={activityType || ""} label={typeLabel} />}
+
+        {showComposite && (
+          <div className="absolute inset-x-0 bottom-0 z-[1] pointer-events-none bg-gradient-to-t from-black/75 via-black/35 to-transparent pt-16 px-4 pb-3.5">
+            {overlayTitle ? (
+              <p className="text-white text-base sm:text-lg font-semibold leading-snug line-clamp-2 drop-shadow-sm">
+                {overlayTitle}
+              </p>
+            ) : (
+              <p className="text-white/55 text-base sm:text-lg font-medium leading-snug">标题将显示在这里</p>
+            )}
+            {overlaySummary ? (
+              <p className="mt-1.5 text-white/85 text-sm leading-relaxed line-clamp-2">{overlaySummary}</p>
+            ) : null}
+          </div>
+        )}
+
+        {/* 拖拽 / 上传时全幅提示；平时只在右上角露出更换入口，不盖住合成预览 */}
+        {uploading || dragging ? (
+          <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center gap-1.5 bg-black/50 text-white">
+            {uploading ? (
+              <span className="text-sm font-medium tracking-wide">{t("form.uploading")}</span>
+            ) : (
+              <>
+                <span className="text-sm font-semibold">{t("upload.dropToUpload")}</span>
+                <span className="text-xs text-white/80">JPG / PNG / WebP</span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="absolute top-2 right-2 z-[2] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200">
+            <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-md bg-black/55 text-white">
+              {hasCustom ? t("form.changeCover") : t("upload.uploadCover")}
+            </span>
+          </div>
+        )}
 
         {uploading && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 overflow-hidden bg-white/20">
+          <div className="absolute bottom-0 left-0 right-0 z-[3] h-1 overflow-hidden bg-white/20">
             <div className="cover-upload-bar absolute inset-y-0 left-0 w-1/2 bg-brand-orange" />
           </div>
         )}
@@ -181,6 +218,11 @@ export default function CoverUploadInput({ defaultValue, name = "coverImage" }: 
         onChange={onFileInput}
       />
       <input type="hidden" name={name} value={coverUrl} />
+      {allowFocalPoint && <div className="grid grid-cols-2 gap-3 rounded-lg border border-brand-border-subtle p-3">
+        <label className="text-xs text-brand-text-muted">封面焦点 · 横向<input type="range" min={0} max={100} value={focusX} onChange={(event) => setFocusX(Number(event.target.value))} className="mt-1 block w-full accent-brand-blue" /></label>
+        <label className="text-xs text-brand-text-muted">封面焦点 · 纵向<input type="range" min={0} max={100} value={focusY} onChange={(event) => setFocusY(Number(event.target.value))} className="mt-1 block w-full accent-brand-blue" /></label>
+        <input type="hidden" name="courseCoverFocusX" value={focusX} /><input type="hidden" name="courseCoverFocusY" value={focusY} />
+      </div>}
     </div>
   );
 }

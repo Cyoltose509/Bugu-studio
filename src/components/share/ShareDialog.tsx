@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { publicShareUrl, type ShareCardData, type ShareHeader } from "@/lib/share";
+import { publicShareUrl, shareHeaderImages, SHARE_HEADER_COLORS, SHARE_HEADER_COLOR_LABELS, type ShareCardData, type ShareHeader } from "@/lib/share";
 import type { Lang } from "@/lib/i18n/config";
 import SharePoster from "./SharePoster";
 
@@ -16,6 +16,8 @@ export default function ShareDialog({ data, lang, onClose }: { data: ShareCardDa
   const dialogRef = useRef<HTMLDialogElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
   const url = publicShareUrl(data.path);
+  const headerImages = shareHeaderImages(data);
+  const colorKeys = Object.keys(SHARE_HEADER_COLORS) as Array<keyof typeof SHARE_HEADER_COLORS>;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -89,16 +91,16 @@ export default function ShareDialog({ data, lang, onClose }: { data: ShareCardDa
       <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.7" strokeLinecap="round" aria-hidden><path d="m6 6 12 12M18 6 6 18" /></svg>
     </button>
     <div onClick={event => { if (event.target === event.currentTarget) onClose(); }} className="flex min-h-dvh items-center justify-center px-5 pb-6 pt-16 sm:px-8 sm:py-20">
-      <div className="grid w-full max-w-[400px] items-center gap-6 md:max-w-[700px] md:grid-cols-[minmax(0,400px)_220px] md:gap-12">
+      <div className="grid w-full max-w-[448px] items-center gap-6 md:max-w-[760px] md:grid-cols-[minmax(0,448px)_240px] md:gap-12">
         <div className="w-full overflow-hidden rounded-[20px] shadow-[0_24px_90px_rgba(0,0,0,0.3)]" ref={posterRef}><SharePoster data={data} lang={lang} header={header} qr={qr} /></div>
         <div className="flex flex-col gap-5" aria-label={en ? "Share controls" : "分享操作"}>
-          {data.kind === "activity" && <fieldset disabled={busy} className="min-w-0">
+          <fieldset disabled={busy} className="min-w-0">
             <legend className="mb-2 text-xs font-medium text-white/75">{en ? "Card header" : "卡头样式"}</legend>
             <div className="grid grid-cols-4 gap-2">
-              {(["blue", "orange", "green", "navy"] as const).map(color => <button key={color} type="button" aria-label={en ? `${color} header` : `${{ blue: "蓝色", orange: "橙色", green: "绿色", navy: "深蓝色" }[color]}卡头`} aria-pressed={header.kind === "color" && header.color === color} onClick={() => setHeader({ kind: "color", color })} className={`h-10 rounded-lg border-2 transition-transform hover:-translate-y-0.5 ${header.kind === "color" && header.color === color ? "border-white" : "border-transparent"}`} style={{ background: { blue: "#3388BB", orange: "#D96F3E", green: "#88C232", navy: "#25547A" }[color] }} />)}
+              {colorKeys.map(color => <button key={color} type="button" aria-label={en ? `${SHARE_HEADER_COLOR_LABELS[color].en} header` : `${SHARE_HEADER_COLOR_LABELS[color].cn}卡头`} aria-pressed={header.kind === "color" && header.color === color} onClick={() => setHeader({ kind: "color", color })} className={`h-10 rounded-lg border-2 transition-transform hover:-translate-y-0.5 ${header.kind === "color" && header.color === color ? "border-white" : "border-transparent"}`} style={{ background: SHARE_HEADER_COLORS[color] }} />)}
             </div>
-            {!!data.headerImages?.length && <div className="mt-2 grid grid-cols-4 gap-2">{data.headerImages.slice(0, 8).map(item => <button key={item.url} type="button" title={item.title} aria-label={en ? `Use image: ${item.title}` : `使用图片：${item.title}`} aria-pressed={header.kind === "image" && header.url === item.url} onClick={() => setHeader({ kind: "image", url: item.url })} className={`h-12 overflow-hidden rounded-lg border-2 transition-transform hover:-translate-y-0.5 ${header.kind === "image" && header.url === item.url ? "border-white" : "border-transparent"}`}><img src={item.url} alt="" className="h-full w-full object-cover" /></button>)}</div>}
-          </fieldset>}
+            {!!headerImages.length && <div className="mt-2 grid grid-cols-4 gap-2">{headerImages.slice(0, 8).map(item => <button key={item.url} type="button" title={item.title} aria-label={en ? `Use cover: ${item.title}` : `使用封面：${item.title}`} aria-pressed={header.kind === "image" && header.url === item.url} onClick={() => setHeader({ kind: "image", url: item.url })} className={`h-12 overflow-hidden rounded-lg border-2 bg-black/25 transition-transform hover:-translate-y-0.5 ${header.kind === "image" && header.url === item.url ? "border-white" : "border-transparent"}`}><img src={item.url} alt="" className="h-full w-full object-cover" /></button>)}</div>}
+          </fieldset>
           <div className="flex overflow-hidden rounded-lg bg-[#E38043] text-white shadow-lg">
             <button type="button" disabled={busy || !qr} onClick={save} className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors hover:bg-[#F09055] disabled:cursor-wait disabled:opacity-50">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg>

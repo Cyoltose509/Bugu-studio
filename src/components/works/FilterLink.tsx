@@ -26,7 +26,7 @@ export default function FilterLink({
     <FilterNavLink
       href={href}
       active={active}
-      className={`block text-sm px-3 py-1.5 rounded transition-colors ${
+      className={`block text-sm px-2 py-1.5 lg:px-3 rounded text-center lg:text-left transition-colors ${
         active
           ? "font-medium bg-brand-navy/10 text-brand-navy"
           : "text-brand-text-secondary hover:bg-brand-surface"

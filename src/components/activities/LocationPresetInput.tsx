@@ -3,11 +3,11 @@
 import { useId, useState } from "react";
 import {
   ACTIVITY_LOCATION_PRESETS,
-  DEFAULT_ACTIVITY_LOCATION,
 } from "@/lib/activities/constants";
 import { useLang } from "@/lib/i18n/LangProvider";
 
 const CUSTOM_VALUE = "__custom__";
+const NONE_VALUE = "__none__";
 
 type Props = {
   name?: string;
@@ -21,22 +21,23 @@ function isPreset(value: string): boolean {
 
 export default function LocationPresetInput({
   name = "location",
-  defaultValue = DEFAULT_ACTIVITY_LOCATION,
+  defaultValue = "",
   id,
 }: Props) {
   const { t } = useLang();
   const autoId = useId();
   const selectId = id || autoId;
-  const initial = (defaultValue || "").trim() || DEFAULT_ACTIVITY_LOCATION;
-  const [custom, setCustom] = useState(!isPreset(initial));
+  const initial = (defaultValue || "").trim();
+  const [custom, setCustom] = useState(initial !== "" && !isPreset(initial));
   const [value, setValue] = useState(initial);
 
-  const selectValue = custom ? CUSTOM_VALUE : value;
+  const selectValue = custom ? CUSTOM_VALUE : (value ? value : NONE_VALUE);
 
   return (
     <div className="space-y-2">
       <label className="block text-sm text-brand-text-body" htmlFor={selectId}>
         {t("location.offlineLabel")}
+        <span className="ml-1 text-xs text-brand-text-muted">({t("location.optional")})</span>
       </label>
 
       <select
@@ -44,6 +45,11 @@ export default function LocationPresetInput({
         value={selectValue}
         onChange={(e) => {
           const next = e.target.value;
+          if (next === NONE_VALUE) {
+            setCustom(false);
+            setValue("");
+            return;
+          }
           if (next === CUSTOM_VALUE) {
             setCustom(true);
             if (isPreset(value)) setValue("");
@@ -54,6 +60,7 @@ export default function LocationPresetInput({
         }}
         className="w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading bg-card"
       >
+        <option value={NONE_VALUE}>{t("location.none")}</option>
         {ACTIVITY_LOCATION_PRESETS.map((preset) => (
           <option key={preset} value={preset}>
             {preset}
@@ -71,7 +78,6 @@ export default function LocationPresetInput({
         />
       )}
 
-      {/* 始终提交当前地点；空则由服务端回落到默认 */}
       <input type="hidden" name={name} value={value} />
     </div>
   );

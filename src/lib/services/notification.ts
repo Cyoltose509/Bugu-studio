@@ -96,7 +96,7 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
       if (!notifUserIds.has(m.userId)) {
         items.push({
           userId: m.userId,
-          type: "NEW_PROJECT",
+          type: "PROJECT_PUBLISHED",
           title: "有新的社团作品 🎮",
           content: `${submitterName} 发布了新作品《${projectTitle}》`,
           relatedId: projectId,
@@ -136,7 +136,7 @@ export async function notifyProjectEdit(projectId: string, projectTitle: string,
     }> = [
       {
         userId: submitterId,
-        type: "PROJECT_UPDATE",
+        type: "PROJECT_RESUBMIT",
         title: "作品已更新，等待重新审核",
         content: `你的作品《${projectTitle}》已更新，等待管理员重新审核`,
         relatedId: projectId,

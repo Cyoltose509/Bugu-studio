@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { saveMeetingTalks } from "@/app/admin/activities/actions";
-import { parseBvId } from "@/lib/activities/constants";
+import { parseBvId, bilibiliWatchUrl } from "@/lib/activities/constants";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
 
@@ -11,9 +13,12 @@ export type TalkDraft = {
   id?: string;
   speaker: string;
   title: string;
+  talkType?: "SHARE" | "SHOWCASE";
   bvId: string;
   userId?: string | null;
   linkedLabel?: string | null;
+  image?: string | null;
+  clientKey?: string;
 };
 
 type UserHit = {
@@ -26,41 +31,76 @@ type UserHit = {
 type Props = {
   activityId: string;
   initialTalks?: TalkDraft[];
+  /** 嵌在活动编辑总表单里：不自带保存，写入 talksJson */
+  embedded?: boolean;
+  /** false：活动详情里对照完成态议程行编辑，不要外框 */
+  framed?: boolean;
 };
 
+let keySeq = 0;
+function nextKey() {
+  keySeq += 1;
+  return `talk-${keySeq}`;
+}
+
 function emptyTalk(): TalkDraft {
-  return { speaker: "", title: "", bvId: "", userId: null, linkedLabel: null };
+  return { clientKey: nextKey(), speaker: "", title: "", talkType: "SHARE", bvId: "", userId: null, linkedLabel: null, image: null };
+}
+
+function withKey(talk: TalkDraft): TalkDraft {
+  return { ...talk, clientKey: talk.clientKey || talk.id || nextKey() };
 }
 
 function displayNameOf(u: UserHit, fallback: string): string {
   return u.member?.displayName || u.name || fallback;
 }
 
-export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Props) {
+function GripIcon() {
+  return (
+    <svg width="12" height="16" viewBox="0 0 12 16" aria-hidden fill="currentColor">
+      <circle cx="3.5" cy="3" r="1.25" />
+      <circle cx="8.5" cy="3" r="1.25" />
+      <circle cx="3.5" cy="8" r="1.25" />
+      <circle cx="8.5" cy="8" r="1.25" />
+      <circle cx="3.5" cy="13" r="1.25" />
+      <circle cx="8.5" cy="13" r="1.25" />
+    </svg>
+  );
+}
+
+export default function MeetingTalksEditor({ activityId, initialTalks = [], embedded = false, framed = true }: Props) {
   const { lang } = useLang();
+  const router = useRouter();
   const [talks, setTalks] = useState<TalkDraft[]>(
-    initialTalks.length > 0 ? initialTalks : [emptyTalk()],
+    (initialTalks.length > 0 ? initialTalks : [emptyTalk()]).map(withKey),
   );
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [activeSearch, setActiveSearch] = useState<number | null>(null);
   const [results, setResults] = useState<UserHit[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [bvOpen, setBvOpen] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dragFrom = useRef<number | null>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function update(i: number, patch: Partial<TalkDraft>) {
-    setTalks((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+    setTalks((prev) => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   }
 
-  function move(i: number, dir: -1 | 1) {
+  function moveTo(from: number, to: number) {
+    if (from === to || from < 0 || to < 0) return;
     setTalks((prev) => {
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
+      if (from >= prev.length || to >= prev.length) return prev;
       const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
       return next;
     });
+    setBvOpen(null);
+    setShowDropdown(false);
+    setActiveSearch(null);
   }
 
   const searchUsers = useCallback(async (q: string) => {
@@ -85,6 +125,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
       if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
         setActiveSearch(null);
+        setBvOpen(null);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -94,9 +135,9 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
   function onSpeakerChange(i: number, value: string) {
     update(i, {
       speaker: value,
-      // 手动改名后解除关联，避免展示名与用户不一致
       userId: null,
       linkedLabel: null,
+      image: null,
     });
     setActiveSearch(i);
     setShowDropdown(true);
@@ -109,6 +150,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
     update(i, {
       speaker: name,
       userId: user.id,
+      image: user.image,
       linkedLabel: user.member
         ? t(lang, "meetingTalks.linkedMember", { name: user.member.displayName })
         : t(lang, "meetingTalks.linkedUser", { name: user.name || user.id.slice(0, 8) }),
@@ -118,22 +160,22 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
     setResults([]);
   }
 
-  function clearLink(i: number) {
-    update(i, { userId: null, linkedLabel: null });
+  function talksPayload() {
+    return talks.map((row) => ({
+      speaker: row.speaker.trim(),
+      title: row.title.trim(),
+      talkType: (row.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE") as "SHARE" | "SHOWCASE",
+      bvId: row.bvId,
+      userId: row.userId || null,
+    }));
   }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (embedded) return;
     setMessage(null);
     startTransition(async () => {
-      const payload = talks
-        .map((t) => ({
-          speaker: t.speaker.trim(),
-          title: t.title.trim(),
-          bvId: parseBvId(t.bvId) || undefined,
-          userId: t.userId || null,
-        }))
-        .filter((t) => t.speaker || t.title);
+      const payload = talksPayload().filter((row) => row.speaker || row.title);
 
       const result = await saveMeetingTalks(activityId, payload);
       if (result?.error) {
@@ -141,79 +183,195 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
         return;
       }
       setMessage({ type: "ok", text: t(lang, "meetingTalks.saved") });
+      router.refresh();
       if (result?.talks) {
         setTalks(
           result.talks.length > 0
-            ? result.talks.map((tk) => ({
-                id: tk.id,
-                speaker: tk.speaker,
-                title: tk.title,
-                bvId: tk.bvId || "",
-                userId: tk.userId || null,
-                linkedLabel: tk.userId
-                  ? tk.user?.member
-                    ? t(lang, "meetingTalks.linkedMember", { name: tk.user.member.displayName })
-                    : t(lang, "meetingTalks.linkedUser", { name: tk.user?.name || tk.userId })
-                  : null,
-              }))
+            ? result.talks.map((tk) =>
+                withKey({
+                  id: tk.id,
+                  speaker: tk.speaker,
+                  title: tk.title,
+                  talkType: tk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
+                  bvId: tk.bvId || "",
+                  userId: tk.userId || null,
+                  image: tk.user?.image || null,
+                  linkedLabel: tk.userId
+                    ? tk.user?.member
+                      ? t(lang, "meetingTalks.linkedMember", { name: tk.user.member.displayName })
+                      : t(lang, "meetingTalks.linkedUser", { name: tk.user?.name || tk.userId })
+                    : null,
+                }),
+              )
             : [emptyTalk()],
         );
       }
     });
   }
 
-  return (
-    <form
-      onSubmit={onSubmit}
-      className="bg-card rounded-xl border p-6 space-y-4 shadow-sm border-brand-border-subtle"
-    >
-      <div>
-        <h2 className="text-lg font-semibold text-brand-navy">{t(lang, "meetingTalks.title")}</h2>
-        <p className="text-xs mt-1 text-brand-text-secondary">
-          {t(lang, "meetingTalks.desc")}
-        </p>
-      </div>
+  const field =
+    "w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading bg-card placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/40";
 
-      <div className="space-y-3" ref={searchBoxRef}>
-        {talks.map((talk, i) => (
-          <div
-            key={talk.id || `new-${i}`}
-            className="rounded-lg border border-brand-border-subtle p-3 space-y-2 bg-[#F8FBFD]"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-brand-text-muted">#{i + 1}</span>
-              <div className="flex items-center gap-1">
+  const rowListClass = framed
+    ? "divide-y divide-brand-border-subtle"
+    : "rounded-xl border border-brand-border-subtle bg-card divide-y divide-brand-border-subtle";
+
+  const body = (
+    <>
+      {embedded && (
+        <input type="hidden" name="talksJson" value={JSON.stringify(talksPayload())} />
+      )}
+      {framed ? (
+        <h2 className="text-lg font-semibold text-brand-navy">{t(lang, "meetingTalks.title")}</h2>
+      ) : null}
+
+      <div className={rowListClass} ref={searchBoxRef}>
+        {talks.map((talk, i) => {
+          const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+          const parsedBv = parseBvId(talk.bvId);
+          const hasBv = !!parsedBv;
+          const draggingOver = dragOver === i;
+
+          return (
+            <div
+              key={talk.clientKey}
+              onDragOver={(e) => {
+                if (dragFrom.current == null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOver !== i) setDragOver(i);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const from = dragFrom.current;
+                dragFrom.current = null;
+                setDragOver(null);
+                if (from == null) return;
+                moveTo(from, i);
+              }}
+              onDragEnd={() => {
+                dragFrom.current = null;
+                setDragOver(null);
+              }}
+              className={`flex flex-wrap items-center gap-2 px-3.5 py-2.5 transition-colors ${
+                draggingOver ? "bg-brand-blue/10" : "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+              }`}
+            >
+              <button
+                type="button"
+                draggable
+                onDragStart={(e) => {
+                  dragFrom.current = i;
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", String(i));
+                  setBvOpen(null);
+                  setShowDropdown(false);
+                }}
+                title={t(lang, "meetingTalks.dragHandle")}
+                aria-label={t(lang, "meetingTalks.dragHandle")}
+                className="shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-md text-brand-text-muted hover:text-brand-text-heading cursor-grab active:cursor-grabbing"
+              >
+                <GripIcon />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => update(i, { talkType: type === "SHARE" ? "SHOWCASE" : "SHARE" })}
+                title={t(lang, "meetingTalks.type")}
+                aria-label={t(lang, "meetingTalks.type")}
+                className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full transition-colors ${
+                  type === "SHOWCASE" ? "agenda-chip-showcase" : "agenda-chip-share"
+                }`}
+              >
+                {type === "SHOWCASE"
+                  ? t(lang, "activityDetail.proposalShowcase")
+                  : t(lang, "activityDetail.proposalShare")}
+              </button>
+
+              <input
+                value={talk.title}
+                onChange={(e) => update(i, { title: e.target.value })}
+                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-brand-navy placeholder:text-brand-text-muted focus:outline-none"
+              />
+
+              <div className="relative shrink-0">
                 <button
                   type="button"
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}
-                  className="text-xs px-2 py-1 rounded border border-brand-border-subtle disabled:opacity-30"
+                  onClick={() => setBvOpen(bvOpen === i ? null : i)}
+                  title={t(lang, "meetingTalks.bvToggle")}
+                  aria-label={t(lang, "meetingTalks.bvToggle")}
+                  aria-expanded={bvOpen === i}
+                  className={`relative w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors ${
+                    hasBv ? "bg-[#00A1D6]/10" : "text-brand-text-muted hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                  }`}
                 >
-                  {t(lang, "meetingTalks.moveUp")}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/links/bilibili.png"
+                    alt=""
+                    width={14}
+                    height={14}
+                    className={`object-contain ${hasBv ? "opacity-100" : "opacity-55"}`}
+                  />
+                  {hasBv && (
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#00A1D6]" />
+                  )}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => move(i, 1)}
-                  disabled={i === talks.length - 1}
-                  className="text-xs px-2 py-1 rounded border border-brand-border-subtle disabled:opacity-30"
-                >
-                  {t(lang, "meetingTalks.moveDown")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTalks((prev) =>
-                      prev.length <= 1 ? [emptyTalk()] : prev.filter((_, idx) => idx !== i),
-                    )
-                  }
-                  className="text-xs px-2 py-1 rounded border border-red-200 text-red-600"
-                >
-                  {t(lang, "meetingTalks.remove")}
-                </button>
+                {bvOpen === i && (
+                  <div className="absolute right-0 top-full mt-1.5 z-30 w-[min(20rem,calc(100vw-3rem))] rounded-lg border border-brand-border-subtle bg-card p-2 shadow-lg">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={talk.bvId}
+                        onChange={(e) => update(i, { bvId: e.target.value })}
+                        placeholder={t(lang, "meetingTalks.bvPlaceholder")}
+                        className={field}
+                      />
+                      {hasBv && (
+                        <a
+                          href={bilibiliWatchUrl(parsedBv)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={t(lang, "meetingTalks.bvOpen")}
+                          aria-label={t(lang, "meetingTalks.bvOpen")}
+                          className="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-lg text-brand-blue hover:bg-brand-blue/10"
+                        >
+                          ↗
+                        </a>
+                      )}
+                      {talk.bvId && (
+                        <button
+                          type="button"
+                          onClick={() => update(i, { bvId: "" })}
+                          title={t(lang, "meetingTalks.bvClear")}
+                          className="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-lg text-brand-text-muted hover:text-brand-text-heading hover:bg-brand-surface"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div className="relative">
+
+              <button
+                type="button"
+                onClick={() =>
+                  setTalks((prev) =>
+                    prev.length <= 1 ? [emptyTalk()] : prev.filter((_, idx) => idx !== i),
+                  )
+                }
+                className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-brand-text-muted hover:text-red-500 hover:bg-red-500/8 transition-colors"
+                aria-label={t(lang, "meetingTalks.remove")}
+                title={t(lang, "meetingTalks.remove")}
+              >
+                ×
+              </button>
+
+              <div className="relative ml-auto flex items-center gap-1.5 shrink-0">
+                <span className="text-xs text-brand-text-muted">{t(lang, "meeting.by")}</span>
+                {talk.userId ? <UserAvatar src={talk.image} name={talk.speaker} size={22} /> : null}
                 <input
                   value={talk.speaker}
                   onChange={(e) => onSpeakerChange(i, e.target.value)}
@@ -223,17 +381,17 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
                     searchUsers(talk.speaker.trim());
                   }}
                   placeholder={t(lang, "meetingTalks.speakerPlaceholder")}
-                  className="w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading"
+                  className="w-[6.5rem] bg-transparent text-xs text-brand-text-secondary placeholder:text-brand-text-muted focus:outline-none"
                   autoComplete="off"
                 />
                 {showDropdown && activeSearch === i && results.length > 0 && (
-                  <div className="absolute z-20 mt-1 w-full bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto border-brand-border-subtle">
+                  <div className="absolute right-0 top-full z-20 mt-1 w-56 bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto border-brand-border-subtle">
                     {results.map((u) => (
                       <button
                         key={u.id}
                         type="button"
                         onClick={() => linkUser(i, u)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface-page flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface flex items-center gap-2 transition-colors"
                       >
                         {u.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -263,33 +421,9 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
                   </div>
                 )}
               </div>
-              <input
-                value={talk.title}
-                onChange={(e) => update(i, { title: e.target.value })}
-                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
-                className="rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading sm:col-span-2"
-              />
             </div>
-            {(talk.userId || talk.linkedLabel) && (
-              <div className="flex items-center gap-2 text-xs text-brand-blue">
-                <span>{talk.linkedLabel || t(lang, "meetingTalks.linkedSiteUser")}</span>
-                <button
-                  type="button"
-                  onClick={() => clearLink(i)}
-                  className="underline text-brand-text-muted"
-                >
-                  {t(lang, "meetingTalks.unlink")}
-                </button>
-              </div>
-            )}
-            <input
-              value={talk.bvId}
-              onChange={(e) => update(i, { bvId: e.target.value })}
-              placeholder={t(lang, "meetingTalks.bvPlaceholder")}
-              className="w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading"
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -300,22 +434,30 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [] }: Pr
         >
           {t(lang, "meetingTalks.addRow")}
         </button>
-        <SubmitButton
-          type="submit"
-          disabled={pending}
-          className="btn-primary px-5 py-2 rounded-lg text-sm font-medium"
-          pendingText={t(lang, "common.saving")}
-        >
-          {t(lang, "meetingTalks.save")}
-        </SubmitButton>
+        {!embedded && (
+          <SubmitButton
+            type="submit"
+            disabled={pending}
+            className="btn-primary px-5 py-2 rounded-lg text-sm font-medium"
+            pendingText={t(lang, "common.saving")}
+          >
+            {t(lang, "meetingTalks.save")}
+          </SubmitButton>
+        )}
         {message && (
           <span
-            className={`text-sm ${message.type === "ok" ? "text-green-700" : "text-red-600"}`}
+            className={`text-sm ${message.type === "ok" ? "text-green-700 dark:text-green-400" : "text-red-600"}`}
           >
             {message.text}
           </span>
         )}
       </div>
-    </form>
+    </>
   );
+
+  const shell = framed
+    ? "bg-card rounded-xl border p-5 sm:p-6 space-y-4 shadow-sm border-brand-border-subtle"
+    : "space-y-3";
+  if (embedded) return <section className={shell}>{body}</section>;
+  return <form onSubmit={onSubmit} className={shell}>{body}</form>;
 }

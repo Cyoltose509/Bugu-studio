@@ -5,7 +5,7 @@ import Image from "next/image";
  *
  * 三种来源：
  * 1) 单色描边的品牌 SVG（GitHub 小猫）—— 用 currentColor 上色，明暗模式自适应；
- * 2) 站内已备的品牌图（Bilibili / Steam）—— 比 emoji 更还原；
+ * 2) 站内已备的品牌图（Bilibili / Steam / itch.io）—— 比 emoji 更还原；
  * 3) emoji 兜底表（知乎、小红书……），都没有时用中性链接符号。
  *
  * 注意标签写法不统一：编辑表单里给的是 "Bilibili"，而项目表单里存的是 "B站"，
@@ -22,6 +22,11 @@ const BRAND_SVG: { label: RegExp; url: RegExp; path: string }[] = [
 ];
 
 const IMAGE_RULES: { src: string; label: RegExp; url: RegExp }[] = [
+  {
+    src: "/images/links/itch-favicon.ico",
+    label: /itch/i,
+    url: /itch\.io/i,
+  },
   {
     src: "/images/links/bilibili.png",
     label: /bilibili|哔哩|b站/i,
@@ -43,7 +48,6 @@ const EMOJI_RULES: { test: RegExp; icon: string }[] = [
   { test: /抖音|tiktok/i, icon: "🎵" },
   { test: /csdn/i, icon: "📋" },
   { test: /掘金/i, icon: "💎" },
-  { test: /itch/i, icon: "🕹️" },
   { test: /网盘|drive|disk|pan/i, icon: "📁" },
 ];
 
@@ -101,6 +105,10 @@ export default function LinkIcon({
   }
 
   if (src) {
+    if (src.endsWith(".ico")) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={src} alt="" width={size} height={size} className={`shrink-0 object-contain ${className}`} aria-hidden />;
+    }
     return (
       <Image
         src={src}
