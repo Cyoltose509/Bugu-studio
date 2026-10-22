@@ -144,7 +144,6 @@ model User {
   jamScores             JamScore[]
   courseScores          CourseScore[]   @relation("CourseScoreJudge")
 
-  @@index([email])
   @@index([role])
   @@index([createdAt])
 }
@@ -222,7 +221,6 @@ model InviteCode {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([code])
   @@index([isActive])
 }
 
@@ -360,7 +358,6 @@ model ErrorReport {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([reportId])
   @@index([status])
   @@index([createdAt])
   @@index([url])
@@ -414,7 +411,6 @@ model Project {
   @@index([developYear])
 
   @@index([createdAt])
-  @@index([slug])
   @@index([publishedAt])
   @@index([status, publishedAt])
   @@index([status, type, publishedAt])
@@ -485,7 +481,6 @@ model Tag {
   projects ProjectTag[]
   courseClasses CourseClassTag[]
 
-  @@index([slug])
   @@index([group])
 }
 
@@ -560,8 +555,6 @@ model SiteSetting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
-
-  @@index([key])
 }
 
 // 速率限制（防滥用）
@@ -573,7 +566,6 @@ model RateLimit {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
-  @@index([key])
 }
 
 // ============================================================
