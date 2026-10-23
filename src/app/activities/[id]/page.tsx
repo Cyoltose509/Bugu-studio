@@ -422,6 +422,7 @@ async function ActivityTalkSection({
                 userName={p.user.name}
                 createdAt={p.createdAt.toLocaleDateString(dateLocale(lang))}
                 description={p.description}
+                imageUrl={p.imageUrl}
               />
             ))}
           </div>
@@ -485,6 +486,7 @@ async function ActivityTalkSection({
               return (
                 <li key={p.id} className="px-3.5 py-2.5">
                   <div className="flex items-center gap-2.5">
+                    {p.imageUrl ? <img src={p.imageUrl} alt="" className="h-10 w-14 shrink-0 rounded-lg object-cover" /> : null}
                     <AgendaTypeTag
                       type={type}
                       label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}

@@ -432,6 +432,8 @@ export async function submitProposal(formData: FormData) {
   const activityId   = formData.get("activityId") as string;
   const title        = (formData.get("title") as string || "").trim();
   const description  = (formData.get("description") as string || "").trim();
+  const imageUrlRaw   = (formData.get("imageUrl") as string || "").trim();
+  const imageUrl = imageUrlRaw && /^(https?:\/\/|\/)/.test(imageUrlRaw) ? imageUrlRaw.slice(0, 2048) : null;
   const proposalType = (formData.get("proposalType") as string || "SHARE");
   if (proposalType !== "SHARE" && proposalType !== "SHOWCASE") {
     return { error: t(lang, "meeting.errInvalidType") };
@@ -453,6 +455,7 @@ export async function submitProposal(formData: FormData) {
       userId,
       title,
       description: description || undefined,
+      imageUrl: imageUrl || undefined,
       proposalType: proposalType as any,
     },
   });
