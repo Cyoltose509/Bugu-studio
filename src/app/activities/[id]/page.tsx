@@ -464,12 +464,12 @@ async function ActivityTalkSection({
               const speaker = speakerMeta(talk, lang, true);
               const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
               return (
-                <li key={talk.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
+                <li key={talk.id} className="group flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 transition-colors hover:bg-brand-surface/60 focus-within:bg-brand-surface/60">
                   <AgendaTypeTag
                     type={type}
                     label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
                   />
-                  <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy truncate">{talk.title}</p>
+                  <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy md:line-clamp-1 md:group-hover:line-clamp-none md:group-focus-within:line-clamp-none">{talk.title}</p>
                   {talk.bvId ? <BilibiliTvLink bvId={talk.bvId} /> : null}
                   <AgendaSpeaker
                     name={speaker.name}
@@ -484,14 +484,14 @@ async function ActivityTalkSection({
               const speaker = speakerMeta(p, lang);
               const type = p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
               return (
-                <li key={p.id} className="px-3.5 py-2.5">
+                <li key={p.id} className="group rounded-lg px-3.5 py-2.5 transition-colors hover:bg-brand-surface/60 focus-within:bg-brand-surface/60">
                   <div className="flex items-center gap-2.5">
                     {p.imageUrl ? <img src={p.imageUrl} alt="" className="h-10 w-14 shrink-0 rounded-lg object-cover" /> : null}
                     <AgendaTypeTag
                       type={type}
                       label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
                     />
-                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy truncate">{p.title}</p>
+                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy md:line-clamp-1 md:group-hover:line-clamp-none md:group-focus-within:line-clamp-none">{p.title}</p>
                     <AgendaSpeaker
                       name={speaker.name}
                       href={speaker.href}
@@ -501,7 +501,7 @@ async function ActivityTalkSection({
                     {isAdmin && <DeleteProposalButton proposalId={p.id} />}
                   </div>
                   {p.description && (
-                    <p className="mt-2 ml-[3.25rem] whitespace-pre-wrap text-sm leading-6 text-brand-text-secondary">{p.description}</p>
+                    <p className="mt-2 ml-[3.25rem] whitespace-pre-wrap text-sm leading-6 text-brand-text-secondary md:max-h-0 md:overflow-hidden md:opacity-0 md:transition-[max-height,opacity] md:duration-300 md:group-hover:max-h-96 md:group-hover:opacity-100 md:group-focus-within:max-h-96 md:group-focus-within:opacity-100">{p.description}</p>
                   )}
                 </li>
               );
