@@ -173,25 +173,22 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
 function UpcomingItem({ a, lang }: { a: any; lang: Lang }) {
   const thumbSrc = a.coverImage || DEFAULT_COVER;
   return (
-      <Link href={`/activities/${a.id}`}>
-        <div
-            className="rounded-xl border border-brand-border-subtle p-3 hover:bg-slate-50 transition-colors flex gap-3"
-        >
-          {/* 缩略图 */}
-          <div className="w-14 h-10 rounded-md overflow-hidden shrink-0 relative bg-brand-surface">
-            <Image src={thumbSrc} alt="" fill className="object-cover" sizes="56px" />
-          </div>
-
-          <div className="flex-1 min-w-0 flex justify-between items-start gap-2">
-            <div className="min-w-0">
-              <h3 className="font-medium text-sm line-clamp-1 text-brand-text-heading">
-                {a.title}
-              </h3>
-              <p className="text-xs mt-1 text-brand-text-muted">
-                {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
-              </p>
+      <Link href={`/activities/${a.id}`} className="group block">
+        <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface shadow-sm">
+          <Image src={thumbSrc} alt={a.title} fill className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" sizes="(max-width: 1280px) 50vw, 360px" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <ActivityTypeCorner type={a.type} label={activityTypeLabel(lang, a.type)} />
+          <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold line-clamp-2">{a.title}</h3>
+                <p className="mt-1 text-xs text-white/80">
+                  {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
+                </p>
+              </div>
+              {!a.timePending && a.startTime ? <Countdown startTime={a.startTime} lang={lang} /> : null}
             </div>
-            {!a.timePending && a.startTime ? <Countdown startTime={a.startTime} lang={lang} /> : null}
+            {a.summary ? <p className="mt-2 text-xs leading-relaxed text-white/80 line-clamp-2">{a.summary}</p> : null}
           </div>
         </div>
       </Link>

@@ -499,7 +499,7 @@ async function ActivityTalkSection({
                     {isAdmin && <DeleteProposalButton proposalId={p.id} />}
                   </div>
                   {p.description && (
-                    <p className="mt-1 ml-[3.25rem] text-xs text-brand-text-secondary line-clamp-2">{p.description}</p>
+                    <p className="mt-2 ml-[3.25rem] whitespace-pre-wrap text-sm leading-6 text-brand-text-secondary">{p.description}</p>
                   )}
                 </li>
               );

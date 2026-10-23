@@ -731,7 +731,7 @@ export const dict = {
   "activityDetail.statusRejected": { cn: "已拒绝", en: "Rejected" },
   "activityDetail.statusPendingReview": { cn: "审核中", en: "Under Review" },
   "activityDetail.adminNote": { cn: "审核意见：{note}", en: "Review note: {note}" },
-  "activityDetail.proposalHint": { cn: "选择分享或展示并填写内容，经管理员审核后将列入议程。每人限提交一份。", en: "Choose Share or Showcase and fill in the content; once approved it will be added to the agenda. One submission per person." },
+  "activityDetail.proposalHint": { cn: "选择分享或展示并填写内容，经管理员审核后将列入议程。", en: "Choose Share or Showcase and fill in the content; once approved it will be added to the agenda." },
   "activityDetail.courseTitle": { cn: "📚 公开课", en: "📚 Course" },
   "activityDetail.courseInstructors": { cn: "讲师", en: "Instructors" },
   "activityDetail.courseStudents": { cn: "学员", en: "Students" },

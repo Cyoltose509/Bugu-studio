@@ -447,14 +447,6 @@ export async function submitProposal(formData: FormData) {
     return { error: t(lang, "meeting.errTalkClosed") };
   }
 
-  // 检查是否已提交过申请（一人只能提交一份）
-  const existing = await prisma.meetingProposal.findFirst({
-    where: { activityId, userId },
-  });
-  if (existing) {
-    return { error: t(lang, "meeting.errAlreadySubmitted") };
-  }
-
   const proposal = await prisma.meetingProposal.create({
     data: {
       activityId,
