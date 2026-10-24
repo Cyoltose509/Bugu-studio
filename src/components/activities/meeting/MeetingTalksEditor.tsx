@@ -212,9 +212,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   const field =
     "w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading bg-card placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/40";
 
-  const rowListClass = framed
-    ? "divide-y divide-brand-border-subtle"
-    : "rounded-xl border border-brand-border-subtle bg-card divide-y divide-brand-border-subtle";
+  const rowListClass = "space-y-3";
 
   const body = (
     <>
@@ -253,8 +251,8 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 dragFrom.current = null;
                 setDragOver(null);
               }}
-              className={`flex flex-wrap items-center gap-2 px-3.5 py-2.5 transition-colors ${
-                draggingOver ? "bg-brand-blue/10" : "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+              className={`flex flex-wrap items-center gap-3 rounded-xl border border-brand-border-subtle bg-card p-4 shadow-sm transition-colors ${
+                draggingOver ? "border-brand-blue/50 bg-brand-blue/10" : "hover:border-brand-blue/30"
               }`}
             >
               <button
@@ -292,7 +290,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 value={talk.title}
                 onChange={(e) => update(i, { title: e.target.value })}
                 placeholder={t(lang, "meetingTalks.topicPlaceholder")}
-                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-brand-navy placeholder:text-brand-text-muted focus:outline-none"
+                className="min-w-0 flex-[1_1_16rem] rounded-lg border border-brand-border-subtle bg-brand-surface/40 px-3 py-2 text-sm font-medium text-brand-navy placeholder:text-brand-text-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
               />
 
               <div className="relative shrink-0">
@@ -369,7 +367,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 ×
               </button>
 
-              <div className="relative ml-auto flex items-center gap-1.5 shrink-0">
+              <div className="relative basis-full flex items-center gap-2 border-t border-brand-border-subtle pt-3">
                 <span className="text-xs text-brand-text-muted">{t(lang, "meeting.by")}</span>
                 {talk.userId ? <UserAvatar src={talk.image} name={talk.speaker} size={22} /> : null}
                 <input
@@ -381,7 +379,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                     searchUsers(talk.speaker.trim());
                   }}
                   placeholder={t(lang, "meetingTalks.speakerPlaceholder")}
-                  className="w-[6.5rem] bg-transparent text-xs text-brand-text-secondary placeholder:text-brand-text-muted focus:outline-none"
+                  className="min-w-0 flex-1 rounded-lg border border-brand-border-subtle bg-brand-surface/40 px-3 py-2 text-sm text-brand-text-heading placeholder:text-brand-text-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
                   autoComplete="off"
                 />
                 {showDropdown && activeSearch === i && results.length > 0 && (

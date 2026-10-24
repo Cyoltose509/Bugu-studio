@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { submitProposal } from "@/app/admin/activities/actions";
 import { useLang } from "@/lib/i18n/LangProvider";
 import MentionEditor from "@/components/ui/MentionEditor";
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
+import { ACCEPT_ATTR, uploadImage } from "@/lib/utils/clientUpload";
 
 const initialState = { error: "", success: false };
 
@@ -47,6 +49,23 @@ function Spinner() {
 export default function SubmitProposalForm({ activityId }: { activityId: string }) {
   const { t } = useLang();
   const [proposalType, setProposalType] = useState<"SHARE" | "SHOWCASE" | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  async function handleImage(file: File) {
+    setUploadError("");
+    setUploading(true);
+    try {
+      const result = await uploadImage(file, { endpoint: "/api/upload/cover", type: "proposal" });
+      setImageUrl(result.url);
+      setImagePreview(URL.createObjectURL(file));
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : t("form.uploadFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }
   const [state, formAction] = useActionState(
     async (_prev: typeof initialState, formData: FormData) => {
       const result = await submitProposal(formData);
@@ -69,6 +88,7 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
     <form action={formAction} className="space-y-2.5">
       <input type="hidden" name="activityId" value={activityId} />
       {proposalType ? <input type="hidden" name="proposalType" value={proposalType} /> : null}
+      {imageUrl ? <input type="hidden" name="imageUrl" value={imageUrl} /> : null}
 
       {state.error && (
         <p className="text-xs text-red-600 dark:text-red-400">{state.error}</p>
@@ -111,6 +131,44 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
                 rows={2}
                 className="border-t border-brand-border-subtle"
               />
+              <ImageDropZone
+                className="rounded-xl"
+                hint={t("meeting.proposalImageDrop")}
+                disabled={uploading}
+                onInvalid={setUploadError}
+                onFile={handleImage}
+              >
+                {imagePreview ? (
+                  <div className="relative overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface">
+                    <img src={imagePreview} alt={t("meeting.proposalImageAlt")} className="h-32 w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { setImageUrl(""); setImagePreview(null); }}
+                      className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-lg leading-none text-white transition hover:bg-black/80"
+                      aria-label={t("meeting.proposalImageRemove")}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-brand-border-subtle bg-brand-surface/40 px-4 py-4 text-sm text-brand-text-secondary transition hover:border-brand-blue hover:text-brand-blue">
+                    <span className="text-lg" aria-hidden>＋</span>
+                    <span>{uploading ? t("meeting.proposalImageUploading") : t("meeting.proposalImageChoose")}</span>
+                    <input
+                      type="file"
+                      accept={ACCEPT_ATTR}
+                      className="sr-only"
+                      disabled={uploading}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void handleImage(file);
+                      }}
+                    />
+                  </label>
+                )}
+              </ImageDropZone>
+              {uploadError ? <p role="alert" className="text-xs text-red-600 dark:text-red-400">{uploadError}</p> : null}
               <SubmitButton />
             </>
           ) : null}

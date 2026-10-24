@@ -849,6 +849,7 @@ model MeetingProposal {
   userId       String
   title        String
   description  String?        @db.Text
+  imageUrl     String?        // 可选：报名分享配图（R2 公共 URL）
   proposalType ProposalType   @default(SHARE)
   status       ProposalStatus @default(PENDING)
   adminNote    String?        @db.Text // 审核意见
@@ -857,7 +858,6 @@ model MeetingProposal {
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([activityId, userId])
   @@index([activityId])
   @@index([userId])
   @@index([status])

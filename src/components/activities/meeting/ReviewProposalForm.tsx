@@ -46,12 +46,14 @@ export default function ReviewProposalForm({
   userName,
   createdAt,
   description,
+  imageUrl,
 }: {
   proposalId: string;
   title: string;
   userName: string;
   createdAt: string;
   description?: string | null;
+  imageUrl?: string | null;
 }) {
   const { t } = useLang();
   const router = useRouter();
@@ -85,6 +87,7 @@ export default function ReviewProposalForm({
             <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">{t("work.badge.PENDING")}</span>
           </div>
           <p className="text-xs mt-1 text-brand-text-secondary">by {userName} · {createdAt}</p>
+          {imageUrl && <img src={imageUrl} alt="" className="mt-3 h-28 w-full rounded-lg object-cover" />}
           {description && <p className="text-sm mt-1 text-brand-text-body">{description}</p>}
         </div>
       </div>
