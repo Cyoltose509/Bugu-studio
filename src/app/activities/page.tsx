@@ -17,6 +17,7 @@ import type { Lang } from "@/lib/i18n/config";
 import { auth } from "@/lib/auth/auth";
 import { activityNewestFirstOrder, formatActivityDay, formatActivitySchedule } from "@/lib/activities/datetime";
 import { redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
+import { localizeActivityTitle } from "@/lib/activities/title";
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
@@ -68,6 +69,7 @@ function ActivityCard({ a, lang, badge, countdown }: {
   a: any; lang: Lang; badge?: "ongoing" | "upcoming" | "past"; countdown?: React.ReactNode;
 }) {
   const coverSrc = a.coverImage || DEFAULT_COVER;
+  const displayTitle = localizeActivityTitle(a.title, lang);
 
   return (
     <Link href={`/activities/${a.id}`} className="group h-full">
@@ -77,7 +79,7 @@ function ActivityCard({ a, lang, badge, countdown }: {
         <div className="relative aspect-video overflow-hidden bg-brand-surface shrink-0">
           <Image
             src={coverSrc}
-            alt={a.title}
+            alt={displayTitle}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -103,7 +105,7 @@ function ActivityCard({ a, lang, badge, countdown }: {
         {/* 信息区：固定三行，避免有/无简介、地点长短导致卡片高低不一 */}
         <div className="p-3 flex flex-col gap-1 flex-1 min-h-[4.75rem]">
           <h3 className="text-sm font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
-            {a.title}
+            {displayTitle}
           </h3>
           <p className="text-xs text-brand-text-muted line-clamp-1">
             {formatActivitySchedule(a.startTime, a.endTime, lang, a.timePending, a.courseHasClock)}
@@ -120,6 +122,7 @@ function ActivityCard({ a, lang, badge, countdown }: {
 
 function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" | "upcoming" | "past" }) {
   const coverSrc = a.coverImage || DEFAULT_COVER;
+  const displayTitle = localizeActivityTitle(a.title, lang);
   const statusBadge = status === "ongoing"
     ? { label: STATUS_LABEL.ongoing[lang], cls: "bg-green-500/80" }
     : status === "upcoming"
@@ -133,7 +136,7 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
           <div className="relative aspect-[16/9] overflow-hidden">
             <Image
                 src={coverSrc}
-                alt={a.title}
+                alt={displayTitle}
                 fill
                 className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
                 sizes="(max-width: 768px) 100vw, 896px"
@@ -151,7 +154,7 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
 
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
               <h2 className="text-2xl font-bold mb-2">
-                {a.title}
+                {displayTitle}
               </h2>
 
               <p className="text-sm opacity-90">
@@ -172,21 +175,24 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
 }
 function UpcomingItem({ a, lang }: { a: any; lang: Lang }) {
   const thumbSrc = a.coverImage || DEFAULT_COVER;
+  const displayTitle = localizeActivityTitle(a.title, lang);
   return (
       <Link href={`/activities/${a.id}`} className="group block">
         <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface shadow-sm">
-          <Image src={thumbSrc} alt={a.title} fill className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" sizes="(max-width: 1280px) 50vw, 360px" />
+          <Image src={thumbSrc} alt={displayTitle} fill className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" sizes="(max-width: 1280px) 50vw, 360px" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <ActivityTypeCorner type={a.type} label={activityTypeLabel(lang, a.type)} />
+          <div className="absolute right-3 top-3">
+            {!a.timePending && a.startTime ? <Countdown startTime={a.startTime} lang={lang} /> : (
+              <span className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">{lang === "en" ? "TBD" : "待定"}</span>
+            )}
+          </div>
           <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-            <div className="flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="text-base font-semibold line-clamp-2">{a.title}</h3>
-                <p className="mt-1 text-xs text-white/80">
-                  {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
-                </p>
-              </div>
-              {!a.timePending && a.startTime ? <Countdown startTime={a.startTime} lang={lang} /> : null}
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold line-clamp-2">{displayTitle}</h3>
+              <p className="mt-1 text-xs text-white/80">
+                {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
+              </p>
             </div>
             {a.summary ? <p className="mt-2 text-xs leading-relaxed text-white/80 line-clamp-2">{a.summary}</p> : null}
           </div>
@@ -310,7 +316,6 @@ export default async function ActivitiesPage() {
                   <HeroCard a={hero} lang={lang} status={heroStatus} />
                 </div>
                 <div className="lg:col-span-2">
-                  <h2 className="text-lg font-semibold mb-3 text-brand-navy">{t(lang, "activities.upcoming")}</h2>
                   <div className="space-y-3">
                     {upcomingList.slice(0, 5).map(a => (
                       <UpcomingItem key={a.id} a={a} lang={lang} />

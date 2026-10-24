@@ -60,11 +60,14 @@ export default function ReviewProposalForm({
   const [state, formAction] = useActionState(
     async (_prev: typeof initialState, formData: FormData) => {
       try {
-        await reviewProposal(
+        const result = await reviewProposal(
           proposalId,
           formData.get("action") as any,
           (formData.get("adminNote") as string) || undefined,
         );
+        if (result && "error" in result && result.error) {
+          return { error: result.error, success: false };
+        }
         // 审核成功后刷新
         router.refresh();
         return { error: "", success: true };

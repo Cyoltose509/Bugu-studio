@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth/auth";
 import { invalidateCache } from "@/lib/db/cache";
 import { createNotification, notifyMentions } from "@/lib/services/notification";
 import { revalidatePath } from "next/cache";
-import { ActivityStatus, CourseParticipantRole, ProposalStatus, ProposalType } from "@prisma/client";
+import { ActivityStatus, CourseParticipantRole, Prisma, ProposalStatus, ProposalType } from "@prisma/client";
 import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
 import { isCourseAttachmentUrl, parseCourseMaterials } from "@/lib/activities/course-materials";
 import { withoutCourseMediaReferences } from "@/lib/activities/course-media";
@@ -487,85 +487,120 @@ export async function deleteProposal(formData: FormData) {
   });
   if (!proposal) return { error: "申请不存在" };
 
-  await prisma.meetingProposal.delete({ where: { id: proposalId } });
-  revalidatePath(`/activities/${proposal.activityId}`);
+  await prisma.$transaction(async (tx) => {
+    await tx.meetingTalk.deleteMany({ where: { sourceProposalId: proposalId } });
+    await tx.meetingProposal.delete({ where: { id: proposalId } });
+  });
+  await invalidateActivityCaches(proposal.activityId);
   return { success: true };
 }
 
-function agendaTitleKey(title: string) {
-  return title.trim().toLowerCase();
-}
-
-/** 已通过的申请写入正式议程；标题已存在则跳过（可重试）。 */
-async function writeApprovedProposalToAgenda(proposalId: string) {
-  const proposal = await prisma.meetingProposal.findUnique({
+/**
+ * Ensure an approved proposal has exactly one formal agenda item.
+ * The unique sourceProposalId relation is the idempotency boundary; titles are
+ * deliberately not used because different people may submit the same topic.
+ */
+async function ensureProposalAgendaTalk(
+  tx: Prisma.TransactionClient,
+  proposalId: string,
+  requireApproved: boolean,
+) {
+  const proposal = await tx.meetingProposal.findUnique({
     where: { id: proposalId },
     select: {
       id: true,
       activityId: true,
       userId: true,
       title: true,
+      description: true,
+      imageUrl: true,
       proposalType: true,
       status: true,
       user: { select: { name: true, member: { select: { displayName: true } } } },
     },
   });
   if (!proposal) return { error: "申请不存在" };
-  if (proposal.status !== ProposalStatus.APPROVED) {
+  if (requireApproved && proposal.status !== ProposalStatus.APPROVED) {
     return { error: "仅已通过的申请可以列入议程" };
   }
 
   const title = proposal.title.trim();
-  const titleKey = agendaTitleKey(title);
   if (!title) return { error: "申请标题为空" };
 
-  const existing = await prisma.meetingTalk.findMany({
-    where: { activityId: proposal.activityId },
-    select: { title: true, userId: true, sortOrder: true },
+  const existing = await tx.meetingTalk.findUnique({
+    where: { sourceProposalId: proposal.id },
+    select: { id: true },
   });
-  const already = existing.some((tk) => agendaTitleKey(tk.title) === titleKey);
-  if (already) return { success: true as const, already: true };
+  if (existing) return { success: true as const, already: true, activityId: proposal.activityId };
 
   const speaker =
     proposal.user.member?.displayName?.trim() ||
     proposal.user.name?.trim() ||
     "主讲";
-  const maxSort = existing.reduce((m, tk) => Math.max(m, tk.sortOrder), -1);
+  const maxSort = await tx.meetingTalk.aggregate({
+    where: { activityId: proposal.activityId },
+    _max: { sortOrder: true },
+  });
 
-  await prisma.meetingTalk.create({
+  await tx.meetingTalk.create({
     data: {
       activityId: proposal.activityId,
+      sourceProposalId: proposal.id,
       speaker,
       title,
+      description: proposal.description,
+      imageUrl: proposal.imageUrl,
       talkType: proposal.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
       userId: proposal.userId,
-      sortOrder: maxSort + 1,
+      sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
+      speakers: {
+        create: [{ name: speaker, userId: proposal.userId, sortOrder: 0 }],
+      },
     },
   });
 
-  await invalidateActivityCaches(proposal.activityId);
-  return { success: true as const, already: false };
+  return { success: true as const, already: false, activityId: proposal.activityId };
 }
 
 export async function promoteProposalToAgenda(proposalId: string) {
   await requireAdmin();
   if (!proposalId) return { error: "缺少申请 ID" };
-  return writeApprovedProposalToAgenda(proposalId);
+  const result = await prisma.$transaction((tx) =>
+    ensureProposalAgendaTalk(tx, proposalId, true),
+  );
+  if (result && "activityId" in result && result.activityId) {
+    await invalidateActivityCaches(result.activityId);
+  }
+  return result;
 }
 
 // ── 审核：分享/展示申请 ──────────────────────────────────────
 export async function reviewProposal(id: string, status: ProposalStatus, adminNote?: string) {
   const session = await requireAdmin();
-  const proposal = await prisma.meetingProposal.findUnique({
-    where: { id },
-    select: { activityId: true, userId: true, title: true, proposalType: true },
-  });
-  if (!proposal) throw new Error("申请不存在");
+  const proposal = await prisma.$transaction(async (tx) => {
+    const current = await tx.meetingProposal.findUnique({
+      where: { id },
+      select: { activityId: true, userId: true, title: true, proposalType: true },
+    });
+    if (!current) throw new Error("申请不存在");
 
-  await prisma.meetingProposal.update({
-    where: { id },
-    data: { status, adminNote: adminNote || undefined },
+    if (status === ProposalStatus.APPROVED) {
+      const agenda = await ensureProposalAgendaTalk(tx, id, false);
+      if ("error" in agenda) throw new Error(agenda.error);
+    } else {
+      // Keep the review status and the public agenda structurally consistent.
+      // Only delete the row explicitly owned by this proposal; manually-created
+      // agenda items (including same-title items) are never touched.
+      await tx.meetingTalk.deleteMany({ where: { sourceProposalId: id } });
+    }
+
+    await tx.meetingProposal.update({
+      where: { id },
+      data: { status, adminNote: adminNote || undefined },
+    });
+    return current;
   });
+
   await prisma.auditLog.create({
     data: {
       action: "ADMIN_ACTION",
@@ -576,13 +611,6 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
       ipAddress: "server-action",
     },
   }).catch((err) => console.error("[AuditLog] 分享申请审核写入失败:", err));
-
-  if (status === ProposalStatus.APPROVED) {
-    const written = await writeApprovedProposalToAgenda(id);
-    if (written && "error" in written && written.error) {
-      console.error("[agenda] 通过后写入议程失败:", written.error);
-    }
-  }
 
   // ── 通知申请人审核结果 ──
   const approved = status === ProposalStatus.APPROVED;
@@ -596,20 +624,26 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
       : `你的${typeLabel}申请「${proposal.title}」未通过审核${adminNote ? `：${adminNote}` : ""}`,
     relatedId: proposal.activityId,
     relatedType: "Activity",
-  });
+  }).catch((error) => console.error("[agenda] 审核通知发送失败:", error));
 
   await invalidateActivityCaches(proposal.activityId);
+  return { success: true as const };
 }
 
 // ── 活动：整表保存分享条目（主讲 + 标题 + BV）────────────────
 export async function saveMeetingTalks(
   activityId: string,
   talks: Array<{
+    id?: string;
+    sourceProposalId?: string | null;
     speaker: string;
     title: string;
+    description?: string | null;
+    imageUrl?: string | null;
     talkType?: "SHARE" | "SHOWCASE";
     bvId?: string;
     userId?: string | null;
+    speakers?: Array<{ name: string; userId?: string | null }>;
   }>,
 ) {
   await requireAdmin();
@@ -624,7 +658,8 @@ export async function saveMeetingTalks(
   const rawUserIds = [
     ...new Set(
       talks
-        .map((t) => (t.userId || "").trim())
+        .flatMap((t) => [t.userId, ...(t.speakers || []).map((speaker) => speaker.userId)])
+        .map((userId) => (userId || "").trim())
         .filter(Boolean),
     ),
   ];
@@ -637,49 +672,102 @@ export async function saveMeetingTalks(
     for (const u of users) validUserIds.add(u.id);
   }
 
+  const rawSourceProposalIds = [
+    ...new Set(talks.map((talk) => (talk.sourceProposalId || "").trim()).filter(Boolean)),
+  ];
+  const validSourceProposalIds = new Set<string>();
+  if (rawSourceProposalIds.length > 0) {
+    const proposals = await prisma.meetingProposal.findMany({
+      where: {
+        id: { in: rawSourceProposalIds },
+        activityId,
+        status: ProposalStatus.APPROVED,
+      },
+      select: { id: true },
+    });
+    proposals.forEach((proposal) => validSourceProposalIds.add(proposal.id));
+    if (validSourceProposalIds.size !== rawSourceProposalIds.length) {
+      return { error: "议程关联的报名记录无效或尚未通过审核" };
+    }
+  }
+
   const normalized = talks
     .map((t, i) => {
-      const userId = (t.userId || "").trim();
+      const seen = new Set<string>();
+      const speakers = (t.speakers?.length ? t.speakers : [{ name: t.speaker, userId: t.userId }])
+        .map((speaker) => {
+          const name = (speaker.name || "").trim();
+          const rawUserId = (speaker.userId || "").trim();
+          const userId = rawUserId && validUserIds.has(rawUserId) ? rawUserId : null;
+          return { name, userId };
+        })
+        .filter((speaker) => {
+          if (!speaker.name) return false;
+          const key = speaker.userId ? `user:${speaker.userId}` : `name:${speaker.name.toLocaleLowerCase()}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      const first = speakers[0];
+      const sourceProposalId = (t.sourceProposalId || "").trim() || null;
       return {
-        speaker: (t.speaker || "").trim(),
+        speaker: first?.name || "",
         title: (t.title || "").trim(),
+        description: (t.description || "").trim() || null,
+        imageUrl: (t.imageUrl || "").trim() || null,
         talkType: t.talkType === "SHOWCASE" ? ProposalType.SHOWCASE : ProposalType.SHARE,
         bvId: parseBvId(t.bvId) || null,
-        userId: userId && validUserIds.has(userId) ? userId : null,
+        userId: first?.userId || null,
+        sourceProposalId: sourceProposalId && validSourceProposalIds.has(sourceProposalId) ? sourceProposalId : null,
+        speakers,
         sortOrder: i,
       };
     })
-    .filter((t) => t.speaker && t.title);
+    .filter((t) => t.speakers.length > 0 && t.title);
+
+  const sourceIds = normalized.flatMap((talk) => talk.sourceProposalId ? [talk.sourceProposalId] : []);
+  if (new Set(sourceIds).size !== sourceIds.length) {
+    return { error: "同一份报名不能关联到多条议程" };
+  }
 
   for (const t of talks) {
-    const speaker = (t.speaker || "").trim();
     const title = (t.title || "").trim();
-    if ((speaker && !title) || (!speaker && title)) {
-      return { error: "每条议程需同时填写主讲与内容" };
+    const hasSpeakers = (t.speakers?.length ? t.speakers : [{ name: t.speaker }])
+      .some((speaker) => (speaker.name || "").trim());
+    if ((hasSpeakers && !title) || (!hasSpeakers && !!title)) {
+      return { error: "每条议程需同时填写至少一位主讲人与内容" };
     }
     if (t.bvId && !parseBvId(t.bvId)) {
       return { error: `无法识别 BV 号：${t.bvId}` };
     }
   }
 
-  await prisma.$transaction([
-    prisma.meetingTalk.deleteMany({ where: { activityId } }),
-    ...(normalized.length
-      ? [
-          prisma.meetingTalk.createMany({
-            data: normalized.map((t) => ({
-              activityId,
-              speaker: t.speaker,
-              title: t.title,
-              talkType: t.talkType,
-              bvId: t.bvId,
-              userId: t.userId,
-              sortOrder: t.sortOrder,
+  await prisma.$transaction(async (tx) => {
+    await tx.meetingTalk.deleteMany({ where: { activityId } });
+    for (const talk of normalized) {
+      await tx.meetingTalk.create({
+        data: {
+          activityId,
+          speaker: talk.speaker,
+          title: talk.title,
+          description: talk.description,
+          imageUrl: talk.imageUrl,
+          talkType: talk.talkType,
+          bvId: talk.bvId,
+          userId: talk.userId,
+          sourceProposalId: talk.sourceProposalId,
+          sortOrder: talk.sortOrder,
+          speakers: {
+            create: talk.speakers.map((speaker, sortOrder) => ({
+              name: speaker.name,
+              userId: speaker.userId,
+              sortOrder,
             })),
-          }),
-        ]
-      : []),
-  ]);
+          },
+        },
+      });
+    }
+  });
 
   const saved = await prisma.meetingTalk.findMany({
     where: { activityId },
@@ -688,16 +776,35 @@ export async function saveMeetingTalks(
       id: true,
       speaker: true,
       title: true,
+      description: true,
+      imageUrl: true,
       talkType: true,
       bvId: true,
       sortOrder: true,
       userId: true,
+      sourceProposalId: true,
       user: {
         select: {
           id: true,
           name: true,
           image: true,
           member: { select: { id: true, displayName: true } },
+        },
+      },
+      speakers: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          name: true,
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              member: { select: { id: true, displayName: true } },
+            },
+          },
         },
       },
     },

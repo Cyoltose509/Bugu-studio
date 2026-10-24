@@ -8,16 +8,26 @@ import { SubmitButton } from "@/components/ui/SubmitButton";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
+import { ACCEPT_ATTR, uploadImage } from "@/lib/utils/clientUpload";
 
 export type TalkDraft = {
   id?: string;
+  sourceProposalId?: string | null;
   speaker: string;
   title: string;
+  description?: string | null;
+  imageUrl?: string | null;
   talkType?: "SHARE" | "SHOWCASE";
   bvId: string;
   userId?: string | null;
   linkedLabel?: string | null;
   image?: string | null;
+  speakers?: Array<{
+    name: string;
+    userId?: string | null;
+    image?: string | null;
+  }>;
   clientKey?: string;
 };
 
@@ -44,11 +54,19 @@ function nextKey() {
 }
 
 function emptyTalk(): TalkDraft {
-  return { clientKey: nextKey(), speaker: "", title: "", talkType: "SHARE", bvId: "", userId: null, linkedLabel: null, image: null };
+  return { clientKey: nextKey(), speaker: "", title: "", description: "", imageUrl: "", talkType: "SHARE", bvId: "", userId: null, linkedLabel: null, image: null, speakers: [] };
 }
 
 function withKey(talk: TalkDraft): TalkDraft {
-  return { ...talk, clientKey: talk.clientKey || talk.id || nextKey() };
+  return {
+    ...talk,
+    speakers: talk.speakers?.length
+      ? talk.speakers
+      : talk.speaker
+        ? [{ name: talk.speaker, userId: talk.userId || null, image: talk.image || null }]
+        : [],
+    clientKey: talk.clientKey || talk.id || nextKey(),
+  };
 }
 
 function displayNameOf(u: UserHit, fallback: string): string {
@@ -77,10 +95,13 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [activeSearch, setActiveSearch] = useState<number | null>(null);
+  const [speakerQuery, setSpeakerQuery] = useState("");
   const [results, setResults] = useState<UserHit[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [bvOpen, setBvOpen] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [uploadingImage, setUploadingImage] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState("");
   const dragFrom = useRef<number | null>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -133,12 +154,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   }, []);
 
   function onSpeakerChange(i: number, value: string) {
-    update(i, {
-      speaker: value,
-      userId: null,
-      linkedLabel: null,
-      image: null,
-    });
+    setSpeakerQuery(value);
     setActiveSearch(i);
     setShowDropdown(true);
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -147,27 +163,66 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
 
   function linkUser(i: number, user: UserHit) {
     const name = displayNameOf(user, t(lang, "meetingTalks.unnamedUser"));
-    update(i, {
-      speaker: name,
-      userId: user.id,
-      image: user.image,
-      linkedLabel: user.member
-        ? t(lang, "meetingTalks.linkedMember", { name: user.member.displayName })
-        : t(lang, "meetingTalks.linkedUser", { name: user.name || user.id.slice(0, 8) }),
-    });
+    const current = talks[i].speakers || [];
+    if (!current.some((speaker) => speaker.userId === user.id)) {
+      update(i, { speakers: [...current, { name, userId: user.id, image: user.image }] });
+    }
     setShowDropdown(false);
     setActiveSearch(null);
+    setSpeakerQuery("");
     setResults([]);
   }
 
+  function addExternalSpeaker(i: number) {
+    const name = speakerQuery.trim();
+    if (!name) return;
+    const current = talks[i].speakers || [];
+    if (!current.some((speaker) => !speaker.userId && speaker.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
+      update(i, { speakers: [...current, { name, userId: null, image: null }] });
+    }
+    setShowDropdown(false);
+    setActiveSearch(null);
+    setSpeakerQuery("");
+    setResults([]);
+  }
+
+  function removeSpeaker(talkIndex: number, speakerIndex: number) {
+    update(talkIndex, {
+      speakers: (talks[talkIndex].speakers || []).filter((_, index) => index !== speakerIndex),
+    });
+  }
+
+  async function handleAgendaImage(i: number, file: File) {
+    setUploadError("");
+    setUploadingImage(i);
+    try {
+      const result = await uploadImage(file, { endpoint: "/api/upload/cover", type: "proposal" });
+      update(i, { imageUrl: result.url });
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : t(lang, "form.uploadFailed"));
+    } finally {
+      setUploadingImage(null);
+    }
+  }
+
   function talksPayload() {
-    return talks.map((row) => ({
-      speaker: row.speaker.trim(),
-      title: row.title.trim(),
-      talkType: (row.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE") as "SHARE" | "SHOWCASE",
-      bvId: row.bvId,
-      userId: row.userId || null,
-    }));
+    return talks.map((row) => {
+      const speakers = (row.speakers || [])
+        .map((speaker) => ({ name: speaker.name.trim(), userId: speaker.userId || null }))
+        .filter((speaker) => speaker.name);
+      return {
+        id: row.id,
+        sourceProposalId: row.sourceProposalId || null,
+        speaker: speakers[0]?.name || "",
+        title: row.title.trim(),
+        description: row.description?.trim() || null,
+        imageUrl: row.imageUrl?.trim() || null,
+        talkType: (row.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE") as "SHARE" | "SHOWCASE",
+        bvId: row.bvId,
+        userId: speakers[0]?.userId || null,
+        speakers,
+      };
+    });
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -175,7 +230,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
     if (embedded) return;
     setMessage(null);
     startTransition(async () => {
-      const payload = talksPayload().filter((row) => row.speaker || row.title);
+      const payload = talksPayload().filter((row) => row.speakers.length || row.title);
 
       const result = await saveMeetingTalks(activityId, payload);
       if (result?.error) {
@@ -190,12 +245,20 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
             ? result.talks.map((tk) =>
                 withKey({
                   id: tk.id,
+                  sourceProposalId: tk.sourceProposalId,
                   speaker: tk.speaker,
                   title: tk.title,
+                  description: tk.description || "",
+                  imageUrl: tk.imageUrl || "",
                   talkType: tk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
                   bvId: tk.bvId || "",
                   userId: tk.userId || null,
                   image: tk.user?.image || null,
+                  speakers: tk.speakers.map((speaker) => ({
+                    name: speaker.name,
+                    userId: speaker.userId,
+                    image: speaker.user?.image || null,
+                  })),
                   linkedLabel: tk.userId
                     ? tk.user?.member
                       ? t(lang, "meetingTalks.linkedMember", { name: tk.user.member.displayName })
@@ -251,7 +314,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 dragFrom.current = null;
                 setDragOver(null);
               }}
-              className={`flex flex-wrap items-center gap-3 rounded-xl border border-brand-border-subtle bg-card p-4 shadow-sm transition-colors ${
+              className={`relative grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-brand-border-subtle bg-card p-4 pr-12 shadow-sm transition-colors ${
                 draggingOver ? "border-brand-blue/50 bg-brand-blue/10" : "hover:border-brand-blue/30"
               }`}
             >
@@ -360,36 +423,48 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                     prev.length <= 1 ? [emptyTalk()] : prev.filter((_, idx) => idx !== i),
                   )
                 }
-                className="w-7 h-7 inline-flex items-center justify-center rounded-lg text-brand-text-muted hover:text-red-500 hover:bg-red-500/8 transition-colors"
+                className="absolute right-3 top-3 w-8 h-8 inline-flex items-center justify-center rounded-lg text-xl font-medium text-brand-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
                 aria-label={t(lang, "meetingTalks.remove")}
                 title={t(lang, "meetingTalks.remove")}
               >
                 ×
               </button>
 
-              <div className="relative basis-full flex items-center gap-2 border-t border-brand-border-subtle pt-3">
-                <span className="text-xs text-brand-text-muted">{t(lang, "meeting.by")}</span>
-                {talk.userId ? <UserAvatar src={talk.image} name={talk.speaker} size={22} /> : null}
-                <input
-                  value={talk.speaker}
-                  onChange={(e) => onSpeakerChange(i, e.target.value)}
-                  onFocus={() => {
-                    setActiveSearch(i);
-                    setShowDropdown(true);
-                    searchUsers(talk.speaker.trim());
-                  }}
-                  placeholder={t(lang, "meetingTalks.speakerPlaceholder")}
-                  className="min-w-0 flex-1 rounded-lg border border-brand-border-subtle bg-brand-surface/40 px-3 py-2 text-sm text-brand-text-heading placeholder:text-brand-text-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-                  autoComplete="off"
-                />
-                {showDropdown && activeSearch === i && results.length > 0 && (
-                  <div className="absolute right-0 top-full z-20 mt-1 w-56 bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto border-brand-border-subtle">
-                    {results.map((u) => (
+              <div className="relative col-span-4 flex flex-wrap items-center gap-2 border-t border-brand-border-subtle pt-3">
+                <span className="mr-1 text-xs font-medium text-brand-text-muted">{t(lang, "meetingTalks.speakers")}</span>
+                {(talk.speakers || []).map((speaker, speakerIndex) => (
+                  <span key={`${speaker.userId || speaker.name}-${speakerIndex}`} className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-xs ${speaker.userId ? "bg-brand-blue/10 text-brand-blue" : "bg-brand-orange/10 text-brand-orange"}`}>
+                    <UserAvatar src={speaker.image} name={speaker.name} size={20} />
+                    <span className="max-w-32 truncate">{speaker.name}</span>
+                    <button type="button" onClick={() => removeSpeaker(i, speakerIndex)} className="ml-0.5 text-sm leading-none opacity-60 hover:text-red-500 hover:opacity-100" aria-label={`${t(lang, "meetingTalks.removeSpeaker")} ${speaker.name}`}>×</button>
+                  </span>
+                ))}
+                {activeSearch === i ? (
+                  <div className="relative min-w-[13rem] flex-1 sm:max-w-sm">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={speakerQuery}
+                        onChange={(e) => onSpeakerChange(i, e.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.nativeEvent.isComposing) return;
+                          if (event.key === "Escape") { setActiveSearch(null); setShowDropdown(false); }
+                          if (event.key === "Enter") { event.preventDefault(); addExternalSpeaker(i); }
+                        }}
+                        placeholder={t(lang, "meetingTalks.speakerPlaceholder")}
+                        className="w-full rounded-lg border border-brand-border-subtle bg-card px-3 py-2 text-sm text-brand-text-heading placeholder:text-brand-text-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                        autoComplete="off"
+                      />
+                      <button type="button" disabled={!speakerQuery.trim()} onClick={() => addExternalSpeaker(i)} className="btn-primary shrink-0 rounded-lg px-3 py-2 text-xs disabled:opacity-40">{t(lang, "profile.edit.add")}</button>
+                    </div>
+                    {showDropdown && (results.length > 0 || speakerQuery.trim()) && (
+                      <div className="absolute left-0 top-full z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-brand-border-subtle bg-card p-1 shadow-xl">
+                        {results.filter((u) => !(talk.speakers || []).some((speaker) => speaker.userId === u.id)).map((u) => (
                       <button
                         key={u.id}
                         type="button"
                         onClick={() => linkUser(i, u)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-brand-surface flex items-center gap-2 transition-colors"
+                            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-brand-surface"
                       >
                         {u.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -416,13 +491,81 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                         </span>
                       </button>
                     ))}
+                        {speakerQuery.trim() ? (
+                          <button type="button" onClick={() => addExternalSpeaker(i)} className="w-full rounded-lg px-2.5 py-2 text-left text-sm text-brand-blue hover:bg-brand-surface">
+                            {t(lang, "meetingTalks.addExternal", { name: speakerQuery.trim() })}
+                          </button>
+                        ) : null}
                   </div>
                 )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSearch(i);
+                      setSpeakerQuery("");
+                      setShowDropdown(true);
+                      searchUsers("");
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-brand-blue/40 px-2.5 py-1 text-xs font-medium text-brand-blue transition hover:border-brand-blue hover:bg-brand-blue/5"
+                  >
+                    {t(lang, "meetingTalks.addSpeaker")} <span className="text-sm leading-none">＋</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="col-span-4 grid gap-3 border-t border-brand-border-subtle pt-3 md:grid-cols-[minmax(0,1fr)_11rem]">
+                <textarea
+                  rows={2}
+                  value={talk.description || ""}
+                  onChange={(event) => update(i, { description: event.target.value })}
+                  placeholder={t(lang, "meetingTalks.descriptionPlaceholder")}
+                  className="min-h-[4.5rem] resize-none rounded-xl border border-brand-border-subtle bg-brand-surface/30 px-3 py-2 text-sm leading-6 text-brand-text-heading placeholder:text-brand-text-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+                <ImageDropZone
+                  className="min-h-[4.5rem]"
+                  disabled={uploadingImage === i}
+                  onInvalid={setUploadError}
+                  onFile={(file) => void handleAgendaImage(i, file)}
+                >
+                  {talk.imageUrl ? (
+                    <div className="group/image relative h-[4.5rem] overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface">
+                      <img src={talk.imageUrl} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => update(i, { imageUrl: "" })}
+                        className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-black/65 text-lg text-white transition hover:bg-black/85"
+                        aria-label={t(lang, "meetingTalks.removeImage")}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex h-[4.5rem] cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-brand-border-subtle bg-brand-surface/30 px-3 text-xs font-medium text-brand-text-secondary transition hover:border-brand-blue hover:text-brand-blue">
+                      <span className="text-lg" aria-hidden>↑</span>
+                      <span>{uploadingImage === i ? t(lang, "meetingTalks.uploadingImage") : t(lang, "meetingTalks.addImage")}</span>
+                      <input
+                        type="file"
+                        accept={ACCEPT_ATTR}
+                        className="sr-only"
+                        disabled={uploadingImage === i}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (file) void handleAgendaImage(i, file);
+                        }}
+                      />
+                    </label>
+                  )}
+                </ImageDropZone>
               </div>
             </div>
           );
         })}
       </div>
+
+      {uploadError ? <p className="text-sm text-red-600 dark:text-red-400">{uploadError}</p> : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <button

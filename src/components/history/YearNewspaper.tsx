@@ -292,7 +292,8 @@ function LaurelBranch({flip = false, className = ""}: { flip?: boolean; classNam
 
     return (
         <svg viewBox={LAUREL_VIEWBOX} className={className} aria-hidden="true"
-             fill="currentColor" style={flip ? {transform: "scaleX(-1)"} : undefined}>
+             fill="currentColor"
+             style={{transform: flip ? "scale(-1, -1)" : "scaleY(-1)"}}>
             <path d={stemPath} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round"/>
             {leaves}
         </svg>

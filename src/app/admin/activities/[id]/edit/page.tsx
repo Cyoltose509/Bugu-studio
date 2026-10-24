@@ -26,7 +26,14 @@ const getActivity = cache(async (id: string) => {
             select: {
               id: true,
               name: true,
+              image: true,
               member: { select: { id: true, displayName: true } },
+            },
+          },
+          speakers: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              user: { select: { id: true, name: true, image: true, member: { select: { id: true, displayName: true } } } },
             },
           },
         },
@@ -59,8 +66,11 @@ export default async function EditActivityPage({ params }: PageProps) {
   const fmt = formatActivityDateTime;
   const talks: TalkDraft[] = activity.talks.map((t) => ({
     id: t.id,
+    sourceProposalId: t.sourceProposalId,
     speaker: t.speaker,
     title: t.title,
+    description: t.description || "",
+    imageUrl: t.imageUrl || "",
     talkType: (t as { talkType?: string }).talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE",
     bvId: t.bvId || "",
     userId: t.userId || null,
@@ -69,6 +79,11 @@ export default async function EditActivityPage({ params }: PageProps) {
         ? `已关联成员 · ${(t as { user?: { member?: { displayName: string } } }).user?.member?.displayName}`
         : `已关联用户 · ${(t as { user?: { name?: string | null } }).user?.name || t.userId}`
       : null,
+    speakers: (t.speakers.length ? t.speakers : [{ name: t.speaker, userId: t.userId, user: t.user }]).map((speaker) => ({
+      name: speaker.name,
+      userId: speaker.userId,
+      image: speaker.user?.image || null,
+    })),
   }));
 
   return (

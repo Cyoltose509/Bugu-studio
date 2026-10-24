@@ -133,6 +133,7 @@ model User {
   meetingProposals       MeetingProposal[]
   showcaseAuthorships    CourseShowcaseItem[] @relation("ShowcaseAuthor")
   meetingTalks           MeetingTalk[]
+  meetingTalkSpeakers    MeetingTalkSpeaker[]
 
   // Game Jam
   jamLedTeams           JamTeam[]
@@ -827,18 +828,39 @@ model MeetingTalk {
   activityId String
   speaker    String
   userId     String? // 可选：关联 User；有 ClubMember 时前台链 /members/[id]
+  sourceProposalId String? @unique // 审核通过的报名来源；保证一份申请只生成一条正式议程
   title      String
+  description String? @db.Text
+  imageUrl    String?
   talkType   ProposalType @default(SHARE)
   bvId       String? // 如 BV1xxxxxxxx，可选（剪辑发布后补录）
   sortOrder  Int          @default(0)
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  activity       Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sourceProposal MeetingProposal? @relation(fields: [sourceProposalId], references: [id], onDelete: Cascade)
+  speakers       MeetingTalkSpeaker[]
 
   @@index([activityId])
   @@index([activityId, sortOrder])
+  @@index([userId])
+}
+
+// 例会议程 — 一个议程条目可以有多位主讲；name 保留当时展示名，也允许社外人员。
+model MeetingTalkSpeaker {
+  id        String   @id @default(cuid())
+  talkId    String
+  name      String
+  userId    String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  talk MeetingTalk @relation(fields: [talkId], references: [id], onDelete: Cascade)
+  user User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([talkId, sortOrder])
   @@index([userId])
 }
 
@@ -855,8 +877,9 @@ model MeetingProposal {
   adminNote    String?        @db.Text // 审核意见
   createdAt    DateTime       @default(now())
 
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity   Activity     @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agendaTalk MeetingTalk?
 
   @@index([activityId])
   @@index([userId])

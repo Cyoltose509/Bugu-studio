@@ -99,12 +99,32 @@ export async function cachedQuery<T>(
 /** 使某个前缀的所有缓存失效 */
 export async function invalidateCache(prefix: string): Promise<void> {
   const r = getRedis();
-  const matchingKeys = Array.from(keyRegistry).filter(k => k.startsWith(prefix));
+  const matchingKeys = new Set(
+    Array.from(keyRegistry).filter(k => k.startsWith(prefix)),
+  );
   
-  if (r && matchingKeys.length > 0) {
+  if (r) {
     try {
-      // 批量删除匹配的 Redis key
-      await Promise.all(matchingKeys.map(k => r!.del(k)));
+      // Most callers invalidate an exact detail key. Delete it first so a
+      // temporary SCAN failure cannot leave the known stale value behind.
+      await r.del(prefix);
+
+      // Vercel 函数实例不共享 keyRegistry。必须从 Redis 自身扫描，
+      // 否则写入发生在 A 实例、失效发生在 B 实例时会持续返回旧数据。
+      let cursor = "0";
+      do {
+        const [nextCursor, keys] = await r.scan(cursor, {
+          match: `${prefix}*`,
+          count: 100,
+        });
+        keys.forEach((key) => matchingKeys.add(key));
+        cursor = nextCursor;
+      } while (cursor !== "0");
+
+      matchingKeys.delete(prefix);
+      if (matchingKeys.size > 0) {
+        await r.del(...Array.from(matchingKeys));
+      }
     } catch { /* ignore */ }
   }
   

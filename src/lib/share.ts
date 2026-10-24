@@ -4,6 +4,7 @@ import { toPlainCardText } from "@/lib/rich-content";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { canSubmitActivityTalk } from "@/lib/activities/capabilities";
 import { formatActivitySchedule } from "@/lib/activities/datetime";
+import { localizeActivityTitle } from "@/lib/activities/title";
 
 export type ShareHeader =
   | { kind: "color"; color: "blue" | "orange" | "green" | "navy" }
@@ -76,7 +77,7 @@ export function activityShareData(activity: {
   startTime?: Date | string | null; endTime?: Date | string | null; location: string | null;
   status: string; timePending?: boolean | null; courseHasClock?: boolean | null; talkSubmissionOpen?: boolean | null;
   talks?: { title: string; speaker?: string | null; user?: { name?: string | null; member?: { displayName?: string | null } | null } | null }[];
-  proposals?: { title: string; user?: { name?: string | null; member?: { displayName?: string | null } | null } | null }[];
+  proposals?: { title: string; agendaTalk?: { id: string } | null; user?: { name?: string | null; member?: { displayName?: string | null } | null } | null }[];
 }, lang: Lang, asOf = new Date()): ShareCardData {
   const pending = !!activity.timePending || !activity.startTime || !activity.endTime;
   const start = activity.startTime ? new Date(activity.startTime) : null;
@@ -91,13 +92,13 @@ export function activityShareData(activity: {
     title: item.title.trim(),
     speaker: item.speaker?.trim() || item.user?.member?.displayName || item.user?.name || undefined,
   })).filter(item => item.title);
-  const talkTitles = new Set(talks.map(item => item.title.toLocaleLowerCase()));
   const approvedProposals = (activity.proposals || []).map(item => ({
     title: item.title.trim(),
     speaker: item.user?.member?.displayName || item.user?.name || undefined,
-  })).filter(item => item.title && !talkTitles.has(item.title.toLocaleLowerCase()));
+    promoted: !!item.agendaTalk,
+  })).filter(item => item.title && !item.promoted).map(({ promoted: _promoted, ...item }) => item);
   return {
-    kind: "activity", title: activity.title, path: `/activities/${encodeURIComponent(activity.id)}`,
+    kind: "activity", title: localizeActivityTitle(activity.title, lang), path: `/activities/${encodeURIComponent(activity.id)}`,
     summary: shareDescription(activity.summary || activity.description), image: activity.coverImage || DEFAULT_ACTIVITY_COVER,
     headerImages,
     date: formatActivitySchedule(start, end, lang, pending, !!activity.courseHasClock),

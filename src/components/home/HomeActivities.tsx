@@ -16,6 +16,7 @@ import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { activityNewestFirstOrder, activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 import { redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
+import { localizeActivityTitle } from "@/lib/activities/title";
 
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
@@ -91,12 +92,13 @@ export default async function HomeActivities({lang = "cn"}: { lang?: Lang }) {
           const isOngoing = phase === "ongoing";
           const isPast = phase === "past";
           const coverSrc = a.coverImage || DEFAULT_COVER;
+          const displayTitle = localizeActivityTitle(a.title, lang);
           return (
             <Link key={a.id} href={`/activities/${a.id}`} className="group block">
               <div className={`bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all ${isPast ? "opacity-55" : ""}`}>
                 {/* 封面 */}
                 <div className="relative aspect-video overflow-hidden bg-brand-surface">
-                  <Image src={coverSrc} alt={a.title} fill className={`object-cover group-hover:scale-105 transition-transform duration-300 ${isPast ? "grayscale-[40%]" : ""}`} sizes="(max-width: 768px) 100vw, 33vw" />
+                  <Image src={coverSrc} alt={displayTitle} fill className={`object-cover group-hover:scale-105 transition-transform duration-300 ${isPast ? "grayscale-[40%]" : ""}`} sizes="(max-width: 768px) 100vw, 33vw" />
                   <ActivityTypeCorner type={a.type} label={typeLabel(a.type)} />
                   {(isOngoing || isPast) && (
                     <div className="absolute top-2 right-2">
@@ -111,7 +113,7 @@ export default async function HomeActivities({lang = "cn"}: { lang?: Lang }) {
                 {/* 信息 */}
                 <div className="p-4 space-y-1.5">
                   <h3 className="font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
-                    {a.title}
+                    {displayTitle}
                   </h3>
                   <p className="text-xs text-brand-text-muted">
                     {formatActivitySchedule(a.startTime, a.endTime, lang, a.timePending, a.courseHasClock)}
