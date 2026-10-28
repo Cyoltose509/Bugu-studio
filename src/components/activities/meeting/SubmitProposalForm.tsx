@@ -2,22 +2,23 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { submitProposal } from "@/app/admin/activities/actions";
 import { useLang } from "@/lib/i18n/LangProvider";
 import MentionEditor from "@/components/ui/MentionEditor";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import { ACCEPT_ATTR, uploadImage } from "@/lib/utils/clientUpload";
 
-const initialState = { error: "", success: false };
+const initialState = { error: "", success: false, published: false };
 
-function SubmitButton() {
+function SubmitButton({ isAdmin, uploading }: { isAdmin: boolean; uploading: boolean }) {
   const { t } = useLang();
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || uploading}
       className="btn-primary text-sm px-4 py-2 rounded-lg inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
     >
       {pending ? (
@@ -26,7 +27,7 @@ function SubmitButton() {
           {t("form.submitting")}
         </>
       ) : (
-        t("meeting.submitProposal")
+        t(isAdmin ? "meeting.publishProposal" : "meeting.submitProposal")
       )}
     </button>
   );
@@ -46,8 +47,9 @@ function Spinner() {
   );
 }
 
-export default function SubmitProposalForm({ activityId }: { activityId: string }) {
+export default function SubmitProposalForm({ activityId, isAdmin = false }: { activityId: string; isAdmin?: boolean }) {
   const { t } = useLang();
+  const router = useRouter();
   const [proposalType, setProposalType] = useState<"SHARE" | "SHOWCASE" | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -68,11 +70,16 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
   }
   const [state, formAction] = useActionState(
     async (_prev: typeof initialState, formData: FormData) => {
-      const result = await submitProposal(formData);
-      if (result && "error" in result) {
-        return { error: result.error as string, success: false };
+      try {
+        const result = await submitProposal(formData);
+        if (result && "error" in result) {
+          return { error: result.error as string, success: false, published: false };
+        }
+        router.refresh();
+        return { error: "", success: true, published: result.published };
+      } catch {
+        return { error: t("meeting.errSubmitFailed"), success: false, published: false };
       }
-      return { error: "", success: true };
     },
     initialState,
   );
@@ -96,12 +103,12 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
 
       {state.success ? (
         <p className="text-xs font-medium text-green-700 dark:text-green-400">
-          {t("meeting.proposalSubmitted")}
+          {t(state.published ? "meeting.proposalPublished" : "meeting.proposalSubmitted")}
         </p>
       ) : (
         <>
           <div className="flex items-center justify-between gap-3">
-            <h3 className="font-semibold text-brand-navy">{t("activityDetail.signUpShare")}</h3>
+            <h3 className="font-semibold text-brand-navy">{t(isAdmin ? "meeting.addAgenda" : "activityDetail.signUpShare")}</h3>
             <div className="flex shrink-0 items-center gap-1">
               <button type="button" onClick={() => setProposalType("SHARE")} className={chip(proposalType === "SHARE", "SHARE")}>
                 {t("activityDetail.proposalShare")}
@@ -113,7 +120,7 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
           </div>
           {proposalType ? (
             <>
-              <p className="text-[11px] leading-snug text-brand-text-muted">{t("activityDetail.proposalHint")}</p>
+              <p className="text-[11px] leading-snug text-brand-text-muted">{t(isAdmin ? "meeting.publishHint" : "activityDetail.proposalHint")}</p>
               <input
                 name="title"
                 placeholder={
@@ -169,7 +176,7 @@ export default function SubmitProposalForm({ activityId }: { activityId: string 
                 )}
               </ImageDropZone>
               {uploadError ? <p role="alert" className="text-xs text-red-600 dark:text-red-400">{uploadError}</p> : null}
-              <SubmitButton />
+              <SubmitButton isAdmin={isAdmin} uploading={uploading} />
             </>
           ) : null}
         </>

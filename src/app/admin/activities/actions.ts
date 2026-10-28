@@ -425,7 +425,7 @@ async function notifyAdminsOfActivity(params: {
 export async function submitProposal(formData: FormData) {
   const lang = await getLang();
   const session = await auth();
-  if (!session?.user) throw new Error(t(lang, "meeting.errLoginFirst"));
+  if (!session?.user) return { error: t(lang, "meeting.errLoginFirst") };
 
   const userId = session.user.id;
 
@@ -449,30 +449,45 @@ export async function submitProposal(formData: FormData) {
     return { error: t(lang, "meeting.errTalkClosed") };
   }
 
-  const proposal = await prisma.meetingProposal.create({
-    data: {
-      activityId,
-      userId,
-      title,
-      description: description || undefined,
-      imageUrl: imageUrl || undefined,
-      proposalType: proposalType as any,
-    },
-  });
+  const isAdmin = session.user.role === "ADMIN";
+  try {
+    await prisma.$transaction(async (tx) => {
+      const proposal = await tx.meetingProposal.create({
+        data: {
+          activityId,
+          userId,
+          title,
+          description: description || undefined,
+          imageUrl: imageUrl || undefined,
+          proposalType: proposalType as ProposalType,
+          status: isAdmin ? ProposalStatus.APPROVED : ProposalStatus.PENDING,
+        },
+      });
+      if (isAdmin) {
+        const agenda = await ensureProposalAgendaTalk(tx, proposal.id, true);
+        if ("error" in agenda) throw new Error(agenda.error);
+      }
+    }, { timeout: 20_000 });
+  } catch (error) {
+    console.error("[agenda] 提交失败:", error);
+    return { error: t(lang, "meeting.errSubmitFailed") };
+  }
 
   // ── 通知管理员：有新申请 ──
-  await notifyAdminsOfActivity({
-    activityId,
-    userId,
-    userName: session.user.name || "未知用户",
-    title,
-    activityName: proposalType === "SHARE" ? "分享申请" : "展示申请",
-    notifType: "ACTIVITY_PROPOSAL",
-    relatedType: "Activity",
-  });
+  if (!isAdmin) {
+    await notifyAdminsOfActivity({
+      activityId,
+      userId,
+      userName: session.user.name || "未知用户",
+      title,
+      activityName: proposalType === "SHARE" ? "分享申请" : "展示申请",
+      notifType: "ACTIVITY_PROPOSAL",
+      relatedType: "Activity",
+    });
+  }
 
-  revalidatePath(`/activities/${activityId}`);
-  return { success: true };
+  await invalidateActivityCaches(activityId);
+  return { success: true, published: isAdmin };
 }
 
 // ── 删除议程项 ────────────────────────────────────────────────
@@ -577,12 +592,16 @@ export async function promoteProposalToAgenda(proposalId: string) {
 // ── 审核：分享/展示申请 ──────────────────────────────────────
 export async function reviewProposal(id: string, status: ProposalStatus, adminNote?: string) {
   const session = await requireAdmin();
-  const proposal = await prisma.$transaction(async (tx) => {
+  const lang = await getLang();
+  if (status !== ProposalStatus.APPROVED && status !== ProposalStatus.REJECTED) {
+    return { error: t(lang, "meeting.errInvalidReview") };
+  }
+  const result = await prisma.$transaction(async (tx) => {
     const current = await tx.meetingProposal.findUnique({
       where: { id },
       select: { activityId: true, userId: true, title: true, proposalType: true },
     });
-    if (!current) throw new Error("申请不存在");
+    if (!current) return { error: t(lang, "meeting.errProposalMissing") };
 
     if (status === ProposalStatus.APPROVED) {
       const agenda = await ensureProposalAgendaTalk(tx, id, false);
@@ -596,10 +615,15 @@ export async function reviewProposal(id: string, status: ProposalStatus, adminNo
 
     await tx.meetingProposal.update({
       where: { id },
-      data: { status, adminNote: adminNote || undefined },
+      data: { status, adminNote: status === ProposalStatus.REJECTED ? adminNote?.trim() || null : null },
     });
     return current;
+  }, { timeout: 20_000 }).catch((error: unknown) => {
+    console.error("[agenda] 审核失败:", error);
+    return { error: t(lang, "meeting.errReviewFailed") };
   });
+  if ("error" in result) return result;
+  const proposal = result;
 
   await prisma.auditLog.create({
     data: {

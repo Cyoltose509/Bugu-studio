@@ -245,7 +245,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
 
   // 仅本地：mock / DB 不可达时跳过，勿提交
   const userProposal =
-    hasTalkSection && activity.type !== "ENGINE_COURSE" && session?.user && !isMockDataEnabled()
+    hasTalkSection && activity.type !== "ENGINE_COURSE" && session?.user && !isAdmin && !isMockDataEnabled()
       ? await prisma.meetingProposal
           .findFirst({
             where: { activityId: id, userId: session.user.id },
@@ -580,7 +580,7 @@ async function ActivityTalkSection({
               )}
             </div>
           ) : session?.user ? (
-            <SubmitProposalForm activityId={activity.id} />
+            <SubmitProposalForm activityId={activity.id} isAdmin={isAdmin} />
           ) : (
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>

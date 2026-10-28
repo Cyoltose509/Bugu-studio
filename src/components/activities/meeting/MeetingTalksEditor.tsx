@@ -314,7 +314,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 dragFrom.current = null;
                 setDragOver(null);
               }}
-              className={`relative grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-brand-border-subtle bg-card p-4 pr-12 shadow-sm transition-colors ${
+              className={`relative grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-brand-border-subtle bg-card p-4 shadow-sm transition-colors ${
                 draggingOver ? "border-brand-blue/50 bg-brand-blue/10" : "hover:border-brand-blue/30"
               }`}
             >
@@ -349,14 +349,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                   : t(lang, "activityDetail.proposalShare")}
               </button>
 
-              <input
-                value={talk.title}
-                onChange={(e) => update(i, { title: e.target.value })}
-                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
-                className="min-w-0 flex-[1_1_16rem] rounded-lg border border-brand-border-subtle bg-brand-surface/40 px-3 py-2 text-sm font-medium text-brand-navy placeholder:text-brand-text-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-              />
-
-              <div className="relative shrink-0">
+              <div className="relative col-start-4 mr-8 shrink-0">
                 <button
                   type="button"
                   onClick={() => setBvOpen(bvOpen === i ? null : i)}
@@ -429,6 +422,14 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
               >
                 ×
               </button>
+
+              <input
+                value={talk.title}
+                onChange={(e) => update(i, { title: e.target.value })}
+                aria-label={t(lang, "meetingTalks.topicPlaceholder")}
+                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
+                className="col-span-4 block w-full min-w-0 rounded-md border-0 bg-transparent px-0 py-1 text-lg font-semibold leading-7 text-brand-text-heading placeholder:font-normal placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+              />
 
               <div className="relative col-span-4 flex flex-wrap items-center gap-2 border-t border-brand-border-subtle pt-3">
                 <span className="mr-1 text-xs font-medium text-brand-text-muted">{t(lang, "meetingTalks.speakers")}</span>
@@ -515,22 +516,23 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 )}
               </div>
 
-              <div className="col-span-4 grid gap-3 border-t border-brand-border-subtle pt-3 md:grid-cols-[minmax(0,1fr)_11rem]">
+              <div className="col-span-4 min-w-0 space-y-2 border-t border-brand-border-subtle pt-3">
                 <textarea
-                  rows={2}
+                  rows={1}
                   value={talk.description || ""}
                   onChange={(event) => update(i, { description: event.target.value })}
                   placeholder={t(lang, "meetingTalks.descriptionPlaceholder")}
-                  className="min-h-[4.5rem] resize-none rounded-xl border border-brand-border-subtle bg-brand-surface/30 px-3 py-2 text-sm leading-6 text-brand-text-heading placeholder:text-brand-text-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  aria-label={t(lang, "meetingTalks.descriptionPlaceholder")}
+                  className="block h-8 w-full min-w-0 resize-none rounded-md border-0 bg-transparent px-0 py-1 text-sm leading-6 text-brand-text-secondary placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
                 />
                 <ImageDropZone
-                  className="min-h-[4.5rem]"
+                  className={talk.imageUrl ? "w-full max-w-xs" : "w-fit max-w-full"}
                   disabled={uploadingImage === i}
                   onInvalid={setUploadError}
                   onFile={(file) => void handleAgendaImage(i, file)}
                 >
                   {talk.imageUrl ? (
-                    <div className="group/image relative h-[4.5rem] overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface">
+                    <div className="group/image relative h-32 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
                       <img src={talk.imageUrl} alt="" className="h-full w-full object-cover" />
                       <button
                         type="button"
@@ -542,8 +544,8 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                       </button>
                     </div>
                   ) : (
-                    <label className="flex h-[4.5rem] cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-brand-border-subtle bg-brand-surface/30 px-3 text-xs font-medium text-brand-text-secondary transition hover:border-brand-blue hover:text-brand-blue">
-                      <span className="text-lg" aria-hidden>↑</span>
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-blue transition-colors hover:bg-brand-blue/5 focus-within:ring-2 focus-within:ring-brand-blue/30">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 5-5 4 4 4-6 5 7" /></svg>
                       <span>{uploadingImage === i ? t(lang, "meetingTalks.uploadingImage") : t(lang, "meetingTalks.addImage")}</span>
                       <input
                         type="file"
