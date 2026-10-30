@@ -90,9 +90,10 @@ export default function AgendaTimeline({
 
   return (
     <>
-      <ol className="relative py-1">
-        {/* 时间轴轨道：细线贯穿，分享=蓝节点、展示=橙节点（实心圆）。无外框，直接落在页面上 */}
-        <span aria-hidden className="absolute bottom-2 left-0 top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
+      <ol className="relative py-1 pl-1.5">
+        {/* 时间轴轨道：细线贯穿，分享=蓝节点、展示=橙节点（实心圆）。无外框，直接落在页面上。
+            pl-1.5 给节点留出左半半径，避免被 aside 滚动容器的 overflow 裁掉 */}
+        <span aria-hidden className="absolute bottom-2 left-[6px] top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
         {items.map((item) => {
           const isPinned = pinned.has(item.key);
           const hasBody = !!(item.description || item.imageUrl);
