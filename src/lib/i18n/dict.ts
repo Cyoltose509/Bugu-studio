@@ -1448,13 +1448,21 @@ export const dict = {
   // ── 成员关系图谱运行时状态 ──
   "members.graph.loadFailed": { cn: "关系图谱加载失败：{error}", en: "Failed to load the relationship graph: {error}" },
   "members.graph.hint": { cn: "拖动节点可调整位置，拖拽空白处平移，滚轮缩放；点击成员或作品节点进入详情页。", en: "Drag a node to reposition it, drag the canvas to pan, scroll to zoom; click a member or work node to open its page." },
+
+  // ── 议程：上传者本人修改自己的议程卡 ──
+  "meetingTalks.editMyTalk": { cn: "修改我的议程", en: "Edit my agenda item" },
+  "meetingTalks.errTalkMissing": { cn: "议程不存在或已被删除", en: "This agenda item no longer exists" },
+  "meetingTalks.errNotAllowed": { cn: "只有上传者本人可以修改这条议程", en: "Only the uploader can edit this agenda item" },
+  "meetingTalks.errBadBv": { cn: "无法识别 BV 号", en: "Unrecognized Bilibili BV ID" },
+  "meetingTalks.errSaveFailed": { cn: "保存失败，请重试；若持续失败请联系管理员", en: "Failed to save, please retry; contact an admin if it keeps failing" },
 } as const;
 
 export type DictKey = keyof typeof dict;
 
-/** 同步取词：服务端组件用 getLang() 拿到 lang 后调用。支持可选变量替换。 */
+/** 同步取词：服务端组件用 getLang() 拿到 lang 后调用。支持可选变量替换。
+ *  key 缺失时回退为 key 本身而不是抛 TypeError（历史错误报告 #41/#56 的教训）。 */
 export function t(lang: Lang, key: DictKey, vars?: Record<string, string | number>): string {
-  const template = dict[key][lang];
+  const template = dict[key]?.[lang] ?? String(key);
   if (!vars) return template;
   return Object.entries(vars).reduce<string>(
     (s, [k, v]) => s.split(`{${k}}`).join(String(v)),
@@ -1468,7 +1476,7 @@ export function tpl(
   key: DictKey,
   vars: Record<string, string | number>,
 ): string {
-  const template = dict[key][lang] as string;
+  const template = (dict[key]?.[lang] ?? String(key)) as string;
   return Object.entries(vars).reduce<string>(
     (s, [k, v]) => s.split(`{${k}}`).join(String(v)),
     template,

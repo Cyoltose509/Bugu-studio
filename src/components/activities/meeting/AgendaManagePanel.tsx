@@ -36,6 +36,14 @@ function PencilIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="mx-auto block">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function PromoteButton({ proposalId }: { proposalId: string }) {
   const { t } = useLang();
   const router = useRouter();
@@ -72,6 +80,9 @@ export default function AgendaManagePanel({
   initialTalks,
   unlistedProposals = [],
   isAdmin = false,
+  canAddAgenda = false,
+  addLabel,
+  addPanel,
   title,
   children,
 }: {
@@ -79,32 +90,54 @@ export default function AgendaManagePanel({
   initialTalks: TalkDraft[];
   unlistedProposals?: UnlistedProposal[];
   isAdmin?: boolean;
+  /** 报名/新增窗口开启时，所有角色都能看到 ＋；面板内容由 addPanel 按角色注入 */
+  canAddAgenda?: boolean;
+  addLabel?: string;
+  addPanel?: ReactNode;
   title: string;
   children?: ReactNode;
 }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const editorKey = initialTalks.map((tk) => tk.id || "").join(",");
   const manageLabel = open ? t("activityDetail.exitManage") : t("activityDetail.enterManage");
+  const plusLabel = addLabel ?? t("meeting.addAgenda");
 
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-brand-navy">{title}</h2>
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            title={manageLabel}
-            aria-label={manageLabel}
-            aria-pressed={open}
-            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition-colors ${
-              open ? "bg-brand-orange" : "bg-brand-navy hover:bg-brand-navy/90"
-            }`}
-          >
-            <PencilIcon />
-          </button>
-        )}
+        <span className="flex shrink-0 items-center gap-2">
+          {canAddAgenda && (
+            <button
+              type="button"
+              onClick={() => setAddOpen((v) => !v)}
+              title={plusLabel}
+              aria-label={plusLabel}
+              aria-pressed={addOpen}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors ${
+                addOpen ? "bg-brand-orange" : "bg-brand-blue hover:bg-brand-blue/90"
+              }`}
+            >
+              <PlusIcon />
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              title={manageLabel}
+              aria-label={manageLabel}
+              aria-pressed={open}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors ${
+                open ? "bg-brand-orange" : "bg-brand-navy hover:bg-brand-navy/90"
+              }`}
+            >
+              <PencilIcon />
+            </button>
+          )}
+        </span>
       </div>
       {open && isAdmin && (
         <div className="mb-3 space-y-3">
@@ -144,6 +177,11 @@ export default function AgendaManagePanel({
           />
         </div>
       )}
+      {addOpen && canAddAgenda && addPanel ? (
+        <div className="mb-3 rounded-xl border border-brand-border-subtle bg-card px-3.5 py-3">
+          {addPanel}
+        </div>
+      ) : null}
       {open ? null : children}
     </section>
   );

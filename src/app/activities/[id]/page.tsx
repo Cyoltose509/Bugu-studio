@@ -18,6 +18,7 @@ import TrophyIcon from "@/components/icons/TrophyIcon";
 import ReviewProposalForm from "@/components/activities/meeting/ReviewProposalForm";
 import BilibiliTvLink from "@/components/activities/meeting/BilibiliTvLink";
 import AgendaManagePanel from "@/components/activities/meeting/AgendaManagePanel";
+import OwnTalkEditor from "@/components/activities/meeting/OwnTalkEditor";
 import { AgendaSpeaker, AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
 import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
@@ -425,6 +426,13 @@ async function ActivityTalkSection({
   }
 
   const hasAgendaItems = talks.length > 0 || approvedProposals.length > 0;
+  const currentUserId = session?.user?.id as string | undefined;
+  // 上传者本人（主讲或讲者之一）可在报名窗口内继续修改自己的议程卡；管理员走管理面板。
+  const submissionOpen = canSubmitActivityTalk(activity);
+  const addWindowOpen = (isOngoing || isUpcoming) && submissionOpen;
+  const canEditTalk = (talk: any) =>
+    !!currentUserId && !isAdmin && submissionOpen &&
+    (talk.userId === currentUserId || (talk.speakers || []).some((s: any) => s.userId === currentUserId));
 
   return (
     <div id="meeting-agenda" className="scroll-mt-28 space-y-6">
@@ -448,10 +456,51 @@ async function ActivityTalkSection({
         </section>
       )}
 
-      {(isAdmin || hasAgendaItems) && (
+      {(isAdmin || hasAgendaItems || addWindowOpen) && (
         <AgendaManagePanel
           activityId={activity.id}
           isAdmin={isAdmin}
+          canAddAgenda={addWindowOpen}
+          addLabel={isAdmin ? t(lang, "meeting.addAgenda") : t(lang, "activityDetail.signUpShare")}
+          addPanel={
+            isAdmin ? (
+              <SubmitProposalForm activityId={activity.id} isAdmin />
+            ) : userProposal ? (
+              // 已提交过申请：展示审核状态，而不是再次报名的表单
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
+                  <AgendaTypeTag
+                    type={userProposal.proposalType}
+                    label={agendaTypeLabel(
+                      userProposal.proposalType,
+                      t(lang, "activityDetail.proposalShare"),
+                      t(lang, "activityDetail.proposalShowcase"),
+                    )}
+                  />
+                  <span className={`ml-auto shrink-0 text-[11px] px-2 py-0.5 rounded-full ${
+                    userProposal.status === "APPROVED" ? "agenda-chip-share" :
+                    userProposal.status === "REJECTED" ? "bg-red-500/10 text-red-600 dark:text-red-400" :
+                    "agenda-chip-showcase"
+                  }`}>
+                    {userProposal.status === "APPROVED" ? t(lang, "activityDetail.statusApproved") : userProposal.status === "REJECTED" ? t(lang, "activityDetail.statusRejected") : t(lang, "activityDetail.statusPendingReview")}
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-brand-navy">{userProposal.title}</p>
+                {userProposal.description && <p className="text-xs text-brand-text-secondary">{userProposal.description}</p>}
+                {userProposal.status === "REJECTED" && userProposal.adminNote && (
+                  <p className="text-xs text-red-600 dark:text-red-400">{t(lang, "activityDetail.adminNote", { note: userProposal.adminNote })}</p>
+                )}
+              </div>
+            ) : session?.user ? (
+              <SubmitProposalForm activityId={activity.id} />
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
+                <Link href={`/auth/login?callbackUrl=${encodeURIComponent(`/activities/${activity.id}#meeting-agenda`)}`} className="btn-primary shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold">{lang === "en" ? "Sign in" : "登录后报名"}</Link>
+              </div>
+            )
+          }
           title={t(lang, "activityDetail.agenda")}
           unlistedProposals={approvedProposals.map((p: any) => ({
             id: p.id,
@@ -486,21 +535,26 @@ async function ActivityTalkSection({
           }))}
         >
           {hasAgendaItems ? (
-          <ol className="rounded-xl border border-brand-border-subtle bg-card divide-y divide-brand-border-subtle">
+          <ol className="relative rounded-xl border border-brand-border-subtle bg-card px-3.5 py-3.5">
+            {/* 时间轴轨道：细线贯穿，分享=蓝节点、展示=橙节点（实心圆） */}
+            <span aria-hidden className="absolute bottom-4 left-[13.5px] top-4 w-px rounded bg-brand-border-subtle" />
             {talks.map((talk: any) => {
               const speakers = (talk.speakers?.length
                 ? talk.speakers.map((speaker: any) => speakerMeta({ ...speaker, speaker: speaker.name }, lang, true))
                 : [speakerMeta(talk, lang, true)]);
               const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
               return (
-                <li key={talk.id} className="group rounded-lg px-3.5 py-2.5 transition-colors hover:bg-brand-surface/60 focus-within:bg-brand-surface/60">
-                  <div className="flex items-center gap-2.5">
-                    {talk.imageUrl ? <img src={talk.imageUrl} alt="" className="h-10 w-14 shrink-0 rounded-lg object-cover" /> : null}
+                <li key={talk.id} className="relative pb-5 pl-6 last:pb-0">
+                  <span
+                    aria-hidden
+                    className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
                     <AgendaTypeTag
                       type={type}
                       label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
                     />
-                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy md:line-clamp-1 md:group-hover:line-clamp-none md:group-focus-within:line-clamp-none">{talk.title}</p>
+                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy">{talk.title}</p>
                     {talk.bvId ? <BilibiliTvLink bvId={talk.bvId} /> : null}
                     <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                       {speakers.map((speaker: any, index: number) => (
@@ -512,10 +566,27 @@ async function ActivityTalkSection({
                           byLabel={index === 0 ? t(lang, "meeting.by") : "&"}
                         />
                       ))}
+                      {canEditTalk(talk) ? (
+                        <OwnTalkEditor
+                          talk={{
+                            id: talk.id,
+                            title: talk.title,
+                            description: talk.description || "",
+                            imageUrl: talk.imageUrl || "",
+                            talkType: type,
+                            bvId: talk.bvId || "",
+                          }}
+                        />
+                      ) : null}
                     </span>
                   </div>
+                  {/* 详情常显、高度自适应：不折叠也就没有悬停展开导致的上下跳动 */}
                   {talk.description ? (
-                    <p className={`mt-2 whitespace-pre-wrap text-sm leading-6 text-brand-text-secondary md:max-h-0 md:overflow-hidden md:opacity-0 md:transition-[max-height,opacity] md:duration-300 md:group-hover:max-h-96 md:group-hover:opacity-100 md:group-focus-within:max-h-96 md:group-focus-within:opacity-100 ${talk.imageUrl ? "ml-[3.25rem]" : ""}`}>{talk.description}</p>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-brand-text-secondary">{talk.description}</p>
+                  ) : null}
+                  {/* 配图独占一行，撑满卡片宽度（自然比例） */}
+                  {talk.imageUrl ? (
+                    <img src={talk.imageUrl} alt="" loading="lazy" className="mt-2 block w-full rounded-lg" />
                   ) : null}
                 </li>
               );
@@ -524,14 +595,17 @@ async function ActivityTalkSection({
               const speaker = speakerMeta(p, lang);
               const type = p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
               return (
-                <li key={p.id} className="group rounded-lg px-3.5 py-2.5 transition-colors hover:bg-brand-surface/60 focus-within:bg-brand-surface/60">
-                  <div className="flex items-center gap-2.5">
-                    {p.imageUrl ? <img src={p.imageUrl} alt="" className="h-10 w-14 shrink-0 rounded-lg object-cover" /> : null}
+                <li key={p.id} className="relative pb-5 pl-6 last:pb-0">
+                  <span
+                    aria-hidden
+                    className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
                     <AgendaTypeTag
                       type={type}
                       label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
                     />
-                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy md:line-clamp-1 md:group-hover:line-clamp-none md:group-focus-within:line-clamp-none">{p.title}</p>
+                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy">{p.title}</p>
                     <AgendaSpeaker
                       name={speaker.name}
                       href={speaker.href}
@@ -541,53 +615,17 @@ async function ActivityTalkSection({
                     {isAdmin && <DeleteProposalButton proposalId={p.id} />}
                   </div>
                   {p.description && (
-                    <p className="mt-2 ml-[3.25rem] whitespace-pre-wrap text-sm leading-6 text-brand-text-secondary md:max-h-0 md:overflow-hidden md:opacity-0 md:transition-[max-height,opacity] md:duration-300 md:group-hover:max-h-96 md:group-hover:opacity-100 md:group-focus-within:max-h-96 md:group-focus-within:opacity-100">{p.description}</p>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-brand-text-secondary">{p.description}</p>
                   )}
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt="" loading="lazy" className="mt-2 block w-full rounded-lg" />
+                  ) : null}
                 </li>
               );
             })}
           </ol>
           ) : null}
         </AgendaManagePanel>
-      )}
-
-      {(isOngoing || isUpcoming) && canSubmitActivityTalk(activity) && (
-        <section id="meeting-signup" className="scroll-mt-28 bg-card rounded-xl border px-3.5 py-3 border-brand-border-subtle">
-          {userProposal ? (
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
-                <AgendaTypeTag
-                  type={userProposal.proposalType}
-                  label={agendaTypeLabel(
-                    userProposal.proposalType,
-                    t(lang, "activityDetail.proposalShare"),
-                    t(lang, "activityDetail.proposalShowcase"),
-                  )}
-                />
-                <span className={`ml-auto shrink-0 text-[11px] px-2 py-0.5 rounded-full ${
-                  userProposal.status === "APPROVED" ? "agenda-chip-share" :
-                  userProposal.status === "REJECTED" ? "bg-red-500/10 text-red-600 dark:text-red-400" :
-                  "agenda-chip-showcase"
-                }`}>
-                  {userProposal.status === "APPROVED" ? t(lang, "activityDetail.statusApproved") : userProposal.status === "REJECTED" ? t(lang, "activityDetail.statusRejected") : t(lang, "activityDetail.statusPendingReview")}
-                </span>
-              </div>
-              <p className="text-sm font-medium text-brand-navy">{userProposal.title}</p>
-              {userProposal.description && <p className="text-xs text-brand-text-secondary">{userProposal.description}</p>}
-              {userProposal.status === "REJECTED" && userProposal.adminNote && (
-                <p className="text-xs text-red-600 dark:text-red-400">{t(lang, "activityDetail.adminNote", { note: userProposal.adminNote })}</p>
-              )}
-            </div>
-          ) : session?.user ? (
-            <SubmitProposalForm activityId={activity.id} isAdmin={isAdmin} />
-          ) : (
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
-              <Link href={`/auth/login?callbackUrl=${encodeURIComponent(`/activities/${activity.id}#meeting-signup`)}`} className="btn-primary shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold">{lang === "en" ? "Sign in" : "登录后报名"}</Link>
-            </div>
-          )}
-        </section>
       )}
     </div>
   );

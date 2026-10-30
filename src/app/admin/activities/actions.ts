@@ -502,10 +502,13 @@ export async function deleteProposal(formData: FormData) {
   });
   if (!proposal) return { error: "申请不存在" };
 
-  await prisma.$transaction(async (tx) => {
-    await tx.meetingTalk.deleteMany({ where: { sourceProposalId: proposalId } });
-    await tx.meetingProposal.delete({ where: { id: proposalId } });
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.meetingTalk.deleteMany({ where: { sourceProposalId: proposalId } });
+      await tx.meetingProposal.delete({ where: { id: proposalId } });
+    },
+    { timeout: 20_000 },
+  );
   await invalidateActivityCaches(proposal.activityId);
   return { success: true };
 }
@@ -766,11 +769,18 @@ export async function saveMeetingTalks(
     }
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.meetingTalk.deleteMany({ where: { activityId } });
-    for (const talk of normalized) {
-      await tx.meetingTalk.create({
-        data: {
+  // 逐条 create 在慢链路（PgBouncer 事务模式 + 跨区 RTT）下极易超过默认 5s
+  // 事务超时，Prisma 报 P2028"Transaction not found"，server action 500 后
+  // 前端整页进入错误边界——正是错误面板里 #67 等 RSC render 报错的来源。
+  // 这里收敛为 3 条语句（deleteMany + createManyAndReturn + createMany），
+  // 并把超时放宽到 20s，与 submitProposal / reviewProposal 对齐。
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.meetingTalk.deleteMany({ where: { activityId } });
+      if (normalized.length === 0) return;
+
+      const created = await tx.meetingTalk.createManyAndReturn({
+        data: normalized.map((talk) => ({
           activityId,
           speaker: talk.speaker,
           title: talk.title,
@@ -781,17 +791,26 @@ export async function saveMeetingTalks(
           userId: talk.userId,
           sourceProposalId: talk.sourceProposalId,
           sortOrder: talk.sortOrder,
-          speakers: {
-            create: talk.speakers.map((speaker, sortOrder) => ({
-              name: speaker.name,
-              userId: speaker.userId,
-              sortOrder,
-            })),
-          },
-        },
+        })),
       });
-    }
-  });
+
+      const bySort = new Map(normalized.map((talk) => [talk.sortOrder, talk]));
+      const speakerRows = created.flatMap((row) => {
+        const talk = bySort.get(row.sortOrder);
+        if (!talk) return [];
+        return talk.speakers.map((speaker, index) => ({
+          talkId: row.id,
+          name: speaker.name,
+          userId: speaker.userId,
+          sortOrder: index,
+        }));
+      });
+      if (speakerRows.length > 0) {
+        await tx.meetingTalkSpeaker.createMany({ data: speakerRows });
+      }
+    },
+    { timeout: 20_000 },
+  );
 
   const saved = await prisma.meetingTalk.findMany({
     where: { activityId },
@@ -836,4 +855,65 @@ export async function saveMeetingTalks(
 
   await invalidateActivityCaches(activityId);
   return { success: true, talks: saved };
+}
+
+// ── 上传者本人：修改自己关联的议程卡片 ─────────────────────
+export async function updateMeetingTalkOwn(
+  talkId: string,
+  patch: {
+    title: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    talkType?: "SHARE" | "SHOWCASE";
+    bvId?: string;
+  },
+) {
+  const lang = await getLang();
+  const session = await auth();
+  if (!session?.user) return { error: t(lang, "meeting.errLoginFirst") };
+  if (!talkId) return { error: t(lang, "meetingTalks.errTalkMissing") };
+
+  const talk = await prisma.meetingTalk.findUnique({
+    where: { id: talkId },
+    select: {
+      id: true,
+      activityId: true,
+      userId: true,
+      speakers: { select: { userId: true } },
+      activity: {
+        select: { talkSubmissionOpen: true, status: true, endTime: true, timePending: true },
+      },
+    },
+  });
+  if (!talk) return { error: t(lang, "meetingTalks.errTalkMissing") };
+
+  const isAdmin = session.user.role === "ADMIN";
+  const isOwner = talk.userId === session.user.id
+    || talk.speakers.some((speaker) => speaker.userId && speaker.userId === session.user.id);
+  if (!isAdmin && !isOwner) return { error: t(lang, "meetingTalks.errNotAllowed") };
+  if (!isAdmin && !canSubmitActivityTalk(talk.activity)) {
+    return { error: t(lang, "meeting.errTalkClosed") };
+  }
+
+  const title = (patch.title || "").trim();
+  if (!title) return { error: t(lang, "meeting.errTitleRequired") };
+  if (patch.bvId && !parseBvId(patch.bvId)) {
+    return { error: `${t(lang, "meetingTalks.errBadBv")}: ${patch.bvId}` };
+  }
+  const imageUrlRaw = (patch.imageUrl || "").trim();
+  const imageUrl = imageUrlRaw && /^(https?:\/\/|\/)/.test(imageUrlRaw) ? imageUrlRaw.slice(0, 2048) : null;
+
+  await prisma.meetingTalk.update({
+    where: { id: talkId },
+    data: {
+      title,
+      description: (patch.description || "").trim() || null,
+      imageUrl,
+      ...(patch.talkType ? { talkType: patch.talkType === "SHOWCASE" ? ProposalType.SHOWCASE : ProposalType.SHARE } : {}),
+      bvId: parseBvId(patch.bvId) || null,
+    },
+  });
+
+  await invalidateActivityCaches(talk.activityId);
+  return { success: true as const };
 }

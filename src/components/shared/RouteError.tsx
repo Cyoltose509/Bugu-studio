@@ -16,13 +16,16 @@ export default function ErrorPage({
   useEffect(() => {
     console.error("[Route Error]", error);
 
-    // 自动上报错误给管理员
+    // 自动上报错误给管理员。digest 是生产环境定位服务端错误的唯一线索
+    // （Next.js 生产构建会吞掉真实报错信息），必须随报告一起带上。
     fetch("/api/errors/report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         message: error.message,
-        stack: error.stack,
+        stack: error.stack
+          ? `${error.stack}\n[digest: ${error.digest ?? "none"}]`
+          : `[digest: ${error.digest ?? "none"}]`,
         url: window.location.href,
         userAgent: navigator.userAgent,
       }),
