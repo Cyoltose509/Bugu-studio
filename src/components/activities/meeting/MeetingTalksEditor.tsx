@@ -232,7 +232,15 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
     startTransition(async () => {
       const payload = talksPayload().filter((row) => row.speakers.length || row.title);
 
-      const result = await saveMeetingTalks(activityId, payload);
+      // 保存失败（网络抖动、服务端 500 等）只行内提示，绝不让错误冒泡到
+      // 路由级错误边界——那会卸载整个编辑器，用户填了一半的内容全丢。
+      let result: Awaited<ReturnType<typeof saveMeetingTalks>>;
+      try {
+        result = await saveMeetingTalks(activityId, payload);
+      } catch {
+        setMessage({ type: "err", text: t(lang, "meetingTalks.errSaveFailed") });
+        return;
+      }
       if (result?.error) {
         setMessage({ type: "err", text: result.error });
         return;
@@ -275,7 +283,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   const field =
     "w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading bg-card placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/40";
 
-  const rowListClass = "space-y-3";
+  const rowListClass = "space-y-2";
 
   const body = (
     <>
@@ -314,7 +322,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 dragFrom.current = null;
                 setDragOver(null);
               }}
-              className={`relative grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-brand-border-subtle bg-card p-4 shadow-sm transition-colors ${
+              className={`relative grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-brand-border-subtle bg-card p-3 shadow-sm transition-colors ${
                 draggingOver ? "border-brand-blue/50 bg-brand-blue/10" : "hover:border-brand-blue/30"
               }`}
             >
@@ -428,10 +436,10 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 onChange={(e) => update(i, { title: e.target.value })}
                 aria-label={t(lang, "meetingTalks.topicPlaceholder")}
                 placeholder={t(lang, "meetingTalks.topicPlaceholder")}
-                className="col-span-4 block w-full min-w-0 rounded-md border-0 bg-transparent px-0 py-1 text-lg font-semibold leading-7 text-brand-text-heading placeholder:font-normal placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                className="col-span-4 block w-full min-w-0 rounded-md border-0 bg-transparent px-0 py-0.5 text-base font-semibold leading-6 text-brand-text-heading placeholder:font-normal placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
               />
 
-              <div className="relative col-span-4 flex flex-wrap items-center gap-2 border-t border-brand-border-subtle pt-3">
+              <div className="relative col-span-4 flex flex-wrap items-center gap-2 border-t border-brand-border-subtle pt-2">
                 <span className="mr-1 text-xs font-medium text-brand-text-muted">{t(lang, "meetingTalks.speakers")}</span>
                 {(talk.speakers || []).map((speaker, speakerIndex) => (
                   <span key={`${speaker.userId || speaker.name}-${speakerIndex}`} className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-xs ${speaker.userId ? "bg-brand-blue/10 text-brand-blue" : "bg-brand-orange/10 text-brand-orange"}`}>
@@ -516,7 +524,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 )}
               </div>
 
-              <div className="col-span-4 min-w-0 space-y-2 border-t border-brand-border-subtle pt-3">
+              <div className="col-span-4 min-w-0 space-y-1.5 border-t border-brand-border-subtle pt-2">
                 <textarea
                   rows={1}
                   value={talk.description || ""}
@@ -532,7 +540,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                   onFile={(file) => void handleAgendaImage(i, file)}
                 >
                   {talk.imageUrl ? (
-                    <div className="group/image relative h-32 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
+                    <div className="group/image relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
                       <img src={talk.imageUrl} alt="" className="h-full w-full object-cover" />
                       <button
                         type="button"
@@ -599,8 +607,8 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   );
 
   const shell = framed
-    ? "bg-card rounded-xl border p-5 sm:p-6 space-y-4 shadow-sm border-brand-border-subtle"
-    : "space-y-3";
+    ? "bg-card rounded-xl border p-4 sm:p-5 space-y-3 shadow-sm border-brand-border-subtle"
+    : "space-y-2";
   if (embedded) return <section className={shell}>{body}</section>;
   return <form onSubmit={onSubmit} className={shell}>{body}</form>;
 }
