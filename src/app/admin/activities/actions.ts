@@ -737,7 +737,9 @@ export async function saveMeetingTalks(
         });
       const first = speakers[0];
       const sourceProposalId = (t.sourceProposalId || "").trim() || null;
+      const existingId = (t.id || "").trim();
       return {
+        id: existingId || undefined,
         speaker: first?.name || "",
         title: (t.title || "").trim(),
         description: (t.description || "").trim() || null,
@@ -769,44 +771,128 @@ export async function saveMeetingTalks(
     }
   }
 
-  // 逐条 create 在慢链路（PgBouncer 事务模式 + 跨区 RTT）下极易超过默认 5s
-  // 事务超时，Prisma 报 P2028"Transaction not found"，server action 500 后
-  // 前端整页进入错误边界——正是错误面板里 #67 等 RSC render 报错的来源。
-  // 这里收敛为 3 条语句（deleteMany + createManyAndReturn + createMany），
-  // 并把超时放宽到 20s，与 submitProposal / reviewProposal 对齐。
+  // 差异化保存：按 id/关联申请匹配已有议程项，字段级比对后只增删改差异行——
+  // 无变化的行零语句跳过。此前整表删除重建会让每行拿到新 id：成员正打开的
+  // "修改我的议程"面板失效，并静默覆盖管理员视图之外的他人修改。
+  // 20s 超时沿用 P2028 修复；慢链路下逐行语句较多，字段级跳过是关键。
   await prisma.$transaction(
     async (tx) => {
-      await tx.meetingTalk.deleteMany({ where: { activityId } });
-      if (normalized.length === 0) return;
-
-      const created = await tx.meetingTalk.createManyAndReturn({
-        data: normalized.map((talk) => ({
-          activityId,
-          speaker: talk.speaker,
-          title: talk.title,
-          description: talk.description,
-          imageUrl: talk.imageUrl,
-          talkType: talk.talkType,
-          bvId: talk.bvId,
-          userId: talk.userId,
-          sourceProposalId: talk.sourceProposalId,
-          sortOrder: talk.sortOrder,
-        })),
+      const existing = await tx.meetingTalk.findMany({
+        where: { activityId },
+        include: { speakers: { orderBy: { sortOrder: "asc" } } },
       });
+      const existingById = new Map(existing.map((row) => [row.id, row]));
+      const speakersKey = (list: Array<{ name: string; userId: string | null }>) =>
+        JSON.stringify(list.map((s) => [s.name, s.userId ?? null]));
 
-      const bySort = new Map(normalized.map((talk) => [talk.sortOrder, talk]));
-      const speakerRows = created.flatMap((row) => {
-        const talk = bySort.get(row.sortOrder);
-        if (!talk) return [];
-        return talk.speakers.map((speaker, index) => ({
-          talkId: row.id,
-          name: speaker.name,
-          userId: speaker.userId,
-          sortOrder: index,
-        }));
-      });
-      if (speakerRows.length > 0) {
-        await tx.meetingTalkSpeaker.createMany({ data: speakerRows });
+      const matched = new Set<string>();
+      const toUpdate: Array<{ row: (typeof normalized)[number]; id: string }> = [];
+      const toCreate: Array<(typeof normalized)[number]> = [];
+      for (const row of normalized) {
+        const hitById =
+          row.id && existingById.has(row.id) && !matched.has(row.id) ? row.id : null;
+        const hitBySource =
+          row.sourceProposalId && !hitById
+            ? (existing.find(
+                (e) => e.sourceProposalId === row.sourceProposalId && !matched.has(e.id),
+              )?.id ?? null)
+            : null;
+        const hit = hitById ?? hitBySource;
+        if (hit) {
+          matched.add(hit);
+          const cur = existingById.get(hit)!;
+          const unchanged =
+            cur.speaker === row.speaker &&
+            cur.title === row.title &&
+            (cur.description ?? null) === row.description &&
+            (cur.imageUrl ?? null) === row.imageUrl &&
+            cur.talkType === row.talkType &&
+            (cur.bvId ?? null) === row.bvId &&
+            (cur.userId ?? null) === row.userId &&
+            (cur.sourceProposalId ?? null) === (row.sourceProposalId ?? null) &&
+            cur.sortOrder === row.sortOrder &&
+            speakersKey(cur.speakers) === speakersKey(row.speakers);
+          if (!unchanged) toUpdate.push({ row, id: hit });
+        } else {
+          toCreate.push(row);
+        }
+      }
+
+      // 删除本轮不再存在的行（speaker 行随 onDelete: Cascade 一并移除）
+      const staleIds = existing.filter((row) => !matched.has(row.id)).map((row) => row.id);
+      if (staleIds.length > 0) {
+        await tx.meetingTalk.deleteMany({ where: { id: { in: staleIds } } });
+      }
+
+      for (const { row, id } of toUpdate) {
+        const cur = existingById.get(id)!;
+        const sourceChanging = (cur.sourceProposalId ?? null) !== (row.sourceProposalId ?? null);
+        // 两阶段防撞唯一约束：先置空再赋新值，仅在实际换关联时发生
+        await tx.meetingTalk.update({
+          where: { id },
+          data: {
+            speaker: row.speaker,
+            title: row.title,
+            description: row.description,
+            imageUrl: row.imageUrl,
+            talkType: row.talkType,
+            bvId: row.bvId,
+            userId: row.userId,
+            sourceProposalId: sourceChanging ? null : row.sourceProposalId ?? null,
+            sortOrder: row.sortOrder,
+          },
+        });
+        if (speakersKey(cur.speakers) !== speakersKey(row.speakers)) {
+          await tx.meetingTalkSpeaker.deleteMany({ where: { talkId: id } });
+          if (row.speakers.length > 0) {
+            await tx.meetingTalkSpeaker.createMany({
+              data: row.speakers.map((speaker, index) => ({
+                talkId: id,
+                name: speaker.name,
+                userId: speaker.userId,
+                sortOrder: index,
+              })),
+            });
+          }
+        }
+        if (sourceChanging && row.sourceProposalId) {
+          await tx.meetingTalk.update({
+            where: { id },
+            data: { sourceProposalId: row.sourceProposalId },
+          });
+        }
+      }
+
+      if (toCreate.length > 0) {
+        const created = await tx.meetingTalk.createManyAndReturn({
+          data: toCreate.map((talk) => ({
+            activityId,
+            speaker: talk.speaker,
+            title: talk.title,
+            description: talk.description,
+            imageUrl: talk.imageUrl,
+            talkType: talk.talkType,
+            bvId: talk.bvId,
+            userId: talk.userId,
+            sourceProposalId: talk.sourceProposalId,
+            sortOrder: talk.sortOrder,
+          })),
+        });
+
+        const bySort = new Map(toCreate.map((talk) => [talk.sortOrder, talk]));
+        const speakerRows = created.flatMap((row) => {
+          const talk = bySort.get(row.sortOrder);
+          if (!talk) return [];
+          return talk.speakers.map((speaker, index) => ({
+            talkId: row.id,
+            name: speaker.name,
+            userId: speaker.userId,
+            sortOrder: index,
+          }));
+        });
+        if (speakerRows.length > 0) {
+          await tx.meetingTalkSpeaker.createMany({ data: speakerRows });
+        }
       }
     },
     { timeout: 20_000 },

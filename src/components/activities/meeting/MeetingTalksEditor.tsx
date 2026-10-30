@@ -406,7 +406,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                         value={talk.bvId}
                         onChange={(e) => update(i, { bvId: e.target.value })}
                         placeholder={t(lang, "meetingTalks.bvPlaceholder")}
-                        className={field}
+                        className={`${field} ${talk.bvId && !hasBv ? "border-red-400 focus:ring-red-400/30" : ""}`}
                       />
                       {hasBv && (
                         <a
@@ -537,12 +537,16 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
 
               <div className="mt-1.5 min-w-0 space-y-1.5">
                 <textarea
-                  rows={1}
                   value={talk.description || ""}
                   onChange={(event) => update(i, { description: event.target.value })}
                   placeholder={t(lang, "meetingTalks.descriptionPlaceholder")}
                   aria-label={t(lang, "meetingTalks.descriptionPlaceholder")}
-                  className="block h-8 w-full min-w-0 resize-none rounded-md border-0 bg-transparent px-0 py-1 text-sm leading-6 text-brand-text-secondary placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  ref={(el) => {
+                    if (!el) return;
+                    el.style.height = "auto";
+                    el.style.height = `${el.scrollHeight}px`;
+                  }}
+                  className="block min-h-8 w-full min-w-0 resize-none overflow-hidden rounded-md border-0 bg-transparent px-0 py-1 text-sm leading-6 text-brand-text-secondary placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
                 />
                 <ImageDropZone
                   className={talk.imageUrl ? "w-full max-w-xs" : "w-fit max-w-full"}
