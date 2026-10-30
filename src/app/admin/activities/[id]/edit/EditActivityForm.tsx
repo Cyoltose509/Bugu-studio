@@ -134,6 +134,10 @@ export default function EditActivityForm({
   const [status, setStatus] = useState(activity.status);
   const [title, setTitle] = useState(activity.title);
   const [summary, setSummary] = useState(activity.summary);
+  // 议程里已上传的配图，可直接选作封面（去重保序）
+  const agendaImages = Array.from(
+    new Set(talks.map((tk) => (tk.imageUrl || "").trim()).filter((u) => /^https?:\/\/|^\//.test(u))),
+  );
   const [timePending, setTimePending] = useState(activity.timePending);
   const [startTime, setStartTime] = useState(activity.startTime);
   const [endTime, setEndTime] = useState(activity.endTime);
@@ -340,6 +344,7 @@ export default function EditActivityForm({
                 initialFocusX={activity.courseCoverFocusX}
                 initialFocusY={activity.courseCoverFocusY}
                 typeLabel={TYPE_OPTIONS.find((t) => t.value === type)?.label}
+                presetImages={agendaImages}
               />
             </div>
           </div>

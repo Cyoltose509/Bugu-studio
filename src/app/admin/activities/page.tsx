@@ -136,11 +136,11 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
                     {TYPE_LABELS[activity.type] || activity.type}
                   </span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    activity.status === "PUBLISHED" ? "bg-green-100 text-green-700" :
-                    activity.status === "DRAFT"     ? "bg-gray-100 text-gray-600" :
-                                                     "bg-yellow-100 text-yellow-700"
+                    activity.status === "PUBLISHED" ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400" :
+                    activity.status === "DRAFT"     ? "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300" :
+                                                      "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400"
                   }`}>{STATUS_LABELS[activity.status] || activity.status}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E0] text-brand-orange">{timeLabel}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E0] text-brand-orange dark:bg-brand-orange/15 dark:text-[#F09055]">{timeLabel}</span>
                 </div>
                 <p className="text-xs mt-1 truncate text-brand-text-secondary">
                   {formatActivitySchedule(activity.startTime, activity.endTime, "cn", activity.timePending)}

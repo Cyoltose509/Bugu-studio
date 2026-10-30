@@ -303,13 +303,13 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
       <div className="space-y-3 mb-6">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`text-xs px-2 py-0.5 rounded-full ${
-            activity.status === "PUBLISHED" ? "bg-green-100 text-green-700" :
-            activity.status === "DRAFT"      ? "bg-gray-100 text-gray-600" :
-                                                       "bg-yellow-100 text-yellow-700"
+            activity.status === "PUBLISHED" ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400" :
+            activity.status === "DRAFT"      ? "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300" :
+                                               "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400"
           }`}>{activityStatusLabel(lang, activity.status)}</span>
-          {isOngoing && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{t(lang, "activity.ongoing")}</span>}
-          {isUpcoming && <span className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E0] text-brand-orange">{t(lang, "activity.upcoming")}</span>}
-          {isPast    && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{t(lang, "activity.past")}</span>}
+          {isOngoing && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400">{t(lang, "activity.ongoing")}</span>}
+          {isUpcoming && <span className="text-xs px-2 py-0.5 rounded-full bg-[#FFF3E0] text-brand-orange dark:bg-brand-orange/15 dark:text-[#F09055]">{t(lang, "activity.upcoming")}</span>}
+          {isPast    && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400">{t(lang, "activity.past")}</span>}
         </div>
 
         <div className="flex items-start justify-between gap-4">
@@ -366,7 +366,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
   if (hasTalkSection) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] xl:items-start">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] xl:items-start">
           <div className="min-w-0">{mainColumn}</div>
           <aside className="min-w-0 xl:sticky xl:top-24">
             {talkColumn}
@@ -535,9 +535,9 @@ async function ActivityTalkSection({
           }))}
         >
           {hasAgendaItems ? (
-          <ol className="relative rounded-xl border border-brand-border-subtle bg-card px-3.5 py-3.5">
-            {/* 时间轴轨道：细线贯穿，分享=蓝节点、展示=橙节点（实心圆） */}
-            <span aria-hidden className="absolute bottom-4 left-[13.5px] top-4 w-px rounded bg-brand-border-subtle" />
+          <ol className="relative py-1">
+            {/* 时间轴轨道：细线贯穿，分享=蓝节点、展示=橙节点（实心圆）。无外框，直接落在页面上 */}
+            <span aria-hidden className="absolute bottom-2 left-0 top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
             {talks.map((talk: any) => {
               const speakers = (talk.speakers?.length
                 ? talk.speakers.map((speaker: any) => speakerMeta({ ...speaker, speaker: speaker.name }, lang, true))

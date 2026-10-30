@@ -19,6 +19,8 @@ interface Props {
   allowFocalPoint?: boolean;
   initialFocusX?: number;
   initialFocusY?: number;
+  /** 可直接选用的现成图片（如议程配图）；点击即设为封面，不再上传 */
+  presetImages?: string[];
 }
 
 export default function CoverUploadInput({
@@ -32,6 +34,7 @@ export default function CoverUploadInput({
   allowFocalPoint = false,
   initialFocusX = 50,
   initialFocusY = 50,
+  presetImages,
 }: Props) {
   const { t, lang } = useLang();
   const [preview, setPreview] = useState<string | null>(defaultValue || null);
@@ -209,6 +212,34 @@ export default function CoverUploadInput({
 
       {error && <p className="text-xs text-red-500">{error}</p>}
       {!error && note && <p className="text-xs text-brand-text-muted">{note}</p>}
+
+      {presetImages && presetImages.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-brand-text-muted">从议程配图选择</span>
+          {presetImages.map((url) => (
+            <button
+              key={url}
+              type="button"
+              onClick={() => {
+                setCoverUrl(url);
+                setPreview(url);
+                setNote("");
+                setError("");
+              }}
+              title="选用为封面"
+              aria-label="选用为封面"
+              className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
+                coverUrl === url
+                  ? "border-brand-blue ring-2 ring-brand-blue/40"
+                  : "border-brand-border-subtle hover:border-brand-blue/50"
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="h-full w-full object-cover" draggable={false} />
+            </button>
+          ))}
+        </div>
+      )}
 
       <input
         ref={fileRef}
