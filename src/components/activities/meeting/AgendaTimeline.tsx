@@ -25,7 +25,7 @@ export type AgendaTimelineItem = {
 
 /**
  * 议程时间轴（交互版）。
- * - 详情与配图默认收起：带图卡片收起时配图保持 50% 宽，hover/键盘聚焦展开
+ * - 详情默认收起，hover/键盘聚焦展开；配图始终撑满卡片宽度（自然比例）
  * - 单击卡片「钉住」展开态，再次单击取消；触屏设备靠它替代 hover
  * - 单击配图打开灯箱单独放大查看
  * - draft 非空时在议程序列末尾追加一张填写卡（＋下拉选完类型后出现）
@@ -100,9 +100,6 @@ export default function AgendaTimeline({
           const expandBody = isPinned
             ? "grid-rows-[1fr]"
             : "grid-rows-[0fr] group-hover/card:grid-rows-[1fr] group-focus-within/card:grid-rows-[1fr]";
-          const expandImage = isPinned
-            ? "w-full"
-            : "w-1/2 group-hover/card:w-full group-focus-within/card:w-full";
           return (
             <li
               key={item.key}
@@ -145,9 +142,7 @@ export default function AgendaTimeline({
               ) : null}
 
               {item.imageUrl ? (
-                <div
-                  className={`mt-2 overflow-hidden rounded-lg transition-[width] duration-300 ease-out ${expandImage}`}
-                >
+                <div className="mt-2 overflow-hidden rounded-lg">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.imageUrl}
