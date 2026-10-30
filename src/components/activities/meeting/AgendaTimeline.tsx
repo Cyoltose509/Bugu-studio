@@ -108,7 +108,7 @@ export default function AgendaTimeline({
             >
               <span
                 aria-hidden
-                className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${item.type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+                className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ${item.type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
               />
               <div className="flex flex-wrap items-center gap-2">
                 <AgendaTypeTag type={item.type} label={item.typeLabel} />
@@ -166,7 +166,7 @@ export default function AgendaTimeline({
           <li ref={draftRef} className="relative pb-1 pl-6">
             <span
               aria-hidden
-              className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${draft === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+              className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ${draft === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
             />
             <SubmitProposalForm
               activityId={activityId ?? ""}
