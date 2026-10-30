@@ -283,7 +283,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   const field =
     "w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading bg-card placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/40";
 
-  const rowListClass = "space-y-2";
+  const rowListClass = "relative pl-1.5";
 
   const body = (
     <>
@@ -295,6 +295,8 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
       ) : null}
 
       <div className={rowListClass} ref={searchBoxRef}>
+        {/* 时间轴轨道：与阅读态一致，节点颜色随类型切换 */}
+        <span aria-hidden className="absolute bottom-2 left-[6px] top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
         {talks.map((talk, i) => {
           const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
           const parsedBv = parseBvId(talk.bvId);
@@ -322,10 +324,16 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 dragFrom.current = null;
                 setDragOver(null);
               }}
-              className={`relative grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-brand-border-subtle bg-card p-3 shadow-sm transition-colors ${
-                draggingOver ? "border-brand-blue/50 bg-brand-blue/10" : "hover:border-brand-blue/30"
+              className={`relative pl-6 pb-4 transition-colors rounded-lg ${
+                draggingOver ? "bg-brand-blue/5" : ""
               }`}
             >
+              <span
+                aria-hidden
+                className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 draggable
@@ -357,7 +365,15 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                   : t(lang, "activityDetail.proposalShare")}
               </button>
 
-              <div className="relative col-start-4 mr-8 shrink-0">
+              <input
+                value={talk.title}
+                onChange={(e) => update(i, { title: e.target.value })}
+                aria-label={t(lang, "meetingTalks.topicPlaceholder")}
+                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
+                className="min-w-0 flex-1 rounded-md border-0 bg-transparent px-1 py-0.5 text-sm font-medium leading-6 text-brand-navy placeholder:font-normal placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+              />
+
+              <div className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setBvOpen(bvOpen === i ? null : i)}
@@ -424,22 +440,15 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                     prev.length <= 1 ? [emptyTalk()] : prev.filter((_, idx) => idx !== i),
                   )
                 }
-                className="absolute right-3 top-3 w-8 h-8 inline-flex items-center justify-center rounded-lg text-xl font-medium text-brand-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                className="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-lg text-xl font-medium text-brand-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
                 aria-label={t(lang, "meetingTalks.remove")}
                 title={t(lang, "meetingTalks.remove")}
               >
                 ×
               </button>
+            </div>
 
-              <input
-                value={talk.title}
-                onChange={(e) => update(i, { title: e.target.value })}
-                aria-label={t(lang, "meetingTalks.topicPlaceholder")}
-                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
-                className="col-span-4 block w-full min-w-0 rounded-md border-0 bg-transparent px-0 py-0.5 text-base font-semibold leading-6 text-brand-text-heading placeholder:font-normal placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-              />
-
-              <div className="relative col-span-4 flex flex-wrap items-center gap-2 border-t border-brand-border-subtle pt-2">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <span className="mr-1 text-xs font-medium text-brand-text-muted">{t(lang, "meetingTalks.speakers")}</span>
                 {(talk.speakers || []).map((speaker, speakerIndex) => (
                   <span key={`${speaker.userId || speaker.name}-${speakerIndex}`} className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-xs ${speaker.userId ? "bg-brand-blue/10 text-brand-blue" : "bg-brand-orange/10 text-brand-orange"}`}>
@@ -524,7 +533,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 )}
               </div>
 
-              <div className="col-span-4 min-w-0 space-y-1.5 border-t border-brand-border-subtle pt-2">
+              <div className="mt-1.5 min-w-0 space-y-1.5">
                 <textarea
                   rows={1}
                   value={talk.description || ""}
