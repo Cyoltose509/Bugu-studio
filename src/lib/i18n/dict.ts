@@ -1455,6 +1455,7 @@ export const dict = {
   "meetingTalks.errNotAllowed": { cn: "只有上传者本人可以修改这条议程", en: "Only the uploader can edit this agenda item" },
   "meetingTalks.errBadBv": { cn: "无法识别 BV 号", en: "Unrecognized Bilibili BV ID" },
   "meetingTalks.errSaveFailed": { cn: "保存失败，请重试；若持续失败请联系管理员", en: "Failed to save, please retry; contact an admin if it keeps failing" },
+  "agenda.viewImage": { cn: "查看大图", en: "View image" },
 } as const;
 
 export type DictKey = keyof typeof dict;

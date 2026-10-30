@@ -12,14 +12,12 @@ import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { ProposalStatus } from "@prisma/client";
 import SubmitProposalForm from "@/components/activities/meeting/SubmitProposalForm";
-import DeleteProposalButton from "@/components/activities/meeting/DeleteProposalButton";
 import { RichContent } from "@/components/ui/RichContent";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import ReviewProposalForm from "@/components/activities/meeting/ReviewProposalForm";
-import BilibiliTvLink from "@/components/activities/meeting/BilibiliTvLink";
 import AgendaManagePanel from "@/components/activities/meeting/AgendaManagePanel";
-import OwnTalkEditor from "@/components/activities/meeting/OwnTalkEditor";
-import { AgendaSpeaker, AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
+import AgendaTimeline, { type AgendaTimelineItem } from "@/components/activities/meeting/AgendaTimeline";
+import { AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import { DisbandTeamButton } from "@/components/activities/teams/DisbandTeamButton";
 import { LeaveTeamButton } from "@/components/activities/teams/LeaveTeamButton";
 import { InvitationButtons } from "@/components/activities/teams/InvitationButtons";
@@ -535,95 +533,56 @@ async function ActivityTalkSection({
           }))}
         >
           {hasAgendaItems ? (
-          <ol className="relative py-1">
-            {/* 时间轴轨道：细线贯穿，分享=蓝节点、展示=橙节点（实心圆）。无外框，直接落在页面上 */}
-            <span aria-hidden className="absolute bottom-2 left-0 top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
-            {talks.map((talk: any) => {
-              const speakers = (talk.speakers?.length
-                ? talk.speakers.map((speaker: any) => speakerMeta({ ...speaker, speaker: speaker.name }, lang, true))
-                : [speakerMeta(talk, lang, true)]);
-              const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
-              return (
-                <li key={talk.id} className="relative pb-5 pl-6 last:pb-0">
-                  <span
-                    aria-hidden
-                    className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AgendaTypeTag
-                      type={type}
-                      label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
-                    />
-                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy">{talk.title}</p>
-                    {talk.bvId ? <BilibiliTvLink bvId={talk.bvId} /> : null}
-                    <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                      {speakers.map((speaker: any, index: number) => (
-                        <AgendaSpeaker
-                          key={`${speaker.href || speaker.name}-${index}`}
-                          name={speaker.name}
-                          href={speaker.href}
-                          image={speaker.image}
-                          byLabel={index === 0 ? t(lang, "meeting.by") : "&"}
-                        />
-                      ))}
-                      {canEditTalk(talk) ? (
-                        <OwnTalkEditor
-                          talk={{
-                            id: talk.id,
-                            title: talk.title,
-                            description: talk.description || "",
-                            imageUrl: talk.imageUrl || "",
-                            talkType: type,
-                            bvId: talk.bvId || "",
-                          }}
-                        />
-                      ) : null}
-                    </span>
-                  </div>
-                  {/* 详情常显、高度自适应：不折叠也就没有悬停展开导致的上下跳动 */}
-                  {talk.description ? (
-                    <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-brand-text-secondary">{talk.description}</p>
-                  ) : null}
-                  {/* 配图独占一行，撑满卡片宽度（自然比例） */}
-                  {talk.imageUrl ? (
-                    <img src={talk.imageUrl} alt="" loading="lazy" className="mt-2 block w-full rounded-lg" />
-                  ) : null}
-                </li>
-              );
-            })}
-            {approvedProposals.map((p: any) => {
-              const speaker = speakerMeta(p, lang);
-              const type = p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
-              return (
-                <li key={p.id} className="relative pb-5 pl-6 last:pb-0">
-                  <span
-                    aria-hidden
-                    className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <AgendaTypeTag
-                      type={type}
-                      label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
-                    />
-                    <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy">{p.title}</p>
-                    <AgendaSpeaker
-                      name={speaker.name}
-                      href={speaker.href}
-                      image={speaker.image}
-                      byLabel={t(lang, "meeting.by")}
-                    />
-                    {isAdmin && <DeleteProposalButton proposalId={p.id} />}
-                  </div>
-                  {p.description && (
-                    <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-brand-text-secondary">{p.description}</p>
-                  )}
-                  {p.imageUrl ? (
-                    <img src={p.imageUrl} alt="" loading="lazy" className="mt-2 block w-full rounded-lg" />
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
+          <AgendaTimeline
+            items={[
+              ...talks.map((talk: any) => {
+                const speakers = (talk.speakers?.length
+                  ? talk.speakers.map((speaker: any) => speakerMeta({ ...speaker, speaker: speaker.name }, lang, true))
+                  : [speakerMeta(talk, lang, true)]);
+                const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+                return {
+                  key: talk.id,
+                  type,
+                  typeLabel: agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase")),
+                  title: talk.title,
+                  description: talk.description || "",
+                  imageUrl: talk.imageUrl || "",
+                  bvId: talk.bvId || "",
+                  speakers: speakers.map((speaker: any, index: number) => ({
+                    ...speaker,
+                    byLabel: index === 0 ? t(lang, "meeting.by") : "&",
+                  })),
+                  ...(canEditTalk(talk)
+                    ? {
+                        ownEdit: {
+                          id: talk.id,
+                          title: talk.title,
+                          description: talk.description || "",
+                          imageUrl: talk.imageUrl || "",
+                          talkType: type,
+                          bvId: talk.bvId || "",
+                        },
+                      }
+                    : {}),
+                };
+              }),
+              ...approvedProposals.map((p: any) => {
+                const speaker = speakerMeta(p, lang);
+                const type = p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+                return {
+                  key: p.id,
+                  type,
+                  typeLabel: agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase")),
+                  title: p.title,
+                  description: p.description || "",
+                  imageUrl: p.imageUrl || "",
+                  bvId: "",
+                  speakers: [{ ...speaker, byLabel: t(lang, "meeting.by") }],
+                  ...(isAdmin ? { deletableProposalId: p.id } : {}),
+                };
+              }),
+            ]}
+          />
           ) : null}
         </AgendaManagePanel>
       )}
