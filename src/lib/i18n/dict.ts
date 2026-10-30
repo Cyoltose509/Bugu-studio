@@ -41,6 +41,7 @@ export const dict = {
   "footer.membersList": { cn: "成员列表", en: "Members" },
   "footer.clubActivities": { cn: "社团活动", en: "Activities" },
   "footer.clubHistory": { cn: "社团历史", en: "History" },
+  "footer.tools": { cn: "实用工具跳转", en: "Useful Tools" },
   "footer.followUs": { cn: "关注我们", en: "Follow Us" },
   "footer.bilibili": { cn: "Bilibili 账号", en: "Bilibili" },
   "footer.recruit": { cn: "招新信息", en: "Join Us" },
@@ -50,6 +51,23 @@ export const dict = {
 
   // 页面主标题
   "page.works.title": { cn: "作品库", en: "Works" },
+  "page.tools.title": { cn: "实用工具", en: "Tools" },
+  "page.tools.description": { cn: "开发常用工具站导航，点击卡片直达官网。", en: "Handy tool sites for development — click a card to visit the official site." },
+
+  // ── 实用工具：管理 ──
+  "tools.add": { cn: "添加工具", en: "Add tool" },
+  "tools.manage": { cn: "管理工具", en: "Manage tools" },
+  "tools.manageExit": { cn: "退出管理", en: "Exit manage" },
+  "tools.edit": { cn: "编辑", en: "Edit" },
+  "tools.remove": { cn: "删除", en: "Remove" },
+  "tools.save": { cn: "保存", en: "Save" },
+  "tools.cancel": { cn: "取消", en: "Cancel" },
+  "tools.errSave": { cn: "保存失败，请重试", en: "Failed to save, please retry" },
+  "tools.form.name": { cn: "名称", en: "Name" },
+  "tools.form.url": { cn: "网址（https:// 开头）", en: "URL (starts with https://)" },
+  "tools.form.category": { cn: "分类", en: "Category" },
+  "tools.form.description": { cn: "一句话简介", en: "Short description" },
+  "tools.form.color": { cn: "回退色（favicon 加载失败时的字标底色）", en: "Fallback color for the lettermark" },
   "common.skipToContent": { cn: "跳到主要内容", en: "Skip to main content" },
   "meta.titleTemplate": { cn: "%s | 布谷工作室", en: "%s | Bugoo Studio" },
   "meta.titleDefault": { cn: "布谷工作室 - 官方网站", en: "Bugoo Studio — Official Site" },

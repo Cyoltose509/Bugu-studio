@@ -4,6 +4,21 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-10-31（第十批·修订）— 工具页真实 favicon + 管理员 ＋/✎ 管理【本地完成，未推送】
+
+- 按用户反馈改版：无卡片实色底、行式布局、favicon 撑满行高（44px，原 28px 过小）、去掉标题旁小 ↗ 改为行尾大 → 箭头（hover 右移变蓝）。
+- favicon：godot.png / blender.png（Google s2 服务 64px PNG）下载至 public/images/tools/ 本地化，避免运行时热链；favicon 加载失败自动回退品牌色字标。
+- 管理能力：条目持久化到 SiteSetting（tools:sites JSON 数组，未配置回退默认）；ToolsClient 提供 ＋ 追加（行内表单：名称/网址/分类/颜色/简介）与 ✎ 编辑模式（每行 编辑/删除），保存走 server action saveToolSites（requireAdmin + normalize 校验：非法 url/空名丢弃、iconUrl 缺省按域名自动取 Google favicon）。
+- getToolSites 读失败不再静默装作"未配置"，补错误日志（防止管理员刚保存的列表因瞬时读失败闪回默认）。
+- 验证：tsc 通过；vitest 127/127 + 集成测试（真实 DB 全流程）；生产构建通过；浏览器确认 favicon 大图渲染、＋表单→保存→落库→刷新上墙闭环（测试条目随后清理，库内恢复默认两条）。已知边界：本机 vitest 多 it 形态下"写后读"存在环境性不可见（探针实验确认单 it 形态稳定），集成测试收敛为单 it 全流程断言；IAB fetch 通道间歇劣化，部分 UI 流程靠 SSR/DB 直查交叉验证。
+
+## 2026-10-31（第十批）— 实用工具站导航页【本地完成，未推送】
+
+- 新增 /tools 静态单页（无数据库依赖）：条目维护在 src/lib/tools/tools.ts，首批收录 Godot（godotengine.org）与 Blender（blender.org）官网。
+- 行式布局（用户指定）：每站一行、居中窄栏（max-w-3xl）——左侧品牌色圆角字标（替代 favicon，工具站无本站内图标），右侧名字+分类胶囊+↗、简介、域名·官网徽标；整行可点，hover 边框阴影与标题变蓝、箭头右移；cardPopIn 入场动画；外链 target=_blank rel=noopener。
+- 页脚快速链接新增"实用工具跳转"（/tools），双语字典 footer.tools / page.tools.title / page.tools.description。
+- 验证：tsc 通过；vitest 127/127；生产构建通过（/tools 路由生成）；浏览器昼/夜截图 18、19，页脚入口与卡片外链结构确认。
+
 ## 2026-10-31（第九批）— A 类四项改进【本地完成，未推送】
 
 - A1 议程保存差异化落库：saveMeetingTalks 从事先整表删除重建改为按 id/关联申请匹配、字段级比对后只增删改差异行，无变化行零语句跳过；换关联时两阶段置空防撞唯一约束。此前整表换血会让成员打开的"修改我的议程"面板失效并静默覆盖他人修改。新增真实 DB 集成测试（初建→重排改写→增删，id 集合保持不变；空数组清空后可重建）。
