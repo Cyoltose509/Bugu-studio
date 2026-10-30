@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import MeetingTalksEditor, {
   type TalkDraft,
 } from "@/components/activities/meeting/MeetingTalksEditor";
+import AgendaTimeline, {
+  type AgendaTimelineItem,
+} from "@/components/activities/meeting/AgendaTimeline";
 import { AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import { promoteProposalToAgenda } from "@/app/admin/activities/actions";
 import { useLang } from "@/lib/i18n/LangProvider";
@@ -82,42 +85,72 @@ export default function AgendaManagePanel({
   isAdmin = false,
   canAddAgenda = false,
   addLabel,
+  addMode = "panel",
   addPanel,
+  timelineItems,
   title,
-  children,
 }: {
   activityId: string;
   initialTalks: TalkDraft[];
   unlistedProposals?: UnlistedProposal[];
   isAdmin?: boolean;
-  /** 报名/新增窗口开启时，所有角色都能看到 ＋；面板内容由 addPanel 按角色注入 */
+  /** 报名/新增窗口开启时，所有角色都能看到 ＋ */
   canAddAgenda?: boolean;
   addLabel?: string;
+  /**
+   * "form"：点 ＋ 先弹下拉选 分享/展示，选完在议程序列尾部追加填写卡；
+   * "panel"：点 ＋ 直接展开 addPanel（登录引导 / 已提交状态卡）。
+   */
+  addMode?: "form" | "panel";
   addPanel?: ReactNode;
+  /** 议程时间轴数据；缺省且无草稿时不渲染时间轴 */
+  timelineItems?: AgendaTimelineItem[];
   title: string;
-  children?: ReactNode;
 }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [draft, setDraft] = useState<"SHARE" | "SHOWCASE" | null>(null);
   const editorKey = initialTalks.map((tk) => tk.id || "").join(",");
   const manageLabel = open ? t("activityDetail.exitManage") : t("activityDetail.enterManage");
   const plusLabel = addLabel ?? t("meeting.addAgenda");
+
+  // 下拉菜单点外部关闭
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target instanceof Element)) return;
+      if (!e.target.closest("[data-add-menu]")) setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [menuOpen]);
+
+  function chooseDraftType(type: "SHARE" | "SHOWCASE") {
+    setDraft(type);
+    setMenuOpen(false);
+  }
+
+  const showTimeline = Boolean(timelineItems?.length || draft);
 
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-brand-navy">{title}</h2>
-        <span className="flex shrink-0 items-center gap-2">
+        <span className="relative flex shrink-0 items-center gap-2" data-add-menu>
           {canAddAgenda && (
             <button
               type="button"
-              onClick={() => setAddOpen((v) => !v)}
+              onClick={() => {
+                setAddOpen(false);
+                setMenuOpen((v) => !v);
+              }}
               title={plusLabel}
               aria-label={plusLabel}
-              aria-pressed={addOpen}
+              aria-expanded={menuOpen}
               className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors ${
-                addOpen ? "bg-brand-orange" : "bg-brand-blue hover:bg-brand-blue/90"
+                menuOpen || draft ? "bg-brand-orange" : "bg-brand-blue hover:bg-brand-blue/90"
               }`}
             >
               <PlusIcon />
@@ -126,7 +159,10 @@ export default function AgendaManagePanel({
           {isAdmin && (
             <button
               type="button"
-              onClick={() => setOpen((v) => !v)}
+              onClick={() => {
+                setMenuOpen(false);
+                setOpen((v) => !v);
+              }}
               title={manageLabel}
               aria-label={manageLabel}
               aria-pressed={open}
@@ -137,6 +173,33 @@ export default function AgendaManagePanel({
               <PencilIcon />
             </button>
           )}
+
+          {menuOpen && canAddAgenda && addMode === "form" ? (
+            <div
+              role="menu"
+              aria-label={plusLabel}
+              className="absolute right-0 top-full z-30 mt-1.5 w-40 rounded-xl border border-brand-border-subtle bg-card p-1 shadow-xl"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseDraftType("SHARE")}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-brand-text-heading transition-colors hover:bg-brand-surface"
+              >
+                <AgendaTypeTag type="SHARE" label={t("activityDetail.proposalShare")} />
+                <span className="min-w-0 flex-1 truncate">{t("activityDetail.proposalShare")}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => chooseDraftType("SHOWCASE")}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-brand-text-heading transition-colors hover:bg-brand-surface"
+              >
+                <AgendaTypeTag type="SHOWCASE" label={t("activityDetail.proposalShowcase")} />
+                <span className="min-w-0 flex-1 truncate">{t("activityDetail.proposalShowcase")}</span>
+              </button>
+            </div>
+          ) : null}
         </span>
       </div>
       {open && isAdmin && (
@@ -177,12 +240,20 @@ export default function AgendaManagePanel({
           />
         </div>
       )}
-      {addOpen && canAddAgenda && addPanel ? (
+      {addOpen && canAddAgenda && addMode === "panel" && addPanel ? (
         <div className="mb-3 rounded-xl border border-brand-border-subtle bg-card px-3.5 py-3">
           {addPanel}
         </div>
       ) : null}
-      {open ? null : children}
+      {open ? null : showTimeline ? (
+        <AgendaTimeline
+          items={timelineItems ?? []}
+          activityId={activityId}
+          isAdmin={isAdmin}
+          draft={draft}
+          onDraftDone={() => setDraft(null)}
+        />
+      ) : null}
     </section>
   );
 }

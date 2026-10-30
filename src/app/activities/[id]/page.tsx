@@ -11,7 +11,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { ProposalStatus } from "@prisma/client";
-import SubmitProposalForm from "@/components/activities/meeting/SubmitProposalForm";
 import { RichContent } from "@/components/ui/RichContent";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import ReviewProposalForm from "@/components/activities/meeting/ReviewProposalForm";
@@ -366,7 +365,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
       <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] xl:items-start">
           <div className="min-w-0">{mainColumn}</div>
-          <aside className="min-w-0 xl:sticky xl:top-24">
+          <aside className="min-w-0 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1 [scrollbar-width:thin]">
             {talkColumn}
           </aside>
         </div>
@@ -460,10 +459,11 @@ async function ActivityTalkSection({
           isAdmin={isAdmin}
           canAddAgenda={addWindowOpen}
           addLabel={isAdmin ? t(lang, "meeting.addAgenda") : t(lang, "activityDetail.signUpShare")}
+          // 管理员与未报名的登录用户：＋ 走下拉选类型 → 尾部填写卡；
+          // 已提交过的用户与访客：＋ 直接展开状态卡 / 登录引导
+          addMode={isAdmin || (session?.user && !userProposal) ? "form" : "panel"}
           addPanel={
-            isAdmin ? (
-              <SubmitProposalForm activityId={activity.id} isAdmin />
-            ) : userProposal ? (
+            userProposal ? (
               // 已提交过申请：展示审核状态，而不是再次报名的表单
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
@@ -490,8 +490,6 @@ async function ActivityTalkSection({
                   <p className="text-xs text-red-600 dark:text-red-400">{t(lang, "activityDetail.adminNote", { note: userProposal.adminNote })}</p>
                 )}
               </div>
-            ) : session?.user ? (
-              <SubmitProposalForm activityId={activity.id} />
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.signUpShare")}</h3>
@@ -531,60 +529,59 @@ async function ActivityTalkSection({
               image: speaker.user?.image || null,
             })),
           }))}
-        >
-          {hasAgendaItems ? (
-          <AgendaTimeline
-            items={[
-              ...talks.map((talk: any) => {
-                const speakers = (talk.speakers?.length
-                  ? talk.speakers.map((speaker: any) => speakerMeta({ ...speaker, speaker: speaker.name }, lang, true))
-                  : [speakerMeta(talk, lang, true)]);
-                const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
-                return {
-                  key: talk.id,
-                  type,
-                  typeLabel: agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase")),
-                  title: talk.title,
-                  description: talk.description || "",
-                  imageUrl: talk.imageUrl || "",
-                  bvId: talk.bvId || "",
-                  speakers: speakers.map((speaker: any, index: number) => ({
-                    ...speaker,
-                    byLabel: index === 0 ? t(lang, "meeting.by") : "&",
-                  })),
-                  ...(canEditTalk(talk)
-                    ? {
-                        ownEdit: {
-                          id: talk.id,
-                          title: talk.title,
-                          description: talk.description || "",
-                          imageUrl: talk.imageUrl || "",
-                          talkType: type,
-                          bvId: talk.bvId || "",
-                        },
-                      }
-                    : {}),
-                };
-              }),
-              ...approvedProposals.map((p: any) => {
-                const speaker = speakerMeta(p, lang);
-                const type = p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
-                return {
-                  key: p.id,
-                  type,
-                  typeLabel: agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase")),
-                  title: p.title,
-                  description: p.description || "",
-                  imageUrl: p.imageUrl || "",
-                  bvId: "",
-                  speakers: [{ ...speaker, byLabel: t(lang, "meeting.by") }],
-                  ...(isAdmin ? { deletableProposalId: p.id } : {}),
-                };
-              }),
-            ]}
-          />
-          ) : null}
-        </AgendaManagePanel>
+          timelineItems={
+            hasAgendaItems
+              ? ([
+                  ...talks.map((talk: any) => {
+                    const speakers = (talk.speakers?.length
+                      ? talk.speakers.map((speaker: any) => speakerMeta({ ...speaker, speaker: speaker.name }, lang, true))
+                      : [speakerMeta(talk, lang, true)]);
+                    const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+                    return {
+                      key: talk.id,
+                      type,
+                      typeLabel: agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase")),
+                      title: talk.title,
+                      description: talk.description || "",
+                      imageUrl: talk.imageUrl || "",
+                      bvId: talk.bvId || "",
+                      speakers: speakers.map((speaker: any, index: number) => ({
+                        ...speaker,
+                        byLabel: index === 0 ? t(lang, "meeting.by") : "&",
+                      })),
+                      ...(canEditTalk(talk)
+                        ? {
+                            ownEdit: {
+                              id: talk.id,
+                              title: talk.title,
+                              description: talk.description || "",
+                              imageUrl: talk.imageUrl || "",
+                              talkType: type,
+                              bvId: talk.bvId || "",
+                            },
+                          }
+                        : {}),
+                    };
+                  }),
+                  ...approvedProposals.map((p: any) => {
+                    const speaker = speakerMeta(p, lang);
+                    const type = p.proposalType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+                    return {
+                      key: p.id,
+                      type,
+                      typeLabel: agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase")),
+                      title: p.title,
+                      description: p.description || "",
+                      imageUrl: p.imageUrl || "",
+                      bvId: "",
+                      speakers: [{ ...speaker, byLabel: t(lang, "meeting.by") }],
+                      ...(isAdmin ? { deletableProposalId: p.id } : {}),
+                    };
+                  }),
+                ] as AgendaTimelineItem[])
+              : undefined
+          }
+        />
       )}
     </div>
   );

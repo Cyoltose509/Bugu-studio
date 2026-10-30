@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AgendaSpeaker, AgendaTypeTag } from "@/components/activities/meeting/AgendaRow";
 import BilibiliTvLink from "@/components/activities/meeting/BilibiliTvLink";
 import DeleteProposalButton from "@/components/activities/meeting/DeleteProposalButton";
 import OwnTalkEditor, { type OwnTalkDraft } from "@/components/activities/meeting/OwnTalkEditor";
+import SubmitProposalForm from "@/components/activities/meeting/SubmitProposalForm";
 import { useLang } from "@/lib/i18n/LangProvider";
 
 export type AgendaTimelineItem = {
@@ -27,12 +28,28 @@ export type AgendaTimelineItem = {
  * - 详情与配图默认收起：带图卡片收起时配图保持 50% 宽，hover/键盘聚焦展开
  * - 单击卡片「钉住」展开态，再次单击取消；触屏设备靠它替代 hover
  * - 单击配图打开灯箱单独放大查看
+ * - draft 非空时在议程序列末尾追加一张填写卡（＋下拉选完类型后出现）
  * 铺开用 grid-template-rows 0fr→1fr 过渡，高度始终自适应内容，不会截断长文。
  */
-export default function AgendaTimeline({ items }: { items: AgendaTimelineItem[] }) {
+export default function AgendaTimeline({
+  items,
+  activityId,
+  isAdmin = false,
+  draft = null,
+  onDraftDone,
+}: {
+  items: AgendaTimelineItem[];
+  /** 尾部填写卡所需；draft 为空时可缺省 */
+  activityId?: string;
+  isAdmin?: boolean;
+  /** ＋ 下拉选中的类型；非空即在序列尾部挂填写卡 */
+  draft?: "SHARE" | "SHOWCASE" | null;
+  onDraftDone?: () => void;
+}) {
   const { t } = useLang();
   const [pinned, setPinned] = useState<Set<string>>(new Set());
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const draftRef = useRef<HTMLLIElement>(null);
 
   const closeLightbox = useCallback(() => setLightbox(null), []);
 
@@ -48,6 +65,11 @@ export default function AgendaTimeline({ items }: { items: AgendaTimelineItem[] 
       document.body.style.overflow = "";
     };
   }, [lightbox, closeLightbox]);
+
+  // 草稿卡出现时滚动到可视区，避免用户在长列表里找不到
+  useEffect(() => {
+    if (draft) draftRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [draft]);
 
   function togglePin(key: string) {
     setPinned((prev) => {
@@ -143,6 +165,22 @@ export default function AgendaTimeline({ items }: { items: AgendaTimelineItem[] 
             </li>
           );
         })}
+
+        {draft ? (
+          <li ref={draftRef} className="relative pb-1 pl-6">
+            <span
+              aria-hidden
+              className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ring-2 ring-card ${draft === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+            />
+            <SubmitProposalForm
+              activityId={activityId ?? ""}
+              isAdmin={isAdmin}
+              initialType={draft}
+              onDone={onDraftDone}
+              onCancel={onDraftDone}
+            />
+          </li>
+        ) : null}
       </ol>
 
       {lightbox ? (
