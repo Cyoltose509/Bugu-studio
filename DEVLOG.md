@@ -4,6 +4,14 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-10-31（第二批）— 议程视觉微调 + 封面议程配图选取
+
+- 时间轴去掉外框卡片（原 border+bg-card 衬底观感突兀），轨道与节点几何随内边距调整重对齐；议程侧栏加宽（xl: 18–22rem → 20–26rem）。
+- 封面编辑支持直接选用议程配图：CoverUploadInput 新增 presetImages 缩略图选择条，点击即写入 coverImage 表单值（不再重复上传）；EditActivityForm 从当前议程 talks 提取去重后的 imageUrl 列表传入。刚在议程里新传的图需保存后刷新编辑页才会出现在选择条。
+- 暗色模式状态标签优化：活动详情页与后台活动列表的 已发布/草稿/归档/进行中/即将开始/已结束 徽章补 dark: 半透明色底 + 亮色文字，替代刺眼的浅色 100 底。
+- 清理过程产物：项目根 tmp/、.tmp/、.tmp-check-col.js、.tmp-share-check.js（历史调试脚本、截图、日志）；样式选样 HTML 页同步移除（方案已实装）。
+- 验证：tsc 通过；vitest unit+ui 127/127；生产构建通过；浏览器实测暗色模式详情页、编辑页配图选择条点击后表单值与预览同步（未保存生产数据）。临时账号已删除。
+
 ## 2026-10-31 — 议程保存崩溃修复 + 议程区改版
 
 - 根因修复（错误报告 #67 等 RSC render 报错）：`saveMeetingTalks` 事务逐条 create 在慢链路下超过 Prisma 默认 5s 事务超时，报 P2028 后 server action 500、前端整页进入错误边界、编辑内容全丢。事务改写为 deleteMany + createManyAndReturn + createMany 三条语句，超时放宽到 20s，与 submitProposal / reviewProposal 对齐；deleteProposal 事务同样补 20s。编辑器保存失败改为行内提示，不再冒泡到路由错误边界。
