@@ -99,10 +99,13 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   const [results, setResults] = useState<UserHit[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [bvOpen, setBvOpen] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
   const [uploadingImage, setUploadingImage] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState("");
-  const dragFrom = useRef<number | null>(null);
+  // 指针拖拽排序：不依赖 HTML5 原生 DnD（真实浏览器中 dragstart 不可靠），
+  // 按住拖拽柄后用 mousemove 实时换位，mouseup 落定
+  const dragIndexRef = useRef<number | null>(null);
+  const rowRefs = useRef<Array<HTMLDivElement | null>>([]);
   const searchBoxRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -110,18 +113,42 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
     setTalks((prev) => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   }
 
-  function moveTo(from: number, to: number) {
-    if (from === to || from < 0 || to < 0) return;
-    setTalks((prev) => {
-      if (from >= prev.length || to >= prev.length) return prev;
-      const next = [...prev];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next;
-    });
+  function beginDrag(e: React.MouseEvent, index: number) {
+    e.preventDefault();
+    dragIndexRef.current = index;
+    setDragging(index);
     setBvOpen(null);
     setShowDropdown(false);
     setActiveSearch(null);
+
+    const onMove = (ev: MouseEvent) => {
+      const from = dragIndexRef.current;
+      if (from == null) return;
+      for (let i = 0; i < rowRefs.current.length; i++) {
+        const el = rowRefs.current[i];
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        if (ev.clientY < r.top || ev.clientY > r.bottom) continue;
+        if (i === from) return;
+        setTalks((prev) => {
+          if (from >= prev.length || i >= prev.length) return prev;
+          const next = [...prev];
+          const [item] = next.splice(from, 1);
+          next.splice(i, 0, item);
+          return next;
+        });
+        dragIndexRef.current = i;
+        return;
+      }
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      dragIndexRef.current = null;
+      setDragging(null);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   }
 
   const searchUsers = useCallback(async (q: string) => {
@@ -283,7 +310,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   const field =
     "w-full rounded-lg border px-3 py-2 text-sm border-brand-border-subtle text-brand-text-heading bg-card placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/40";
 
-  const rowListClass = "space-y-2";
+  const rowListClass = "relative pl-1.5";
 
   const body = (
     <>
@@ -295,50 +322,33 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
       ) : null}
 
       <div className={rowListClass} ref={searchBoxRef}>
+        {/* 时间轴轨道：与阅读态一致，节点颜色随类型切换 */}
+        <span aria-hidden className="absolute bottom-2 left-[6px] top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
         {talks.map((talk, i) => {
           const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
           const parsedBv = parseBvId(talk.bvId);
           const hasBv = !!parsedBv;
-          const draggingOver = dragOver === i;
 
           return (
             <div
               key={talk.clientKey}
-              onDragOver={(e) => {
-                if (dragFrom.current == null) return;
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-                if (dragOver !== i) setDragOver(i);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const from = dragFrom.current;
-                dragFrom.current = null;
-                setDragOver(null);
-                if (from == null) return;
-                moveTo(from, i);
-              }}
-              onDragEnd={() => {
-                dragFrom.current = null;
-                setDragOver(null);
-              }}
-              className={`relative grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-brand-border-subtle bg-card p-3 shadow-sm transition-colors ${
-                draggingOver ? "border-brand-blue/50 bg-brand-blue/10" : "hover:border-brand-blue/30"
+              ref={(el) => { rowRefs.current[i] = el; }}
+              className={`relative pl-6 pb-4 transition-colors rounded-lg select-none ${
+                dragging === i ? "bg-brand-blue/5" : ""
               }`}
             >
+              <span
+                aria-hidden
+                className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                draggable
-                onDragStart={(e) => {
-                  dragFrom.current = i;
-                  e.dataTransfer.effectAllowed = "move";
-                  e.dataTransfer.setData("text/plain", String(i));
-                  setBvOpen(null);
-                  setShowDropdown(false);
-                }}
+                onMouseDown={(e) => beginDrag(e, i)}
                 title={t(lang, "meetingTalks.dragHandle")}
                 aria-label={t(lang, "meetingTalks.dragHandle")}
-                className="shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-md text-brand-text-muted hover:text-brand-text-heading cursor-grab active:cursor-grabbing"
+                className={`shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-md text-brand-text-muted hover:text-brand-text-heading cursor-grab active:cursor-grabbing ${dragging === i ? "cursor-grabbing text-brand-text-heading" : ""}`}
               >
                 <GripIcon />
               </button>
@@ -357,7 +367,15 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                   : t(lang, "activityDetail.proposalShare")}
               </button>
 
-              <div className="relative col-start-4 mr-8 shrink-0">
+              <input
+                value={talk.title}
+                onChange={(e) => update(i, { title: e.target.value })}
+                aria-label={t(lang, "meetingTalks.topicPlaceholder")}
+                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
+                className="min-w-0 flex-1 rounded-md border-0 bg-transparent px-1 py-0.5 text-sm font-medium leading-6 text-brand-navy placeholder:font-normal placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+              />
+
+              <div className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setBvOpen(bvOpen === i ? null : i)}
@@ -388,7 +406,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                         value={talk.bvId}
                         onChange={(e) => update(i, { bvId: e.target.value })}
                         placeholder={t(lang, "meetingTalks.bvPlaceholder")}
-                        className={field}
+                        className={`${field} ${talk.bvId && !hasBv ? "border-red-400 focus:ring-red-400/30" : ""}`}
                       />
                       {hasBv && (
                         <a
@@ -424,22 +442,15 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                     prev.length <= 1 ? [emptyTalk()] : prev.filter((_, idx) => idx !== i),
                   )
                 }
-                className="absolute right-3 top-3 w-8 h-8 inline-flex items-center justify-center rounded-lg text-xl font-medium text-brand-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                className="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-lg text-xl font-medium text-brand-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
                 aria-label={t(lang, "meetingTalks.remove")}
                 title={t(lang, "meetingTalks.remove")}
               >
                 ×
               </button>
+            </div>
 
-              <input
-                value={talk.title}
-                onChange={(e) => update(i, { title: e.target.value })}
-                aria-label={t(lang, "meetingTalks.topicPlaceholder")}
-                placeholder={t(lang, "meetingTalks.topicPlaceholder")}
-                className="col-span-4 block w-full min-w-0 rounded-md border-0 bg-transparent px-0 py-0.5 text-base font-semibold leading-6 text-brand-text-heading placeholder:font-normal placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-              />
-
-              <div className="relative col-span-4 flex flex-wrap items-center gap-2 border-t border-brand-border-subtle pt-2">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <span className="mr-1 text-xs font-medium text-brand-text-muted">{t(lang, "meetingTalks.speakers")}</span>
                 {(talk.speakers || []).map((speaker, speakerIndex) => (
                   <span key={`${speaker.userId || speaker.name}-${speakerIndex}`} className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-xs ${speaker.userId ? "bg-brand-blue/10 text-brand-blue" : "bg-brand-orange/10 text-brand-orange"}`}>
@@ -524,14 +535,18 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 )}
               </div>
 
-              <div className="col-span-4 min-w-0 space-y-1.5 border-t border-brand-border-subtle pt-2">
+              <div className="mt-1.5 min-w-0 space-y-1.5">
                 <textarea
-                  rows={1}
                   value={talk.description || ""}
                   onChange={(event) => update(i, { description: event.target.value })}
                   placeholder={t(lang, "meetingTalks.descriptionPlaceholder")}
                   aria-label={t(lang, "meetingTalks.descriptionPlaceholder")}
-                  className="block h-8 w-full min-w-0 resize-none rounded-md border-0 bg-transparent px-0 py-1 text-sm leading-6 text-brand-text-secondary placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  ref={(el) => {
+                    if (!el) return;
+                    el.style.height = "auto";
+                    el.style.height = `${el.scrollHeight}px`;
+                  }}
+                  className="block min-h-8 w-full min-w-0 resize-none overflow-hidden rounded-md border-0 bg-transparent px-0 py-1 text-sm leading-6 text-brand-text-secondary placeholder:text-brand-text-muted focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
                 />
                 <ImageDropZone
                   className={talk.imageUrl ? "w-full max-w-xs" : "w-fit max-w-full"}

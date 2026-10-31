@@ -29,7 +29,14 @@ export async function generateMetadata(): Promise<Metadata> {
         title: {template: t(lang, "meta.titleTemplate"), default: t(lang, "meta.titleDefault")},
         description: t(lang, "meta.description"),
         keywords: t(lang, "meta.keywords").split(","),
-        icons: {icon: "/images/logo.png", apple: "/images/logo.png", shortcut: "/images/logo.png"},
+        icons: {
+            icon: [
+                { url: "/images/favicon-32.png", sizes: "32x32", type: "image/png" },
+                { url: "/images/favicon-192.png", sizes: "192x192", type: "image/png" },
+            ],
+            apple: "/images/apple-touch-icon.png",
+            shortcut: "/images/favicon-32.png",
+        },
         openGraph: {
             type: "website",
             locale: lang === "en" ? "en_US" : "zh_CN",

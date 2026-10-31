@@ -361,7 +361,12 @@ export default function EditActivityForm({
         <Link href={`/admin/activities/${activity.id}/program`} className="mt-3 inline-flex rounded-lg bg-brand-blue px-4 py-2 text-sm font-medium text-white">编辑课程编排 →</Link>
       </div>}
 
-      {type !== "ENGINE_COURSE" && <MeetingTalksEditor activityId={activity.id} initialTalks={talks} embedded />}
+      {type !== "ENGINE_COURSE" && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-brand-navy">安排议程</h2>
+          <MeetingTalksEditor activityId={activity.id} initialTalks={talks} embedded framed={false} />
+        </div>
+      )}
 
       {type === "GENERAL" && (
         <ShowcaseEditor activityId={activity.id} initial={showcase} projects={projects} />

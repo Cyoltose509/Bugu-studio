@@ -32,6 +32,7 @@ export function Footer({ lang = "cn" }: { lang?: Lang }) {
                                     <li><Link href="/members" className="hover:text-[#3388BB] transition-colors">{t(lang, "footer.membersList")}</Link></li>
                                     <li><Link href="/activities" className="hover:text-[#3388BB] transition-colors">{t(lang, "footer.clubActivities")}</Link></li>
                                     <li><Link href="/history" className="hover:text-[#3388BB] transition-colors">{t(lang, "footer.clubHistory")}</Link></li>
+                                    <li><Link href="/tools" className="hover:text-[#3388BB] transition-colors">{t(lang, "footer.tools")}</Link></li>
                                 </ul>
                             </div>
                             <div>
