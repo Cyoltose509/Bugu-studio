@@ -96,9 +96,21 @@ function ToolRowEditor({
   );
   const valid = draft.name.trim() && /^https?:\/\/.+\..+/.test(draft.url.trim());
 
+  /** 输入网址即联动获取该域名 favicon（与保存时的服务端补全逻辑一致） */
+  function onUrlChange(url: string) {
+    let iconUrl = draft.iconUrl;
+    const trimmed = url.trim();
+    if (/^https?:\/\/.+\..+/.test(trimmed)) {
+      try {
+        iconUrl = `https://www.google.com/s2/favicons?domain=${new URL(trimmed).hostname}&sz=64`;
+      } catch { /* 保持原值 */ }
+    }
+    setDraft({ ...draft, url, iconUrl });
+  }
+
   return (
     <div className="flex items-stretch border-b border-brand-border-subtle">
-      <IconBlock tool={{ ...draft, letter: (draft.name.trim()[0] || "?").toUpperCase() }} />
+      <IconBlock key={draft.iconUrl} tool={{ ...draft, letter: (draft.name.trim()[0] || "?").toUpperCase() }} />
       <div className="flex-1 space-y-2 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <input
@@ -127,7 +139,7 @@ function ToolRowEditor({
         </div>
         <input
           value={draft.url}
-          onChange={(e) => setDraft({ ...draft, url: e.target.value })}
+          onChange={(e) => onUrlChange(e.target.value)}
           placeholder={t("tools.form.url")}
           aria-label={t("tools.form.url")}
           className={`${inputCls} ${draft.url && !/^https?:\/\/.+\..+/.test(draft.url.trim()) ? "border-red-400" : ""}`}
