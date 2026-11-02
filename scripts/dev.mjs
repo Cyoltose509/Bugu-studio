@@ -94,8 +94,22 @@ if (realDir) {
 }
 logBoot(`nodeBin=${nodeBin} useTurbo=${useTurbo} spawnOk=${spawnOk} realDir=${realDir}`);
 
+/**
+ * 宿主预览通道会传 `--host <值>`，而 Next CLI 只认 `--hostname`（不认 --host，
+ * 会直接 "unknown option '--host'" 退出码 1 秒退）。这里把两种写法都翻译成
+ * Next 的参数名；其余参数（如 --port）原样透传。
+ */
+function translateArgs(argv) {
+  return argv.map((a) => {
+    if (a === "--host") return "--hostname";
+    if (a.startsWith("--host=")) return "--hostname=" + a.slice("--host=".length);
+    return a;
+  });
+}
+
 const nextBin = path.join(root, "node_modules", "next", "dist", "bin", "next");
-const args = [nextBin, "dev", ...(useTurbo ? ["--turbo"] : []), ...process.argv.slice(2)];
+const args = [nextBin, "dev", ...(useTurbo ? ["--turbo"] : []), ...translateArgs(process.argv.slice(2))];
+logBoot(`next args=${JSON.stringify(args.slice(2))}`);
 const child = spawn(nodeBin, args, { stdio: "inherit", env: process.env });
 
 child.on("error", (err) => {

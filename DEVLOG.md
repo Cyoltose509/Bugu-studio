@@ -4,6 +4,13 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-02 — 预览通道失败根因坐实：--host 参数不兼容【已推送】
+
+- .dev-boot.log 一次命中真凶：预览 spawner 传 `--host localhost --port 7101`，而 Next.js CLI 只认 `--hostname`——`error: unknown option '--host'` 退出码 1 秒退（stderr 54 字节与该报错长度精确吻合，旧记录的 83B/54B 之谜就此闭环）。
+- 修复：dev.mjs 新增 translateArgs，把 `--host X` / `--host=X` 翻译为 `--hostname`，其余参数（--port 等）原样透传。
+- 验证：用预览原始参数走 Kimi 垫片全链路（Kimi.exe→npm-cli→cmd→node.cmd→runner→dev.mjs→next），HTTP 200（约 2 秒就绪）；boot log 确认翻译后 args=["--turbo","--hostname","localhost","--port","7101"]。测试服务器已清理，7101 端口已释放。
+- 结论修正：此前怀疑的"Kimi.exe 作为子进程秒退"不是主因（该路径本身可用），真正死因自始至终是参数名不兼容。
+
 ## 2026-11-02 — Kimi 预览通道"网站启动失败"排查与 dev.mjs 加固【已推送】
 
 - 用户报告：点预览报"网站启动失败，请检查项目和端口占用情况"。排查确认端口无占用（7100/3000 均空闲，无残留 dev 进程），非端口问题。
