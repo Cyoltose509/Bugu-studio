@@ -7,9 +7,14 @@
  *   "Failed to write app endpoint … spawning node pooled process … program not found"
  *
  * 策略：
- * 1) 在 PATH 与常见安装位置中找真实 node 可执行文件，找到则把其目录前置到 PATH（保持 --turbo）。
+ * 1) 在 PATH 与常见安装位置中找真实 node 可执行文件；找到则把其目录前置到 PATH，
+ *    并用该真实 node 二进制启动 next（不能用 process.execPath —— 宿主通道下它可能
+ *    是 Kimi.exe 等 Electron 宿主，作为子进程直起的可靠性无法保证）。
  * 2) 找不到则回退 webpack 模式（next dev，PostCSS 在进程内执行，无需 spawn 工作进程）。
  * CLI 参数（如 -p 端口）原样透传给 next。
+ *
+ * 排障：每次启动把关键上下文追加写入 <项目根>/.dev-boot.log（时间、execPath、
+ * PATH 开头、选用的 node、子进程退出码），用于诊断宿主预览通道的启动失败。
  */
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -17,6 +22,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const bootLog = path.join(root, ".dev-boot.log");
+
+function logBoot(msg) {
+  try {
+    fs.appendFileSync(bootLog, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch {
+    /* 日志失败不影响启动 */
+  }
+}
+
+const exe = process.platform === "win32" ? "node.exe" : "node";
 
 /** PATH 中是否能直接 spawn node */
 function nodeSpawnWorks() {
@@ -24,9 +40,8 @@ function nodeSpawnWorks() {
   return !r.error;
 }
 
-/** 在常见位置找真实 node 可执行文件，返回其所在目录 */
+/** 在 PATH 与常见安装位置找真实 node 可执行文件，返回其所在目录 */
 function findRealNodeDir() {
-  const exe = process.platform === "win32" ? "node.exe" : "node";
   const dirs = [];
   for (const dir of (process.env.PATH ?? "").split(path.delimiter)) {
     if (dir) dirs.push(dir);
@@ -46,8 +61,7 @@ function findRealNodeDir() {
   }
   for (const dir of dirs) {
     try {
-      const p = path.join(dir, exe);
-      fs.accessSync(p, fs.constants.X_OK);
+      fs.accessSync(path.join(dir, exe), fs.constants.X_OK);
       return dir;
     } catch {
       /* 继续找 */
@@ -56,23 +70,42 @@ function findRealNodeDir() {
   return null;
 }
 
+logBoot(
+  `boot execPath=${process.execPath} argv=${JSON.stringify(process.argv.slice(2))} ` +
+    `PATH头=${(process.env.PATH ?? "").split(path.delimiter).slice(0, 3).join(" | ")}`,
+);
+
 let useTurbo = true;
-if (!nodeSpawnWorks()) {
-  const dir = findRealNodeDir();
-  if (dir) {
-    process.env.PATH = dir + path.delimiter + (process.env.PATH ?? "");
-    console.log(`[dev] PATH 中找不到可用的 node，已前置真实 node 目录：${dir}`);
-  } else {
-    useTurbo = false;
-    console.warn("[dev] 未找到真实 node 可执行文件，回退 webpack 模式启动（略慢，但无需 PostCSS 工作进程）");
-  }
+let nodeBin;
+const spawnOk = nodeSpawnWorks();
+const realDir = findRealNodeDir();
+if (realDir) {
+  // 前置真实 node 目录（供 Turbopack 工作进程池 spawn("node")），并用真实二进制起 next
+  process.env.PATH = realDir + path.delimiter + (process.env.PATH ?? "");
+  nodeBin = path.join(realDir, exe);
+  if (!spawnOk) console.log(`[dev] PATH 中找不到可用的 node，已前置真实 node 目录：${realDir}`);
+} else if (spawnOk) {
+  // PATH 里的 node 可 spawn 但不是常规文件布局（罕见），直接用
+  nodeBin = "node";
+} else {
+  useTurbo = false;
+  nodeBin = process.execPath; // 最后手段：至少当前进程能跑 JS
+  console.warn("[dev] 未找到真实 node 可执行文件，回退 webpack 模式启动（略慢，但无需 PostCSS 工作进程）");
 }
+logBoot(`nodeBin=${nodeBin} useTurbo=${useTurbo} spawnOk=${spawnOk} realDir=${realDir}`);
 
 const nextBin = path.join(root, "node_modules", "next", "dist", "bin", "next");
 const args = [nextBin, "dev", ...(useTurbo ? ["--turbo"] : []), ...process.argv.slice(2)];
-const child = spawn(process.execPath, args, { stdio: "inherit", env: process.env });
+const child = spawn(nodeBin, args, { stdio: "inherit", env: process.env });
+
+child.on("error", (err) => {
+  logBoot(`child spawn error: ${String(err)}`);
+  console.error(`[dev] 启动 next 失败：${err.message}`);
+  process.exit(1);
+});
 
 child.on("exit", (code, signal) => {
+  logBoot(`child exit code=${code} signal=${signal}`);
   if (signal) {
     process.kill(process.pid, signal);
   } else {
