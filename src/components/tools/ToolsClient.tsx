@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveToolsData } from "@/app/tools/actions";
 import { faviconFor, type ToolSection, type ToolSite, type ToolsData } from "@/lib/tools/shared";
@@ -29,40 +29,59 @@ function PencilIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-/** 图标块：favicon / 上传图像优先（撑满行高），加载失败回退品牌色字标 */
-function IconBlock({ tool }: { tool: Pick<ToolSite, "iconUrl" | "color" | "letter" | "name"> }) {
-  const [failed, setFailed] = useState(false);
-  const showImg = tool.iconUrl && !failed;
+/** 图标块：favicon / 上传图像优先（撑满行高），失败链式回退，字标常驻兜底。
+ *  抓取链：iconUrl → 目标站 /favicon.ico → 品牌色字标。
+ *  分层渲染（字标垫底、图标加载成功才覆盖）：Google s2 在部分网络下水合前就
+ *  加载失败，React 的 onError 接不住——字标垫底可保证任何时刻都不出现破图。 */
+function IconBlock({ tool }: { tool: Pick<ToolSite, "url" | "iconUrl" | "color" | "letter" | "name"> }) {
+  const candidates: string[] = [];
+  if (tool.iconUrl) candidates.push(tool.iconUrl);
+  try {
+    const direct = `https://${new URL(tool.url).hostname}/favicon.ico`;
+    if (!candidates.includes(direct)) candidates.push(direct);
+  } catch { /* 非法 url 时不追加候选 */ }
+  const [idx, setIdx] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  // 水合后再挂 img：水合前的加载失败 React onError 接不住，会出现破图残留
+  useEffect(() => setMounted(true), []);
+  const showImg = mounted && idx < candidates.length;
   return (
     <span
       aria-hidden
-      className="flex w-16 shrink-0 items-center justify-center select-none"
-      style={
-        showImg
-          ? undefined
-          : {
-              background: `linear-gradient(160deg, ${tool.color} 0%, ${tool.color}BB 100%)`,
-              textShadow: "0 2px 8px rgba(0,0,0,0.3)",
-              color: "#fff",
-              fontSize: "1.5rem",
-              fontWeight: 700,
-            }
-      }
+      className="relative flex w-16 shrink-0 items-center justify-center overflow-hidden select-none"
+      style={{
+        background: `linear-gradient(160deg, ${tool.color} 0%, ${tool.color}BB 100%)`,
+      }}
     >
-      {showImg ? (
+      <span
+        className="text-2xl font-bold text-white"
+        style={{ textShadow: "0 2px 8px rgba(0,0,0,0.3)", visibility: loaded ? "hidden" : "visible" }}
+      >
+        {tool.letter}
+      </span>
+      {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={tool.iconUrl}
+          key={candidates[idx]}
+          src={candidates[idx]}
           alt=""
           width={44}
           height={44}
-          onError={() => setFailed(true)}
-          className="h-11 w-11 rounded-lg object-contain drop-shadow-sm"
+          onError={() => {
+            setLoaded(false);
+            setIdx((i) => i + 1);
+          }}
+          onLoad={(e) => {
+            // 极小的占位图（s2 对无 favicon 站点返回 1×1）视为失败
+            const img = e.currentTarget;
+            if (img.naturalWidth <= 2) setIdx((i) => i + 1);
+            else setLoaded(true);
+          }}
+          className="absolute inset-0 h-full w-full bg-card object-contain p-2.5"
           referrerPolicy="no-referrer"
           draggable={false}
         />
-      ) : (
-        tool.letter
       )}
     </span>
   );
@@ -468,16 +487,16 @@ export default function ToolsClient({ initialData, isAdmin }: { initialData: Too
                         <IconBlock tool={tool} />
                         <span className="flex min-w-0 flex-1 items-center gap-4 px-4 py-3.5">
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-2">
-                              <span className="truncate text-sm font-semibold text-brand-text-heading transition-colors group-hover/row:text-[#3388BB]">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="min-w-0 truncate text-sm font-semibold text-brand-text-heading transition-colors group-hover/row:text-[#3388BB]">
                                 {tool.name}
                               </span>
-                              <span className="shrink-0 text-[11px] text-brand-text-muted">
+                              <span className="min-w-0 truncate text-[11px] text-brand-text-muted">
                                 {tool.url.replace(/^https?:\/\//, "")}
                               </span>
                             </span>
                             {tool.description && (
-                              <span className="mt-0.5 block text-xs leading-5 text-brand-text-secondary">
+                              <span className="mt-0.5 block text-xs leading-5 text-brand-text-secondary break-words">
                                 {tool.description}
                               </span>
                             )}
