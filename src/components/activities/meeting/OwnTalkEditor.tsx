@@ -179,6 +179,7 @@ export default function OwnTalkEditor({ talk }: { talk: OwnTalkDraft }) {
         disabled={uploading}
         onInvalid={setUploadError}
         onFile={(file) => void handleImage(file)}
+        globalPaste
       >
         {imageUrl ? (
           <div className="group/image relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">

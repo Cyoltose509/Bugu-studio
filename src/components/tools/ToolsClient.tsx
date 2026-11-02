@@ -288,17 +288,20 @@ export default function ToolsClient({ initialData, isAdmin }: { initialData: Too
   const manageLabel = manageOpen ? t("tools.manageExit") : t("tools.manage");
 
   function persist(next: ToolsData) {
+    const previous = data;
     setData(next);
     setError("");
     startTransition(async () => {
       try {
         const result = await saveToolsData(next);
         if (result?.error) {
+          setData(previous); // 保存失败回滚本地乐观状态，避免界面与库不一致
           setError(result.error);
           return;
         }
         router.refresh();
       } catch {
+        setData(previous);
         setError(t("tools.errSave"));
       }
     });

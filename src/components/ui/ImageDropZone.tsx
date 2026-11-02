@@ -12,6 +12,22 @@ interface UseImageDropOptions {
   disabled?: boolean;
   /** 是否顺手拦住"拖到页面空白处导致浏览器直接打开图片"的默认行为 */
   guardDocument?: boolean;
+  /** 文档级粘贴接管：页面任意处 Ctrl+V 图片都进这个区域（仅单上传区场景使用；
+   *  多区域同开时先挂载者先得，靠 preventDefault 去重）。默认仅区域内粘贴。 */
+  globalPaste?: boolean;
+}
+
+/** 从剪贴板事件里取第一张图片文件 */
+function imageFromClipboard(e: ClipboardEvent | React.ClipboardEvent): File | null {
+  const items = e.clipboardData?.items;
+  if (!items) return null;
+  for (const item of items) {
+    if (item.kind === "file" && item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      if (file) return file;
+    }
+  }
+  return null;
 }
 
 /**
@@ -25,14 +41,18 @@ export function useImageDrop({
   onInvalid,
   disabled = false,
   guardDocument = true,
+  globalPaste = false,
 }: UseImageDropOptions) {
   const [dragging, setDragging] = useState(false);
   const depth = useRef(0);
+  const zoneRef = useRef<HTMLDivElement | null>(null);
 
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
   const onInvalidRef = useRef(onInvalid);
   onInvalidRef.current = onInvalid;
+  const onFileRef = useRef(onFile);
+  onFileRef.current = onFile;
 
   // 拖到页面空白处时，浏览器默认会用图片替换当前页面 —— 表单内容就丢了
   useEffect(() => {
@@ -49,6 +69,33 @@ export function useImageDrop({
       document.removeEventListener("drop", prevent);
     };
   }, [guardDocument]);
+
+  // 粘贴：globalPaste 时接管整页粘贴；否则仅在区域（含其内获得焦点的子元素）内生效
+  useEffect(() => {
+    if (disabled) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      // 先挂载的 globalPaste 区域已处理 → 跳过
+      if (e.defaultPrevented) return;
+      const file = imageFromClipboard(e);
+      if (!file) return; // 纯文本粘贴不碰
+      if (!globalPaste) {
+        const zone = zoneRef.current;
+        if (!zone || !zone.contains(document.activeElement)) return;
+      } else {
+        // 焦点落在别的上传区内时让位，避免多面板同开时抢粘贴
+        const activeZone = document.activeElement?.closest("[data-image-dropzone]");
+        if (activeZone && activeZone !== zoneRef.current) return;
+      }
+      e.preventDefault();
+      void assertImageFile(file)
+        .then(() => onFileRef.current(file))
+        .catch((err) =>
+          onInvalidRef.current?.(err instanceof Error ? err.message : "不支持的文件"),
+        );
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [disabled, globalPaste]);
 
   const hasFiles = (e: React.DragEvent) => {
     const types = e.dataTransfer?.types;
@@ -107,6 +154,7 @@ export function useImageDrop({
 
   return {
     dragging,
+    zoneRef,
     dropProps: { onDragEnter, onDragLeave, onDragOver, onDrop },
   };
 }
@@ -121,8 +169,9 @@ interface ImageDropZoneProps extends UseImageDropOptions {
 }
 
 /**
- * 通用拖拽导入容器：把任意现有 UI 包一层就能接拖拽。
- * 只负责接收文件 + 画高亮遮罩，具体上传逻辑交给 onFile。
+ * 通用图片导入容器：把任意现有 UI 包一层就能接 拖拽 / 粘贴。
+ * 点击选择由 children 自带的 file input 负责。容器可聚焦（Tab/点击后）
+ * 以便区域内 Ctrl+V 粘贴生效。
  */
 export function ImageDropZone({
   children,
@@ -131,13 +180,16 @@ export function ImageDropZone({
   overlayClassName,
   ...opts
 }: ImageDropZoneProps) {
-  const { dragging, dropProps } = useImageDrop(opts);
+  const { dragging, zoneRef, dropProps } = useImageDrop(opts);
 
   return (
     <div
       {...dropProps}
+      ref={zoneRef}
+      tabIndex={0}
+      data-image-dropzone="true"
       data-dragging={dragging ? "true" : undefined}
-      className={clsx("relative", className)}
+      className={clsx("relative outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/30 rounded-xl", className)}
     >
       {children}
       {dragging && (
@@ -150,7 +202,7 @@ export function ImageDropZone({
           )}
         >
           <span>{hint}</span>
-          <span className="text-xs opacity-75">JPG / PNG / WebP / GIF</span>
+          <span className="text-xs opacity-75">JPG / PNG / WebP / GIF · 支持拖入与粘贴</span>
         </div>
       )}
     </div>

@@ -43,7 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
             siteName: t(lang, "meta.siteName"),
             title: t(lang, "meta.titleDefault"),
             description: t(lang, "meta.description"),
-            images: [{ url: "/images/logo.png", width: 512, height: 512 }],
+            images: [{ url: "/images/og-image.png", width: 1200, height: 630, alt: t(lang, "brand.name") }],
         },
         twitter: {
             card: "summary",

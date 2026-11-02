@@ -102,8 +102,10 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
   const [dragging, setDragging] = useState<number | null>(null);
   const [uploadingImage, setUploadingImage] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState("");
-  // 指针拖拽排序：不依赖 HTML5 原生 DnD（真实浏览器中 dragstart 不可靠），
-  // 按住拖拽柄后用 mousemove 实时换位，mouseup 落定
+  // 指针拖拽排序：不依赖 HTML5 原生 DnD（真实浏览器中 dragstart 不可靠）。
+  // 按住拖拽柄后用 pointermove 实时换位，松开落定。
+  // 用 Pointer 事件：鼠标仅左键触发，触屏/触控笔天然可用；
+  // setPointerCapture 保证指针移出窗口也能持续收到 move。
   const dragIndexRef = useRef<number | null>(null);
   const rowRefs = useRef<Array<HTMLDivElement | null>>([]);
   const searchBoxRef = useRef<HTMLDivElement>(null);
@@ -113,7 +115,8 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
     setTalks((prev) => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
   }
 
-  function beginDrag(e: React.MouseEvent, index: number) {
+  function beginDrag(e: React.PointerEvent<HTMLButtonElement>, index: number) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     e.preventDefault();
     dragIndexRef.current = index;
     setDragging(index);
@@ -121,7 +124,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
     setShowDropdown(false);
     setActiveSearch(null);
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       const from = dragIndexRef.current;
       if (from == null) return;
       for (let i = 0; i < rowRefs.current.length; i++) {
@@ -142,13 +145,18 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
       }
     };
     const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
       dragIndexRef.current = null;
       setDragging(null);
     };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch { /* 部分环境不支持 capture，window 监听已兜底 */ }
   }
 
   const searchUsers = useCallback(async (q: string) => {
@@ -345,7 +353,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
               <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onMouseDown={(e) => beginDrag(e, i)}
+                onPointerDown={(e) => beginDrag(e, i)}
                 title={t(lang, "meetingTalks.dragHandle")}
                 aria-label={t(lang, "meetingTalks.dragHandle")}
                 className={`shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-md text-brand-text-muted hover:text-brand-text-heading cursor-grab active:cursor-grabbing ${dragging === i ? "cursor-grabbing text-brand-text-heading" : ""}`}

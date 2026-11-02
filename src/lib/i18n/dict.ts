@@ -1497,6 +1497,7 @@ export const dict = {
   "meetingTalks.errBadBv": { cn: "无法识别 BV 号", en: "Unrecognized Bilibili BV ID" },
   "meetingTalks.errSaveFailed": { cn: "保存失败，请重试；若持续失败请联系管理员", en: "Failed to save, please retry; contact an admin if it keeps failing" },
   "agenda.viewImage": { cn: "查看大图", en: "View image" },
+  "upload.howto": { cn: "可拖入、点击选择或 Ctrl+V 粘贴", en: "Drag in, click to choose, or paste with Ctrl+V" },
 } as const;
 
 export type DictKey = keyof typeof dict;
