@@ -1,7 +1,8 @@
 /**
  * 议程栏 ＋ 类型下拉 —— 防回归测试。
  * 背景：侧栏 aside 带 overflow-y-auto，旧实现 absolute 菜单会被底部截断并骤现滚动条；
- * 现为 fixed 定位脱离裁剪，滚动/缩放即关闭。
+ * 改为 fixed 后仍会被页面容器 animate-fade-in 的 transform 陷阱困住而遭侧栏裁切；
+ * 现经 createPortal 挂到 document.body，fixed 定位彻底脱离任何祖先裁剪，滚动/缩放即关闭。
  *
  * @vitest-environment happy-dom
  */
@@ -73,6 +74,15 @@ describe("AgendaManagePanel ＋ 类型下拉", () => {
     expect(screen.getByRole("menu")).toBeTruthy();
     fireEvent.scroll(window);
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("菜单经 portal 直挂 document.body（结构性保证不被任何祖先裁切）", () => {
+    renderPanel();
+    fireEvent.click(screen.getByLabelText("添加议程"));
+    const menu = screen.getByRole("menu");
+    // 关键不变量：菜单的 DOM 父级就是 body —— aside 的 overflow-y-auto、
+    // 页面容器的 transform 等任何祖先样式都不再可能裁切它
+    expect(menu.parentElement).toBe(document.body);
   });
 
   it("点菜单外部关闭", () => {

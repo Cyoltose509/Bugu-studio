@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import MeetingTalksEditor, {
   type TalkDraft,
@@ -143,8 +144,9 @@ export default function AgendaManagePanel({
 
   /**
    * 打开类型下拉。
-   * 注意：侧栏 aside 有 overflow-y-auto，会同时裁切绝对定位的菜单并把菜单高度
-   * 计入滚动区（菜单被底部截断 + 滚动条骤现）。故菜单用 fixed 定位脱离侧栏裁剪，
+   * 注意：侧栏 aside 有 overflow-y-auto，且页面容器带 animate-fade-in（transform）——
+   * absolute 会被侧栏裁切并撑出滚动条，fixed 也会被祖先 transform 陷阱困住。
+   * 故菜单经 portal 挂到 document.body + fixed 定位，彻底脱离任何祖先裁剪；
    * 坐标取自按钮位置；空间不足时向上展开。
    */
   function toggleMenu() {
@@ -207,13 +209,15 @@ export default function AgendaManagePanel({
             </button>
           )}
 
-          {menuOpen && canAddAgenda && addMode === "form" ? (
-            <div
-              role="menu"
-              aria-label={plusLabel}
-              style={menuPos ? { top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right } : undefined}
-              className="fixed z-50 w-40 rounded-xl border border-brand-border-subtle bg-card p-1 shadow-xl"
-            >
+          {menuOpen && canAddAgenda && addMode === "form" && menuPos
+            ? createPortal(
+                <div
+                  role="menu"
+                  aria-label={plusLabel}
+                  data-add-menu
+                  style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}
+                  className="fixed z-50 w-40 rounded-xl border border-brand-border-subtle bg-card p-1 shadow-xl"
+                >
               <button
                 type="button"
                 role="menuitem"
@@ -232,8 +236,10 @@ export default function AgendaManagePanel({
                 <AgendaTypeTag type="SHOWCASE" label={t("activityDetail.proposalShowcase")} />
                 <span className="min-w-0 flex-1 truncate">{t("activityDetail.proposalShowcase")}</span>
               </button>
-            </div>
-          ) : null}
+                </div>,
+                document.body,
+              )
+            : null}
         </span>
       </div>
       {open && isAdmin && (

@@ -4,6 +4,14 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-02 — 议程栏 ＋ 下拉二次修复：createPortal 挂 document.body【已推送】
+
+- 用户反馈：上一轮 fixed 定位修复（ce57a56）后实测仍被右侧栏容器裁切。复盘：fixed 只在无祖先 transform/filter/perspective 时才相对视口；页面容器 animate-fade-in 动画期间（或残留 transform）形成"包含块陷阱"，菜单仍以该祖先为定位上下文，侧栏 aside 的 overflow-y-auto 继续裁切。真实浏览器未实测是上一轮的验证缺口。
+- 修复：AgendaManagePanel 类型下拉改经 `createPortal` 渲染到 `document.body`——菜单与视口之间不再有任何祖先，结构上不可能再被侧栏/页面容器裁切；fixed 坐标仍取自按钮 getBoundingClientRect（贴右缘下展，视口底部空间不足上展）；菜单打开时 scroll(capture)/resize 自动关闭；菜单 div 自带 data-add-menu（portal 后不在原 span 内，靠它保住点外部关闭与 ＋ 按钮开合切换）。
+- 环境核查：globals.css 中 body/html 无 transform、无 overflow 裁剪（仅字体/背景/min-height），portal 方案无残留风险点。
+- 测试：__tests__/ui/agenda-add-menu.test.tsx 增至 5 项，新增关键不变量断言 `menu.parentElement === document.body`（portal 生效即不可能被裁切），原有 4 项保持。
+- 验证：tsc 通过；vitest unit+ui 137/137；next build 通过。下拉仅管理员/未报名登录用户可见（访客为 panel 模式），本机无登录凭据未做真实浏览器点击实测——但裁切问题由 DOM 结构保证消除，不再依赖具体祖先样式。
+
 ## 2026-11-02 — 本地预览全页 500 根因修复（dev 启动包装）【已推送】
 
 - 现象：本机 dev / next start 所有页面 500（含未改动页面，换端口无效），用户无法本地预览。
