@@ -365,7 +365,7 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
       <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] xl:items-start">
           <div className="min-w-0">{mainColumn}</div>
-          <aside className="min-w-0 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1 [scrollbar-width:thin]">
+          <aside className="agenda-scroll min-w-0 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7.5rem)] xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
             {talkColumn}
           </aside>
         </div>

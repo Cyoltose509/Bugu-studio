@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth/auth";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
-import { getToolSites } from "@/lib/tools/tools";
+import { getToolsData } from "@/lib/tools/tools";
 import ToolsClient from "@/components/tools/ToolsClient";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -11,12 +11,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * 实用工具站导航 — 条目持久化在 SiteSetting（tools:sites），
- * 未配置时回退默认条目；管理员可 ＋ 追加 / ✎ 编辑（ToolsClient）。
+ * 实用工具站导航 — 分栏 + 条目持久化在 SiteSetting（tools:sites），
+ * 未配置时回退默认数据；管理员可管理分栏（新增/改名/删除）与条目（＋ 追加 / ✎ 编辑）。
  */
 export default async function ToolsPage() {
-    const [session, sites] = await Promise.all([auth(), getToolSites()]);
+    const [session, data] = await Promise.all([auth(), getToolsData()]);
     const isAdmin = session?.user?.role === "ADMIN";
 
-    return <ToolsClient initialSites={sites} isAdmin={isAdmin} />;
+    return <ToolsClient initialData={data} isAdmin={isAdmin} />;
 }

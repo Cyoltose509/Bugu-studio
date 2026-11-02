@@ -4,6 +4,44 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-02 — 本地预览全页 500 根因修复（dev 启动包装）【已推送】
+
+- 现象：本机 dev / next start 所有页面 500（含未改动页面，换端口无效），用户无法本地预览。
+- 根因（错误页 digest 链）：`Failed to write app endpoint … parse_css … spawning node pooled process … program not found`——Turbopack 的 PostCSS 工作进程池 spawn("node") 失败。宿主环境（Kimi Work 预览通道）PATH 里没有真实 node.exe（只有 shell 垫片；process.execPath 是 Electron 宿主 Kimi.exe），垫片目录无 node.exe，CreateProcess 解析失败即 ENOENT。此前误判为"环境原发"，实为可修复的 PATH 问题。
+- 修复：新增 scripts/dev.mjs 启动包装——先探测 PATH 能否 spawn node，不行则在 PATH 与常见安装位置（D:\NodeJS、Program Files、NVM/Volta/fnm 等）找真实 node.exe 并前置其目录（保持 --turbo）；再找不到则回退 webpack 模式（PostCSS 进程内执行，无需工作进程）。package.json dev 脚本改为 `node scripts/dev.mjs`，CLI 参数（-p 等）透传。
+- 验证：修复前 /tools、/、/activities 全 500；修复后全部 200，工具页分栏（游戏引擎/三维创作）与 Tripo 3D 条目渲染正确、页脚旧文案 0 残留；`npm run dev` 端到端实测通过；vitest unit+ui 136/136。测试服务器已全部清理，端口无残留。
+- 备注：next start 的 500 为另一签名（21 字节 Internal Server Error，非 Turbopack），本地预览统一走 dev 即可，生产模式本地起服需求暂不深究。
+
+## 2026-11-02 — 议程栏 ＋ 下拉被侧栏裁剪修复【已推送】
+
+- 用户报告：活动页议程栏点 ＋，类型下拉被遮挡且骤现滚动条。根因：侧栏 aside 带 `overflow-y-auto`，按 CSS 规范 overflow-x 随之计算为 auto，绝对定位菜单（absolute top-full）既被底部裁切、又把自身高度计入侧栏滚动区——视觉上"遮挡 + 滑杆"。
+- 修复：AgendaManagePanel 类型下拉改 fixed 定位脱离侧栏裁剪，坐标打开时取自按钮 getBoundingClientRect（贴按钮右缘下展；视口底部空间不足时向上展开）；菜单打开期间任意滚动/窗口缩放即自动关闭，避免与按钮错位；点外部关闭逻辑不变（菜单仍在 data-add-menu 容器 DOM 内）。
+- 新增防回归测试 __tests__/ui/agenda-add-menu.test.tsx 4 项：fixed 定位与内联坐标、选型后菜单关闭且时间轴收到草稿、滚动即关、点外部关闭。
+- 验证：tsc 通过；vitest unit+ui 136/136；next build 通过。浏览器实测遮挡消除待本地预览环境恢复后人工点验。
+
+## 2026-11-02 — 实用工具新增 Tripo 3D 条目【代码已推送；库已写入】
+
+- 按用户提供的链接，向实用工具页收录 Tripo 3D（tripo3d.ai 的 Astra 模型 3D 场景提示词库，URL 按用户所给原样保留含 UTM），归入"三维创作"分栏；iconUrl 留空按域名自动取 google s2 favicon，简介一句话说明平台与链接内容。
+- 两处同步：① 代码默认条目 DEFAULT_TOOL_SITES 追加 tripo-3d（集成测试期望同步更新）；② 生产库 SiteSetting(tools:sites) 经只读探查为旧裸数组（2 条），用幂等脚本追加为 3 条——刻意保持旧数组格式，线上旧代码立即可见，v2 代码上线后 normalizeToolsData 会自动升级。临时脚本已删除。
+- 验证：tsc 通过；vitest unit+ui 132/132；next build 通过；写库后回读确认 3 条持久化。集成测试（真实 DB 写流程）本机未跑。
+
+## 2026-11-02 — 活动页议程侧栏滚动条美化【已推送】
+
+- 按用户要求美化活动详情页右侧议程（xl 断点 sticky 独立滚动栏）超出高度时的滚动条：新增 `.agenda-scroll`（globals.css，紧邻全局滚动条样式），aside 上的 `[scrollbar-width:thin]` 替换为该类。
+- 形态：轨道透明；拇指 8px 槽位 + 2px 透明描边经 padding-box 裁出约 4px 细条、999px 圆头胶囊；平时完全隐匿，容器悬停时以品牌海军蓝 38% 透明浮现（暗色为浅蓝 #7eb8da 38%），拇指悬停加深至 60%，0.2s 过渡；Firefox 走 scrollbar-color（悬停切换），WebKit 走 ::-webkit-scrollbar 双通道。
+- 无 hover 设备（触屏）保持隐匿，与移动端原生行为一致。
+- 验证：tsc 通过；vitest unit+ui 132/132；next build 通过。纯 CSS 视觉改动，浏览器实测待本地预览环境恢复后人工点验（本机页面 500 为环境原发问题，见第十一批）。
+
+## 2026-10-31（第十一批）— 实用工具分栏管理 + 图标流程简化【已推送】
+
+- 分栏化：存储形态升级为 v2 `{ sections, sites }`（同一 SiteSetting key，旧裸数组读取时自动升级，按 category 首现顺序还原分栏）；展示态按分栏分组渲染（空分栏不展示），行内分类胶囊随分栏标题移除。纯数据/校验逻辑拆至 `src/lib/tools/shared.ts`（无 prisma 依赖，客户端安全引入），`tools.ts` 保留服务端读写并全量 re-export。
+- 分栏管理（管理员 ✎ 模式）：分栏标题可原位改名（Enter/失焦确认、Esc 取消，改名同步栏内条目归属、同名拒绝）、栏内 ＋ 直接在该分栏下添加条目、× 删除空分栏（非空禁用并提示）、底部"新增分栏"虚线入口。
+- 编辑态样式对齐展示态：行内编辑器镜像展示行版式（左图标列 / 中 名称+分栏·网址·简介 同位同字号 / 右 保存·取消 取代 → 箭头），仅描边提示可编辑。
+- 图标流程：取消代表色选取（移除取色器，`color` 字段保留作字标回退，新条目固定默认色）；图标=按网址自动获取 favicon（google s2，URL 输入即联动）或管理员本地上传（复用 /api/upload），上传过的自定义图标不会被后续改网址覆盖，⟳ 可手动重新获取 favicon。
+- 页脚快速链接"实用工具跳转"改名"实用工具"（footer.tools）。
+- 保存接口：`saveToolSites` → `saveToolsData`（requireAdmin + normalizeToolsData 校验，条目 ≤60、分栏 ≤20）；集成测试同步更新为 v2 形态并新增旧格式升级断言。
+- 验证：tsc 通过；vitest unit+ui 132/132（含新增 ToolsClient 渲染测试 5 项：分栏渲染/空栏隐藏/管理模式入口/无取色器/favicon 联动/原位改名）；next build 通过（/tools 4.87 kB）。已知边界：本机所有页面（含未改动的 /privacy）在 dev 与 start 模式均 500，未修改树同样复现，属本机环境原发问题，非本次改动引入；集成测试未在本机跑（需真实 DB，会写生产 SiteSetting）；管理员全流程（分栏改名/增删、图标上传落库）待上线后人工点验。npm run build 的 prisma generate 步骤曾因残留 next 进程持有 DLL 文件锁 EPERM，清理残留进程/直连 next build 后通过。
+
 ## 2026-10-31（第十批·修订）— 工具页真实 favicon + 管理员 ＋/✎ 管理【已合并上线：PR #13】
 
 - 按用户反馈改版：无卡片实色底、行式布局、favicon 撑满行高（44px，原 28px 过小）、去掉标题旁小 ↗ 改为行尾大 → 箭头（hover 右移变蓝）。

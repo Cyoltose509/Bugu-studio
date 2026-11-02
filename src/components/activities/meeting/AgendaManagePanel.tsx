@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import MeetingTalksEditor, {
   type TalkDraft,
@@ -111,6 +111,8 @@ export default function AgendaManagePanel({
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const plusBtnRef = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<"SHARE" | "SHOWCASE" | null>(null);
   const editorKey = initialTalks.map((tk) => tk.id || "").join(",");
   const manageLabel = open ? t("activityDetail.exitManage") : t("activityDetail.enterManage");
@@ -127,6 +129,39 @@ export default function AgendaManagePanel({
     return () => document.removeEventListener("pointerdown", onDown);
   }, [menuOpen]);
 
+  // 菜单打开期间：页面/侧栏滚动或窗口尺寸变化即关闭，避免与按钮错位
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [menuOpen]);
+
+  /**
+   * 打开类型下拉。
+   * 注意：侧栏 aside 有 overflow-y-auto，会同时裁切绝对定位的菜单并把菜单高度
+   * 计入滚动区（菜单被底部截断 + 滚动条骤现）。故菜单用 fixed 定位脱离侧栏裁剪，
+   * 坐标取自按钮位置；空间不足时向上展开。
+   */
+  function toggleMenu() {
+    setAddOpen(false);
+    if (!menuOpen && plusBtnRef.current) {
+      const r = plusBtnRef.current.getBoundingClientRect();
+      const right = Math.max(8, window.innerWidth - r.right);
+      const EST_MENU_H = 120; // 两个选项 + 内边距的估计高度
+      if (r.bottom + 6 + EST_MENU_H > window.innerHeight) {
+        setMenuPos({ bottom: window.innerHeight - r.top + 6, right });
+      } else {
+        setMenuPos({ top: r.bottom + 6, right });
+      }
+    }
+    setMenuOpen((v) => !v);
+  }
+
   function chooseDraftType(type: "SHARE" | "SHOWCASE") {
     setDraft(type);
     setMenuOpen(false);
@@ -141,11 +176,9 @@ export default function AgendaManagePanel({
         <span className="relative flex shrink-0 items-center gap-2" data-add-menu>
           {canAddAgenda && (
             <button
+              ref={plusBtnRef}
               type="button"
-              onClick={() => {
-                setAddOpen(false);
-                setMenuOpen((v) => !v);
-              }}
+              onClick={toggleMenu}
               title={plusLabel}
               aria-label={plusLabel}
               aria-expanded={menuOpen}
@@ -178,7 +211,8 @@ export default function AgendaManagePanel({
             <div
               role="menu"
               aria-label={plusLabel}
-              className="absolute right-0 top-full z-30 mt-1.5 w-40 rounded-xl border border-brand-border-subtle bg-card p-1 shadow-xl"
+              style={menuPos ? { top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right } : undefined}
+              className="fixed z-50 w-40 rounded-xl border border-brand-border-subtle bg-card p-1 shadow-xl"
             >
               <button
                 type="button"
