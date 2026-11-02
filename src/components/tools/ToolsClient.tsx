@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveToolsData } from "@/app/tools/actions";
 import { faviconFor, type ToolSection, type ToolSite, type ToolsData } from "@/lib/tools/shared";
@@ -42,10 +42,8 @@ function IconBlock({ tool }: { tool: Pick<ToolSite, "url" | "iconUrl" | "color" 
   } catch { /* 非法 url 时不追加候选 */ }
   const [idx, setIdx] = useState(0);
   const [loaded, setLoaded] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  // 水合后再挂 img：水合前的加载失败 React onError 接不住，会出现破图残留
-  useEffect(() => setMounted(true), []);
-  const showImg = mounted && idx < candidates.length;
+  // iconUrl 已全部本地化（R2/本地文件），SSR 可直出 <img>；onError 链兜底
+  const showImg = idx < candidates.length;
   return (
     <span
       aria-hidden
