@@ -21,11 +21,20 @@ const TYPE_OPTIONS = [
   { value: "ENGINE_COURSE", label: "引擎教学公开课", hint: "分班教学与作品大赏" },
   { value: "COMPETITION", label: "Game Jam", hint: "组队、题目与提交" },
   { value: "GENERAL",     label: "大事件",   hint: "海报与试玩目录" },
+  { value: "RECOMMENDATION", label: "活动推荐", hint: "外部 Jam / 黑客松 / 培训" },
+];
+
+const RECO_TAG_OPTIONS = [
+  { value: "GAME_JAM",  label: "Game Jam" },
+  { value: "HACKATHON", label: "黑客松" },
+  { value: "TRAINING",  label: "合作培训" },
+  { value: "OTHER",     label: "其他" },
 ];
 
 export default function CreateActivityPage() {
   const router = useRouter();
   const [type, setType] = useState("GENERAL");
+  const [recoTag, setRecoTag] = useState("GAME_JAM");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [timePending, setTimePending] = useState(false);
@@ -115,6 +124,29 @@ export default function CreateActivityPage() {
           {type === "GENERAL" && (
             <p className="text-xs mt-2 text-brand-text-muted">创建后可在编辑页启用海报与试玩目录</p>
           )}
+          {type === "RECOMMENDATION" && (
+            <div className="mt-3 rounded-xl border border-brand-border-subtle bg-card p-3">
+              <p className={label}>推荐类别</p>
+              <input type="hidden" name="recoTag" value={recoTag} />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {RECO_TAG_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRecoTag(opt.value)}
+                    className={`rounded-lg px-3 py-2 text-sm transition-all border ${
+                      recoTag === opt.value
+                        ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
+                        : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue/40"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs mt-2 text-brand-text-muted">展示在活动页「活动推荐」横排栏，结束后自动消失，不进活动档案</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] gap-8 lg:gap-10">
@@ -137,8 +169,10 @@ export default function CreateActivityPage() {
             <LocationPresetInput />
 
             <div>
-              <label className={label} htmlFor="meetingUrl">线上链接 <span className="text-xs text-brand-text-muted">(腾讯会议等，可选)</span></label>
-              <input id="meetingUrl" name="meetingUrl" type="url" placeholder="https://meeting.tencent.com/…" className={field} />
+              <label className={label} htmlFor="meetingUrl">
+                {type === "RECOMMENDATION" ? "官网 / 报名链接" : "线上链接"} <span className="text-xs text-brand-text-muted">({type === "RECOMMENDATION" ? "推荐活动的官方页面" : "腾讯会议等，可选"})</span>
+              </label>
+              <input id="meetingUrl" name="meetingUrl" type="url" placeholder={type === "RECOMMENDATION" ? "https://globalgamejam.org/…" : "https://meeting.tencent.com/…"} className={field} />
             </div>
 
             <div>

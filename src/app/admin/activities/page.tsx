@@ -30,6 +30,7 @@ const TYPE_LABELS: Record<string, string> = {
   ENGINE_COURSE: "引擎教学公开课",
   COMPETITION: "Game Jam",
   GENERAL:    "大事件",
+  RECOMMENDATION: "活动推荐",
 };
 
 const STATUS_LABELS: Record<string, string> = {

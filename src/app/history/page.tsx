@@ -1,4 +1,4 @@
-﻿import {Metadata} from "next";
+import {Metadata} from "next";
 import HistoryClient from "@/components/history/HistoryClient";
 import {prisma} from "@/lib/db/prisma";
 import {cachedQuery} from "@/lib/db/cache";
@@ -50,7 +50,7 @@ export default async function HistoryPage() {
             3600),
         cachedQuery("history:activityYears", () =>
                 prisma.activity.findMany({
-                    where: {status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, type: {not: "MEETING"}, timePending: false, startTime: { not: null }},
+                    where: {status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, type: {notIn: ["MEETING", "RECOMMENDATION"]}, timePending: false, startTime: { not: null }},
                     select: {startTime: true},
                 }),
             3600),
@@ -129,7 +129,7 @@ export default async function HistoryPage() {
         }), 3600),
       cachedQuery('history:allActivities', () =>
         prisma.activity.findMany({
-          where: { status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, timePending: false, startTime: { not: null } },
+          where: { status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] }, type: { not: "RECOMMENDATION" }, timePending: false, startTime: { not: null } },
           select: { id: true, title: true, type: true, status: true, startTime: true, endTime: true, summary: true, description: true, coverImage: true },
           orderBy: { startTime: "asc" }
         }), 3600),

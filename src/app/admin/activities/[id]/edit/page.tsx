@@ -112,6 +112,7 @@ export default async function EditActivityPage({ params }: PageProps) {
           theme: activity.theme || "",
           themeRevealedAt: activity.themeRevealedAt ? fmt(activity.themeRevealedAt) : "",
           maxTeamSize: activity.maxTeamSize ?? 6,
+          recoTag: activity.recoTag || "",
         }}
         talks={talks}
         showcase={showcase}

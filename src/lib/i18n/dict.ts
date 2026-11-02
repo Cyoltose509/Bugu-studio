@@ -133,11 +133,18 @@ export const dict = {
   "activity.type.ENGINE_COURSE": { cn: "引擎教学公开课", en: "Engine Course" },
   "activity.type.COMPETITION": { cn: "Game Jam", en: "Game Jam" },
   "activity.type.GENERAL": { cn: "大事件", en: "Major Event" },
+  "activity.type.RECOMMENDATION": { cn: "活动推荐", en: "Recommended" },
+  "activity.recoTag.GAME_JAM": { cn: "Game Jam", en: "Game Jam" },
+  "activity.recoTag.HACKATHON": { cn: "黑客松", en: "Hackathon" },
+  "activity.recoTag.TRAINING": { cn: "合作培训", en: "Training" },
+  "activity.recoTag.OTHER": { cn: "其他", en: "Other" },
   "activity.ongoing": { cn: "进行中", en: "Ongoing" },
   "activity.upcoming": { cn: "即将开始", en: "Upcoming" },
   "activity.past": { cn: "已结束", en: "Ended" },
   "activity.online": { cn: "🔗 线上", en: "🔗 Online" },
   "activities.archive": { cn: "活动档案", en: "Activity Archive" },
+  "activities.recommendations": { cn: "活动推荐", en: "Recommended Events" },
+  "activityDetail.visitSite": { cn: "前往官网", en: "Visit Website" },
 
   // 通用
   "common.loading": { cn: "加载中…", en: "Loading…" },

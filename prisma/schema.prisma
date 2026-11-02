@@ -78,6 +78,7 @@ enum ActivityType {
   ENGINE_COURSE // 引擎教学公开课
   COMPETITION // Game Jam 等比赛
   GENERAL // 普通社团活动
+  RECOMMENDATION // 活动推荐（外部 Game Jam / 黑客松 / 合作培训等，不进档案，活动页单开横排栏）
 }
 
 enum ActivityStatus {
@@ -692,6 +693,8 @@ model Activity {
   theme            String?        @db.Text // Game Jam — 比赛题目
   themeRevealedAt  DateTime?               // Game Jam — 题目公布时间
   maxTeamSize      Int?          @default(6) // Game Jam — 每队最大人数
+  /// 活动推荐细分类：GAME_JAM / HACKATHON / TRAINING / OTHER（字符串而非枚举，扩类别免迁移）
+  recoTag          String?
   status           ActivityStatus @default(DRAFT)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt

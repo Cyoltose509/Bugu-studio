@@ -26,6 +26,7 @@ const ACTIVITY_TYPE_KEY: Record<string, DictKey> = {
   ENGINE_COURSE: "activity.type.ENGINE_COURSE",
   COMPETITION: "activity.type.COMPETITION",
   GENERAL: "activity.type.GENERAL",
+  RECOMMENDATION: "activity.type.RECOMMENDATION",
 };
 
 async function getHomeActivities() {
@@ -35,12 +36,14 @@ async function getHomeActivities() {
   const now = new Date();
   try {
     return await cachedQuery(
-      "home:activities:v3",
+      "home:activities:v4",
       async () => {
+        // 活动推荐（外部活动）不进首页动态
         const [live, past] = await Promise.all([
           prisma.activity.findMany({
             where: {
               status: ActivityStatus.PUBLISHED,
+              type: { not: "RECOMMENDATION" },
               OR: [
                 { timePending: true },
                 { endTime: { gte: now } },
@@ -51,6 +54,7 @@ async function getHomeActivities() {
           }),
           prisma.activity.findMany({
             where: {
+              type: { not: "RECOMMENDATION" },
               OR: [
                 { status: ActivityStatus.PUBLISHED, timePending: false, endTime: { lt: now } },
                 { status: ActivityStatus.ARCHIVED },

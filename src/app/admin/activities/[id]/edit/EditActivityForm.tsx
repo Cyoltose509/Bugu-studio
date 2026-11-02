@@ -23,6 +23,14 @@ const TYPE_OPTIONS = [
   { value: "ENGINE_COURSE", label: "引擎教学公开课", hint: "分班教学与作品大赏" },
   { value: "COMPETITION", label: "Game Jam", hint: "组队、题目与提交" },
   { value: "GENERAL",     label: "大事件",   hint: "海报与试玩目录" },
+  { value: "RECOMMENDATION", label: "活动推荐", hint: "外部 Jam / 黑客松 / 培训" },
+] as const;
+
+const RECO_TAG_OPTIONS = [
+  { value: "GAME_JAM",  label: "Game Jam" },
+  { value: "HACKATHON", label: "黑客松" },
+  { value: "TRAINING",  label: "合作培训" },
+  { value: "OTHER",     label: "其他" },
 ] as const;
 
 const STATUS_STEPS = [
@@ -56,6 +64,7 @@ export type EditActivityValues = {
   theme: string;
   themeRevealedAt: string;
   maxTeamSize: number;
+  recoTag: string;
 };
 
 function StatusTimeline({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -131,6 +140,7 @@ export default function EditActivityForm({
 }) {
   const router = useRouter();
   const [type, setType] = useState(activity.type);
+  const [recoTag, setRecoTag] = useState(activity.recoTag || "GAME_JAM");
   const [status, setStatus] = useState(activity.status);
   const [title, setTitle] = useState(activity.title);
   const [summary, setSummary] = useState(activity.summary);
@@ -204,6 +214,29 @@ export default function EditActivityForm({
         {(type === "COURSE" || type === "ENGINE_COURSE") && <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-brand-border-subtle bg-card p-2">
           {TYPE_OPTIONS.filter((option) => option.value === "COURSE" || option.value === "ENGINE_COURSE").map((option) => <button key={option.value} type="button" onClick={() => setType(option.value)} className={`rounded-lg px-3 py-2 text-left text-sm ${type === option.value ? "bg-brand-blue text-white" : "text-brand-text-body hover:bg-brand-blue/10"}`}><strong className="block">{option.value === "COURSE" ? "策划公开课" : option.label}</strong><span className="text-xs opacity-75">{option.value === "COURSE" ? "组队分享与评分" : option.hint}</span></button>)}
         </div>}
+        {type === "RECOMMENDATION" && (
+          <div className="mt-3 rounded-xl border border-brand-border-subtle bg-card p-3">
+            <p className={label}>推荐类别</p>
+            <input type="hidden" name="recoTag" value={recoTag} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {RECO_TAG_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setRecoTag(opt.value)}
+                  className={`rounded-lg px-3 py-2 text-sm transition-all border ${
+                    recoTag === opt.value
+                      ? "border-brand-blue bg-brand-blue/10 text-brand-blue font-medium"
+                      : "border-brand-border-subtle text-brand-text-secondary hover:border-brand-blue/40"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mt-2 text-brand-text-muted">展示在活动页「活动推荐」横排栏，结束后自动消失，不进活动档案</p>
+          </div>
+        )}
       </div>
 
       <StatusTimeline value={status} onChange={setStatus} />
@@ -230,13 +263,13 @@ export default function EditActivityForm({
 
             <div>
               <label className={label}>
-                线上链接 <span className="text-xs text-brand-text-muted">(腾讯会议等，可选)</span>
+                {type === "RECOMMENDATION" ? "官网 / 报名链接" : "线上链接"} <span className="text-xs text-brand-text-muted">({type === "RECOMMENDATION" ? "推荐活动的官方页面" : "腾讯会议等，可选"})</span>
               </label>
               <input
                 name="meetingUrl"
                 type="url"
                 defaultValue={activity.meetingUrl}
-                placeholder="https://meeting.tencent.com/…"
+                placeholder={type === "RECOMMENDATION" ? "https://globalgamejam.org/…" : "https://meeting.tencent.com/…"}
                 className={field}
               />
             </div>

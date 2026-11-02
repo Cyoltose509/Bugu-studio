@@ -16,9 +16,11 @@ import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import { showcaseKey } from "@/lib/activities/showcase";
 import { canSubmitActivityTalk } from "@/lib/activities/capabilities";
+import { isRecoTag } from "@/lib/activities/recommendation";
 
 const TYPE_LABEL: Record<string, string> = {
   MEETING: "例会", COURSE: "策划公开课", ENGINE_COURSE: "引擎教学公开课", COMPETITION: "Game Jam", GENERAL: "大事件",
+  RECOMMENDATION: "活动推荐",
 };
 
 /** 简单 slug 生成 */
@@ -129,6 +131,9 @@ export async function createActivity(formData: FormData) {
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
+  // 活动推荐细分类：仅推荐类型生效，其余类型强制清空
+  const recoTagRaw = (formData.get("recoTag") as string || "").trim();
+  const recoTag = type === "RECOMMENDATION" && isRecoTag(recoTagRaw) ? recoTagRaw : null;
   const schedule = readSchedule(formData);
   if ("error" in schedule) return schedule;
   const focus = readFocus(formData);
@@ -163,6 +168,7 @@ export async function createActivity(formData: FormData) {
       theme: theme || undefined,
       themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
       maxTeamSize,
+      recoTag,
     },
   });
 
@@ -200,6 +206,9 @@ export async function updateActivity(id: string, formData: FormData) {
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
+  // 活动推荐细分类：仅推荐类型生效，其余类型强制清空
+  const recoTagRaw = (formData.get("recoTag") as string || "").trim();
+  const recoTag = type === "RECOMMENDATION" && isRecoTag(recoTagRaw) ? recoTagRaw : null;
   const schedule = readSchedule(formData);
   const focus = readFocus(formData);
 
@@ -237,6 +246,7 @@ export async function updateActivity(id: string, formData: FormData) {
       theme: theme || undefined,
       themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
       maxTeamSize: newMaxTeamSize,
+      recoTag,
     },
   });
 

@@ -225,7 +225,10 @@ export function mockAdjacentProjects(slug: string, sort = "date") {
 export function mockHomeActivities(take = 6) {
   const list = getMockSnapshot().activities || [];
   const now = Date.now();
-  const dated = list.map((a) => withDates(a, ["startTime", "endTime", "themeRevealedAt"]));
+  // 活动推荐（外部活动）不进首页动态
+  const dated = list
+    .map((a) => withDates(a, ["startTime", "endTime", "themeRevealedAt"]))
+    .filter((a) => a.type !== "RECOMMENDATION");
   const live = dated
     .filter((a) => a.status === "PUBLISHED" && (a.timePending || a.endTime.getTime() >= now))
     .sort(compareActivitiesNewestFirst)
@@ -242,17 +245,19 @@ export function mockActivitiesBuckets() {
   const list = (getMockSnapshot().activities || []).map((a) =>
     withDates({ ...a }, ["startTime", "endTime", "themeRevealedAt"]),
   );
+  const isReco = (a: any) => a.type === "RECOMMENDATION";
   const ongoing = list
-    .filter((a) => a.status === "PUBLISHED" && !a.timePending && a.startTime.getTime() <= now && a.endTime.getTime() >= now)
+    .filter((a) => !isReco(a) && a.status === "PUBLISHED" && !a.timePending && a.startTime.getTime() <= now && a.endTime.getTime() >= now)
     .sort(compareActivitiesNewestFirst)
     .slice(0, 6);
   const upcoming = list
-    .filter((a) => a.status === "PUBLISHED" && (a.timePending || a.startTime.getTime() > now))
+    .filter((a) => !isReco(a) && a.status === "PUBLISHED" && (a.timePending || a.startTime.getTime() > now))
     .sort(compareActivitiesNewestFirst)
     .slice(0, 6);
   const past = list
     .filter(
       (a) =>
+        !isReco(a) &&
         !a.timePending && (
           (a.status === "PUBLISHED" && a.endTime.getTime() < now) ||
           a.status === "ARCHIVED"
@@ -260,7 +265,12 @@ export function mockActivitiesBuckets() {
     )
     .sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
     .slice(0, 12);
-  return [ongoing, upcoming, past] as const;
+  // 活动推荐：仅未结束的（待定视为有效），最新在前
+  const recommendations = list
+    .filter((a) => isReco(a) && a.status === "PUBLISHED" && (a.timePending || a.endTime.getTime() >= now))
+    .sort(compareActivitiesNewestFirst)
+    .slice(0, 12);
+  return [ongoing, upcoming, past, recommendations] as const;
 }
 
 export function mockActivityByKey(key: string) {

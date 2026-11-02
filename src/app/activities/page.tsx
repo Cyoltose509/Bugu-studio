@@ -18,6 +18,7 @@ import { auth } from "@/lib/auth/auth";
 import { activityNewestFirstOrder, formatActivityDay, formatActivitySchedule } from "@/lib/activities/datetime";
 import { redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
 import { localizeActivityTitle } from "@/lib/activities/title";
+import { recoTagLabel } from "@/lib/activities/recommendation";
 
 export async function generateMetadata(): Promise<Metadata> {
   const lang = await getLang();
@@ -28,12 +29,13 @@ export const dynamic = "force-dynamic";
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
 // 活动类型 / 状态 → 双语标签
-const ACTIVITY_TYPE_KEYS: Record<string, "activity.type.MEETING" | "activity.type.COURSE" | "activity.type.ENGINE_COURSE" | "activity.type.COMPETITION" | "activity.type.GENERAL"> = {
+const ACTIVITY_TYPE_KEYS: Record<string, "activity.type.MEETING" | "activity.type.COURSE" | "activity.type.ENGINE_COURSE" | "activity.type.COMPETITION" | "activity.type.GENERAL" | "activity.type.RECOMMENDATION"> = {
   MEETING:     "activity.type.MEETING",
   COURSE:      "activity.type.COURSE",
   ENGINE_COURSE: "activity.type.ENGINE_COURSE",
   COMPETITION: "activity.type.COMPETITION",
   GENERAL:     "activity.type.GENERAL",
+  RECOMMENDATION: "activity.type.RECOMMENDATION",
 };
 const STATUS_LABEL: Record<string, { cn: string; en: string }> = {
   ongoing:  { cn: "进行中", en: "Ongoing" },
@@ -95,7 +97,7 @@ function ActivityCard({ a, lang, badge, countdown }: {
               {countdown}
             </div>
           )}
-          {a.meetingUrl && a.type !== "COURSE" && a.type !== "ENGINE_COURSE" && (
+          {a.meetingUrl && a.type !== "COURSE" && a.type !== "ENGINE_COURSE" && a.type !== "RECOMMENDATION" && (
             <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
               {t(lang, "activity.online")}
             </div>
@@ -200,6 +202,52 @@ function UpcomingItem({ a, lang }: { a: any; lang: Lang }) {
       </Link>
   );
 }
+// ── 活动推荐卡片：紧凑横排卡，类别小标签 + 倒计时 ────────────
+function RecoCard({ a, lang }: { a: any; lang: Lang }) {
+  const coverSrc = a.coverImage || DEFAULT_COVER;
+  const displayTitle = localizeActivityTitle(a.title, lang);
+  const tagLabel = recoTagLabel(lang, a.recoTag);
+  const now = Date.now();
+  const isLive = !a.timePending && a.startTime && a.endTime &&
+    new Date(a.startTime).getTime() <= now && new Date(a.endTime).getTime() >= now;
+  return (
+    <Link href={`/activities/${a.id}`} className="group snap-start shrink-0 w-60 sm:w-64">
+      <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all h-full flex flex-col">
+        <div className="relative aspect-video overflow-hidden bg-brand-surface shrink-0">
+          <Image
+            src={coverSrc}
+            alt={displayTitle}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="264px"
+          />
+          {tagLabel && (
+            <span className="absolute top-2 left-2 text-[11px] font-medium px-2 py-0.5 rounded-full bg-black/45 text-white backdrop-blur-sm">
+              {tagLabel}
+            </span>
+          )}
+          <div className="absolute top-2 right-2">
+            {isLive ? (
+              <span className="text-[11px] px-2 py-0.5 rounded-full text-white bg-green-500/80 backdrop-blur-sm">{STATUS_LABEL.ongoing[lang]}</span>
+            ) : (
+              !a.timePending && a.startTime && <Countdown startTime={new Date(a.startTime)} lang={lang} />
+            )}
+          </div>
+        </div>
+        <div className="p-3 flex flex-col gap-1 flex-1">
+          <h3 className="text-sm font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
+            {displayTitle}
+          </h3>
+          <p className="text-xs text-brand-text-muted line-clamp-1">
+            {formatActivitySchedule(a.startTime, a.endTime, lang, a.timePending, a.courseHasClock)}
+            {a.location ? ` · ${a.location}` : ""}
+          </p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 // ── 区间标题 ──────────────────────────────────────────────
 function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
   return (
@@ -218,12 +266,12 @@ export default async function ActivitiesPage() {
   const raw = isMockDataEnabled()
     ? mockActivitiesBuckets()
     : await cachedQuery(
-    "activities:list:v2",
+    "activities:list:v3",
     () =>
       Promise.all([
-        // 进行中，开始时间从新到旧
+        // 进行中，开始时间从新到旧（活动推荐不进常规桶）
         prisma.activity.findMany({
-          where:  { status: ActivityStatus.PUBLISHED, timePending: false, startTime: { lte: now }, endTime: { gte: now } },
+          where:  { status: ActivityStatus.PUBLISHED, type: { not: ActivityType.RECOMMENDATION }, timePending: false, startTime: { lte: now }, endTime: { gte: now } },
           orderBy: { startTime: "desc" },
           take: 6,
         }),
@@ -231,14 +279,16 @@ export default async function ActivitiesPage() {
         prisma.activity.findMany({
           where:  {
             status: ActivityStatus.PUBLISHED,
+            type: { not: ActivityType.RECOMMENDATION },
             OR: [{ timePending: true }, { startTime: { gt: now } }],
           },
           orderBy: activityNewestFirstOrder,
           take: 6,
         }),
-        // 已结束 / 归档（最近 12 条，从新到旧）
+        // 已结束 / 归档（最近 12 条，从新到旧；推荐类活动过期即隐，不进档案）
         prisma.activity.findMany({
           where: {
+            type: { not: ActivityType.RECOMMENDATION },
             OR: [
               { status: ActivityStatus.PUBLISHED, timePending: false, endTime: { lt: now } },
               { status: ActivityStatus.ARCHIVED },
@@ -247,15 +297,26 @@ export default async function ActivitiesPage() {
           orderBy: { endTime: "desc" },
           take: 12,
         }),
+        // 活动推荐：仅未结束的（待定视为有效），最新在前
+        prisma.activity.findMany({
+          where: {
+            status: ActivityStatus.PUBLISHED,
+            type: ActivityType.RECOMMENDATION,
+            OR: [{ timePending: true }, { endTime: { gte: now } }],
+          },
+          orderBy: activityNewestFirstOrder,
+          take: 12,
+        }),
       ]),
     60,
   ).catch(() => mockActivitiesBuckets());
-  const [ongoing, upcoming, past] = Array.isArray(raw) ? raw : [[], [], []];
+  const [ongoing, upcoming, past, recommendations] = Array.isArray(raw) ? raw : [[], [], [], []];
   // 每个子元素也做守卫，防止缓存返回异常数据
   const stripCourseUrl = (activity: any) => redactCourseMeetingLinks(activity, false);
   const safeOngoing  = Array.isArray(ongoing)  ? ongoing.map(stripCourseUrl)  : [];
   const safeUpcoming = Array.isArray(upcoming) ? upcoming.map(stripCourseUrl) : [];
   const safePast     = Array.isArray(past)     ? past.map(stripCourseUrl)     : [];
+  const safeReco     = Array.isArray(recommendations) ? recommendations.map(stripCourseUrl) : [];
   const hero =
       safeOngoing[0] ??
       safeUpcoming[0] ??
@@ -272,7 +333,7 @@ export default async function ActivitiesPage() {
       hero && safeUpcoming[0]?.id === hero.id
           ? safeUpcoming.slice(1)
           : safeUpcoming;
-  const hasAny = !!(hero || safePast.length || safeOngoing.length || safeUpcoming.length);
+  const hasAny = !!(hero || safePast.length || safeOngoing.length || safeUpcoming.length || safeReco.length);
   const otherOngoing =
       hero && heroStatus === "ongoing"
           ? safeOngoing.filter((a) => a.id !== hero.id)
@@ -338,6 +399,20 @@ export default async function ActivitiesPage() {
               {otherOngoing.map((a) => (
                 <ActivityCard key={a.id} a={a} lang={lang} badge="ongoing" />
               ))}
+            </div>
+          </section>
+        )}
+
+        {safeReco.length > 0 && (
+          <section className="mb-12">
+            <SectionTitle emoji="" title={t(lang, "activities.recommendations")} />
+            {/* 一排横排卡片，超出横向滚动；负边距让滚动条贴齐容器 */}
+            <div className="reco-scroll -mx-4 px-4 overflow-x-auto overscroll-x-contain pb-2">
+              <div className="flex w-max snap-x snap-mandatory gap-4">
+                {safeReco.map((a) => (
+                  <RecoCard key={a.id} a={a} lang={lang} />
+                ))}
+              </div>
             </div>
           </section>
         )}

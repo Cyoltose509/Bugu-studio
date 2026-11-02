@@ -43,6 +43,7 @@ import { canSubmitActivityTalk, hasActivityTalkSection } from "@/lib/activities/
 import { activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 import { localizeActivityTitle } from "@/lib/activities/title";
+import { recoTagLabel } from "@/lib/activities/recommendation";
 
 // 活动类型 / 状态 → 双语标签
 const ACTIVITY_TYPE_KEYS: Record<string, DictKey> = {
@@ -51,6 +52,7 @@ const ACTIVITY_TYPE_KEYS: Record<string, DictKey> = {
   ENGINE_COURSE: "activity.type.ENGINE_COURSE",
   COMPETITION: "activityDetail.typeCompetition",
   GENERAL:    "activity.type.GENERAL",
+  RECOMMENDATION: "activity.type.RECOMMENDATION",
 };
 
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
@@ -317,8 +319,16 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
         <p className="text-sm text-brand-text-secondary">
           📅 {formatActivitySchedule(activity.startTime, activity.endTime, lang, activity.timePending, activity.courseHasClock)}
           {activity.location ? ` · 📍 ${activity.location}` : ""}
-          {canViewMeetingLinks && activity.meetingUrl ? ` · ${t(lang, "activity.online")}` : ""}
+          {activity.type !== "RECOMMENDATION" && canViewMeetingLinks && activity.meetingUrl ? ` · ${t(lang, "activity.online")}` : ""}
         </p>
+
+        {activity.type === "RECOMMENDATION" && activity.recoTag && (
+          <p className="text-sm">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#C2447C]/10 text-[#C2447C] dark:bg-[#C2447C]/20 dark:text-[#E58AAE]">
+              {recoTagLabel(lang, activity.recoTag)}
+            </span>
+          </p>
+        )}
 
         {activity.summary && (
             <p className="text-base text-brand-text-body">
@@ -334,8 +344,23 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
         </div>
       )}
 
+      {/* ── 活动推荐：官网 / 报名链接 CTA ────────────── */}
+      {activity.type === "RECOMMENDATION" && activity.meetingUrl && (
+        <div className="mb-6 p-4 rounded-xl border bg-[#FDF2F7] border-[#C2447C]/20 dark:bg-[#C2447C]/10 dark:border-[#C2447C]/30 flex items-center justify-between gap-4 flex-wrap">
+          <span className="text-sm text-brand-text-body min-w-0 break-all">{activity.meetingUrl}</span>
+          <a
+            href={activity.meetingUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-primary inline-flex shrink-0 items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            {t(lang, "activityDetail.visitSite")} →
+          </a>
+        </div>
+      )}
+
       {/* ── 线上链接 ────────────────────────────────── */}
-      {canViewMeetingLinks && activity.meetingUrl && (
+      {activity.type !== "RECOMMENDATION" && canViewMeetingLinks && activity.meetingUrl && (
         <div className="mb-6 p-4 rounded-xl border bg-[#F0F8FF] border-brand-border-subtle">
           <span className="text-sm font-medium text-brand-navy">{t(lang, "activityDetail.onlineLink")}</span>
           <a href={activity.meetingUrl} target="_blank" rel="noreferrer" className="text-sm ml-1 hover:underline text-brand-blue">{activity.meetingUrl}</a>

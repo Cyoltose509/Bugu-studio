@@ -4,6 +4,16 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-02 — 新增「活动推荐」类型与横排栏【已推送；迁移已上生产库】
+
+- 需求：新增活动类型「活动推荐」，推送 Global Game Jam、黑客松、合作企业培训等第三方活动；不进活动档案，在「正在进行」与「活动档案」之间单开一栏，限一排、可横向滚动。
+- 设计：① 细分类用 recoTag 字符串列（GAME_JAM/HACKATHON/TRAINING/OTHER，扩类别免迁移），卡片角标式小标签；② 复用 meetingUrl 作官网/报名链接，详情页显示「前往官网 →」CTA；③ 生命周期：只存在于专属横排栏，结束自动消失——排除出档案、首页动态、年报（history 两处查询）；④ 角标配色 #C2447C（玫瑰红，与既有五色区分）。
+- DB：迁移 20261102170000_activity_recommendation（ALTER TYPE ADD VALUE + ADD COLUMN recoTag，纯增量）已 migrate deploy 至生产 Supabase；因用户预览服务器占用引擎 DLL，客户端用 generate --no-engine 生成（引擎文件同版本无需替换）。
+- 前端：activities/page.tsx 查询升 v3 加第四桶（PUBLISHED+RECOMMENDATION+未结束，取 12），新 RecoCard 紧凑卡（类别 chip + 倒计时/进行中）+ .reco-scroll 横向细胶囊滚动条（复用议程栏风格）；详情页隐藏「线上」标记、显示类别 chip 与官网 CTA；hasAny 纳入推荐桶。
+- 后台：创建/编辑页加类型卡片与细分类选择器，meetingUrl 标签随类型切换为「官网/报名链接」；actions.ts 读写 recoTag（非推荐类型强制清空）；管理列表加类型标签。
+- 验证：tsc 通过；vitest unit+ui 137/137 + 新增 recommendation 测试 3/3；next build 通过（66/66）。注意：正在运行的预览服务器需重启后 Prisma 新客户端才生效（旧客户端会把 type 过滤静默忽略，推荐栏会混入常规活动）。
+- 设计备忘（未做，后续可选）：报名截止日倒计时、主办方 logo 字段。
+
 ## 2026-11-02 — 预览通道失败根因坐实：--host 参数不兼容【已推送】
 
 - .dev-boot.log 一次命中真凶：预览 spawner 传 `--host localhost --port 7101`，而 Next.js CLI 只认 `--hostname`——`error: unknown option '--host'` 退出码 1 秒退（stderr 54 字节与该报错长度精确吻合，旧记录的 83B/54B 之谜就此闭环）。

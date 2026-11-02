@@ -4,6 +4,7 @@ const TONE: Record<string, string> = {
   ENGINE_COURSE: "bg-[#236EAE]",
   COMPETITION: "bg-brand-orange",
   GENERAL: "bg-[#6D5B9A]",
+  RECOMMENDATION: "bg-[#C2447C]",
 };
 
 /** 封面左上角三角角标：例会 / 大事件 / Game Jam / 公开课 */

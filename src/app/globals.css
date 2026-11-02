@@ -140,6 +140,41 @@
   }
 }
 
+/* ── 活动推荐横排滚动条：与议程侧栏同风格的横向细胶囊 ─────────── */
+.reco-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.reco-scroll::-webkit-scrollbar { height: 8px; }
+.reco-scroll::-webkit-scrollbar-track { background: transparent; }
+.reco-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+@media (hover: hover) {
+  .reco-scroll:hover { scrollbar-color: rgba(37, 84, 122, 0.38) transparent; }
+  .reco-scroll:hover::-webkit-scrollbar-thumb {
+    background: rgba(37, 84, 122, 0.38);
+    background-clip: padding-box;
+  }
+  .reco-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(37, 84, 122, 0.6);
+    background-clip: padding-box;
+  }
+  .dark .reco-scroll:hover { scrollbar-color: rgba(126, 184, 218, 0.38) transparent; }
+  .dark .reco-scroll:hover::-webkit-scrollbar-thumb {
+    background: rgba(126, 184, 218, 0.38);
+    background-clip: padding-box;
+  }
+  .dark .reco-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(126, 184, 218, 0.6);
+    background-clip: padding-box;
+  }
+}
+
 /* ── 可访问性 — focus-visible 键盘焦点环 ─────────── */
 *:focus-visible {
   outline: 2px solid #E38043;
