@@ -144,6 +144,11 @@ export const dict = {
   "activity.online": { cn: "🔗 线上", en: "🔗 Online" },
   "activities.archive": { cn: "活动档案", en: "Activity Archive" },
   "activities.recommendations": { cn: "活动推荐", en: "Recommended Events" },
+  "activities.calendarView": { cn: "月历", en: "Calendar" },
+  "activities.gridView": { cn: "网格", en: "Grid" },
+  "activities.today": { cn: "今天", en: "Today" },
+  "activities.pendingActivities": { cn: "待定活动", en: "TBD" },
+  "activities.moreItems": { cn: "+{n} 更多", en: "+{n} more" },
   "activityDetail.visitSite": { cn: "前往官网", en: "Visit Website" },
 
   // 通用

@@ -11,11 +11,12 @@ import { ActivityType, ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-data";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
+import ActivityCalendar from "@/components/activities/ActivityCalendar";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
 import { auth } from "@/lib/auth/auth";
-import { activityNewestFirstOrder, formatActivityDay, formatActivitySchedule } from "@/lib/activities/datetime";
+import { activityNewestFirstOrder, activityCalendar, formatActivityDay, formatActivitySchedule } from "@/lib/activities/datetime";
 import { redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
 import { localizeActivityTitle } from "@/lib/activities/title";
 import { recoTagLabel } from "@/lib/activities/recommendation";
@@ -211,7 +212,7 @@ function RecoCard({ a, lang }: { a: any; lang: Lang }) {
   const isLive = !a.timePending && a.startTime && a.endTime &&
     new Date(a.startTime).getTime() <= now && new Date(a.endTime).getTime() >= now;
   return (
-    <Link href={`/activities/${a.id}`} className="group snap-start shrink-0 w-60 sm:w-64">
+    <Link href={`/activities/${a.id}`} className="group snap-start shrink-0 w-[300px]">
       <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all h-full flex flex-col">
         <div className="relative aspect-video overflow-hidden bg-brand-surface shrink-0">
           <Image
@@ -219,7 +220,7 @@ function RecoCard({ a, lang }: { a: any; lang: Lang }) {
             alt={displayTitle}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="264px"
+            sizes="300px"
           />
           {tagLabel && (
             <span className="absolute top-2 left-2 text-[11px] font-medium px-2 py-0.5 rounded-full bg-black/45 text-white backdrop-blur-sm">
@@ -234,13 +235,17 @@ function RecoCard({ a, lang }: { a: any; lang: Lang }) {
             )}
           </div>
         </div>
-        <div className="p-3 flex flex-col gap-1 flex-1">
+        {/* 信息区与活动档案卡片一致：标题 / 时间·地点 / 简介，三行固定高度 */}
+        <div className="p-3 flex flex-col gap-1 flex-1 min-h-[4.75rem]">
           <h3 className="text-sm font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
             {displayTitle}
           </h3>
           <p className="text-xs text-brand-text-muted line-clamp-1">
             {formatActivitySchedule(a.startTime, a.endTime, lang, a.timePending, a.courseHasClock)}
             {a.location ? ` · ${a.location}` : ""}
+          </p>
+          <p className="text-xs line-clamp-1 text-brand-text-secondary min-h-[1rem]">
+            {a.summary || " "}
           </p>
         </div>
       </div>
@@ -257,11 +262,27 @@ function SectionTitle({ emoji, title }: { emoji: string; title: string }) {
   );
 }
 
-export default async function ActivitiesPage() {
+export default async function ActivitiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; month?: string }>;
+}) {
+  const { view, month: monthParam } = await searchParams;
+  const isCalendar = view === "calendar";
   const now = new Date();
   const lang = await getLang();
   const session = await auth();
   const isAdmin = session?.user?.role === "ADMIN";
+
+  // 月历月份：?month=YYYY-MM，非法或缺省时取北京时间当前月
+  const nowCn = activityCalendar(now);
+  let calYear = nowCn.year;
+  let calMonth = nowCn.month;
+  const monthMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(monthParam ?? "");
+  if (monthMatch) {
+    calYear = Number(monthMatch[1]);
+    calMonth = Number(monthMatch[2]);
+  }
 
   const raw = isMockDataEnabled()
     ? mockActivitiesBuckets()
@@ -339,6 +360,25 @@ export default async function ActivitiesPage() {
           ? safeOngoing.filter((a) => a.id !== hero.id)
           : safeOngoing;
 
+  // 月历视图：全部已发布/归档活动（含推荐类），仅取排期所需字段，按开始时间升序
+  const calendarAll: any[] = isCalendar
+    ? isMockDataEnabled()
+      ? (mockActivitiesBuckets().flat() as any[])
+      : await cachedQuery(
+          "activities:calendar:v1",
+          () =>
+            prisma.activity.findMany({
+              where: { status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] } },
+              select: { id: true, title: true, type: true, startTime: true, endTime: true, timePending: true },
+              orderBy: { startTime: "asc" },
+              take: 500,
+            }),
+          60,
+        ).catch(() => [] as any[])
+    : [];
+  const calendarActivities = calendarAll.filter((a) => !a.timePending && a.startTime);
+  const calendarPending = calendarAll.filter((a) => a.timePending || !a.startTime);
+
   return (
       <div className="container mx-auto px-4 py-10 animate-fade-in">
 
@@ -348,18 +388,52 @@ export default async function ActivitiesPage() {
             <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.activities.title")}</h1>
             <p className="mt-2 text-brand-text-secondary">{t(lang, "activities.intro")}</p>
           </div>
-          {isAdmin && (
+          <div className="flex shrink-0 items-center gap-2">
+            {/* 网格 / 月历视图切换 */}
             <Link
-              href="/admin/activities/create"
-              className="btn-primary shrink-0 w-11 h-11 rounded-xl text-[1.75rem] font-light leading-none flex items-center justify-center"
-              title={t(lang, "activities.create")}
-              aria-label={t(lang, "activities.create")}
+              href={isCalendar ? "/activities" : "/activities?view=calendar"}
+              className="w-11 h-11 rounded-xl border border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-blue/40 hover:text-brand-blue transition-colors flex items-center justify-center"
+              title={t(lang, isCalendar ? "activities.gridView" : "activities.calendarView")}
+              aria-label={t(lang, isCalendar ? "activities.gridView" : "activities.calendarView")}
             >
-              +
+              {isCalendar ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="17" rx="2.5" />
+                  <path d="M3 9h18" />
+                  <path d="M8 2v4M16 2v4" />
+                </svg>
+              )}
             </Link>
-          )}
+            {isAdmin && (
+              <Link
+                href="/admin/activities/create"
+                className="btn-primary shrink-0 w-11 h-11 rounded-xl text-[1.75rem] font-light leading-none flex items-center justify-center"
+                title={t(lang, "activities.create")}
+                aria-label={t(lang, "activities.create")}
+              >
+                +
+              </Link>
+            )}
+          </div>
         </div>
 
+        {isCalendar ? (
+          <ActivityCalendar
+            activities={calendarActivities}
+            pending={calendarPending}
+            year={calYear}
+            month={calMonth}
+            lang={lang}
+          />
+        ) : (
+        <>
         {!hasAny && (
           <div className="rounded-xl border border-brand-border-subtle bg-card px-6 py-16 text-center">
             <p className="text-lg font-medium text-brand-navy">{t(lang, "activities.emptyTitle")}</p>
@@ -430,6 +504,8 @@ export default async function ActivitiesPage() {
                 ))}
               </div>
             </section>
+        )}
+        </>
         )}
 
       </div>  );
