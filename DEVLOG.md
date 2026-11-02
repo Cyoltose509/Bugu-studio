@@ -4,6 +4,16 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-02 — Kimi 预览通道"网站启动失败"排查与 dev.mjs 加固【已推送】
+
+- 用户报告：点预览报"网站启动失败，请检查项目和端口占用情况"。排查确认端口无占用（7100/3000 均空闲，无残留 dev 进程），非端口问题。
+- 宿主日志（kimi-desktop/logs/main.log [LocalWebsite]）：dev-server 进程约 1 秒后 exit 1，stdout 83B / stderr 54B——该失败从 00:39 起一直存在，预览通道从未成功过（此前"修好"的结论只覆盖了 Git Bash 直接启动路径）。
+- 环境事实：宿主 node/npm 是垫片（command-process-owner/bin 下的 sh 脚本 + .cmd，经 process-runner.cjs 转调 Kimi.exe-as-node，process.execPath=Kimi.exe）；dev.mjs 此前用 spawn(process.execPath) 起 next 子进程，在预览调用链下不可靠（秒退 exit 1）。
+- 复现注意：Git Bash 里 env PATH 必须用 Unix 格式（/c/...），MSYS 才会正确转成 Windows PATH；Windows 格式直传会被当冒号分隔列表毁掉——此前一轮"'node' 不是内部或外部命令"是复现伪影。修正后全链路（Kimi.exe→npm-cli→cmd→node.cmd→runner→dev.mjs→next）实测可起服且 HTTP 200。
+- 加固（0c49791）：dev.mjs 起 next 子进程改用 findRealNodeDir 找到的真实 node.exe（D:\NodeJS），process.execPath 降为最后手段；新增 .dev-boot.log 启动诊断（execPath/argv/PATH 头/选用 node/子进程退出码，已入 .gitignore），用于捕获预览通道真实失败现场。
+- 验证：Kimi 垫片全链路复现 HTTP 200（boot log 确认 nodeBin=D:\NodeJS\node.exe）；真实 node 直启正常；tsc 通过。注意：Turbopack 首屏编译可达 8 秒+，短超时 curl 会误报失败。
+- 待办：等用户再点一次预览——若仍失败，读项目根 .dev-boot.log 即可定位真实原因（本次复现未能重现 exit 1，疑似与预览 spawner 的确切 env/参数传递有关）。
+
 ## 2026-11-02 — 议程栏 ＋ 下拉二次修复：createPortal 挂 document.body【已推送】
 
 - 用户反馈：上一轮 fixed 定位修复（ce57a56）后实测仍被右侧栏容器裁切。复盘：fixed 只在无祖先 transform/filter/perspective 时才相对视口；页面容器 animate-fade-in 动画期间（或残留 transform）形成"包含块陷阱"，菜单仍以该祖先为定位上下文，侧栏 aside 的 overflow-y-auto 继续裁切。真实浏览器未实测是上一轮的验证缺口。
