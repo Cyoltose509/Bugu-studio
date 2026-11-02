@@ -1,7 +1,8 @@
 /**
- * 活动月历视图：把活动排布在月历格子上。
+ * 活动月历视图：itch.io jam 日历风格 —— 月历格子上铺甘特条。
+ * 多天活动渲染为跨格连续条（按周分段），单日活动为单格条。
  * 纯服务端渲染；月份切换走 searchParams（?view=calendar&month=YYYY-MM）。
- * 日期一律按北京时间（activityCalendar）分桶，多天活动覆盖每一天。
+ * 日期一律按北京时间（activityCalendar）计算。
  */
 import Link from "next/link";
 import { activityCalendar } from "@/lib/activities/datetime";
@@ -23,7 +24,17 @@ export type PendingActivity = {
   type: string;
 };
 
-/** 与封面角标同色系：浅底 + 深字 + 左侧色条 */
+/** 甘特条：实心底 + 白字，与封面角标同色系 */
+const BAR_TONE: Record<string, string> = {
+  MEETING: "bg-[#3B82C4]",
+  COURSE: "bg-[#3D9B8F]",
+  ENGINE_COURSE: "bg-[#236EAE]",
+  COMPETITION: "bg-[#E38043]",
+  GENERAL: "bg-[#6D5B9A]",
+  RECOMMENDATION: "bg-[#C2447C]",
+};
+
+/** 待定活动色签：浅底 + 深字 + 左侧色条 */
 const CHIP_TONE: Record<string, string> = {
   MEETING: "bg-[#3B82C4]/10 text-[#2E6BA3] border-l-[#3B82C4] dark:bg-[#3B82C4]/20 dark:text-[#8FC0EA]",
   COURSE: "bg-[#3D9B8F]/10 text-[#2C7A70] border-l-[#3D9B8F] dark:bg-[#3D9B8F]/20 dark:text-[#7FCCC2]",
@@ -38,6 +49,9 @@ const WEEKDAYS: Record<Lang, string[]> = {
   en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
 };
 
+/** 每周最多铺 3 层甘特条，超出的折叠为「+N 更多」 */
+const MAX_LANES = 3;
+
 function dayKey(y: number, m: number, d: number) {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
@@ -47,10 +61,14 @@ function daySerial(y: number, m: number, d: number) {
   return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
 }
 
-function serialToKey(serial: number) {
-  const dt = new Date(serial * 86400000);
-  return dayKey(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
-}
+type Segment = {
+  a: CalendarActivity;
+  colStart: number; // 1-7，gridColumn 起点
+  span: number;     // 跨越格数
+  contBefore: boolean; // 本周之前就开始了 → 左端不圆角
+  contAfter: boolean;  // 本周之后还没完 → 右端不圆角
+  lane: number;        // 泳道序号（0 起）
+};
 
 export default function ActivityCalendar({
   activities,
@@ -65,35 +83,55 @@ export default function ActivityCalendar({
   month: number; // 1-12
   lang: Lang;
 }) {
-  // 活动按"覆盖的每个北京时间日历日"进桶
-  const byDay = new Map<string, CalendarActivity[]>();
-  for (const a of activities) {
-    const s = activityCalendar(a.startTime);
-    const e = a.endTime ? activityCalendar(a.endTime) : s;
-    const from = daySerial(s.year, s.month, s.day);
-    const to = Math.max(from, daySerial(e.year, e.month, e.day));
-    for (let serial = from; serial <= to && serial - from < 62; serial++) {
-      const key = serialToKey(serial);
-      const list = byDay.get(key);
-      if (list) list.push(a);
-      else byDay.set(key, [a]);
-    }
-  }
-  for (const list of byDay.values()) {
-    list.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  }
+  // 每个活动的"日序号"区间；先按开始早、跨度长排序，泳道分配更整齐
+  const ranges = activities
+    .map((a) => {
+      const s = activityCalendar(a.startTime);
+      const e = a.endTime ? activityCalendar(a.endTime) : s;
+      const from = daySerial(s.year, s.month, s.day);
+      const to = Math.max(from, Math.min(from + 61, daySerial(e.year, e.month, e.day)));
+      return { a, from, to };
+    })
+    .sort((x, y) => x.from - y.from || (y.to - y.from) - (x.to - x.from));
 
-  // 月历格子：周一开头，固定 6 行
+  // 月历格子：周一开头，固定 6 周；以当月第一周的周一作为格 0
   const firstWeekday = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7; // 周一=0
-  const cells: { key: string; day: number; inMonth: boolean }[] = [];
-  // 以当月第一周的周一作为格 0，用日序号推 42 格，天然覆盖跨月
   const firstSerial = daySerial(year, month, 1) - firstWeekday;
-  for (let i = 0; i < 42; i++) {
-    const dt = new Date((firstSerial + i) * 86400000);
-    const cy = dt.getUTCFullYear();
-    const cm = dt.getUTCMonth() + 1;
-    const cd = dt.getUTCDate();
-    cells.push({ key: dayKey(cy, cm, cd), day: cd, inMonth: cm === month });
+
+  const weeks: { days: { key: string; day: number; inMonth: boolean }[]; segs: Segment[]; overflow: number }[] = [];
+  for (let w = 0; w < 6; w++) {
+    const wkStart = firstSerial + w * 7;
+    const days: { key: string; day: number; inMonth: boolean }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const dt = new Date((wkStart + i) * 86400000);
+      const cm = dt.getUTCMonth() + 1;
+      days.push({ key: dayKey(dt.getUTCFullYear(), cm, dt.getUTCDate()), day: dt.getUTCDate(), inMonth: cm === month });
+    }
+    // 甘特条按周切段 + 泳道分配（贪心：放进第一条空得下的泳道）
+    const laneEnds: number[] = [];
+    const segs: Segment[] = [];
+    for (const r of ranges) {
+      const segStart = Math.max(r.from, wkStart);
+      const segEnd = Math.min(r.to, wkStart + 6);
+      if (segStart > segEnd) continue;
+      let lane = laneEnds.findIndex((end) => end < segStart);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(segEnd);
+      } else {
+        laneEnds[lane] = segEnd;
+      }
+      segs.push({
+        a: r.a,
+        colStart: segStart - wkStart + 1,
+        span: segEnd - segStart + 1,
+        contBefore: r.from < wkStart,
+        contAfter: r.to > wkStart + 6,
+        lane,
+      });
+    }
+    const overflow = segs.filter((s) => s.lane >= MAX_LANES).length;
+    weeks.push({ days, segs: segs.filter((s) => s.lane < MAX_LANES), overflow });
   }
 
   const nowCn = activityCalendar(new Date());
@@ -122,58 +160,68 @@ export default function ActivityCalendar({
         </Link>
       </div>
 
-      {/* 星期表头（周一开头） */}
-      <div className="grid grid-cols-7 gap-1.5">
-        {WEEKDAYS[lang].map((w) => (
-          <div key={w} className="pb-1.5 text-center text-xs font-medium text-brand-text-muted">{w}</div>
-        ))}
-      </div>
+      <div className="overflow-hidden rounded-xl border border-brand-border-subtle">
+        {/* 星期表头（周一开头） */}
+        <div className="grid grid-cols-7 border-b border-brand-border-subtle bg-brand-surface/50">
+          {WEEKDAYS[lang].map((w) => (
+            <div key={w} className="py-2 text-center text-xs font-medium text-brand-text-muted">{w}</div>
+          ))}
+        </div>
 
-      {/* 日期格子 */}
-      <div className="grid grid-cols-7 gap-1.5">
-        {cells.map((cell) => {
-          const items = byDay.get(cell.key) ?? [];
-          const isToday = cell.key === todayKey;
-          return (
-            <div
-              key={cell.key}
-              className={`min-h-[5.5rem] rounded-lg border p-1.5 ${
-                cell.inMonth
-                  ? "border-brand-border-subtle bg-card"
-                  : "border-transparent bg-brand-surface/40"
-              } ${isToday ? "ring-2 ring-brand-blue/60" : ""}`}
-            >
-              <div
-                className={`mb-1 text-right text-xs leading-none ${
-                  isToday
-                    ? "font-bold text-brand-blue"
-                    : cell.inMonth
-                      ? "text-brand-text-secondary"
-                      : "text-brand-text-muted/60"
-                }`}
-              >
-                {cell.day}
-              </div>
-              <div className="space-y-1">
-                {items.slice(0, 3).map((a) => (
-                  <Link
-                    key={a.id}
-                    href={`/activities/${a.id}`}
-                    title={localizeActivityTitle(a.title, lang)}
-                    className={`block truncate rounded border-l-2 px-1.5 py-0.5 text-[11px] leading-tight hover:opacity-80 ${CHIP_TONE[a.type] || "bg-brand-surface text-brand-text-body border-l-brand-navy"}`}
+        {/* 六周：每周一层，底层是日期格，上层铺甘特条 */}
+        {weeks.map((week, wi) => (
+          <div key={wi} className={`relative ${wi > 0 ? "border-t border-brand-border-subtle" : ""}`}>
+            {/* 日期格（仅竖分隔线 + 日期数字） */}
+            <div className="absolute inset-0 grid grid-cols-7">
+              {week.days.map((cell, ci) => {
+                const isToday = cell.key === todayKey;
+                return (
+                  <div
+                    key={cell.key}
+                    className={`px-1.5 pt-1.5 text-right ${ci > 0 ? "border-l border-brand-border-subtle/70" : ""} ${cell.inMonth ? "" : "bg-brand-surface/30"}`}
                   >
-                    {localizeActivityTitle(a.title, lang)}
-                  </Link>
-                ))}
-                {items.length > 3 && (
-                  <div className="px-1 text-[10px] text-brand-text-muted">
-                    {t(lang, "activities.moreItems", { n: items.length - 3 })}
+                    <span
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs leading-none ${
+                        isToday
+                          ? "bg-brand-blue font-bold text-white"
+                          : cell.inMonth
+                            ? "text-brand-text-secondary"
+                            : "text-brand-text-muted/50"
+                      }`}
+                    >
+                      {cell.day}
+                    </span>
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
+
+            {/* 甘特条层：7 列网格，gridRow = 泳道 */}
+            <div className="relative grid grid-cols-7 gap-y-1 px-1 pb-2 pt-8 min-h-[5rem]">
+              {week.segs.map((s) => (
+                <Link
+                  key={`${s.a.id}-${s.colStart}`}
+                  href={`/activities/${s.a.id}`}
+                  title={localizeActivityTitle(s.a.title, lang)}
+                  style={{ gridColumn: `${s.colStart} / span ${s.span}`, gridRow: s.lane + 1 }}
+                  className={`flex h-5 items-center overflow-hidden px-2 text-[11px] font-medium leading-none text-white hover:brightness-110 transition ${
+                    BAR_TONE[s.a.type] || "bg-brand-navy"
+                  } ${s.contBefore ? "rounded-l-none -ml-1 pl-1" : "rounded-l-full"} ${s.contAfter ? "rounded-r-none -mr-1 pr-1" : "rounded-r-full"}`}
+                >
+                  <span className="min-w-0 truncate">{localizeActivityTitle(s.a.title, lang)}</span>
+                </Link>
+              ))}
+              {week.overflow > 0 && (
+                <div
+                  style={{ gridColumn: "1 / span 7", gridRow: MAX_LANES + 1 }}
+                  className="px-1 text-[10px] leading-4 text-brand-text-muted"
+                >
+                  {t(lang, "activities.moreItems", { n: week.overflow })}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* 待定活动：没有日期排不上月历，单列一块 */}
