@@ -102,7 +102,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
     },
     {
         id: "tripo-3d",
-        name: "Tripo 提示词库",
+        name: "3D模型生成prompt",
         url: "https://www.tripo3d.ai/zh/3d-prompts/models/gpt-6-astra?utm_source=github&utm_medium=referral&utm_campaign=awesome_astra_prompts&utm_content=catalog_bottom&category=3d-scenes&page=2#free-prompts",
         iconUrl: "",
         color: "#25547A",
