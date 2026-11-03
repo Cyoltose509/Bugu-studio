@@ -48,13 +48,10 @@ function IconBlock({ tool }: { tool: Pick<ToolSite, "url" | "iconUrl" | "color" 
     <span
       aria-hidden
       className="relative flex w-16 shrink-0 items-center justify-center overflow-hidden select-none"
-      style={{
-        background: `linear-gradient(160deg, ${tool.color} 0%, ${tool.color}BB 100%)`,
-      }}
     >
       <span
-        className="text-2xl font-bold text-white"
-        style={{ textShadow: "0 2px 8px rgba(0,0,0,0.3)", visibility: loaded ? "hidden" : "visible" }}
+        className="text-2xl font-bold text-brand-navy dark:text-white"
+        style={{ visibility: loaded ? "hidden" : "visible" }}
       >
         {tool.letter}
       </span>
@@ -76,7 +73,7 @@ function IconBlock({ tool }: { tool: Pick<ToolSite, "url" | "iconUrl" | "color" 
             if (img.naturalWidth <= 2) setIdx((i) => i + 1);
             else setLoaded(true);
           }}
-          className="absolute inset-0 h-full w-full bg-card object-contain p-2.5"
+          className="absolute inset-0 h-full w-full object-contain p-2.5"
           referrerPolicy="no-referrer"
           draggable={false}
         />
