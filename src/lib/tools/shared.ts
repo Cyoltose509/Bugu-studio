@@ -193,7 +193,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://lucide.dev"),
         color: "#F56565",
         letter: "L",
-        category: "游戏素材",
+        category: "图标",
         description: "开源图标库：统一风格的 SVG 图标随取随用，支持调色与按需打包。",
     },
     {
@@ -203,7 +203,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.iconfont.cn"),
         color: "#1B9DF3",
         letter: "i",
-        category: "游戏素材",
+        category: "图标",
         description: "阿里巴巴矢量图标库：中文图标资源丰富，支持自建项目与图标管理。",
     },
     {
@@ -213,7 +213,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://iconmonstr.com"),
         color: "#3F51B5",
         letter: "M",
-        category: "游戏素材",
+        category: "图标",
         description: "免费线性图标库：极简几何风格，无需署名即可商用。",
     },
     {
@@ -223,7 +223,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://poly.pizza/"),
         color: "#7C4DFF",
         letter: "P",
-        category: "游戏素材",
+        category: "3D 模型",
         description: "免费低多边形 3D 模型库：CC0 授权为主，下载即用，搜索体验轻快。",
     },
     {
@@ -233,7 +233,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://sketchfab.com/"),
         color: "#1CAAD9",
         letter: "S",
-        category: "游戏素材",
+        category: "3D 模型",
         description: "海量 3D 模型市场与社区：网页内即时预览，含免费/付费与多种授权。",
     },
     {
@@ -243,7 +243,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://free-paper-texture.com/"),
         color: "#A1887F",
         letter: "F",
-        category: "游戏素材",
+        category: "贴图材质",
         description: "免费纸张纹理素材：手绘/拼贴/复古质感的底纹与材质贴图。",
     },
     {
@@ -253,7 +253,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://kenney.nl"),
         color: "#7BC143",
         letter: "K",
-        category: "游戏素材",
+        category: "综合素材包",
         description: "游戏素材界的公共图书馆：CC0 授权的 2D/3D 素材包与音效包，白嫖无忧。",
     },
     {
@@ -263,7 +263,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://opengameart.org"),
         color: "#2E7D32",
         letter: "O",
-        category: "游戏素材",
+        category: "综合素材包",
         description: "开源游戏素材仓库：模型、音效、音乐与贴图，逐条注明授权。",
     },
     {
@@ -273,7 +273,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://quaternius.com"),
         color: "#5B8DEF",
         letter: "Q",
-        category: "游戏素材",
+        category: "3D 模型",
         description: "免费风格化低模 3D 模型包：角色、道具与场景，定期更新。",
     },
     {
@@ -283,7 +283,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://ambientcg.com"),
         color: "#3E7CB1",
         letter: "A",
-        category: "游戏素材",
+        category: "贴图材质",
         description: "CC0 PBR 材质贴图库：木质、金属、地面等质感素材最全。",
     },
     {
@@ -335,16 +335,6 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         letter: "B",
         category: "灵感积累",
         description: "Adobe 设计作品库：UI/平面与视觉方向灵感。",
-    },
-    {
-        id: "zhongguose",
-        name: "中国传统色",
-        url: "https://zhongguose.com",
-        iconUrl: faviconFor("https://zhongguose.com"),
-        color: "#A03C3C",
-        letter: "色",
-        category: "灵感积累",
-        description: "中国传统色色谱：点击复制色值，做国风 UI 配色很实用。",
     },
     {
         id: "excalidraw",
@@ -403,7 +393,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.flaticon.com/"),
         color: "#0C63E4",
         letter: "F",
-        category: "游戏素材",
+        category: "图标",
         description: "全球最大图标站之一：数百万 SVG/PNG 图标，注意授权与署名要求。",
     },
     {
@@ -413,7 +403,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.emojiall.com/zh-hans"),
         color: "#F5A623",
         letter: "E",
-        category: "游戏素材",
+        category: "图标",
         description: "全平台 Emoji 大全：按分类检索，含含义解释与一键复制。",
     },
     {
@@ -423,7 +413,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.100font.com/"),
         color: "#222222",
         letter: "字",
-        category: "游戏素材",
+        category: "综合素材包",
         description: "免费商用字体集合：整理可商用的中文字体下载与授权说明。",
     },
     {
