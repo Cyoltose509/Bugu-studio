@@ -110,7 +110,7 @@ export const dict = {
   },
   "home.browseWorks": { cn: "浏览作品", en: "Browse Works" },
   "home.meetMembers": { cn: "认识成员", en: "Meet Members" },
-  "home.latestWorks": { cn: "最新作品", en: "Latest Works" },
+  "home.latestUploads": { cn: "最新上传", en: "Latest Uploads" },
   "home.viewAll": { cn: "查看全部", en: "View All" },
   "home.recentActivities": { cn: "近期活动", en: "Recent Activities" },
   "home.joinTitle": { cn: "想加入我们？", en: "Want to join us?" },
@@ -1455,7 +1455,7 @@ export const dict = {
   "loading.membersShort": { cn: "正在加载成员...", en: "Loading members…" },
   "loading.editProfile": { cn: "正在加载编辑资料...", en: "Loading profile editor…" },
   "loading.settings": { cn: "正在加载设置...", en: "Loading settings…" },
-  "loading.latestWorks": { cn: "正在加载最新作品...", en: "Loading latest works…" },
+  "loading.latestUploads": { cn: "正在加载最新上传...", en: "Loading latest uploads…" },
   "loading.activities": { cn: "加载活动中…", en: "Loading activities…" },
 
   // ── 错误边界 ──

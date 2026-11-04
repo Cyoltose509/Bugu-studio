@@ -16,6 +16,7 @@ import {
 } from "@/lib/tags/event-tags";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { tagDisplayName } from "@/lib/tags/tag-names";
+import { chipToneVars } from "@/lib/tags/chip-tone";
 
 type TagLike = {
   slug: string;
@@ -37,18 +38,23 @@ function brandChipClass(slug: string): string {
 }
 
 function chipStyle(tag: TagLike, active?: boolean): CSSProperties | undefined {
-  // 引擎 / 活动&赛事用 CSS class 自适应暗色；其余保持 inline 色
+  // 引擎 / 活动&赛事用 CSS class 自适应暗色；其余走 --tag-* 变量（见 lib/tags/chip-tone）
   if (usesChipClass(tag.slug)) {
     return active
       ? { boxShadow: `inset 0 0 0 1px currentColor` }
       : undefined;
   }
-  const color = resolveColor(tag);
   return {
-    backgroundColor: `${color}18`,
-    color,
-    boxShadow: active ? `inset 0 0 0 1px ${color}` : undefined,
-  };
+    ...chipToneVars(resolveColor(tag)),
+    // ring 颜色跟着昼夜切，别用死色
+    "--tw-ring-color": "var(--tag-ring)",
+    boxShadow: active ? `inset 0 0 0 1px currentColor` : undefined,
+  } as CSSProperties;
+}
+
+/** 非引擎/赛事标签走 .tag-soft，颜色随昼夜切换 */
+function softClass(slug: string): string {
+  return usesChipClass(slug) ? "" : "tag-soft";
 }
 
 function TagMark({ slug }: { slug: string }) {
@@ -71,7 +77,7 @@ export function TagChip({
   return (
     <span
       className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded whitespace-nowrap font-medium ${
-        branded ? brandChipClass(tag.slug) : ""
+        branded ? brandChipClass(tag.slug) : softClass(tag.slug)
       } ${className}`}
       style={chipStyle(tag)}
     >
@@ -104,7 +110,7 @@ export function TagChipLink({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={`inline-flex items-center gap-1 text-xs px-2 py-1 transition-opacity hover:opacity-90 ${
-        branded ? `font-medium rounded-full ${brandChipClass(tag.slug)}` : "rounded"
+        branded ? `font-medium rounded-full ${brandChipClass(tag.slug)}` : `rounded ${softClass(tag.slug)}`
       } ${active ? "ring-1 ring-offset-1" : "opacity-80 hover:opacity-100"} ${className}`}
       style={chipStyle(tag, active)}
     >
@@ -118,6 +124,6 @@ export function TagChipLink({
 export function TagChipButton({ tag, active, onClick }: { tag: TagLike; active: boolean; onClick: () => void }) {
   const { lang } = useLang();
   return <button type="button" aria-pressed={active} onClick={onClick}
-    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 ${usesChipClass(tag.slug) ? brandChipClass(tag.slug) : ""} ${active ? "opacity-100" : "opacity-75 hover:opacity-100"}`}
+    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 ${usesChipClass(tag.slug) ? brandChipClass(tag.slug) : softClass(tag.slug)} ${active ? "opacity-100" : "opacity-75 hover:opacity-100"}`}
     style={chipStyle(tag, active)}><TagMark slug={tag.slug} /><span>{tagDisplayName(tag.slug, tag.name, lang)}</span></button>;
 }

@@ -18,6 +18,7 @@ import {
 import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
 import { getEventChipClass, getEventColor, isEventTagSlug } from "@/lib/tags/event-tags";
 import { tagDisplayName, tagGroupDisplayName } from "@/lib/tags/tag-names";
+import { chipToneVars } from "@/lib/tags/chip-tone";
 
 // ── 作品类型 ──
 const PROJECT_TYPES = ["IN_DEVELOPMENT", "TRIAL_DEMO", "MINI_GAME", "OFFICIAL_RELEASE"] as const;
@@ -973,12 +974,12 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                     return (
                       <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
                         className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer rounded-full ${
-                          branded ? `font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}` : ""
+                          branded ? `font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}` : "tag-soft"
                         } ${active ? "ring-2 ring-offset-1 opacity-100" : "opacity-60 hover:opacity-100"}`}
                         style={
                           branded
                             ? { ["--tw-ring-color" as string]: "currentColor" }
-                            : { color, backgroundColor: `${color}18`, ["--tw-ring-color" as string]: color }
+                            : { ...chipToneVars(color), ["--tw-ring-color" as string]: "var(--tag-ring)" }
                         }
                         >
                         {isEngineTagSlug(tag.slug) && <EngineTagIcon slug={tag.slug} />}
@@ -1003,12 +1004,12 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                         return (
                           <button key={tag.id} type="button" onClick={() => toggleTag(tag.id)}
                             className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 transition-all cursor-pointer rounded-full ${
-                              branded ? `font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}` : ""
+                              branded ? `font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}` : "tag-soft"
                             } ${active ? "ring-2 ring-offset-1 opacity-100" : "opacity-60 hover:opacity-100"}`}
                             style={
                               branded
                                 ? { ["--tw-ring-color" as string]: "currentColor" }
-                                : { color, backgroundColor: `${color}18`, ["--tw-ring-color" as string]: color }
+                                : { ...chipToneVars(color), ["--tw-ring-color" as string]: "var(--tag-ring)" }
                             }
                           >
                             {isEngineTagSlug(tag.slug) && <EngineTagIcon slug={tag.slug} />}
