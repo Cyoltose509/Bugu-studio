@@ -4,7 +4,7 @@
  */
 import {Suspense} from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import localFont from "next/font/local";
 import HomeStats from "@/components/home/HomeStats";
 import LatestProjects from "@/components/home/LatestProjects";

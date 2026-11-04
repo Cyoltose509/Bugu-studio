@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useState } from "react";
 import type { ActivityShowcase } from "@/lib/activities/showcase";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
@@ -93,7 +94,7 @@ export default function ShowcaseEditor({ activityId, initial, projects }: {
         <h3 className="font-semibold">活动海报（{config.posters.length}/10）</h3>
         <p className="text-xs text-brand-text-muted">第一张显示在页面首屏，其余显示在介绍区。图片保留完整比例。</p>
         {config.posters.map((poster, index) => <div key={`${poster.url}-${index}`} className="flex gap-3 rounded-lg bg-brand-surface p-3">
-          <img src={poster.url} alt={poster.title} className="h-24 w-16 shrink-0 rounded object-contain" />
+          <CdnImage src={poster.url} alt={poster.title} className="h-24 w-16 shrink-0 rounded object-contain" />
           <div className="min-w-0 flex-1 space-y-2">
             <label className="block text-xs">海报 {index + 1} 标题<input value={poster.title} maxLength={80}
               className="mt-1 w-full rounded border border-brand-border-subtle bg-card px-2 py-1.5 text-sm"

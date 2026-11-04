@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import {useRef, useCallback, useState, useEffect, memo} from "react";
 import Link from "next/link";
 import SafeImage from "@/components/ui/SafeImage";
@@ -862,7 +863,7 @@ function YearNewspaper({
                                                                             aria-label={t(lang, "common.viewImage")}
                                                                         >
                                                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                                            <img
+                                                                            <CdnImage
                                                                                 src={img.url}
                                                                                 alt={img.altText || e.title}
                                                                                 width={120}
@@ -1050,7 +1051,7 @@ function YearNewspaper({
             {lightboxSrc && (
                 <div data-lightbox onClick={() => setLightboxSrc(null)} className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center cursor-zoom-out">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={lightboxSrc} className="max-w-[90vw] max-h-[90vh] object-contain" alt=""/>
+                    <CdnImage original src={lightboxSrc} className="max-w-[90vw] max-h-[90vh] object-contain" alt=""/>
                 </div>
             )}
         </>

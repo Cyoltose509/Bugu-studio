@@ -6,8 +6,9 @@
 
 import { prisma } from "@/lib/db/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, DeleteObjectsCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { auth } from "@/lib/auth/auth";
+import { isImageVariantKey, imageVariantPaths, imageVariantOriginalKey } from "@/lib/images/delivery";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -29,6 +30,17 @@ async function collectReferencedUrls(publicUrl: string): Promise<Set<string>> {
     }
   }
 
+  function addContent(value: unknown) {
+    if (typeof value === "string") {
+      try { addContent(JSON.parse(value)); return; } catch { /* Text/HTML rather than JSON. */ }
+      for (const match of value.matchAll(/https?:\/\/[^\s"'<>\\)]+/g)) addUrl(match[0]);
+    } else if (Array.isArray(value)) {
+      value.forEach(addContent);
+    } else if (value && typeof value === "object") {
+      Object.values(value).forEach(addContent);
+    }
+  }
+
   // User.image
   const users = await prisma.user.findMany({
     where: { image: { not: null } },
@@ -45,10 +57,9 @@ async function collectReferencedUrls(publicUrl: string): Promise<Set<string>> {
 
   // Project.coverImage
   const projects = await prisma.project.findMany({
-    where: { coverImage: { not: null } },
-    select: { coverImage: true },
+    select: { coverImage: true, description: true },
   });
-  projects.forEach((p) => addUrl(p.coverImage));
+  projects.forEach((p) => { addUrl(p.coverImage); addContent(p.description); });
 
   // ProjectImage.url
   const projectImages = await prisma.projectImage.findMany({
@@ -58,10 +69,9 @@ async function collectReferencedUrls(publicUrl: string): Promise<Set<string>> {
 
   // Activity.coverImage
   const activities = await prisma.activity.findMany({
-    where: { coverImage: { not: null } },
-    select: { coverImage: true },
+    select: { coverImage: true, description: true },
   });
-  activities.forEach((a) => addUrl(a.coverImage));
+  activities.forEach((a) => { addUrl(a.coverImage); addContent(a.description); });
 
   // EventImage.url
   const eventImages = await prisma.eventImage.findMany({
@@ -80,6 +90,15 @@ async function collectReferencedUrls(publicUrl: string): Promise<Set<string>> {
     }
   });
 
+  const [talks, proposals, attachments, classes, showcases, settings] = await Promise.all([
+    prisma.meetingTalk.findMany({ select: { imageUrl: true, description: true } }),
+    prisma.meetingProposal.findMany({ select: { imageUrl: true, description: true } }),
+    prisma.courseAttachment.findMany({ select: { url: true } }),
+    prisma.courseClass.findMany({ select: { coverImage: true, scheduleImage: true, description: true } }),
+    prisma.courseShowcaseItem.findMany({ select: { imageUrl: true } }),
+    prisma.siteSetting.findMany({ select: { value: true } }),
+  ]);
+  [talks, proposals, attachments, classes, showcases, settings].forEach(addContent);
   return urls;
 }
 
@@ -142,9 +161,14 @@ export async function GET(_req: NextRequest) {
 
     const referencedUrls = await collectReferencedUrls(publicUrl);
     const allObjects = await listAllR2Objects(client, bucketName);
+    const objectKeys = new Set(allObjects.map((object) => object.key));
 
     const orphans = allObjects.filter((obj) => {
       const key = obj.key;
+      if (isImageVariantKey(key)) {
+        const original = imageVariantOriginalKey(key, objectKeys);
+        if (original && objectKeys.has(original)) return false;
+      }
       // endsWith 匹配：容忍域名/前缀不一致（如自定义域名 vs .r2.dev 域名）
       // 同时去掉 URL 中的 query / hash 部分再比较
       return !Array.from(referencedUrls).some((url) => {
@@ -203,11 +227,29 @@ export async function POST(req: NextRequest) {
     });
 
     const results: { key: string; success: boolean; error?: string; stillExists?: boolean }[] = [];
+    const referencedUrls = await collectReferencedUrls(process.env.R2_PUBLIC_URL || "");
     for (const key of keys) {
+      if (typeof key !== "string" || !key || [...referencedUrls].some((url) => url.split(/[?#]/)[0].endsWith(`/${key}`))) {
+        results.push({ key: String(key), success: false, error: "文件仍在使用或文件名无效，请重新扫描" });
+        continue;
+      }
       try {
-        await client.send(
-          new DeleteObjectCommand({ Bucket: bucketName, Key: key })
+        if (isImageVariantKey(key)) {
+          const Prefix = key.includes("/v1/")
+            ? key.slice(0, key.lastIndexOf("/") + 1) + "original"
+            : key.replace(/\.w-(320|640|1280|1920)\.webp$/i, "");
+          const objects = await client.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix }));
+          const sourceKeys = new Set((objects.Contents || []).flatMap((object) => object.Key ? [object.Key] : []));
+          const original = imageVariantOriginalKey(key, sourceKeys);
+          if (original && sourceKeys.has(original)) {
+            results.push({ key, success: false, error: "展示图的原图仍存在，请通过原图管理" });
+            continue;
+          }
+        }
+        const deletion = await client.send(
+          new DeleteObjectsCommand({ Bucket: bucketName, Delete: { Objects: [key, ...imageVariantPaths(key)].map((Key) => ({ Key })) } })
         );
+        if (deletion.Errors?.length) throw new Error("文件清理未完成，请重试");
         // 验证删除是否真的生效：HeadObject 应该返回 404
         let stillExists = false;
         try {

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 
 /**
  * 微软风格奖杯图标 — 替代 🏆 emoji。

@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import Link from "next/link";
 import React, { useCallback, useMemo, useState } from "react";
 import MiniLikeButton from "./MiniLikeButton";
@@ -266,7 +267,7 @@ function ProjectCard({
                     >
                       {avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <CdnImage
                           src={avatarUrl}
                           alt={name}
                           className="w-full h-full rounded-full object-cover"

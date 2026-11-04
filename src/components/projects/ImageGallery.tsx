@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import {useState, useCallback, useEffect, useRef} from "react";
 import { createPortal } from "react-dom";
 import SafeImage from "../ui/SafeImage";
@@ -200,7 +201,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                     onKeyDown={(e) => { if (e.key === "Enter") open(0); }}
                     aria-label={t(lang, "imageGallery.viewCover")}
                 >
-                    <img
+                    <CdnImage
                         key={previewItem.src}
                         src={previewItem.src}
                         alt={previewItem.alt}
@@ -317,8 +318,9 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                     <div
                         className={`relative flex items-center justify-center w-[90vw] h-[85vh] ${isZoomed ? "overflow-visible" : "overflow-hidden"}`}
                     >
-                        <img
+                        <CdnImage
                             ref={imgRef}
+                            original
                             src={allImages[lightbox.index].src}
                             alt={allImages[lightbox.index].alt}
                             key={lightbox.index}

@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateMeetingTalkOwn } from "@/app/admin/activities/actions";
@@ -183,7 +184,7 @@ export default function OwnTalkEditor({ talk }: { talk: OwnTalkDraft }) {
       >
         {imageUrl ? (
           <div className="group/image relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
-            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+            <CdnImage src={imageUrl} alt="" className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => setImageUrl("")}

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import { useState } from "react";
 import type { ShareCardData, ShareHeader } from "@/lib/share";
 import type { Lang } from "@/lib/i18n/config";

@@ -1,3 +1,4 @@
+import CdnImage from "@/components/ui/CdnImage";
 import Link from "next/link";
 import { RichContent } from "@/components/ui/RichContent";
 import CourseMaterials from "./CourseMaterials";
@@ -42,7 +43,7 @@ export default function EngineCoursePage({ activity, canViewMeetingLinks, isAdmi
   }));
   return <main className="pb-20 animate-fade-in">
     <header className="relative isolate min-h-[27rem] overflow-hidden bg-brand-navy text-white sm:min-h-[34rem]">
-      {activity.coverImage && <img src={activity.coverImage} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" style={{ objectPosition: `${activity.courseCoverFocusX}% ${activity.courseCoverFocusY}%` }} />}
+      {activity.coverImage && <CdnImage src={activity.coverImage} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" style={{ objectPosition: `${activity.courseCoverFocusX}% ${activity.courseCoverFocusY}%` }} />}
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#0c1b2d] via-[#0c1b2d]/65 to-[#0c1b2d]/15" />
       <div className="mx-auto flex min-h-[27rem] max-w-6xl flex-col justify-end px-5 pb-12 pt-24 sm:min-h-[34rem] sm:pb-16">
         <p className="mb-4 text-xs font-bold uppercase tracking-[0.3em] text-[#acd5f4]">Bugoo Studio / Engine Course</p>
@@ -66,7 +67,7 @@ export default function EngineCoursePage({ activity, canViewMeetingLinks, isAdmi
             {courseClass.description && <p className="mt-4 max-w-2xl whitespace-pre-wrap leading-relaxed text-brand-text-body">{courseClass.description}</p>}
             {courseClass.tags.length > 0 && <div className="mt-5 flex flex-wrap gap-2">{courseClass.tags.map(({ tag }) => <TagChipLink key={tag.id} tag={tag} href={`/works?tag=${encodeURIComponent(tag.slug)}`} className="rounded-full px-3 py-1" />)}</div>}
           </div>
-          {courseClass.coverImage && <img src={courseClass.coverImage} alt="" className="aspect-[4/3] w-full rounded-2xl object-cover" style={{ objectPosition: `${courseClass.coverFocusX}% ${courseClass.coverFocusY}%` }} />}
+          {courseClass.coverImage && <CdnImage src={courseClass.coverImage} alt="" className="aspect-[4/3] w-full rounded-2xl object-cover" style={{ objectPosition: `${courseClass.coverFocusX}% ${courseClass.coverFocusY}%` }} />}
         </div>
         {courseClass.scheduleImage && <div><h3 className="mb-4 text-xl font-bold text-brand-navy">课程表</h3><EngineCourseGallery fullWidth items={[{ id: `${courseClass.id}-schedule`, title: `${courseClass.name} · 课程表`, imageUrl: courseClass.scheduleImage, projectSlug: null }]} /></div>}
         {courseClass.lessons.length > 0 && <div><h3 className="mb-4 text-xl font-bold text-brand-navy">课程安排</h3><div className="space-y-2">{courseClass.lessons.map((lesson, lessonIndex) => <div key={lesson.id} className="grid gap-2 rounded-xl border border-brand-border-subtle bg-card p-4 sm:grid-cols-[3.5rem_minmax(0,1fr)_auto] sm:items-center sm:gap-5">

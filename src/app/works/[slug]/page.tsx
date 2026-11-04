@@ -5,6 +5,7 @@
  * 相邻作品按当前列表排序（时间 / 名称）在内存里定位，避免和列表顺序再次分叉
  */
 
+import CdnImage from "@/components/ui/CdnImage";
 import { cache } from "react";
 import { Metadata, ResolvingMetadata } from "next";
 import { notFound } from "next/navigation";
@@ -467,7 +468,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                         ${pm.member ? "bg-gradient-to-br from-brand-orange to-brand-orange-light" : (pm as any).userId ? "bg-brand-blue" : "bg-gray-500"}
                       `}>
                         {avatarUrl ? (
-                          <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <CdnImage src={avatarUrl} alt={displayName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                         ) : displayName[0]}
                       </div>
                       <div>

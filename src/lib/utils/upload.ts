@@ -9,10 +9,15 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 import { extname } from "path";
 import { UPLOAD_LIMIT_BYTES, AVATAR_LIMIT_BYTES } from "./uploadLimits";
+import { prepareImageVariants } from "../images/prepare";
+import { imageVariantPaths } from "../images/delivery";
+
+const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 // 允许上传的图片类型
 export const ALLOWED_MIME_TYPES = [
@@ -99,24 +104,50 @@ export async function uploadToR2(
 
   // 生成随机文件名（防止路径遍历和覆盖攻击）
   const randomName = randomBytes(16).toString("hex");
-  const key = `${type}s/${randomName}${ext}`;
+  const variants = type === "cover" || type === "screenshot"
+    ? await prepareImageVariants(buffer, mimeType) : [];
+  const key = variants.length
+    ? `${type}s/v1/${randomName}/original-w${variants[0].sourceWidth}${ext}`
+    : `${type}s/${randomName}${ext}`;
 
   const client = getR2Client();
-  await client.send(
-    new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME!,
-      Key: key,
-      Body: buffer,
-      ContentType: mimeType,
-      // 元数据（不存原始文件名，防止信息泄露）
-      Metadata: {
-        "upload-type": type,
-        "upload-time": new Date().toISOString(),
-      },
-    })
-  );
+  const variantKeys = imageVariantPaths(key);
+  try {
+    // Finish every variant before publishing an original URL that implies they exist.
+    const writes = await Promise.allSettled(variants.map((variant, index) => client.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!, Key: variantKeys[index],
+        Body: variant.buffer, ContentType: "image/webp", CacheControl: IMAGE_CACHE_CONTROL,
+        Metadata: { "upload-type": type, "image-variant": String(variant.width), "source-width": String(variant.sourceWidth) },
+      }),
+    )));
+    const failed = writes.find((write) => write.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
+    await client.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType,
+        CacheControl: IMAGE_CACHE_CONTROL,
+        // 元数据（不存原始文件名，防止信息泄露）
+        Metadata: {
+          "upload-type": type,
+          "upload-time": new Date().toISOString(),
+        },
+      })
+    );
+  } catch (error) {
+    if (variantKeys.length) {
+      await client.send(new DeleteObjectsCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Delete: { Objects: [...variantKeys, key].map((Key) => ({ Key })), Quiet: true },
+      })).catch(() => undefined);
+    }
+    throw error;
+  }
 
-  const url = `${process.env.R2_PUBLIC_URL}/${key}`;
+  const url = `${process.env.R2_PUBLIC_URL!.replace(/\/+$/, "")}/${key}`;
   return { url, key };
 }
 
@@ -225,6 +256,14 @@ export async function deleteFromR2(urlOrKey: string): Promise<boolean> {
 
   try {
     const client = getR2Client();
+    const variants = imageVariantPaths(key);
+    if (variants.length) {
+      const result = await client.send(new DeleteObjectsCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Delete: { Objects: [key, ...variants].map((Key) => ({ Key })), Quiet: true },
+      }));
+      return !result.Errors?.length;
+    }
     await client.send(
       new DeleteObjectCommand({
         Bucket: process.env.R2_BUCKET_NAME!,

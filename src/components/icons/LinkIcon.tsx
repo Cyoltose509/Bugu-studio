@@ -1,4 +1,4 @@
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 
 /**
  * 外部/社交链接的小图标。

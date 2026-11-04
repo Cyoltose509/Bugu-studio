@@ -1,3 +1,4 @@
+import CdnImage from "@/components/ui/CdnImage";
 import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { t } from "@/lib/i18n/dict";
@@ -75,7 +76,7 @@ export default function CourseMaterials({
             {images.map((file) => (
               <li key={file.id} className="min-w-0">
                 <a href={file.url} target="_blank" rel="noreferrer" aria-label={file.name} className="group relative block aspect-[4/3] overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface hover:border-brand-blue">
-                  <img src={file.url} alt="" className="h-full w-full object-cover" />
+                  <CdnImage src={file.url} alt="" className="h-full w-full object-cover" />
                   <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/75 to-transparent px-2.5 pb-2 pt-8 text-sm text-white">{file.name}</span>
                 </a>
               </li>

@@ -39,6 +39,8 @@ function isPrivateOrSensitiveIP(ip: string): boolean {
 // ── 域名白名单（仅允许这些域名，注释掉则为全允许但禁内网） ──
 const ALLOWED_HOSTS: RegExp[] = [
   // 布谷 Studio 自身（CDN/R2）
+  /^cdn\.bugoostudio\.com$/,
+  /^lh3\.googleusercontent\.com$/,
   /^.*\.r2\.cloudflarestorage\.com$/,
   /^pub-[a-f0-9]+\.r2\.dev$/,
   // 常见图片 CDN/平台

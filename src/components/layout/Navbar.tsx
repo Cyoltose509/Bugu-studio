@@ -5,7 +5,7 @@
  * 布局用三栏 grid，避免 absolute 居中与右侧控件重叠。
  */
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import { auth } from "@/lib/auth/auth";
 import NotificationBell from "./NotificationBell";
 import NavLink from "./NavLink";

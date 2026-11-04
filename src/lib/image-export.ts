@@ -97,10 +97,14 @@ export async function prepareImagesForExport(
 
     // 替换为同源代理
     const proxyUrl = `${PROXY_PATH}${encodeURIComponent(src)}`;
-    const origSrc = src;
+    const origSrc = el.getAttribute("src");
+    const origSrcset = el.getAttribute("srcset");
+    const origSizes = el.getAttribute("sizes");
     restores.push(() => {
-      el.src = origSrc;
-      if (el.srcset) el.srcset = el.srcset;
+      for (const [name, value] of [["src", origSrc], ["srcset", origSrcset], ["sizes", origSizes]]) {
+        if (value === null) el.removeAttribute(name!);
+        else el.setAttribute(name!, value!);
+      }
     });
     el.src = proxyUrl;
     el.removeAttribute("srcset");
