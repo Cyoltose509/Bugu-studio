@@ -6,7 +6,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import React from "react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -91,5 +91,33 @@ describe("ToolsClient", () => {
     fireEvent.change(input, { target: { value: "引擎工具" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(screen.getByText("引擎工具")).toBeTruthy();
+  });
+
+  it("顶部 + 打开独立新增横幅，按所选分栏归类（不再固定落在第一栏）", async () => {
+    const { saveToolsData } = await import("@/app/tools/actions");
+    renderClient();
+    fireEvent.click(screen.getByLabelText("添加工具"));
+    // 独立横幅有自己的标题，不再伪装成第一栏的追加行
+    expect(screen.getByText("新增工具")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("名称"), { target: { value: "新站点" } });
+    fireEvent.change(screen.getByLabelText("网址（https:// 开头）"), {
+      target: { value: "https://new.example.com" },
+    });
+    // 显式改分栏到第二栏
+    fireEvent.change(screen.getByLabelText("所属分栏"), { target: { value: "s2" } });
+    fireEvent.click(screen.getByText("保存"));
+    await waitFor(() => expect(saveToolsData).toHaveBeenCalled());
+    const last = (saveToolsData as unknown as { mock: { calls: unknown[][] } }).mock.calls.at(-1)![0] as ToolsData;
+    expect(last.sites.at(-1)?.category).toBe("三维创作");
+    expect(last.sites.at(-1)?.name).toBe("新站点");
+  });
+
+  it("管理模式给条目和分栏都挂上拖动把手", () => {
+    renderClient();
+    fireEvent.click(screen.getByLabelText("管理工具"));
+    // 两个条目 → 两个条目把手
+    expect(screen.getAllByLabelText("拖动排序（可拖到其它分栏）")).toHaveLength(2);
+    // 三个分栏 → 三个分栏把手
+    expect(screen.getAllByLabelText("拖动调整分栏顺序")).toHaveLength(3);
   });
 });

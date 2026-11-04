@@ -35,13 +35,17 @@ export const TOOLS_SETTING_KEY = "tools:sites";
 
 export const DEFAULT_TOOL_SECTIONS: ToolSection[] = [
     { id: "sec-game-engine", name: "游戏引擎" },
+    { id: "sec-engine-assets", name: "引擎资产商店" },
+    { id: "sec-3d-model", name: "3D 模型" },
+    { id: "sec-texture", name: "贴图材质" },
+    { id: "sec-icon-font", name: "图标与字体" },
+    { id: "sec-assets", name: "综合素材包" },
+    { id: "sec-audio", name: "音频素材" },
     { id: "sec-3d", name: "三维创作" },
     { id: "sec-game-platform", name: "游戏平台" },
-    { id: "sec-collab", name: "协作工具" },
     { id: "sec-sketch", name: "快速画板" },
     { id: "sec-inspiration", name: "灵感积累" },
-    { id: "sec-assets", name: "游戏素材" },
-    { id: "sec-audio", name: "音频素材" },
+    { id: "sec-collab", name: "协作工具" },
     { id: "sec-tutorial", name: "教程学习" },
 ];
 
@@ -193,7 +197,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://lucide.dev"),
         color: "#F56565",
         letter: "L",
-        category: "图标",
+        category: "图标与字体",
         description: "开源图标库：统一风格的 SVG 图标随取随用，支持调色与按需打包。",
     },
     {
@@ -203,7 +207,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.iconfont.cn"),
         color: "#1B9DF3",
         letter: "i",
-        category: "图标",
+        category: "图标与字体",
         description: "阿里巴巴矢量图标库：中文图标资源丰富，支持自建项目与图标管理。",
     },
     {
@@ -213,7 +217,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://iconmonstr.com"),
         color: "#3F51B5",
         letter: "M",
-        category: "图标",
+        category: "图标与字体",
         description: "免费线性图标库：极简几何风格，无需署名即可商用。",
     },
     {
@@ -273,7 +277,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.unrealengine.com/marketplace/zh-CN/"),
         color: "#2A2A2A",
         letter: "U",
-        category: "综合素材包",
+        category: "引擎资产商店",
         description: "虚幻引擎官方资产市场：大量免费资产每月更新，含模型与材质。",
     },
     {
@@ -303,7 +307,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://assetstore.unity.com/zh?category=2d%2Ftextures-materials%2Fmetals&free=true&orderBy=1"),
         color: "#4A4A4A",
         letter: "U",
-        category: "贴图材质",
+        category: "引擎资产商店",
         description: "Unity 官方资产商店：此链接直达免费金属材质贴图筛选结果。",
     },
     {
@@ -433,7 +437,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.flaticon.com/"),
         color: "#0C63E4",
         letter: "F",
-        category: "图标",
+        category: "图标与字体",
         description: "全球最大图标站之一：数百万 SVG/PNG 图标，注意授权与署名要求。",
     },
     {
@@ -443,7 +447,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.emojiall.com/zh-hans"),
         color: "#F5A623",
         letter: "E",
-        category: "图标",
+        category: "图标与字体",
         description: "全平台 Emoji 大全：按分类检索，含含义解释与一键复制。",
     },
     {
@@ -453,7 +457,7 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         iconUrl: faviconFor("https://www.100font.com/"),
         color: "#222222",
         letter: "字",
-        category: "综合素材包",
+        category: "图标与字体",
         description: "免费商用字体集合：整理可商用的中文字体下载与授权说明。",
     },
     {
@@ -465,6 +469,56 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         letter: "効",
         category: "音频素材",
         description: "日本免费音效素材站：游戏 UI 音、环境声与拟音素材可下载。",
+    },
+    {
+        id: "sounds-resource",
+        name: "The Sounds Resource",
+        url: "https://sounds.spriters-resource.com/",
+        iconUrl: faviconFor("https://sounds.spriters-resource.com/"),
+        color: "#2F6DB5",
+        letter: "S",
+        category: "音频素材",
+        description: "游戏原声与音效资源站：按主机与作品索引，收录从游戏里直接提取的 BGM、音效与配音。",
+    },
+    {
+        id: "vsthouse",
+        name: "VST House",
+        url: "https://vsthouse.ru/",
+        iconUrl: faviconFor("https://vsthouse.ru/"),
+        color: "#8E44AD",
+        letter: "V",
+        category: "音频素材",
+        description: "俄语 VST 插件与虚拟乐器索引站：按类型检索免费/商业音源与音色库，附试听与下载入口。",
+    },
+    {
+        id: "spriters-resource",
+        name: "The Spriters Resource",
+        url: "https://www.spriters-resource.com/browse/",
+        iconUrl: faviconFor("https://www.spriters-resource.com/browse/"),
+        color: "#C1443C",
+        letter: "S",
+        category: "综合素材包",
+        description: "精灵图资源库：按平台与作品浏览 2D 角色、场景、UI 拆图，做像素素材参考或直接取用。",
+    },
+    {
+        id: "bmfont-web",
+        name: "BMFont Web",
+        url: "https://bmfont-web.hahahoho.studio/",
+        iconUrl: faviconFor("https://bmfont-web.hahahoho.studio/"),
+        color: "#5B6AE0",
+        letter: "B",
+        category: "图标与字体",
+        description: "在线生成 BMFont 兼容的位图字体：调字号与描边后直接导出，可用于 Unity3D、Cocos Creator、PhaserJS 等。",
+    },
+    {
+        id: "easyicon",
+        name: "EasyIcon",
+        url: "https://www.easyicon.cc/",
+        iconUrl: faviconFor("https://www.easyicon.cc/"),
+        color: "#2E9E5B",
+        letter: "E",
+        category: "图标与字体",
+        description: "中文图标下载站：PNG/ICO/SVG 多尺寸打包，支持关键词与配色筛选，适合临时补图标。",
     },
 ];
 
@@ -550,4 +604,62 @@ export function normalizeToolsData(raw: unknown): ToolsData {
     for (const site of sites) pushSection("", site.category);
 
     return { sections, sites };
+}
+
+/** 拖放落点：插入到某个分栏内、某条目之前；beforeId 为 null 表示追加到该分栏末尾 */
+export interface ToolSiteDropTarget {
+    sectionName: string;
+    beforeId: string | null;
+}
+
+/**
+ * 把条目移动到目标位置（允许跨分栏）。
+ *
+ * 存储是「分栏数组 + 扁平条目数组」，栏内顺序由条目数组的相对顺序决定，
+ * 所以跨栏移动必须同时改 category 和数组位置。这里先按分栏重新分组、
+ * 摘出被拖条目、按落点插回，再按分栏顺序铺平——保证数组顺序与分栏顺序
+ * 不会互相打架（否则下次读库渲染会出现「看着跳了一格」的错位）。
+ */
+export function moveToolSite(data: ToolsData, dragId: string, target: ToolSiteDropTarget): ToolsData {
+    const dragged = data.sites.find((s) => s.id === dragId);
+    if (!dragged) return data;
+    const sectionNames = data.sections.map((s) => s.name);
+    if (!sectionNames.includes(target.sectionName)) return data;
+    if (target.beforeId === dragId) return data;
+
+    const groups = new Map<string, ToolSite[]>();
+    for (const name of sectionNames) groups.set(name, []);
+    // 分栏列表里没有的归属（理论上 normalize 后不会出现）单独兜底，避免条目丢失
+    const orphans: ToolSite[] = [];
+    for (const site of data.sites) {
+        const bucket = groups.get(site.category);
+        if (bucket) bucket.push(site);
+        else orphans.push(site);
+    }
+    for (const bucket of groups.values()) {
+        const i = bucket.findIndex((s) => s.id === dragId);
+        if (i >= 0) bucket.splice(i, 1);
+    }
+
+    const moved: ToolSite = { ...dragged, category: target.sectionName };
+    const dest = groups.get(target.sectionName)!;
+    const insertAt = target.beforeId ? dest.findIndex((s) => s.id === target.beforeId) : -1;
+    if (insertAt >= 0) dest.splice(insertAt, 0, moved);
+    else dest.push(moved);
+
+    const sites: ToolSite[] = [];
+    for (const name of sectionNames) sites.push(...groups.get(name)!);
+    sites.push(...orphans);
+    return { sections: data.sections, sites };
+}
+
+/** 分栏重排：把 dragId 分栏移到 beforeId 之前；beforeId 为 null 表示移到末尾 */
+export function moveToolSection(data: ToolsData, dragId: string, beforeId: string | null): ToolsData {
+    const dragged = data.sections.find((s) => s.id === dragId);
+    if (!dragged || beforeId === dragId) return data;
+    const rest = data.sections.filter((s) => s.id !== dragId);
+    const insertAt = beforeId ? rest.findIndex((s) => s.id === beforeId) : -1;
+    if (insertAt >= 0) rest.splice(insertAt, 0, dragged);
+    else rest.push(dragged);
+    return { ...data, sections: rest };
 }
