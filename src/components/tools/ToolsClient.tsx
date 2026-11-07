@@ -4,7 +4,6 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveToolsData } from "@/app/tools/actions";
 import {
-  faviconFor,
   moveToolSection,
   moveToolSite,
   type ToolSection,
@@ -153,13 +152,10 @@ function ToolRowEditor({
   );
   const valid = draft.name.trim() && /^https?:\/\/.+\..+/.test(draft.url.trim());
 
-  /** 输入网址即联动获取该域名 favicon（与保存时的服务端补全逻辑一致）；管理员上传过的自定义图标不被覆盖 */
+  /** 图标统一由保存时的服务端现抓并转存 R2；前端不再预填 s2 热链（访客网络常不可达，会出破图） */
   function onUrlChange(url: string) {
-    let iconUrl = draft.iconUrl;
-    const trimmed = url.trim();
-    if (/^https?:\/\/.+\..+/.test(trimmed) && (!iconUrl || iconUrl.includes("google.com/s2/favicons"))) {
-      iconUrl = faviconFor(trimmed);
-    }
+    // 历史数据里若还留着 s2 热链，编辑时顺手清掉
+    const iconUrl = draft.iconUrl.includes("google.com/s2/favicons") ? "" : draft.iconUrl;
     setDraft({ ...draft, url, iconUrl });
   }
 
@@ -205,7 +201,7 @@ function ToolRowEditor({
         </button>
         <button
           type="button"
-          onClick={() => setDraft({ ...draft, iconUrl: faviconFor(draft.url.trim()) })}
+          onClick={() => setDraft({ ...draft, iconUrl: "" })}
           title={t("tools.icon.refetch")}
           aria-label={t("tools.icon.refetch")}
           className="mt-0.5 px-1 text-[11px] leading-4 text-brand-text-muted transition-colors hover:text-brand-navy"

@@ -50,7 +50,7 @@ describe("tools sites", () => {
     expect(await getFallback()).toEqual(DEFAULT_TOOLS_DATA.sites);
   }, 120_000);
 
-  it("normalize：非法 url/空名被丢弃，iconUrl 缺省补热链，letter 回退首字母", () => {
+  it("normalize：非法 url/空名被丢弃，iconUrl 缺省保持空（前端回字标），letter 回退首字母", () => {
     const out = normalizeToolSites([
       { name: "好条目", url: "https://ok.example.com" },
       { name: "坏URL", url: "javascript:alert(1)" },
@@ -59,7 +59,7 @@ describe("tools sites", () => {
     ]);
     expect(out).toHaveLength(1);
     expect(out[0].letter).toBe("好");
-    expect(out[0].iconUrl).toContain("ok.example.com");
+    expect(out[0].iconUrl).toBe("");
   });
 
   it("normalizeToolsData：v1 裸数组升级为 v2 分栏结构", () => {

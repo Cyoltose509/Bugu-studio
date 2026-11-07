@@ -72,14 +72,13 @@ describe("ToolsClient", () => {
     expect((screen.getByLabelText("名称") as HTMLInputElement).value).toBe("Godot Engine");
   });
 
-  it("新增条目时输入合法网址自动填充 favicon", () => {
+  it("新增条目时不再预填 Google s2 热链，图标留空由服务端现抓", () => {
     renderClient();
     fireEvent.click(screen.getByLabelText("添加工具"));
     const urlInput = screen.getByLabelText("网址（https:// 开头）") as HTMLInputElement;
     fireEvent.change(urlInput, { target: { value: "https://example.com/docs" } });
-    // favicon 预览 img 指向 google s2
     const imgs = Array.from(document.querySelectorAll("img")) as HTMLImageElement[];
-    expect(imgs.some((i) => i.src.includes("google.com/s2/favicons") && i.src.includes("example.com"))).toBe(true);
+    expect(imgs.some((i) => i.src.includes("google.com/s2/favicons"))).toBe(false);
   });
 
   it("分栏改名原位输入并可确认（改名同步到栏内条目）", () => {
