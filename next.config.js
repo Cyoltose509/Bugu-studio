@@ -5,9 +5,10 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react", "date-fns", "bcryptjs"],
   },
   images: {
-    formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60 * 60 * 24, // 24h — 减少重复优化请求
-    deviceSizes: [640, 768, 1024, 1280, 1536],
+    // Serve prebuilt files from R2/CDN; never call Vercel Image Optimization.
+    loader: "custom",
+    loaderFile: "./src/lib/images/loader.ts",
+    deviceSizes: [320, 640, 1280, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
     remotePatterns: [
       {

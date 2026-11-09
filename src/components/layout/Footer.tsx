@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 
 import { getClubFoundedYear } from "@/lib/club";
 import { t } from "@/lib/i18n/dict";

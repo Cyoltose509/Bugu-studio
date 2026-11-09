@@ -1,7 +1,8 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 
 /**
  * 作品封面图客户端组件
@@ -50,7 +51,7 @@ export default function ProjectCoverImage({
   if (!src || imgError) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100">
-        <img src={fallbackSrc} alt="" width={40} height={40} className="opacity-30" />
+        <CdnImage src={fallbackSrc} alt="" width={40} height={40} className="opacity-30" />
       </div>
     );
   }
@@ -70,9 +71,10 @@ export default function ProjectCoverImage({
     return (
       <>
         {skeleton}
-        <img
+        <CdnImage
           ref={imgRef}
           src={src}
+          sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw"
           alt={alt}
           className={`${imgClass} aspect-video transition-opacity duration-500 ${
             loaded ? "opacity-100" : "opacity-0"

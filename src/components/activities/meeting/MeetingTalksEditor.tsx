@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { saveMeetingTalks } from "@/app/admin/activities/actions";
@@ -387,7 +388,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <CdnImage
                     src="/images/links/bilibili.png"
                     alt=""
                     width={14}
@@ -488,7 +489,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                       >
                         {u.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <CdnImage
                             src={u.image}
                             alt=""
                             className="w-6 h-6 rounded-full object-cover shrink-0"
@@ -556,7 +557,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                 >
                   {talk.imageUrl ? (
                     <div className="group/image relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
-                      <img src={talk.imageUrl} alt="" className="h-full w-full object-cover" />
+                      <CdnImage src={talk.imageUrl} alt="" className="h-full w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => update(i, { imageUrl: "" })}

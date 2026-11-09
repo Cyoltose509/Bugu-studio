@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -155,7 +156,7 @@ export default function SubmitProposalForm({
       >
         {imagePreview || imageUrl ? (
           <div className="relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
-            <img src={imagePreview || imageUrl} alt={t("meeting.proposalImageAlt")} className="h-full w-full object-cover" />
+            <CdnImage src={imagePreview || imageUrl} alt={t("meeting.proposalImageAlt")} className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => { setImageUrl(""); setImagePreview(null); }}

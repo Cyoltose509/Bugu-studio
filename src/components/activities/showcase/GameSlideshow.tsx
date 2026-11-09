@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { buildShowcaseSlides, type ShowcaseSlideshowProject } from "@/lib/activities/slideshow";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
@@ -16,7 +17,7 @@ function SlideshowImage({ src, cover, alt, className, thumbnail = false }: {
 }) {
   const [fallback, setFallback] = useState(0);
   const resolved = fallback === 0 ? src : fallback === 1 && cover ? cover : "/images/logo.png";
-  return <img src={resolved} alt={thumbnail ? "" : alt} className={className}
+  return <CdnImage src={resolved} alt={thumbnail ? "" : alt} className={className}
     loading={thumbnail ? "lazy" : "eager"}
     onError={() => setFallback(stage => Math.min(stage + 1, 2))} />;
 }

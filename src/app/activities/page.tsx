@@ -4,7 +4,7 @@
  */
 import { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityType, ActivityStatus } from "@prisma/client";

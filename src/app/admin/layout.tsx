@@ -2,7 +2,7 @@
  * 管理后台布局 - 侧边导航 + 内容区
  */
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import dynamic from "next/dynamic";
 import { auth } from "@/lib/auth/auth";
 import { redirect } from "next/navigation";
