@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import { RichContent } from "@/components/ui/RichContent";
 import PosterGallery from "./PosterGallery";
 import PlayableCatalogue from "./PlayableCatalogue";

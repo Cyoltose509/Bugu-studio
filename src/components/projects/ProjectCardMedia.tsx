@@ -3,6 +3,7 @@
 /**
  * 作品卡片封面区：悬停一段时间后轮播封面 + 详细截图
  */
+import CdnImage from "@/components/ui/CdnImage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ProjectCoverImage from "./ProjectCoverImage";
 
@@ -123,8 +124,9 @@ export default function ProjectCardMedia({
             aria-hidden={!visible}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <CdnImage
               src={src}
+              sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw"
               alt={visible ? title : ""}
               className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ${
                 playing ? "scale-105" : "scale-100 group-hover:scale-105"

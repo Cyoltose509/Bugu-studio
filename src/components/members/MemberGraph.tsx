@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import { useRouter } from "next/navigation";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";

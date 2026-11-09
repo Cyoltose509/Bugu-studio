@@ -3,7 +3,7 @@
  * 在 auth() 完成前显示，不阻塞首屏渲染
  */
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import NavLink from "@/components/layout/NavLink";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";

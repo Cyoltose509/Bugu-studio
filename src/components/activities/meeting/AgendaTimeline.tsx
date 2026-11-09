@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgendaSpeaker, AgendaTypeTag } from "@/components/activities/meeting/AgendaRow";
 import BilibiliTvLink from "@/components/activities/meeting/BilibiliTvLink";
@@ -144,7 +145,7 @@ export default function AgendaTimeline({
               {item.imageUrl ? (
                 <div className="mt-2 overflow-hidden rounded-lg">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <CdnImage
                     src={item.imageUrl}
                     alt={t("agenda.viewImage")}
                     loading="lazy"
@@ -188,8 +189,9 @@ export default function AgendaTimeline({
           className="fixed inset-0 z-[100] flex cursor-zoom-out items-center justify-center bg-black/85 p-4 sm:p-8"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox}
+          <CdnImage
+            original
+              src={lightbox}
             alt=""
             onClick={(e) => e.stopPropagation()}
             className="max-h-[92vh] max-w-full rounded-lg object-contain shadow-2xl"

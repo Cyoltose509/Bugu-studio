@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ui/SiteImage";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";

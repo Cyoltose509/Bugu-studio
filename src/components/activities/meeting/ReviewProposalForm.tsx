@@ -1,5 +1,6 @@
 "use client";
 
+import CdnImage from "@/components/ui/CdnImage";
 import { useActionState, useId, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -95,7 +96,7 @@ export default function ReviewProposalForm({
           {t("meeting.by")} {userName} · {createdAt}
         </p>
         {imageUrl && (
-          <img
+          <CdnImage
             src={imageUrl}
             alt={t("meeting.proposalImageAlt")}
             className="mt-3 h-28 w-full rounded-lg object-cover"
