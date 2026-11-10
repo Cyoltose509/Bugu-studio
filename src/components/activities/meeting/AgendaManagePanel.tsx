@@ -12,6 +12,7 @@ import AgendaTimeline, {
 import { AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import { promoteProposalToAgenda } from "@/app/admin/activities/actions";
 import { useLang } from "@/lib/i18n/LangProvider";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 export type UnlistedProposal = {
   id: string;
@@ -36,14 +37,6 @@ function PencilIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="mx-auto block">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -188,7 +181,7 @@ export default function AgendaManagePanel({
                 menuOpen || draft ? "bg-brand-orange" : "bg-brand-blue hover:bg-brand-blue/90"
               }`}
             >
-              <PlusIcon />
+              <PlusIcon size={18} />
             </button>
           )}
           {isAdmin && (

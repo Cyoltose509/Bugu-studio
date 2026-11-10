@@ -11,6 +11,7 @@ import CourseScheduleMenu from "@/components/activities/course/CourseScheduleMen
 import CourseScheduleInput from "@/components/activities/course/CourseScheduleInput";
 import CourseImagePicker from "@/components/activities/CourseImagePicker";
 import { TagChipButton } from "@/components/tags/TagChip";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 type TagOption = { id: string; slug: string; name: string; color: string; group: string | null };
 type AuthorOption = { id: string; name: string };
@@ -20,7 +21,7 @@ const blankClass = (): EngineCourseClassDraft => ({ name: "", description: "", c
 const blankLesson = (): EngineCourseLessonDraft => ({ instructorName: "", topic: "", title: "", date: "", startTime: "", endTime: "", meetingUrl: "", videoUrl: "" });
 const blankWork = (): EngineCourseShowcaseDraft => ({ title: "", imageUrl: "", projectId: null });
 function SymbolButton({ label, remove = false, onClick }: { label: string; remove?: boolean; onClick: () => void }) {
-  return <button type="button" aria-label={label} title={label} onClick={onClick} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue active:scale-95 ${remove ? "border-transparent text-brand-text-muted hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500" : "border-brand-blue/20 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20"}`}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={remove ? "M6 6l12 12M18 6 6 18" : "M12 5v14M5 12h14"} /></svg></button>;
+  return <button type="button" aria-label={label} title={label} onClick={onClick} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue active:scale-95 ${remove ? "border-transparent text-brand-text-muted hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500" : "border-brand-blue/20 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20"}`}>{remove ? <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg> : <PlusIcon size={18} strokeWidth={2} />}</button>;
 }
 function ClassNameEditor({ name, onChange }: { name: string; onChange: (name: string) => void }) {
   const [editing, setEditing] = useState(false);

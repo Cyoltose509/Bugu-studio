@@ -1,7 +1,7 @@
 "use client";
 
 import CdnImage from "@/components/ui/CdnImage";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateMeetingTalkOwn } from "@/app/admin/activities/actions";
 import { parseBvId } from "@/lib/activities/constants";
@@ -50,6 +50,7 @@ export default function OwnTalkEditor({ talk }: { talk: OwnTalkDraft }) {
   const [bvId, setBvId] = useState(talk.bvId);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -182,12 +183,24 @@ export default function OwnTalkEditor({ talk }: { talk: OwnTalkDraft }) {
         onFile={(file) => void handleImage(file)}
         globalPaste
       >
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept={ACCEPT_ATTR}
+          className="sr-only"
+          disabled={uploading}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) void handleImage(file);
+          }}
+        />
         {imageUrl ? (
-          <div className="group/image relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
+          <div role="button" tabIndex={0} aria-label="点击更换配图" onClick={() => imageInputRef.current?.click()} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); imageInputRef.current?.click(); } }} className="group/image relative h-24 cursor-pointer overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface focus-visible:ring-2 focus-visible:ring-brand-blue/40">
             <CdnImage src={imageUrl} alt="" className="h-full w-full object-cover" />
             <button
               type="button"
-              onClick={() => setImageUrl("")}
+              onClick={(event) => { event.stopPropagation(); setImageUrl(""); }}
               className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-black/65 text-lg text-white transition hover:bg-black/85"
               aria-label={t("meetingTalks.removeImage")}
             >
@@ -195,21 +208,10 @@ export default function OwnTalkEditor({ talk }: { talk: OwnTalkDraft }) {
             </button>
           </div>
         ) : (
-          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-blue transition-colors hover:bg-brand-blue/5 focus-within:ring-2 focus-within:ring-brand-blue/30">
+          <button type="button" onClick={() => imageInputRef.current?.click()} disabled={uploading} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-blue transition-colors hover:bg-brand-blue/5 focus-visible:ring-2 focus-visible:ring-brand-blue/30">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 5-5 4 4 4-6 5 7" /></svg>
             <span>{uploading ? t("meetingTalks.uploadingImage") : t("meetingTalks.addImage")}</span>
-            <input
-              type="file"
-              accept={ACCEPT_ATTR}
-              className="sr-only"
-              disabled={uploading}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (file) void handleImage(file);
-              }}
-            />
-          </label>
+          </button>
         )}
       </ImageDropZone>
 

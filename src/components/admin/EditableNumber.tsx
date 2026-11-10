@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateMemberDetails } from "@/app/admin/members/actions";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 interface Props {
   memberId: string;
@@ -67,9 +68,10 @@ export default function EditableNumber({ memberId, field, currentValue, preserve
         type="button"
         onClick={() => step(true)}
         disabled={isPending}
+        aria-label={field === "grade" ? "年级加一" : "入社年份加一"}
         className="w-6 h-6 rounded border flex items-center justify-center text-sm font-bold cursor-pointer hover:bg-gray-100 flex-shrink-0 border-brand-border-subtle text-brand-text-body leading-none"
       >
-        +
+        <PlusIcon size={14} strokeWidth={2.4} />
       </button>
       {dirty && !isPending && (
         <button

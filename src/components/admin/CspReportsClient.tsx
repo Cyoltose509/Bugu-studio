@@ -291,7 +291,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded"
+                className="h-4 w-4 cursor-pointer rounded accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40"
               />
               30s 自动刷新
             </label>
@@ -324,7 +324,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                         type="checkbox"
                         checked={selected.size > 0 && selected.size === reports.length}
                         onChange={toggleSelectAll}
-                        className="rounded"
+                        className="h-4 w-4 cursor-pointer rounded accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40"
                       />
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-brand-text-secondary">违规指令</th>
@@ -348,7 +348,7 @@ export default function CspReportsClient({ initialStats }: { initialStats: Initi
                               type="checkbox"
                               checked={selected.has(r.id)}
                               onChange={() => toggleSelect(r.id)}
-                              className="rounded"
+                              className="h-4 w-4 cursor-pointer rounded accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40"
                             />
                           </td>
                           <td className="px-4 py-2.5 cursor-pointer" onClick={() => toggleExpand(r.id)}>
