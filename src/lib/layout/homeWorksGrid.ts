@@ -1,4 +1,4 @@
-/** 首页「最新作品」栅格。CSS 断点必须与此文件数字一致。 */
+/** 首页「最新上传」栅格。CSS 断点必须与此文件数字一致。 */
 export const HOME_WORKS_BREAKPOINTS = [
   { minWidth: 0, cols: 1, show: 2 },
   { minWidth: 520, cols: 2, show: 4 },

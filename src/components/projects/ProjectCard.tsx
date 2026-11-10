@@ -172,17 +172,18 @@ function ProjectCard({
         )}
 
         <div className="absolute top-2 left-2 z-10">
-          <span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded">
+          <span className="text-[10px] sm:text-xs bg-black/50 text-white px-1.5 sm:px-2 py-0.5 rounded">
             {TYPE_LABEL_KEYS[p.type] ? t(lang, TYPE_LABEL_KEYS[p.type]) : p.type}
           </span>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col p-4 min-h-0">
-        <h3 className="font-semibold group-hover:text-[#3388BB] transition-colors flex items-baseline gap-1.5 min-w-0 text-brand-text-heading">
+      <div className="flex flex-1 flex-col p-3 sm:p-4 min-h-0">
+        <h3 className="font-semibold leading-snug group-hover:text-[#3388BB] transition-colors flex items-baseline gap-1.5 min-w-0 text-[15px] sm:text-base text-brand-text-heading">
           <span className="truncate min-w-0">{display.main}</span>
           {display.sub && (
-            <span className="text-xs font-normal truncate max-w-[45%] text-brand-text-muted">
+            // 窄屏两列时标题只够放主名，副名（多为原名/英文名）留给 ≥sm
+            <span className="hidden sm:inline text-xs font-normal truncate max-w-[45%] text-brand-text-muted">
               {display.sub}
             </span>
           )}
@@ -190,22 +191,25 @@ function ProjectCard({
 
         {!compact && (
           <p
-            className="text-sm mt-1 h-10 leading-5 line-clamp-2 text-brand-text-secondary"
+            className="text-xs sm:text-sm mt-1 h-8 sm:h-10 leading-4 sm:leading-5 line-clamp-2 text-brand-text-secondary"
             aria-hidden={!excerpt}
           >
             {excerpt || "\u00A0"}
           </p>
         )}
 
-        <div className="mt-3 h-6 flex items-center gap-1.5 overflow-hidden">
+        {/* 窄屏一屏两列，第三个标签会挤掉时间/点赞，只在 ≥sm 显示 */}
+        <div className="mt-2.5 sm:mt-3 h-6 flex items-center gap-1.5 overflow-hidden">
           {sortProjectTagsEngineFirst(p.tags ?? [])
             .slice(0, 3)
-            .map(({ tag }) => (
-              <TagChip key={tag.slug} tag={tag} />
+            .map(({ tag }, i) => (
+              <span key={tag.slug} className={i >= 2 ? "hidden sm:inline-flex" : "inline-flex"}>
+                <TagChip tag={tag} />
+              </span>
             ))}
         </div>
 
-        <div className="flex items-center gap-1.5 mt-auto pt-3">
+        <div className="flex items-center gap-1.5 mt-auto pt-2.5 sm:pt-3">
           {p.developYear ? (
             <span className="text-xs flex-shrink-0 text-brand-text-muted">
               {p.developYear}
@@ -224,7 +228,7 @@ function ProjectCard({
             />
             {n > 0 && (
               <div
-                className="flex items-center overflow-hidden"
+                className="hidden sm:flex items-center overflow-hidden"
                 style={
                   {
                     "--avatar-max-w": `${maxW}px`,

@@ -229,7 +229,7 @@ export default function WorksInfiniteGrid({
         <div className="text-sm mb-4 text-brand-text-muted animate-pulse">
           {t(lang, "works.loading")}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-stretch">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 items-stretch">
           {Array.from({ length: 8 }).map((_, i) => (
             <WorkCardSkeleton key={i} />
           ))}
@@ -289,7 +289,7 @@ export default function WorksInfiniteGrid({
         {tpl(lang, "works.loaded", { n: items.length, m: total })}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-stretch">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 items-stretch">
         {items.map((p, idx) => (
           <ProjectCard
             key={p.id}
@@ -304,7 +304,7 @@ export default function WorksInfiniteGrid({
       <div className="mt-6">
         {hasMore && <div ref={sentinelRef} className="h-1" />}
         {loadingMore && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 items-stretch">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 items-stretch">
             {Array.from({ length: 4 }).map((_, i) => (
               <WorkCardSkeleton key={i} />
             ))}

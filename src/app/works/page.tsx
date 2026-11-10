@@ -69,7 +69,8 @@ export default async function WorksPage({searchParams}: PageProps) {
                 </Suspense>
 
                 {/* ── 主区域：工具栏（含桌面已选胶囊）+ 作品网格── */}
-                <div className="flex-1 min-w-0">
+                {/* pb-16：给移动端右下角浮动筛选按钮留出位置，别压住最后一行卡片 */}
+                <div className="flex-1 min-w-0 pb-16 lg:pb-0">
                     <Suspense fallback={<WorksToolbar />}>
                         <WorksToolbarData params={params} lang={lang} />
                     </Suspense>

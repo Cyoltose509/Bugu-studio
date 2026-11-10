@@ -7,6 +7,7 @@
  * 而筛选不再触发 RSC 重渲染，服务端给的 active 不会更新。
  */
 import { useSearchParams } from "next/navigation";
+import type { CSSProperties } from "react";
 import FilterNavLink from "./FilterNavLink";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
 import EventTagIcon from "@/components/tags/EventTagIcon";
@@ -23,6 +24,7 @@ import {
 import { buildUrl } from "@/lib/works/filters";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { tagDisplayName, tagGroupDisplayName } from "@/lib/tags/tag-names";
+import { chipToneVars } from "@/lib/tags/chip-tone";
 
 export type TagChip = {
     slug: string;
@@ -67,12 +69,12 @@ export default function TagFilterChips({
                                     className={`inline-flex items-center gap-1 text-xs px-2 py-1 transition-all ${
                                         branded
                                             ? `rounded-full font-medium ${getEngineChipClass(tag.slug) || getEventChipClass(tag.slug)}`
-                                            : "rounded"
+                                            : "rounded tag-soft"
                                     } ${active ? "ring-1 ring-offset-1 opacity-100" : "opacity-75 hover:opacity-100"}`}
                                     style={
                                         branded
                                             ? undefined
-                                            : { color, backgroundColor: `${color}18` }
+                                            : { ...chipToneVars(color), "--tw-ring-color": "var(--tag-ring)" } as CSSProperties
                                     }
                                 >
                                     {engine && <EngineTagIcon slug={tag.slug} />}

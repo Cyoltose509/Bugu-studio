@@ -66,13 +66,13 @@ export default async function HomePage() {
                 <HomeStats lang={lang}/>
             </Suspense>
 
-            {/* 最新作品 — 流式加载；栅格始终两行 */}
+            {/* 最新上传 — 流式加载；栅格始终两行。文案对齐排序：按 publishedAt / createdAt 倒序 */}
             <section className="py-16 container mx-auto px-4">
                 <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold text-brand-navy">{t(lang, "home.latestWorks")}</h2>
+                    <h2 className="text-2xl font-bold text-brand-navy">{t(lang, "home.latestUploads")}</h2>
                     <Link href="/works" className="text-sm hover:underline text-brand-blue">{t(lang, "home.viewAll")} →</Link>
                 </div>
-                <Suspense fallback={<LogoLoading text={t(lang, "loading.latestWorks")} compact />}>
+                <Suspense fallback={<LogoLoading text={t(lang, "loading.latestUploads")} compact />}>
                     <LatestProjects lang={lang}/>
                 </Suspense>
             </section>

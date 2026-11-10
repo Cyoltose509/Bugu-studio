@@ -711,6 +711,21 @@ select:focus-visible {
 .dark .event-chip-cusga { color: #a4d85a; background-color: rgba(164, 216, 90, 0.16); }
 .dark .event-chip-mengyabei { color: #6aa0c8; background-color: rgba(106, 160, 200, 0.16); }
 
+/* ── 通用标签胶囊（平台 / 大类 / 要素 / 自建）────────────────────────
+   颜色存在库里，没法逐个手写暗色变体，所以两套值由 lib/tags/chip-tone.ts
+   按标签色算好后以 --tag-* 变量注入，这里只负责昼夜切换。
+   深色标签（Steam #1B2838、恐怖 #292524）在暗底上会糊掉，暗色值已提亮。 */
+.tag-soft {
+  --tag-ring: var(--tag-fg);
+  color: var(--tag-fg);
+  background-color: var(--tag-bg);
+}
+.dark .tag-soft {
+  --tag-ring: var(--tag-fg-dark);
+  color: var(--tag-fg-dark);
+  background-color: var(--tag-bg-dark);
+}
+
 /* 议程/报名：「分享」「展示」胶囊，随昼夜切换 */
 .agenda-chip-share {
   color: #3388BB;
@@ -964,7 +979,7 @@ html.graph-fullscreen footer {
   background: color-mix(in srgb, #C62828 68%, #121a26);
 }
 
-/* 首页最新作品：列数与露出张数跟 src/lib/layout/homeWorksGrid.ts 对齐。
+/* 首页最新上传：列数与露出张数跟 src/lib/layout/homeWorksGrid.ts 对齐。
    首屏用 nth-child 裁两行；水合后客户端按同一断点卸载多余卡片。 */
 .home-latest-works-grid {
   --home-works-cols: 1;
