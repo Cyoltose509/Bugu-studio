@@ -2,7 +2,7 @@
 
 import Image from "@/components/ui/SiteImage";
 import { useState } from "react";
-import type { ShareCardData, ShareHeader } from "@/lib/share";
+import { shareImageMask, type ShareCardData, type ShareHeader } from "@/lib/share";
 import type { Lang } from "@/lib/i18n/config";
 import { toPlainCardText } from "@/lib/rich-content";
 import { t, type DictKey } from "@/lib/i18n/dict";
@@ -30,9 +30,14 @@ export default function SharePoster({ data, lang, header, qr }: { data: ShareCar
   const en = lang === "en";
   const member = data.kind === "member";
   const imageHeader = header.kind === "image";
+  const imageStyle = header.kind === "image" ? {
+    opacity: header.opacity / 100,
+    WebkitMaskImage: shareImageMask(header.maskZero, header.maskFull),
+    maskImage: shareImageMask(header.maskZero, header.maskFull),
+  } : undefined;
   return <article data-share-poster className={styles.poster} data-header-color={header.kind === "color" ? header.color : "blue"} data-header-mode={imageHeader ? "image" : "color"} data-card={member ? "member" : "activity"}>
     <div className={styles.hero}>
-      {imageHeader ? <><PosterImage key={header.url} src={header.url} alt="" className={member ? `${styles.heroImage} ${styles.heroImageFit}` : styles.heroImage} /><div className={member ? styles.heroShadeFit : styles.heroShade} aria-hidden /></> : <div className={styles.pattern} aria-hidden />}
+      {imageHeader ? <><div className={styles.heroImageLayer} style={imageStyle}><PosterImage key={header.url} src={header.url} alt="" className={member ? `${styles.heroImage} ${styles.heroImageFit}` : styles.heroImage} /></div><div className={member ? styles.heroShadeFit : styles.heroShade} aria-hidden /></> : <div className={styles.pattern} aria-hidden />}
       <header className={styles.brand}>
         <img src="/images/logo.png" width="34" height="34" alt="" />
         <span>{en ? "Bugoo Studio" : "布谷工作室"}</span>

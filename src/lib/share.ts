@@ -8,7 +8,14 @@ import { localizeActivityTitle } from "@/lib/activities/title";
 
 export type ShareHeader =
   | { kind: "color"; color: "blue" | "orange" | "green" | "navy" }
-  | { kind: "image"; url: string };
+  | { kind: "image"; url: string; opacity: number; maskZero: number; maskFull: number };
+
+/** The two mask stops can cross, so dragging them can reverse the fade. */
+export function shareImageMask(maskZero: number, maskFull: number): string {
+  return maskZero <= maskFull
+    ? `linear-gradient(to right, transparent ${maskZero}%, black ${maskFull}%)`
+    : `linear-gradient(to right, black ${maskFull}%, transparent ${maskZero}%)`;
+}
 
 export const SHARE_HEADER_COLORS = {
   blue: "#3388BB",
