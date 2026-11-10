@@ -115,7 +115,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
     const submittedProjects = m.userId
       ? await prisma.project.findMany({
           where: {
-            submitterId: m.userId,
+            OR: [{ submitterId: m.userId }, { members: { some: { userId: m.userId } } }],
             id: { notIn: [...existingProjectIds] },
             status: ProjectStatus.PUBLISHED,
           },
@@ -294,6 +294,7 @@ async function MemberDetailContent({ params }: { params: Promise<{ id: string }>
           {/* 管理员编辑面板 */}
           <AdminMemberEditor
             memberId={member.id}
+            userId={member.user?.id}
             currentGrade={member.grade}
             currentJoinYear={member.joinYear ?? null}
             currentPosition={member.position || "MEMBER"}

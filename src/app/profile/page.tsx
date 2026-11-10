@@ -64,6 +64,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
   let member: any;
   let userProjects: any[];
   let likedProjects: any[];
+  let userActivities: { id: string; title: string; type: string; startTime: Date | null }[] = [];
 
   if (isMockDataEnabled() && !isAdminView) {
     const mockUser = getMockAuthUser();
@@ -132,7 +133,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
     , 30),
     cachedQuery(`profile:projects:${userId}`, () =>
       prisma.project.findMany({
-        where: { submitterId: userId },
+        where: { OR: [{ submitterId: userId }, { members: { some: { userId } } }, { members: { some: { member: { userId } } } }] },
         orderBy: [{ developYear: "desc" }, { createdAt: "desc" }],
         include: {
           tags: { include: { tag: true } },
@@ -191,13 +192,24 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       })
     , 30),
   ]);
+  userActivities = await cachedQuery(`profile:activities:${userId}`, () =>
+    prisma.activity.findMany({
+      where: { status: "PUBLISHED", OR: [
+        { courseParticipants: { some: { OR: [{ userId }, { member: { userId } }] } } },
+        { talks: { some: { OR: [{ userId }, { speakers: { some: { userId } } }] } } },
+        { courseClasses: { some: { showcase: { some: { authorUserId: userId } } } } },
+      ] },
+      select: { id: true, title: true, type: true, startTime: true },
+      orderBy: { startTime: "desc" },
+      take: 30,
+    }), 30);
   }
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in space-y-8">
       {/* 管理员视图横幅 */}
       {isAdminView && (
-        <div className="rounded-xl border p-4 flex items-center justify-between shadow-sm border-red-100 bg-red-50">
+        <div className="rounded-xl border p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm border-red-100 bg-red-50">
           <div className="flex items-center gap-3">
             <span className="text-lg">🛡️</span>
             <div>
@@ -205,7 +217,10 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
               <p className="text-xs text-red-600">{t(lang, "profile.adminViewHint")}</p>
             </div>
           </div>
-          <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">{t(lang, "profile.backToUsers")}</Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">{t(lang, "profile.backToUsers")}</Link>
+            <Link href={`/admin/users/${userId}/claims`} className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">认领关联</Link>
+          </div>
         </div>
       )}
 
@@ -266,6 +281,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
                 {user?.role === "ADMIN" && (
                   <Link href="/admin" className="btn-primary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "nav.admin")}</Link>
                 )}
+                {session.user.role === "ADMIN" && <Link href={`/admin/users/${userId}/claims`} className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">认领关联</Link>}
                 <Link href="/profile/edit" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "profile.editProfileShort")}</Link>
                 <Link href="/profile/settings" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "page.settings.title")}</Link>
                 <Link href="/profile/privacy" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "profile.privacy.title")}</Link>
@@ -467,6 +483,11 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
           </div>
         )}
       </div>
+
+      {userActivities.length > 0 && <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
+        <h2 className="mb-4 font-semibold text-brand-navy">参与活动</h2>
+        <ul className="space-y-2">{userActivities.map((activity) => <li key={activity.id}><Link href={`/activities/${activity.id}`} className="text-sm text-brand-blue hover:underline">{activity.title}</Link></li>)}</ul>
+      </div>}
 
       {/* 我喜欢的作品 */}
       {likedProjects.length > 0 && (

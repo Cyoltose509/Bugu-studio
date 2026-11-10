@@ -239,8 +239,8 @@ function ProjectCard({
                 {p.members!.map((pm, i) => {
                   const name =
                     pm.member?.displayName ||
-                    pm.user?.name ||
                     pm.externalName ||
+                    pm.user?.name ||
                     "?";
                   const avatarUrl =
                     pm.member?.user?.image ||

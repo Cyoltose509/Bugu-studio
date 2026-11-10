@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { publicShareUrl, shareHeaderImages, SHARE_HEADER_COLORS, SHARE_HEADER_COLOR_LABELS, type ShareCardData, type ShareHeader } from "@/lib/share";
 import type { Lang } from "@/lib/i18n/config";
 import SharePoster from "./SharePoster";
+import ImageMaskControl from "./ImageMaskControl";
 
 export default function ShareDialog({ data, lang, onClose }: { data: ShareCardData; lang: Lang; onClose: () => void }) {
   const en = lang === "en";
@@ -18,6 +19,14 @@ export default function ShareDialog({ data, lang, onClose }: { data: ShareCardDa
   const url = publicShareUrl(data.path);
   const headerImages = shareHeaderImages(data);
   const colorKeys = Object.keys(SHARE_HEADER_COLORS) as Array<keyof typeof SHARE_HEADER_COLORS>;
+  const selectImage = (url: string) => setHeader(previous => ({
+    kind: "image", url,
+    opacity: previous.kind === "image" ? previous.opacity : 100,
+    maskZero: previous.kind === "image" ? previous.maskZero : data.kind === "member" ? 0 : 38,
+    maskFull: previous.kind === "image" ? previous.maskFull : data.kind === "member" ? 12 : 100,
+  }));
+  const updateImage = (changes: Partial<Extract<ShareHeader, { kind: "image" }>>) =>
+    setHeader(previous => previous.kind === "image" ? { ...previous, ...changes } : previous);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -99,7 +108,14 @@ export default function ShareDialog({ data, lang, onClose }: { data: ShareCardDa
             <div className="grid grid-cols-4 gap-2">
               {colorKeys.map(color => <button key={color} type="button" aria-label={en ? `${SHARE_HEADER_COLOR_LABELS[color].en} header` : `${SHARE_HEADER_COLOR_LABELS[color].cn}卡头`} aria-pressed={header.kind === "color" && header.color === color} onClick={() => setHeader({ kind: "color", color })} className={`h-10 rounded-lg border-2 transition-transform hover:-translate-y-0.5 ${header.kind === "color" && header.color === color ? "border-white" : "border-transparent"}`} style={{ background: SHARE_HEADER_COLORS[color] }} />)}
             </div>
-            {!!headerImages.length && <div className="mt-2 grid grid-cols-4 gap-2">{headerImages.slice(0, 8).map(item => <button key={item.url} type="button" title={item.title} aria-label={en ? `Use cover: ${item.title}` : `使用封面：${item.title}`} aria-pressed={header.kind === "image" && header.url === item.url} onClick={() => setHeader({ kind: "image", url: item.url })} className={`h-12 overflow-hidden rounded-lg border-2 bg-black/25 transition-transform hover:-translate-y-0.5 ${header.kind === "image" && header.url === item.url ? "border-white" : "border-transparent"}`}><img src={item.url} alt="" className="h-full w-full object-cover" /></button>)}</div>}
+            {!!headerImages.length && <div className="mt-2 grid grid-cols-4 gap-2">{headerImages.slice(0, 8).map(item => <button key={item.url} type="button" title={item.title} aria-label={en ? `Use cover: ${item.title}` : `使用封面：${item.title}`} aria-pressed={header.kind === "image" && header.url === item.url} onClick={() => selectImage(item.url)} className={`h-12 overflow-hidden rounded-lg border-2 bg-black/25 transition-transform hover:-translate-y-0.5 ${header.kind === "image" && header.url === item.url ? "border-white" : "border-transparent"}`}><img src={item.url} alt="" className="h-full w-full object-cover" /></button>)}</div>}
+            {header.kind === "image" && <div className="mt-4 space-y-3">
+              <label className="block text-xs text-white/80">
+                <span className="mb-2 flex justify-between"><span>{en ? "Image opacity" : "图片整体不透明度"}</span><span>{header.opacity}%</span></span>
+                <span className="mx-3 block"><input type="range" min="0" max="100" value={header.opacity} onChange={event => updateImage({ opacity: Number(event.target.value) })} className="m-0 block w-full accent-[#E38043]" /></span>
+              </label>
+              <ImageMaskControl en={en} zero={header.maskZero} full={header.maskFull} onChange={(stop, value) => updateImage({ [stop]: value })} />
+            </div>}
           </fieldset>
           <div className="flex overflow-hidden rounded-lg bg-[#E38043] text-white shadow-lg">
             <button type="button" disabled={busy || !qr} onClick={save} className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors hover:bg-[#F09055] disabled:cursor-wait disabled:opacity-50">

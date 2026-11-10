@@ -2,6 +2,7 @@ export type CourseRole = "INSTRUCTOR" | "STUDENT";
 
 export type CourseParticipantDraft = {
   memberId?: string | null;
+  userId?: string | null;
   externalName?: string | null;
   role: CourseRole;
   displayName?: string;
@@ -9,13 +10,14 @@ export type CourseParticipantDraft = {
 };
 
 export type CourseParticipantInput =
-  | { memberId: string; externalName: null; role: CourseRole }
-  | { memberId: null; externalName: string; role: "INSTRUCTOR" };
+  | { memberId: string; userId: null; externalName: null; role: CourseRole }
+  | { memberId: null; userId: null; externalName: string; role: "INSTRUCTOR" }
+  | { memberId: null; userId: string; externalName: string; role: "INSTRUCTOR" };
 
-export function courseParticipantKey(person: Pick<CourseParticipantDraft, "memberId" | "externalName">): string {
+export function courseParticipantKey(person: Pick<CourseParticipantDraft, "memberId" | "userId" | "externalName">): string {
   return person.memberId
     ? `member:${person.memberId}`
-    : `external:${(person.externalName || "").trim().toLocaleLowerCase()}`;
+    : person.userId ? `user:${person.userId}` : `external:${(person.externalName || "").trim().toLocaleLowerCase()}`;
 }
 
 export type CourseAttachmentDraft = {
@@ -85,23 +87,28 @@ export function parseCourseMaterials(raw: unknown): { error: string } | {
 
   const participants: CourseParticipantInput[] = [];
   const seen = new Set<string>();
+  const seenExternalNames = new Set<string>();
   for (const item of body.participants) {
     if (!item || typeof item !== "object") return { error: "公开课资料无效" };
     const memberId = String((item as { memberId?: unknown }).memberId || "").trim();
+    const userId = String((item as { userId?: unknown }).userId || "").trim();
     const externalRaw = (item as { externalName?: unknown }).externalName;
     if (externalRaw != null && typeof externalRaw !== "string") return { error: "公开课资料无效" };
     const externalName = typeof externalRaw === "string" ? externalRaw.trim().replace(/\s+/g, " ") : "";
     const role = (item as { role?: unknown }).role;
-    if (!ROLES.has(role as CourseRole) || Boolean(memberId) === Boolean(externalName)) return { error: "每位讲师或学员只能选择一种身份" };
+    if (!ROLES.has(role as CourseRole) || (memberId && (userId || externalName)) || (!memberId && !externalName) || (userId && !externalName)) return { error: "每位讲师或学员只能选择一种身份" };
     if (externalName && (role !== "INSTRUCTOR" || externalName.length > 80 || /[\u0000-\u001f\u007f]/.test(externalName))) {
       return { error: "社外讲师姓名无效（最多 80 字）" };
     }
     const participant = memberId
-      ? { memberId, externalName: null, role: role as CourseRole }
-      : { memberId: null, externalName, role: "INSTRUCTOR" as const };
+      ? { memberId, userId: null, externalName: null, role: role as CourseRole }
+      : { memberId: null, userId: userId || null, externalName, role: "INSTRUCTOR" as const };
     const key = courseParticipantKey(participant);
     if (seen.has(key)) return { error: memberId ? "同一成员不能同时是讲师和学员" : "社外讲师姓名重复" };
+    const nameKey = externalName.toLocaleLowerCase();
+    if (externalName && seenExternalNames.has(nameKey)) return { error: "社外讲师姓名重复" };
     seen.add(key);
+    if (externalName) seenExternalNames.add(nameKey);
     participants.push(participant);
   }
 

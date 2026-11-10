@@ -2,10 +2,12 @@
 
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import Link from "next/link";
 import { updateMemberDetails } from "@/app/admin/members/actions";
 
 interface Props {
   memberId: string;
+  userId?: string | null;
   currentGrade: number | null;
   currentJoinYear: number | null;
   currentPosition: string;
@@ -25,7 +27,7 @@ const POSITION_OPTIONS_WITH_FOUNDER = [
   { value: "FOUNDER", label: "创始人" },
 ];
 
-export default function AdminMemberEditor({ memberId, currentGrade, currentJoinYear, currentPosition }: Props) {
+export default function AdminMemberEditor({ memberId, userId, currentGrade, currentJoinYear, currentPosition }: Props) {
   const { data: session } = useSession();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -51,10 +53,11 @@ export default function AdminMemberEditor({ memberId, currentGrade, currentJoinY
 
   return (
     <div className="rounded-xl p-5 border bg-[var(--ui-bg-warm-light)] border-brand-orange/30">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <span className="text-xs px-2 py-0.5 rounded font-medium bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">
           管理员编辑
         </span>
+        {userId && <Link href={`/admin/users/${userId}/claims`} className="text-xs font-medium text-brand-blue hover:underline">认领关联 →</Link>}
       </div>
 
       <form action={handleSubmit} className="space-y-4">

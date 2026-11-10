@@ -102,7 +102,7 @@ async function EditContent({ params }: { params: Promise<{ slug: string }> }) {
       memberId: m.memberId || undefined,
       userId: (m as any).userId || undefined,
       externalName: m.externalName || undefined,
-      displayName: m.member?.displayName || (m as any).user?.name || m.externalName || "未知",
+      displayName: m.member?.displayName || m.externalName || (m as any).user?.name || "未知",
       roles: m.roles,
     })),
     images: project.images.map((img) => ({ url: img.url, altText: img.altText || undefined })),

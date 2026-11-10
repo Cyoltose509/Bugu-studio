@@ -119,6 +119,7 @@ export default async function EditActivityPage({ params }: PageProps) {
         projects={projects}
         courseParticipants={activity.courseParticipants.map((item) => ({
           memberId: item.memberId,
+          userId: item.userId,
           externalName: item.externalName,
           role: item.role === "INSTRUCTOR" ? "INSTRUCTOR" as const : "STUDENT" as const,
           displayName: item.member?.displayName || item.externalName || "",
