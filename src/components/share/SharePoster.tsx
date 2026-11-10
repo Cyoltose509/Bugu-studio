@@ -37,7 +37,7 @@ export default function SharePoster({ data, lang, header, qr }: { data: ShareCar
   } : undefined;
   return <article data-share-poster className={styles.poster} data-header-color={header.kind === "color" ? header.color : "blue"} data-header-mode={imageHeader ? "image" : "color"} data-card={member ? "member" : "activity"}>
     <div className={styles.hero}>
-      {imageHeader ? <><div className={styles.heroImageLayer} style={imageStyle}><PosterImage key={header.url} src={header.url} alt="" className={member ? `${styles.heroImage} ${styles.heroImageFit}` : styles.heroImage} /></div><div className={member ? styles.heroShadeFit : styles.heroShade} aria-hidden /></> : <div className={styles.pattern} aria-hidden />}
+      {imageHeader ? <div className={styles.heroImageLayer} style={imageStyle}><PosterImage key={header.url} src={header.url} alt="" className={member ? `${styles.heroImage} ${styles.heroImageFit}` : styles.heroImage} /></div> : <div className={styles.pattern} aria-hidden />}
       <header className={styles.brand}>
         <img src="/images/logo.png" width="34" height="34" alt="" />
         <span>{en ? "Bugoo Studio" : "布谷工作室"}</span>

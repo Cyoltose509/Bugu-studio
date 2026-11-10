@@ -12,6 +12,9 @@ export type ShareHeader =
 
 /** The two mask stops can cross, so dragging them can reverse the fade. */
 export function shareImageMask(maskZero: number, maskFull: number): string {
+  // Explicit solid endpoints keep both extremes stable in browser and PNG export.
+  if (maskZero === 0 && maskFull === 0) return "linear-gradient(black, black)";
+  if (maskZero === 100 && maskFull === 100) return "linear-gradient(transparent, transparent)";
   return maskZero <= maskFull
     ? `linear-gradient(to right, transparent ${maskZero}%, black ${maskFull}%)`
     : `linear-gradient(to right, black ${maskFull}%, transparent ${maskZero}%)`;

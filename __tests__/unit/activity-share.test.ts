@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityShareData, shareHeaderImages, type ShareCardData } from "@/lib/share";
+import { activityShareData, shareHeaderImages, shareImageMask, type ShareCardData } from "@/lib/share";
 import { canSubmitActivityTalk, hasActivityTalkSection } from "@/lib/activities/capabilities";
 import { productionMeeting, productionRecruitment } from "@/app/dev/share-preview/production-samples";
 
@@ -43,5 +43,12 @@ describe("shareHeaderImages", () => {
       ],
     };
     expect(shareHeaderImages(data)).toEqual([{ title: "铅雨2", url: "https://cdn.example/a.png" }]);
+  });
+});
+
+describe("shareImageMask endpoints", () => {
+  it("can show the complete image or the complete mask", () => {
+    expect(shareImageMask(0, 0)).toBe("linear-gradient(black, black)");
+    expect(shareImageMask(100, 100)).toBe("linear-gradient(transparent, transparent)");
   });
 });
