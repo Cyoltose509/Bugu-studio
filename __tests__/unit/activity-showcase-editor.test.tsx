@@ -8,7 +8,10 @@ const projects = [{ id: "a", slug: "a", title: "东方魔女夜市" }, { id: "b"
 
 it("adds, reorders and removes works in the parent form payload", () => {
   const { container } = render(<ShowcaseEditor activityId="event" projects={projects} initial={{ enabled: true, projectIds: ["a"], posters: [] }} />);
+  fireEvent.click(screen.getByRole("button", { name: "新增海报或试玩作品" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: /添加试玩作品/ }));
   fireEvent.click(screen.getByRole("button", { name: /铅雨2.*添加/ }));
+  fireEvent.click(screen.getByRole("button", { name: "编辑海报与试玩目录" }));
   fireEvent.click(screen.getByRole("button", { name: "上移作品：铅雨2" }));
   fireEvent.click(screen.getByRole("button", { name: "移除作品：东方魔女夜市" }));
   const payload = container.querySelector<HTMLInputElement>('input[name="showcaseJson"]');
@@ -17,6 +20,7 @@ it("adds, reorders and removes works in the parent form payload", () => {
 
 it("keeps poster removal in the parent form payload", () => {
   const { container } = render(<ShowcaseEditor activityId="event" projects={projects} initial={{ enabled: true, projectIds: ["a"], posters: [{ title: "海报", url: "/poster.webp" }] }} />);
+  fireEvent.click(screen.getByRole("button", { name: "编辑海报与试玩目录" }));
   fireEvent.click(screen.getByRole("button", { name: "移除海报：海报" }));
   const payload = container.querySelector<HTMLInputElement>('input[name="showcaseJson"]');
   expect(JSON.parse(payload!.value)).toEqual({ enabled: true, projectIds: ["a"], posters: [] });

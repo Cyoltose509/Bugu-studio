@@ -12,14 +12,9 @@ import {
   type ToolsData,
 } from "@/lib/tools/shared";
 import { useLang } from "@/lib/i18n/LangProvider";
-
-function PlusIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden className="mx-auto block">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
-  );
-}
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
+import { ACCEPT_ATTR, uploadImage } from "@/lib/utils/clientUpload";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 function PencilIcon({ size = 16 }: { size?: number }) {
   return (
@@ -165,12 +160,8 @@ function ToolRowEditor({
     setIconErr("");
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const json = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
-      if (!res.ok || !json?.url) throw new Error(json?.error || t("tools.errUpload"));
-      setDraft((d) => ({ ...d, iconUrl: json.url! }));
+      const result = await uploadImage(file, { endpoint: "/api/upload", type: "screenshot" });
+      setDraft((d) => ({ ...d, iconUrl: result.url }));
     } catch (e) {
       setIconErr(e instanceof Error && e.message ? e.message : t("tools.errUpload"));
     } finally {
@@ -180,14 +171,14 @@ function ToolRowEditor({
   }
 
   return (
-    <div className="flex items-stretch border-b border-brand-border-subtle bg-brand-surface/30">
+    <ImageDropZone className="flex items-stretch rounded-none border-b border-brand-border-subtle bg-brand-surface/30" hint={t("upload.dropToUpload")} disabled={uploading} onFile={onPickIcon} onInvalid={setIconErr}>
       {/* 左：图标列（与展示态同宽），上传 / 重新获取 favicon */}
       <div className="flex w-16 shrink-0 flex-col items-center py-3.5">
         <IconBlock key={draft.iconUrl} tool={{ ...draft, letter: (draft.name.trim()[0] || "?").toUpperCase() }} />
         <input
           ref={fileRef}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
+          accept={ACCEPT_ATTR}
           className="hidden"
           onChange={(e) => onPickIcon(e.target.files?.[0])}
         />
@@ -195,7 +186,7 @@ function ToolRowEditor({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="mt-1.5 rounded border border-brand-border-subtle px-1 py-px text-[10px] leading-4 text-brand-text-muted transition-colors hover:border-brand-blue/50 hover:text-brand-navy disabled:opacity-50"
+          className="mt-1.5 rounded-md border border-brand-blue/30 bg-brand-blue/5 px-1.5 py-1 text-[10px] font-semibold leading-4 text-brand-blue transition-colors hover:border-brand-blue/60 hover:bg-brand-blue/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 disabled:opacity-50"
         >
           {uploading ? t("tools.icon.uploading") : t("tools.icon.upload")}
         </button>
@@ -204,7 +195,7 @@ function ToolRowEditor({
           onClick={() => setDraft({ ...draft, iconUrl: "" })}
           title={t("tools.icon.refetch")}
           aria-label={t("tools.icon.refetch")}
-          className="mt-0.5 px-1 text-[11px] leading-4 text-brand-text-muted transition-colors hover:text-brand-navy"
+          className="mt-0.5 rounded-md px-1.5 py-0.5 text-xs leading-4 text-brand-text-muted transition-colors hover:bg-brand-blue/5 hover:text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40"
         >
           ⟳
         </button>
@@ -280,7 +271,7 @@ function ToolRowEditor({
           {t("tools.cancel")}
         </button>
       </div>
-    </div>
+    </ImageDropZone>
   );
 }
 
@@ -484,11 +475,11 @@ export default function ToolsClient({ initialData, isAdmin }: { initialData: Too
               title={t("tools.add")}
               aria-label={t("tools.add")}
               aria-expanded={addingGlobal}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors ${
-                addingGlobal ? "bg-brand-orange" : "bg-brand-blue hover:bg-brand-blue/90"
+              className={`btn-primary brand-add-control transition-colors focus-visible:ring-2 focus-visible:ring-brand-orange/40 focus-visible:ring-offset-2 ${
+                addingGlobal ? "ring-2 ring-brand-orange/40 ring-offset-2" : ""
               }`}
             >
-              <PlusIcon />
+              <PlusIcon size={22} />
             </button>
             <button
               type="button"
@@ -504,11 +495,13 @@ export default function ToolsClient({ initialData, isAdmin }: { initialData: Too
               title={manageLabel}
               aria-label={manageLabel}
               aria-pressed={manageOpen}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors ${
-                manageOpen ? "bg-brand-orange" : "bg-brand-navy hover:bg-brand-navy/90"
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 focus-visible:ring-offset-2 ${
+                manageOpen
+                  ? "border-brand-blue/40 bg-brand-blue/10 text-brand-blue"
+                  : "border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-blue/40 hover:text-brand-blue"
               }`}
             >
-              <PencilIcon />
+              <PencilIcon size={20} />
             </button>
           </span>
         )}

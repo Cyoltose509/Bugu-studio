@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import SafeImage from "../ui/SafeImage";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 interface ImageItem {
     src: string;
@@ -278,7 +279,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                                     const ns = Math.max(MIN_SCALE, t.scale - 0.5);
                                     return ns === MIN_SCALE ? {scale: 1, x: 0, y: 0} : {...t, scale: ns};
                                 })}
-                                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-lg flex items-center justify-center transition-colors"
+                                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
                                 aria-label={t(lang, "imageGallery.zoomOut")}
                                 title={t(lang, "imageGallery.zoomOutTitle")}
                             >−</button>
@@ -295,7 +296,7 @@ export default function ImageGallery({coverImage, coverAlt, screenshots}: Props)
                                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white text-lg flex items-center justify-center transition-colors"
                                 aria-label={t(lang, "imageGallery.zoomIn")}
                                 title={t(lang, "imageGallery.zoomInTitle")}
-                            >+</button>
+                            ><PlusIcon size={17} strokeWidth={2.2} /></button>
                             {/* 关闭 */}
                             <button
                                 onClick={close}
