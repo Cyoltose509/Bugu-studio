@@ -28,8 +28,6 @@
 .poster[data-card="member"][data-header-mode="image"] .hero { min-height: 252px; background: #1b3348; }
 .hero:has(.heroImage) { color: white; }
 .hero:has(.heroImage) .title { text-shadow: 0 2px 10px rgba(10, 38, 60, .8); }
-.poster[data-full-image="true"] .brand { width: fit-content; margin: -4px -6px; padding: 4px 6px; border-radius: 6px; background: rgba(10, 38, 60, .72); }
-.poster[data-full-image="true"] .activityHeading, .poster[data-full-image="true"] .identity { margin-left: -10px; margin-right: -10px; padding: 8px 10px; border-radius: 8px; background: rgba(10, 38, 60, .72); }
 .hero:has(.heroImageFit) .bio { color: rgba(255, 255, 255, .88); }
 .hero:has(.heroImageFit) .tags span { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .28); color: #fff; }
 .brand { position: relative; display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 700; letter-spacing: .03em; }

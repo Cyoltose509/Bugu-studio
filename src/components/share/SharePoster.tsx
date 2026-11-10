@@ -35,7 +35,7 @@ export default function SharePoster({ data, lang, header, qr }: { data: ShareCar
     WebkitMaskImage: shareImageMask(header.maskZero, header.maskFull),
     maskImage: shareImageMask(header.maskZero, header.maskFull),
   } : undefined;
-  return <article data-share-poster className={styles.poster} data-header-color={header.kind === "color" ? header.color : "blue"} data-header-mode={imageHeader ? "image" : "color"} data-full-image={imageHeader && header.opacity === 100 && header.maskZero === 0 && header.maskFull === 0} data-card={member ? "member" : "activity"}>
+  return <article data-share-poster className={styles.poster} data-header-color={header.kind === "color" ? header.color : "blue"} data-header-mode={imageHeader ? "image" : "color"} data-card={member ? "member" : "activity"}>
     <div className={styles.hero}>
       {imageHeader ? <div className={styles.heroImageLayer} style={imageStyle}><PosterImage key={header.url} src={header.url} alt="" className={member ? `${styles.heroImage} ${styles.heroImageFit}` : styles.heroImage} /></div> : <div className={styles.pattern} aria-hidden />}
       <header className={styles.brand}>
