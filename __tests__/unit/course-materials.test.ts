@@ -46,6 +46,18 @@ describe("course materials", () => {
     })).toEqual({ error: "社外讲师姓名重复" });
   });
 
+  it("keeps a claimed external instructor linked when course materials are saved again", () => {
+    expect(parseCourseMaterials({ participants: [
+      { userId: "u1", externalName: "李老师", role: "INSTRUCTOR" },
+    ], attachments: [] })).toMatchObject({ participants: [
+      { memberId: null, userId: "u1", externalName: "李老师", role: "INSTRUCTOR" },
+    ] });
+    expect(parseCourseMaterials({ participants: [
+      { userId: "u1", externalName: "李老师", role: "INSTRUCTOR" },
+      { externalName: " 李老师 ", role: "INSTRUCTOR" },
+    ], attachments: [] })).toEqual({ error: "社外讲师姓名重复" });
+  });
+
   it("rejects a member in both roles and files outside the attachment store", () => {
     expect(parseCourseMaterials({
       participants: [

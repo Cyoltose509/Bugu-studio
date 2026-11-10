@@ -111,7 +111,7 @@ const getProject = cache(async (slug: string) => {
                 user: { select: { image: true } },
               },
             },
-            user: { select: { id: true, name: true, image: true } },
+            user: { select: { id: true, name: true, image: true, member: { select: { id: true } } } },
           },
         },
         _count: { select: { likes: true } },
@@ -456,7 +456,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               <div className="space-y-3">
                 {project.members.map((pm: any) => {
                   const isExternal = !pm.member && !pm.user;
-                  const displayName = pm.member?.displayName || (pm as any).user?.name || pm.externalName || t(lang, "works.detail.unknown");
+                  const displayName = pm.member?.displayName || pm.externalName || (pm as any).user?.name || t(lang, "works.detail.unknown");
                   const avatarUrl =
                     pm.member ? (pm.member.user?.image || pm.member.avatar) :
                     (pm as any).user?.image || null;
@@ -485,7 +485,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
                       </div>
                     );
                   }
-                  const href = pm.member ? `/members/${pm.member.id}` : (pm as any).userId ? `/profile?id=${(pm as any).userId}` : undefined;
+                  const href = pm.member ? `/members/${pm.member.id}` : pm.user?.member?.id ? `/members/${pm.user.member.id}` : undefined;
                   if (href) {
                     return (
                       <Link key={pm.id} href={href} className="flex items-center gap-3 rounded-lg p-1.5 -mx-1.5 transition-colors hover:bg-brand-surface">

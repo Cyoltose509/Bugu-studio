@@ -122,6 +122,7 @@ model User {
   member                 ClubMember?
   submittedProjects      Project[]               @relation("ProjectSubmitter")
   projectMembers         ProjectMember[]         // 作为非社团成员参与的作品
+  courseParticipations   CourseParticipant[]     // 注册用户认领的公开课参与记录
   reviewedProjects       Review[]
   auditLogs              AuditLog[]              @relation("AuditUser")
   loginAttempts          LoginAttempt[]
@@ -724,6 +725,7 @@ model CourseParticipant {
   id         String                @id @default(cuid())
   activityId String
   memberId   String?
+  userId     String?
   externalName String?
   role       CourseParticipantRole
   sortOrder  Int                   @default(0)
@@ -731,8 +733,10 @@ model CourseParticipant {
 
   activity Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
   member   ClubMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  user     User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([activityId, memberId])
+  @@unique([activityId, userId])
   @@index([activityId, role, sortOrder])
   @@index([memberId])
 }

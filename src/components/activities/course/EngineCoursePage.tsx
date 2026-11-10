@@ -15,7 +15,7 @@ type CourseClassView = {
   lessons: { id: string; instructorName: string; topic: string; title: string; date: Date | string; startMinute: number | null; endMinute: number | null; meetingUrl: string | null; videoUrl: string | null }[];
   showcase: { authorName?: string; id: string; title: string; imageUrl: string; project: { slug: string; status: string } | null }[];
 };
-type ParticipantView = { role: string; externalName: string | null; member: { id: string; displayName: string; avatar: string | null; user: { image: string | null } | null } | null };
+type ParticipantView = { role: string; externalName: string | null; member: { id: string; displayName: string; avatar: string | null; user: { image: string | null } | null } | null; user?: { id: string; image: string | null; member: { id: string } | null } | null };
 type AttachmentView = { id: string; name: string; url: string; mimeType: string | null; sizeBytes: number | null };
 
 export default function EngineCoursePage({ activity, canViewMeetingLinks, isAdmin, lang, shareData }: {
@@ -32,14 +32,14 @@ export default function EngineCoursePage({ activity, canViewMeetingLinks, isAdmi
   shareData?: ShareCardData | null;
 }) {
   const instructors = activity.courseParticipants.filter((item) => item.role === "INSTRUCTOR").map((item) => ({
-    id: item.member?.id || null,
+    id: item.member?.id || item.user?.member?.id || null,
     displayName: item.member?.displayName || item.externalName || "",
-    avatar: item.member?.avatar || item.member?.user?.image || null,
+    avatar: item.member?.avatar || item.member?.user?.image || item.user?.image || null,
   }));
   const students = activity.courseParticipants.filter((item) => item.role === "STUDENT").map((item) => ({
-    id: item.member?.id || null,
+    id: item.member?.id || item.user?.member?.id || null,
     displayName: item.member?.displayName || item.externalName || "",
-    avatar: item.member?.avatar || item.member?.user?.image || null,
+    avatar: item.member?.avatar || item.member?.user?.image || item.user?.image || null,
   }));
   return <main className="pb-20 animate-fade-in">
     <header className="relative isolate min-h-[27rem] overflow-hidden bg-brand-navy text-white sm:min-h-[34rem]">

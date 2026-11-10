@@ -163,7 +163,7 @@ const getActivity = cache(async (id: string) => {
             jamJudges: { include: { user: { select: { id: true, name: true, image: true } } } },
             courseParticipants: {
               orderBy: { sortOrder: "asc" },
-              include: { member: { select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } } },
+              include: { member: { select: { id: true, displayName: true, avatar: true, user: { select: { image: true } } } }, user: { select: { id: true, image: true, member: { select: { id: true } } } } },
             },
             courseAttachments: { orderBy: { sortOrder: "asc" } },
             courseClasses: {
@@ -674,16 +674,16 @@ async function CourseSection({
         instructors={(activity.courseParticipants || [])
           .filter((item: any) => item.role === "INSTRUCTOR")
           .map((item: any) => ({
-            id: item.member?.id || null,
+            id: item.member?.id || item.user?.member?.id || null,
             displayName: item.member?.displayName || item.externalName || "",
-            avatar: item.member?.avatar || item.member?.user?.image || null,
+            avatar: item.member?.avatar || item.member?.user?.image || item.user?.image || null,
           }))}
         students={(activity.courseParticipants || [])
           .filter((item: any) => item.role === "STUDENT")
           .map((item: any) => ({
-            id: item.member?.id || null,
+            id: item.member?.id || item.user?.member?.id || null,
             displayName: item.member?.displayName || item.externalName || "",
-            avatar: item.member?.avatar || item.member?.user?.image || null,
+            avatar: item.member?.avatar || item.member?.user?.image || item.user?.image || null,
           }))}
         attachments={(activity.courseAttachments || []).map((file: any) => ({
           id: file.id,

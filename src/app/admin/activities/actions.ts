@@ -360,6 +360,9 @@ async function saveCourseMaterials(activityId: string, raw: unknown) {
     ? await prisma.clubMember.findMany({ where: { id: { in: memberIds } }, select: { id: true } })
     : [];
   if (members.length !== memberIds.length) return { error: "有成员不存在或已删除" };
+  const userIds = parsed.participants.flatMap((item) => item.userId ? [item.userId] : []);
+  const users = userIds.length ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true } }) : [];
+  if (users.length !== userIds.length) return { error: "有认领用户不存在或已删除" };
 
   const publicBase = process.env.R2_PUBLIC_URL || "";
   for (const file of parsed.attachments) {
@@ -375,6 +378,7 @@ async function saveCourseMaterials(activityId: string, raw: unknown) {
           data: parsed.participants.map((item, index) => ({
             activityId,
             memberId: item.memberId,
+            userId: item.userId,
             externalName: item.externalName,
             role: item.role === "INSTRUCTOR" ? CourseParticipantRole.INSTRUCTOR : CourseParticipantRole.STUDENT,
             sortOrder: index,

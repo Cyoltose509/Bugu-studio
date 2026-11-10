@@ -114,7 +114,7 @@ export default function CourseMaterialsEditor({
       return;
     }
     const key = courseParticipantKey({ externalName });
-    if (participants.some((item) => courseParticipantKey(item) === key)) {
+    if (participants.some((item) => courseParticipantKey(item) === key || item.externalName?.trim().toLocaleLowerCase() === externalName.toLocaleLowerCase())) {
       setError("这位社外讲师已添加");
       return;
     }
