@@ -85,32 +85,32 @@ function PopupCountdown({ startTime, lang }: { startTime: Date; lang: Lang }) {
 
 
 
-/** 活动类型原色（实色十六进制），用于单日活动格子全格原色染色与色块卡片 */
+/** 活动类型原色（实色十六进制），充分使用布谷品牌色系 */
 export const BAR_COLOR: Record<string, string> = {
-  MEETING: "#3B82C4",
-  COURSE: "#3D9B8F",
-  ENGINE_COURSE: "#236EAE",
-  COMPETITION: "#E38043",
-  GENERAL: "#6D5B9A",
-  RECOMMENDATION: "#C2447C",
+  MEETING: "#25547A", // 布谷深海蓝 (Brand Navy)
+  COURSE: "#3D9B8F", // 教学青绿 (Studio Teal)
+  ENGINE_COURSE: "#3388BB", // 布谷品牌蓝 (Brand Blue)
+  COMPETITION: "#E38043", // 布谷品牌橙 (Brand Orange)
+  GENERAL: "#6D5B9A", // 社团大事件紫 (Studio Violet)
+  RECOMMENDATION: "#C2447C", // 推荐粉红 (Studio Berry)
 };
 
-/** 甘特条：实心底 + 白字，与封面角标同色系 */
+/** 甘特条：实心底 + 白字，与品牌色同源 */
 export const BAR_TONE: Record<string, string> = {
-  MEETING: "bg-[#3B82C4]",
+  MEETING: "bg-brand-navy",
   COURSE: "bg-[#3D9B8F]",
-  ENGINE_COURSE: "bg-[#236EAE]",
-  COMPETITION: "bg-[#E38043]",
+  ENGINE_COURSE: "bg-brand-blue",
+  COMPETITION: "bg-brand-orange",
   GENERAL: "bg-[#6D5B9A]",
   RECOMMENDATION: "bg-[#C2447C]",
 };
 
 /** 待定活动色签：浅底 + 深字 + 左侧色条 */
 const CHIP_TONE: Record<string, string> = {
-  MEETING: "bg-[#3B82C4]/10 text-[#2E6BA3] border-l-[#3B82C4] dark:bg-[#3B82C4]/20 dark:text-[#8FC0EA]",
+  MEETING: "bg-brand-navy/10 text-brand-navy border-l-brand-navy dark:bg-brand-navy/25 dark:text-[#8FC0EA]",
   COURSE: "bg-[#3D9B8F]/10 text-[#2C7A70] border-l-[#3D9B8F] dark:bg-[#3D9B8F]/20 dark:text-[#7FCCC2]",
-  ENGINE_COURSE: "bg-[#236EAE]/10 text-[#1D5C93] border-l-[#236EAE] dark:bg-[#236EAE]/20 dark:text-[#7FAFDC]",
-  COMPETITION: "bg-[#E38043]/10 text-[#B85F23] border-l-[#E38043] dark:bg-[#E38043]/20 dark:text-[#F0A977]",
+  ENGINE_COURSE: "bg-brand-blue/10 text-brand-blue border-l-brand-blue dark:bg-brand-blue/20 dark:text-[#7FAFDC]",
+  COMPETITION: "bg-brand-orange/10 text-brand-orange border-l-brand-orange dark:bg-brand-orange/20 dark:text-[#F0A977]",
   GENERAL: "bg-[#6D5B9A]/10 text-[#57477C] border-l-[#6D5B9A] dark:bg-[#6D5B9A]/20 dark:text-[#B3A6D4]",
   RECOMMENDATION: "bg-[#C2447C]/10 text-[#9C3461] border-l-[#C2447C] dark:bg-[#C2447C]/20 dark:text-[#E58AAE]",
 };
@@ -412,7 +412,7 @@ export default function ActivityCalendar({
                   }}
                   style={{ backgroundColor: cardBg }}
                   className={`group block rounded-xl overflow-hidden text-white transition-all duration-200 shadow-2xs hover:shadow-md hover:brightness-105 hover:scale-[1.015] active:scale-[0.99] ${fadedClass} ${
-                    isSelected ? "ring-2 ring-brand-blue ring-offset-2 ring-offset-background shadow-md opacity-100 saturate-100" : ""
+                    isSelected ? "ring-2 ring-brand-orange ring-offset-2 ring-offset-background shadow-md opacity-100 saturate-100" : ""
                   }`}
                   title={`${displayTitle} · ${scheduleText}`}
                 >
@@ -514,7 +514,7 @@ export default function ActivityCalendar({
             <button
               type="button"
               onClick={() => goToMonth(prevMonth.y, prevMonth.m)}
-              className="inline-flex h-7 w-7 items-center justify-center bg-transparent border-none text-brand-navy hover:text-brand-blue transition-colors cursor-pointer select-none text-lg sm:text-xl font-bold leading-none p-0"
+              className="inline-flex h-7 w-7 items-center justify-center bg-transparent border-none text-brand-navy hover:text-brand-orange hover:bg-brand-orange/10 rounded-md transition-colors cursor-pointer select-none text-lg sm:text-xl font-bold leading-none p-0"
               aria-label={lang === "en" ? "Previous month" : "上一月"}
             >
               ‹
@@ -525,7 +525,7 @@ export default function ActivityCalendar({
             <button
               type="button"
               onClick={() => goToMonth(nextMonth.y, nextMonth.m)}
-              className="inline-flex h-7 w-7 items-center justify-center bg-transparent border-none text-brand-navy hover:text-brand-blue transition-colors cursor-pointer select-none text-lg sm:text-xl font-bold leading-none p-0"
+              className="inline-flex h-7 w-7 items-center justify-center bg-transparent border-none text-brand-navy hover:text-brand-orange hover:bg-brand-orange/10 rounded-md transition-colors cursor-pointer select-none text-lg sm:text-xl font-bold leading-none p-0"
               aria-label={lang === "en" ? "Next month" : "下一月"}
             >
               ›
@@ -533,7 +533,7 @@ export default function ActivityCalendar({
             <button
               type="button"
               onClick={goToToday}
-              className="ml-0.5 inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-brand-blue text-white shadow-xs hover:brightness-110 active:scale-95 transition-all text-xs font-bold leading-none cursor-pointer"
+              className="ml-0.5 inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-brand-orange hover:bg-brand-orange-light text-white shadow-xs hover:shadow active:scale-95 transition-all text-xs font-bold leading-none cursor-pointer"
               title={t(lang, "activities.today")}
               aria-label={t(lang, "activities.today")}
             >
@@ -545,7 +545,7 @@ export default function ActivityCalendar({
           <div className="flex shrink-0 items-center gap-1.5">
             <Link
               href="/activities"
-              className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg border border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-blue/40 hover:text-brand-blue transition-colors flex items-center justify-center shrink-0"
+              className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg border border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-orange/50 hover:text-brand-orange transition-colors flex items-center justify-center shrink-0"
               title={t(lang, "activities.gridView")}
               aria-label={t(lang, "activities.gridView")}
             >
@@ -570,13 +570,21 @@ export default function ActivityCalendar({
         </div>
 
         <div className="flex-1 flex flex-col rounded-xl border border-brand-border-subtle bg-card shadow-xs overflow-hidden min-h-0">
-          {/* 星期表头（周一开头） */}
-          <div className="grid grid-cols-7 shrink-0 border-b border-brand-border-subtle bg-brand-surface/50">
-            {WEEKDAYS[lang].map((w) => (
-              <div key={w} className="py-1.5 text-center text-[11px] sm:text-xs font-medium text-brand-text-muted">
-                {w}
-              </div>
-            ))}
+          {/* 星期表头（周一开头，周末橙色点缀） */}
+          <div className="grid grid-cols-7 shrink-0 border-b border-brand-border-subtle bg-brand-surface/60">
+            {WEEKDAYS[lang].map((w, idx) => {
+              const isWeekend = idx >= 5;
+              return (
+                <div
+                  key={w}
+                  className={`py-1.5 text-center text-[11px] sm:text-xs font-semibold ${
+                    isWeekend ? "text-brand-orange" : "text-brand-navy/85"
+                  }`}
+                >
+                  {w}
+                </div>
+              );
+            })}
           </div>
 
           {/* 六周：等比撑满剩余高度 */}
@@ -606,12 +614,14 @@ export default function ActivityCalendar({
                           className={`inline-flex h-4.5 w-4.5 items-center justify-center rounded-full text-[11px] leading-none ${
                             isToday
                               ? isTinted
-                                ? "bg-white font-bold text-brand-navy shadow-xs"
-                                : "bg-brand-blue font-bold text-white shadow-xs"
+                                ? "bg-white font-bold text-brand-orange shadow-xs ring-1 ring-brand-orange/40"
+                                : "bg-brand-orange font-bold text-white shadow-xs"
                               : isTinted
                                 ? "font-semibold text-white/95"
                                 : cell.inMonth
-                                  ? "text-brand-text-secondary"
+                                  ? ci >= 5
+                                    ? "text-brand-orange/90 font-medium"
+                                    : "text-brand-text-secondary font-medium"
                                   : "text-brand-text-muted/40"
                           }`}
                         >
