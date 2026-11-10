@@ -1,7 +1,7 @@
 const TONE: Record<string, string> = {
-  MEETING: "bg-[#3B82C4]",
+  MEETING: "bg-brand-navy",
   COURSE: "bg-[#3D9B8F]",
-  ENGINE_COURSE: "bg-[#236EAE]",
+  ENGINE_COURSE: "bg-brand-blue",
   COMPETITION: "bg-brand-orange",
   GENERAL: "bg-[#6D5B9A]",
   RECOMMENDATION: "bg-[#C2447C]",
