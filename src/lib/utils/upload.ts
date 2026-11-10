@@ -43,6 +43,7 @@ export const MAX_FILE_SIZE = {
   avatar: AVATAR_LIMIT_BYTES,
   cover: UPLOAD_LIMIT_BYTES,
   screenshot: UPLOAD_LIMIT_BYTES,
+  tools: 1024 * 1024, // 工具站 favicon（服务端抓取后规范化为 64px PNG）
 } as const;
 
 export type UploadType = keyof typeof MAX_FILE_SIZE;

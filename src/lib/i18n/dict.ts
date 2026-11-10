@@ -79,6 +79,13 @@ export const dict = {
   "tools.section.empty": { cn: "暂无条目", en: "No items yet" },
   "tools.section.duplicate": { cn: "已存在同名分栏", en: "A section with this name already exists" },
   "tools.section.default": { cn: "工具", en: "Tools" },
+  "tools.section.moveUp": { cn: "分栏上移", en: "Move section up" },
+  "tools.section.moveDown": { cn: "分栏下移", en: "Move section down" },
+  "tools.addTitle": { cn: "新增工具", en: "New tool" },
+  "tools.addHint": { cn: "选择分栏后保存，条目会出现在所选分栏末尾。", en: "Pick a section — the item is appended to the end of it." },
+  "tools.dragSite": { cn: "拖动排序（可拖到其它分栏）", en: "Drag to reorder (can cross sections)" },
+  "tools.dragSection": { cn: "拖动调整分栏顺序", en: "Drag to reorder sections" },
+  "tools.dropHere": { cn: "放在这里", en: "Drop here" },
   "common.skipToContent": { cn: "跳到主要内容", en: "Skip to main content" },
   "meta.titleTemplate": { cn: "%s | 布谷工作室", en: "%s | Bugoo Studio" },
   "meta.titleDefault": { cn: "布谷工作室 - 官方网站", en: "Bugoo Studio — Official Site" },
@@ -1497,6 +1504,7 @@ export const dict = {
   "meetingTalks.errBadBv": { cn: "无法识别 BV 号", en: "Unrecognized Bilibili BV ID" },
   "meetingTalks.errSaveFailed": { cn: "保存失败，请重试；若持续失败请联系管理员", en: "Failed to save, please retry; contact an admin if it keeps failing" },
   "agenda.viewImage": { cn: "查看大图", en: "View image" },
+  "upload.howto": { cn: "可拖入、点击选择或 Ctrl+V 粘贴", en: "Drag in, click to choose, or paste with Ctrl+V" },
 } as const;
 
 export type DictKey = keyof typeof dict;

@@ -108,7 +108,7 @@ export default function AgendaManagePanel({
   timelineItems?: AgendaTimelineItem[];
   title: string;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -225,7 +225,7 @@ export default function AgendaManagePanel({
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-brand-text-heading transition-colors hover:bg-brand-surface"
               >
                 <AgendaTypeTag type="SHARE" label={t("activityDetail.proposalShare")} />
-                <span className="min-w-0 flex-1 truncate">{t("activityDetail.proposalShare")}</span>
+                <span className="min-w-0 flex-1 truncate text-xs text-brand-text-muted">{lang === "en" ? "5–15 min talk" : "5–15 分钟分享"}</span>
               </button>
               <button
                 type="button"
@@ -234,7 +234,7 @@ export default function AgendaManagePanel({
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-brand-text-heading transition-colors hover:bg-brand-surface"
               >
                 <AgendaTypeTag type="SHOWCASE" label={t("activityDetail.proposalShowcase")} />
-                <span className="min-w-0 flex-1 truncate">{t("activityDetail.proposalShowcase")}</span>
+                <span className="min-w-0 flex-1 truncate text-xs text-brand-text-muted">{lang === "en" ? "Show a work or demo" : "展示作品或 Demo"}</span>
               </button>
                 </div>,
                 document.body,

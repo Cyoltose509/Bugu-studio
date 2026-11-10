@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { uploadImage, ACCEPT_ATTR, compressionNote, assertImageFile } from "@/lib/utils/clientUpload";
 import { useLang } from "@/lib/i18n/LangProvider";
@@ -47,6 +47,7 @@ export default function CoverUploadInput({
   const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const uploadFile = useCallback(async (file: File) => {
     try {
@@ -84,6 +85,30 @@ export default function CoverUploadInput({
       if (fileRef.current) fileRef.current.value = "";
     }
   }, [coverUrl, preview, lang, t]);
+
+  // 粘贴导入：整页 Ctrl+V 图片进封面（焦点落在其他上传区内时让位）
+  useEffect(() => {
+    if (uploading) return;
+    const onPaste = (e: ClipboardEvent) => {
+      if (e.defaultPrevented) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      let file: File | null = null;
+      for (const item of items) {
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          file = item.getAsFile();
+          break;
+        }
+      }
+      if (!file) return;
+      const activeZone = document.activeElement?.closest("[data-image-dropzone]");
+      if (activeZone && activeZone !== cardRef.current) return;
+      e.preventDefault();
+      void uploadFile(file);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [uploading, uploadFile]);
 
   function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -131,8 +156,10 @@ export default function CoverUploadInput({
   return (
     <div className="space-y-2">
       <div
+        ref={cardRef}
         role="button"
         tabIndex={0}
+        data-image-dropzone="true"
         aria-label={hasCustom ? t("upload.changeCoverAria") : t("upload.uploadCoverAria")}
         onClick={() => !uploading && fileRef.current?.click()}
         onKeyDown={(e) => {

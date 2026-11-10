@@ -153,6 +153,7 @@ export default function SubmitProposalForm({
         disabled={uploading}
         onInvalid={setUploadError}
         onFile={handleImage}
+        globalPaste
       >
         {imagePreview || imageUrl ? (
           <div className="relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
