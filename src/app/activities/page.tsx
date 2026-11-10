@@ -11,7 +11,8 @@ import { ActivityType, ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-data";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
-import ActivityCalendar from "@/components/activities/ActivityCalendar";
+import ActivityCalendar, { BAR_TONE } from "@/components/activities/ActivityCalendar";
+import PlusIcon from "@/components/ui/PlusIcon";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
@@ -360,69 +361,86 @@ export default async function ActivitiesPage({
           ? safeOngoing.filter((a) => a.id !== hero.id)
           : safeOngoing;
 
-  // 月历视图：全部已发布/归档活动（含推荐类），仅取排期所需字段，按开始时间升序
-  const calendarAll: any[] = isCalendar
+  // 月历视图：全部已发布/归档活动（含推荐类），取排期与悬浮卡片所需字段，按开始时间升序
+  const calendarAllRaw: any[] = isCalendar
     ? isMockDataEnabled()
       ? (mockActivitiesBuckets().flat() as any[])
       : await cachedQuery(
-          "activities:calendar:v1",
+          "activities:calendar:v2",
           () =>
             prisma.activity.findMany({
               where: { status: { in: [ActivityStatus.PUBLISHED, ActivityStatus.ARCHIVED] } },
-              select: { id: true, title: true, type: true, startTime: true, endTime: true, timePending: true },
+              select: {
+                id: true,
+                title: true,
+                summary: true,
+                type: true,
+                status: true,
+                location: true,
+                meetingUrl: true,
+                coverImage: true,
+                recoTag: true,
+                startTime: true,
+                endTime: true,
+                timePending: true,
+                courseHasClock: true,
+              },
               orderBy: { startTime: "asc" },
               take: 500,
             }),
           60,
         ).catch(() => [] as any[])
     : [];
+  const calendarAll = calendarAllRaw.map(stripCourseUrl);
   const calendarActivities = calendarAll.filter((a) => !a.timePending && a.startTime);
   const calendarPending = calendarAll.filter((a) => a.timePending || !a.startTime);
 
   return (
-      <div className="container mx-auto px-4 py-10 animate-fade-in">
+      <div
+        data-calendar-page={isCalendar ? "true" : undefined}
+        className={
+          isCalendar
+            ? "flex-1 flex flex-col max-w-[1720px] w-full mx-auto px-3 sm:px-5 pt-2 pb-2 sm:pt-3 sm:pb-3 min-h-0"
+            : "container mx-auto px-4 py-10 animate-fade-in"
+        }
+      >
 
-        {/* 页面头 */}
-        <div className="mb-10 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-brand-navy">{t(lang, "page.activities.title")}</h1>
-            <p className="mt-2 text-brand-text-secondary">{t(lang, "activities.intro")}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {/* 网格 / 月历视图切换 */}
-            <Link
-              href={isCalendar ? "/activities" : "/activities?view=calendar"}
-              className="w-11 h-11 rounded-xl border border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-blue/40 hover:text-brand-blue transition-colors flex items-center justify-center"
-              title={t(lang, isCalendar ? "activities.gridView" : "activities.calendarView")}
-              aria-label={t(lang, isCalendar ? "activities.gridView" : "activities.calendarView")}
-            >
-              {isCalendar ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
-                </svg>
-              ) : (
+        {/* 页面头：非日历视图（网格档案）保留顶栏大标题 */}
+        {!isCalendar && (
+          <div className="flex items-center justify-between gap-3 sm:gap-4 shrink-0 mb-10">
+            <div>
+              <h1 className="text-3xl font-bold text-brand-navy">
+                {t(lang, "page.activities.title")}
+              </h1>
+              <p className="mt-2 text-brand-text-secondary">{t(lang, "activities.intro")}</p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <Link
+                href="/activities?view=calendar"
+                className="w-11 h-11 rounded-xl border border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-blue/40 hover:text-brand-blue transition-colors flex items-center justify-center shrink-0"
+                title={t(lang, "activities.calendarView")}
+                aria-label={t(lang, "activities.calendarView")}
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="3" y="4" width="18" height="17" rx="2.5" />
                   <path d="M3 9h18" />
                   <path d="M8 2v4M16 2v4" />
                 </svg>
-              )}
-            </Link>
-            {isAdmin && (
-              <Link
-                href="/admin/activities/create"
-                className="btn-primary shrink-0 w-11 h-11 rounded-xl text-[1.75rem] font-light leading-none flex items-center justify-center"
-                title={t(lang, "activities.create")}
-                aria-label={t(lang, "activities.create")}
-              >
-                +
               </Link>
-            )}
+              {isAdmin && (
+                <Link
+                  href="/admin/activities/create"
+                  className="btn-primary brand-add-control shrink-0"
+                  title={t(lang, "activities.create")}
+                  aria-label={t(lang, "activities.create")}
+                >
+                  <PlusIcon size={24} />
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {isCalendar ? (
           <ActivityCalendar
@@ -431,6 +449,7 @@ export default async function ActivitiesPage({
             year={calYear}
             month={calMonth}
             lang={lang}
+            isAdmin={isAdmin}
           />
         ) : (
         <>
