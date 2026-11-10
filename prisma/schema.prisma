@@ -739,6 +739,7 @@ model CourseParticipant {
   @@unique([activityId, userId])
   @@index([activityId, role, sortOrder])
   @@index([memberId])
+  @@index([userId])
 }
 
 // 公开课 — 资料附件（PDF、幻灯片等），地址必须落在本站附件存储
