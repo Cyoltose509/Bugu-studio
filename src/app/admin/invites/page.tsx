@@ -10,6 +10,7 @@ import { cachedQuery } from "@/lib/db/cache";
 import { createInviteCode, toggleInviteCode, deleteInvalidInviteCodes, deleteAllInviteCodes } from "./actions";
 import DeleteInviteCodeButton from "@/components/admin/DeleteInviteCodeButton";
 import BulkDeleteButtons from "./BulkDeleteButtons";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export const metadata: Metadata = { title: "邀请码管理 - 管理后台" };
 export const dynamic = "force-dynamic";
@@ -29,15 +30,26 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
   const pageSize = 15;
   const skip = (page - 1) * pageSize;
 
-  const [codes, total] = await cachedQuery(`admin:invites:${page}`, () =>
-    Promise.all([
+  // v2：返回结构从 [codes, total] 元组改为对象（多了 creatorMap），换 key 避免读到旧结构的缓存
+  const { codes, total, creatorMap } = await cachedQuery(`admin:invites:v2:${page}`, async () => {
+    const [codes, total] = await Promise.all([
       prisma.inviteCode.findMany({
         orderBy: { createdAt: "desc" },
         skip,
         take: pageSize,
       }),
       prisma.inviteCode.count(),
-    ]), 15);
+    ]);
+    // createdBy 是裸 userId（无 relation），批量查一次创建者信息做小头像
+    const creatorIds = [...new Set(codes.map(c => c.createdBy).filter((id): id is string => !!id))];
+    const creators = creatorIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: creatorIds } },
+          select: { id: true, name: true, image: true },
+        })
+      : [];
+    return { codes, total, creatorMap: Object.fromEntries(creators.map(u => [u.id, u])) };
+  }, 15);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -99,7 +111,7 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
           <div className="p-8 text-center text-sm text-brand-text-secondary">暂无邀请码</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
+            <table className="w-full text-sm min-w-[780px]">
             <thead>
               <tr className="border-b border-brand-border-subtle bg-brand-surface-page">
                 <th className="text-left p-3 font-medium text-brand-text-body">邀请码</th>
@@ -108,6 +120,7 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
                 <th className="text-left p-3 font-medium text-brand-text-body">状态</th>
                 <th className="text-left p-3 font-medium text-brand-text-body">有效期</th>
                 <th className="text-left p-3 font-medium text-brand-text-body">备注</th>
+                <th className="text-left p-3 font-medium text-brand-text-body">创建者</th>
                 <th className="text-right p-3 font-medium text-brand-text-body">操作</th>
               </tr>
             </thead>
@@ -116,6 +129,7 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
                 const expired = c.expiresAt && c.expiresAt < new Date();
                 const exhausted = c.maxUses !== null && c.usedCount >= c.maxUses;
                 const roleOpt = ROLE_OPTIONS.find(r => r.value === c.role);
+                const creator = c.createdBy ? creatorMap[c.createdBy] : undefined;
                 return (
                   <tr key={c.id} className="border-b hover:bg-brand-surface-page transition-colors border-gray-200">
                     <td className="p-3">
@@ -143,10 +157,20 @@ export default async function AdminInvitesPage({ searchParams }: PageProps) {
                       {expired && <span className="ml-1 text-red-600">已过期</span>}
                     </td>
                     <td className="p-3 text-xs text-brand-text-secondary">{c.description || "—"}</td>
+                    <td className="p-3">
+                      {creator ? (
+                        <span className="flex items-center gap-1.5" title={creator.name || "未知用户"}>
+                          <UserAvatar src={creator.image} name={creator.name} size={20} />
+                          <span className="text-xs text-brand-text-secondary">{creator.name || "未知用户"}</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-brand-text-muted">—</span>
+                      )}
+                    </td>
                     <td className="p-3 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3">
                         <form action={toggleInviteCode.bind(null, c.id, !c.isActive)} className="inline">
-                          <button type="submit" className={`text-xs hover:underline cursor-pointer ${c.isActive ? "text-red-700" : "text-brand-green"}`}>
+                          <button type="submit" className={`text-xs leading-none py-0.5 whitespace-nowrap hover:underline cursor-pointer ${c.isActive ? "text-[var(--ui-text-orange)]" : "text-brand-green"}`}>
                             {c.isActive ? "禁用" : "启用"}
                           </button>
                         </form>

@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createActivity } from "../actions";
+import { getAutoMeetingSchedule } from "../auto-schedule";
 import CoverUploadInput from "@/components/activities/CoverUploadInput";
 import LocationPresetInput from "@/components/activities/LocationPresetInput";
 import ActivityTimeChoice from "@/components/activities/ActivityTimeChoice";
@@ -93,7 +94,7 @@ export default function CreateActivityPage() {
 
         <div>
           <p className={label}>活动类型 *</p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {TYPE_OPTIONS.filter((option) => option.value !== "ENGINE_COURSE").map((opt) => {
               const active = type === opt.value || (opt.value === "COURSE" && type === "ENGINE_COURSE");
               return (
@@ -119,7 +120,7 @@ export default function CreateActivityPage() {
             {TYPE_OPTIONS.filter((option) => option.value === "COURSE" || option.value === "ENGINE_COURSE").map((option) => <button key={option.value} type="button" onClick={() => setType(option.value)} className={`rounded-lg px-3 py-2 text-left text-sm ${type === option.value ? "bg-brand-blue text-white" : "text-brand-text-body hover:bg-brand-blue/10"}`}><strong className="block">{option.value === "COURSE" ? "策划公开课" : option.label}</strong><span className="text-xs opacity-75">{option.value === "COURSE" ? "组队分享与评分" : option.hint}</span></button>)}
           </div>}
           {type === "MEETING" && (
-            <p className="text-xs mt-2 text-brand-text-muted">只需选择日期，同一天开始和结束即可</p>
+            <p className="text-xs mt-2 text-brand-text-muted">可点「自动推算」按上一场例会 +2 周填好时间，也可手动选择日期与起止时间</p>
           )}
           {type === "GENERAL" && (
             <p className="text-xs mt-2 text-brand-text-muted">创建后可在编辑页启用海报与试玩目录</p>
@@ -160,6 +161,7 @@ export default function CreateActivityPage() {
               onEndChange={setEndTime}
               fieldClass={field}
               labelClass={label}
+              onAutoSchedule={type === "MEETING" ? getAutoMeetingSchedule : undefined}
             />
             {(type === "COURSE" || type === "ENGINE_COURSE") && !timePending && <div className="space-y-3 rounded-lg border border-brand-border-subtle p-3">
               <label className="flex items-center gap-2 text-sm text-brand-text-body"><input type="checkbox" name="courseHasClock" className="accent-brand-blue" />精确到时分</label>

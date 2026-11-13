@@ -28,6 +28,25 @@ function toSlug(title: string): string {
   return title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\u4e00-\u9fa5\-]/g, "").slice(0, 60);
 }
 
+/**
+ * 活动 slug 唯一化。
+ * 创建页留空标题时会生成「YYYY年M月D日 + 类型」默认标题，同一天同类型建第二个活动
+ * 就必然撞 Activity.slug 唯一键（P2002），server action 抛错后前端整页进入错误边界。
+ * 这里按 -2、-3… 递增找空位，避免把可预期冲突打成 500。
+ */
+async function uniqueActivitySlug(base: string): Promise<string> {
+  const root = base || `activity-${Date.now().toString(36)}`;
+  for (let i = 1; i <= 30; i++) {
+    const candidate = i === 1 ? root : `${root}-${i}`;
+    const exists = await prisma.activity.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+    if (!exists) return candidate;
+  }
+  return `${root}-${Date.now().toString(36)}`;
+}
+
 function readFocus(formData: FormData): { x: number; y: number } | { error: string } {
   const x = Number(formData.get("courseCoverFocusX") ?? 50);
   const y = Number(formData.get("courseCoverFocusY") ?? 50);
@@ -103,7 +122,7 @@ async function invalidateActivityCaches(id?: string) {
     invalidateCache("admin:activities:"),
     // 年报聚合依赖活动/参赛数据
     invalidateCache("history:"),
-    ...(id ? [invalidateCache(`activity:detail:${id}`)] : []),
+    ...(id ? [invalidateCache(`activity:detail:${id}`), invalidateCache(`activity:sidebar-talks:${id}`)] : []),
   ]);
   revalidatePath("/activities");
   revalidatePath("/admin/activities");
@@ -141,36 +160,50 @@ export async function createActivity(formData: FormData) {
 
   // 标题默认：年月日 + 活动类型；待定则只用类型
   const finalTitle = title || defaultTitle(type, schedule.startRaw);
-  const slug = toSlug(finalTitle);
+  const slug = await uniqueActivitySlug(toSlug(finalTitle));
   const maxParticipants = maxStr ? parseInt(maxStr, 10) : undefined;
   const maxTeamSize = maxTeamSizeStr ? parseInt(maxTeamSizeStr, 10) : 6;
 
-  const activity = await prisma.activity.create({
-    data: {
-      title: finalTitle,
-      slug,
-      type: type as any,
-      summary: summary || undefined,
-      description: description || undefined,
-      location: location || null,
-      meetingUrl: meetingUrl || undefined,
-      coverImage: coverImage || undefined,
-      timePending: schedule.timePending,
-      courseHasClock: schedule.courseHasClock,
-      courseCoverFocusX: focus.x,
-      courseCoverFocusY: focus.y,
-      startTime: schedule.startTime,
-      endTime: schedule.endTime,
-      maxParticipants,
-      registrationOpen: false,
-      talkSubmissionOpen,
-      status: publish ? ActivityStatus.PUBLISHED : ActivityStatus.DRAFT,
-      theme: theme || undefined,
-      themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
-      maxTeamSize,
-      recoTag,
-    },
-  });
+  const data: Prisma.ActivityCreateInput = {
+    title: finalTitle,
+    slug,
+    type: type as any,
+    summary: summary || undefined,
+    description: description || undefined,
+    location: location || null,
+    meetingUrl: meetingUrl || undefined,
+    coverImage: coverImage || undefined,
+    timePending: schedule.timePending,
+    courseHasClock: schedule.courseHasClock,
+    courseCoverFocusX: focus.x,
+    courseCoverFocusY: focus.y,
+    startTime: schedule.startTime,
+    endTime: schedule.endTime,
+    maxParticipants,
+    registrationOpen: false,
+    talkSubmissionOpen,
+    status: publish ? ActivityStatus.PUBLISHED : ActivityStatus.DRAFT,
+    theme: theme || undefined,
+    themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
+    maxTeamSize,
+    recoTag,
+  };
+
+  let activity: { id: string; slug: string };
+  try {
+    activity = await prisma.activity.create({ data });
+  } catch (err) {
+    // 并发创建时仍可能撞唯一键：换带时间戳的 slug 重试一次
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      activity = await prisma.activity.create({
+        data: { ...data, slug: `${slug}-${Date.now().toString(36)}` },
+      });
+    } else {
+      // 数据库抖动等非预期错误：给管理员可读提示，而不是整页错误边界
+      console.error("[createActivity] 创建活动失败:", err);
+      return { error: "创建活动失败，请稍后重试" };
+    }
+  }
 
   // @mention 通知
   if (description) {

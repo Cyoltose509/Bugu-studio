@@ -166,6 +166,30 @@ body:has([data-calendar-page="true"]) footer {
   }
 }
 
+/* ── 管理后台：隐藏站点顶栏与底栏，整屏固定，仅内容区内部滚动 ─────────── */
+body:has([data-admin-shell="true"]) footer,
+body:has([data-admin-shell="true"]) header[data-site-navbar] {
+  display: none !important;
+}
+body:has([data-admin-shell="true"]) {
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+body:has([data-admin-shell="true"]) #main-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+body:has([data-admin-shell="true"]) #main-content > div:last-child {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* ── 活动推荐横排滚动条：与议程侧栏同风格的横向细胶囊 ─────────── */
 .reco-scroll {
   scrollbar-width: thin;

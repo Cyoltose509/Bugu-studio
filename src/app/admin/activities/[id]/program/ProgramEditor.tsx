@@ -125,8 +125,17 @@ export default function ProgramEditor({ activityId, activityTitle, initialClasse
       <div><h1 className="text-xl font-bold leading-snug text-brand-navy sm:text-2xl">{activityTitle}</h1></div>
     </div>
     {error && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-600">{error}</p>}
-    <div className="flex items-center gap-2 border-b border-brand-border-subtle pb-2">
-      <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">{classes.map((item, index) => <button type="button" key={index} onClick={() => setActiveClass(index)} className={`rounded-lg px-3 py-2 text-sm font-medium transition ${activeClass === index ? "bg-brand-blue/10 text-brand-blue" : "text-brand-text-muted hover:bg-brand-blue/5"}`}>{item.name || "新班级"}</button>)}<SymbolButton label="添加班级" onClick={() => { setActiveClass(classes.length); setClasses((rows) => [...rows, blankClass()]); setSaved(false); }} /></div>
+    {/* 班级页签：书签式，从内容面板上沿向下垂 */}
+    <div className="flex flex-wrap items-end gap-1.5 [&+section]:!mt-0 [&+section]:!rounded-t-none">
+      {classes.map((item, index) => {
+        const active = activeClass === index;
+        return <button type="button" key={index} onClick={() => setActiveClass(index)} aria-current={active ? "true" : undefined}
+          className={`relative -mb-px flex min-w-0 max-w-[13rem] items-center rounded-t-xl border border-b-0 px-4 pb-2.5 pt-3 text-sm transition-colors ${active ? "border-brand-border-subtle bg-card font-semibold text-brand-blue" : "border-brand-border-subtle bg-brand-surface text-brand-text-muted hover:bg-card hover:text-brand-text-body"}`}>
+          {active && <span aria-hidden className="absolute inset-x-2.5 top-0 h-0.5 rounded-full bg-brand-blue" />}
+          <span className="truncate">{item.name || "新班级"}</span>
+        </button>;
+      })}
+      <span className="mb-1 ml-auto"><SymbolButton label="添加班级" onClick={() => { setActiveClass(classes.length); setClasses((rows) => [...rows, blankClass()]); setSaved(false); }} /></span>
     </div>
     {classes.map((courseClass, classIndex) => (sorting || activeClass === classIndex) && <section key={classIndex} className="rounded-2xl border border-brand-border-subtle bg-card p-3 shadow-sm sm:p-4">
       <div className="mb-3 flex items-center gap-2" draggable={sorting} onDragStart={(event) => { drag.current = { kind: "class", classIndex, index: classIndex }; if (!sorting || (event.target as HTMLElement).closest("input,textarea,select,button,a")) { event.preventDefault(); return; } event.stopPropagation(); event.dataTransfer.effectAllowed = "move"; }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); drop("class", classIndex, classIndex); }}>
