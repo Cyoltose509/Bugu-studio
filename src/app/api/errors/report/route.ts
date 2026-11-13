@@ -1,12 +1,13 @@
 /**
  * POST /api/errors/report
  * 前端错误上报接口 — 无需认证，用户遇到错误时自动调用
+ * 去重与通知逻辑已抽到 @/lib/errors/report-store，本路由只做参数校验与身份回退。
  * 去重策略：相同 URL + 最近 10 分钟内已有相同错误 → 仅递增计数，不创建新报告、不发通知
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
-import { prisma } from "@/lib/db/prisma";
-import { createNotifications } from "@/lib/services/notification";
+import { recordErrorReport } from "@/lib/errors/report-store";
+import { shouldSkipClientReport } from "@/lib/errors/report-filter";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +16,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "缺少错误信息" }, { status: 400 });
     }
 
-    const { message, stack, url, userAgent, errorType } = body as {
+    const { message, stack, url, userAgent } = body as {
       message: string;
       stack?: string;
       url?: string;
       userAgent?: string;
       errorType?: string;
     };
+
+    const ua = userAgent || request.headers.get("user-agent") || undefined;
+    const pageUrl = url || request.headers.get("referer") || undefined;
+
+    // 服务端再过滤一次（前端已过滤，但旧版本页面 / 直连调用仍可能打进来）：
+    // 瞬态错误（chunk 丢失、RSC 流中断、网络抖动）与本地开发来源不落库。
+    // 返回 200 而不是 4xx，避免客户端错误边界因上报失败再抛一个错误。
+    const filter = shouldSkipClientReport(message, pageUrl);
+    if (filter.skip) {
+      return NextResponse.json({ success: true, data: { reportId: null, skipped: filter.reason } });
+    }
 
     // 尝试获取当前用户（不强制要求登录）
     let userId: string | undefined;
@@ -32,86 +44,15 @@ export async function POST(request: NextRequest) {
       // 未登录不影响上报
     }
 
-    const ua = userAgent || request.headers.get("user-agent") || undefined;
-    const pageUrl = url || request.headers.get("referer") || undefined;
-
-    // 去重：10 分钟内相同 URL + 相同错误信息 → 仅递增计数
-    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const existing = await prisma.errorReport.findFirst({
-      where: {
-        message,
-        url: pageUrl ?? null,
-        lastSeenAt: { gte: tenMinAgo },
-      },
-      orderBy: { lastSeenAt: "desc" },
+    const { reportId } = await recordErrorReport({
+      message,
+      stack,
+      url: pageUrl,
+      userAgent: ua,
+      userId,
+      kind: "client",
+      notifyAdmins: true,
     });
-
-    if (existing) {
-      // 去重：仅更新计数和时间
-      await prisma.errorReport.update({
-        where: { id: existing.id },
-        data: { count: { increment: 1 }, lastSeenAt: new Date(), userAgent: ua },
-      });
-      return NextResponse.json({
-        success: true,
-        data: { reportId: existing.reportId },
-      });
-    }
-
-    // 新错误：分配递增编号
-    const reportId = await prisma.$transaction(async (tx) => {
-      const last = await tx.errorReport.findFirst({
-        orderBy: { reportId: "desc" },
-        select: { reportId: true },
-      });
-      const nextId = (last?.reportId ?? 0) + 1;
-
-      await tx.errorReport.create({
-        data: {
-          reportId: nextId,
-          message,
-          stack: stack?.slice(0, 5000) ?? null,
-          url: pageUrl,
-          userId,
-          userAgent: ua,
-        },
-      });
-
-      return nextId;
-    });
-
-    // 通知所有管理员（去重：同一 URL 10 分钟内不重复通知）
-    try {
-      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
-      const recentNotif = await prisma.notification.findFirst({
-        where: {
-          type: "ERROR_REPORT",
-          content: { contains: pageUrl?.slice(0, 100) ?? message.slice(0, 60) },
-          createdAt: { gte: thirtyMinAgo },
-        },
-      });
-      if (!recentNotif) {
-        const admins = await prisma.user.findMany({
-          where: { role: "ADMIN" },
-          select: { id: true },
-        });
-        if (admins.length > 0) {
-          const urlPreview = pageUrl ? pageUrl.slice(0, 80) : "未知页面";
-          await createNotifications(
-            admins.map((a) => ({
-              userId: a.id,
-              type: "ERROR_REPORT",
-              title: `⚠️ 前端错误 #${reportId}`,
-              content: `页面 ${urlPreview} 发生错误：${message.slice(0, 120)}`,
-              relatedId: String(reportId),
-              relatedType: "ErrorReport",
-            }))
-          );
-        }
-      }
-    } catch {
-      // 通知失败不影响上报
-    }
 
     return NextResponse.json({
       success: true,

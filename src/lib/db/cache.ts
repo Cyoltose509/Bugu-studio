@@ -7,6 +7,7 @@
  */
 
 import { Redis } from '@upstash/redis';
+import { withDbRetry } from './transient';
 
 interface CacheEntry<T> {
   data: T;
@@ -80,7 +81,9 @@ export async function cachedQuery<T>(
   }
 
   // 2. 缓存未命中，执行查询
-  const data = await queryFn();
+  //    Supabase Pooler 偶发断连（P1001/P1017/transaction not found）时重试一次，
+  //    否则这一下抖动会让整页 RSC 渲染直接抛错，变成前台白屏错误页。
+  const data = await withDbRetry(queryFn);
 
   // 3. 写入缓存
   if (r) {

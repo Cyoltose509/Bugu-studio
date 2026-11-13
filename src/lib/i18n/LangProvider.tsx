@@ -55,7 +55,9 @@ export function LangProvider({
 
   const t = useCallback(
     (key: DictKey, vars?: Record<string, string | number>) => {
-      const template = dict[key][lang];
+      // 防御：key 未收录（例如新增词条只在服务端 dict 里、或旧客户端缓存）时不能让整页崩溃。
+      // 生产错误报告里多条 "Cannot read properties of undefined (reading 'en'/'cn')" 即源于此。
+      const template = dict[key]?.[lang] ?? String(key);
       if (!vars) return template;
       return Object.entries(vars).reduce<string>(
         (s, [k, v]) => s.split(`{${k}}`).join(String(v)),
@@ -79,7 +81,7 @@ export function useLang(): LangCtx {
       setLang: () => {},
       toggle: () => {},
       t: (key, vars) => {
-        const template = dict[key][DEFAULT_LANG];
+        const template = dict[key]?.[DEFAULT_LANG] ?? String(key);
         if (!vars) return template;
         return Object.entries(vars).reduce<string>(
           (s, [k, v]) => s.split(`{${k}}`).join(String(v)),

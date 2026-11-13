@@ -2,7 +2,17 @@
 const nextConfig = {
   // ❌ 移除 output: 'standalone' — Vercel 不需要，会导致部署失败
   experimental: {
+    // 注意：experimental 只能出现一个对象字面量。此前下面还写过第二个
+    // `experimental: { serverActions: … }`，对象字面量重复键后写的会整个覆盖前者，
+    // optimizePackageImports 因此一直没生效（白白多打了不少 barrel import）。
     optimizePackageImports: ["lucide-react", "date-fns", "bcryptjs"],
+    serverActions: {
+      allowedOrigins: [
+        "localhost:3000",
+        "bugoostudio.com",
+        "www.bugoostudio.com",
+      ],
+    },
   },
   images: {
     // Serve prebuilt files from R2/CDN; never call Vercel Image Optimization.
@@ -41,15 +51,6 @@ const nextConfig = {
         hostname: "*.githubusercontent.com",
       },
     ],
-  },
-  experimental: {
-    serverActions: {
-      allowedOrigins: [
-        "localhost:3000",
-        "bugoostudio.com",
-        "www.bugoostudio.com",
-      ],
-    },
   },
   // jose 在 Edge Runtime 会引用 Node.js API，标为外部包避免打包进 Edge bundle
   serverExternalPackages: ["jose"],

@@ -34,6 +34,7 @@ import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { getActivityShowcase } from "@/lib/activities/showcase-data";
 import ActivityShowcasePage from "@/components/activities/showcase/ActivityShowcasePage";
 import { isMockDataEnabled, mockActivityByKey } from "@/lib/mock/frontend-data";
+import { reportServerFailure } from "@/lib/errors/server-report";
 import { getLang } from "@/lib/i18n/getLang";
 import { t, type DictKey } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
@@ -85,16 +86,23 @@ interface PageProps {
 /* ── 极轻量 metadata 查询（仅 select，无 include，不阻塞首字节）── */
 
 const getActivityMeta = cache(async (key: string) => {
-  const id = await resolveActivityId(key);
-  if (!id) return null;
-  if (isMockDataEnabled()) {
-    const a = mockActivityByKey(id);
-    return a ? { id: a.id, title: a.title, summary: a.summary, status: a.status, coverImage: a.coverImage } : null;
+  try {
+    const id = await resolveActivityId(key);
+    if (!id) return null;
+    if (isMockDataEnabled()) {
+      const a = mockActivityByKey(id);
+      return a ? { id: a.id, title: a.title, summary: a.summary, status: a.status, coverImage: a.coverImage } : null;
+    }
+    return await prisma.activity.findUnique({
+      where: { id },
+      select: { id: true, title: true, summary: true, status: true, coverImage: true },
+    });
+  } catch {
+    // metadata 只为 SEO / 分享卡片服务：数据库抖动时不要连带整页崩成
+    // "An error occurred in the Server Components render"。返回 null 后
+    // generateMetadata 退回通用标题，正文由 ActivityDetailContent 正常渲染。
+    return null;
   }
-  return prisma.activity.findUnique({
-    where: { id },
-    select: { id: true, title: true, summary: true, status: true, coverImage: true },
-  });
 });
 
 export async function generateMetadata(
@@ -188,9 +196,14 @@ const getActivity = cache(async (id: string) => {
         }),
       120,
     );
-  } catch {
-    // 仅本地：DB 不可达时降级，勿提交
-    return mockActivityByKey(id);
+  } catch (error) {
+    // 数据库不可用时的两种错误处理都不能要：
+    // - 返回 null 会让真实存在的活动变成 404（用户以为活动被删了）
+    // - 直接吞掉会让错误列表里只剩一句被省略的 digest（本次要治的就是这个）
+    // 这里先补录真实 message（同 message+url 会被 onRequestError 的记录去重合并），
+    // 再抛出交给 app/activities/error.tsx 渲染错误页。
+    await reportServerFailure({ error, path: `/activities/${id}` });
+    throw error;
   }
 });
 

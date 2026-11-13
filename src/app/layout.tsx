@@ -9,6 +9,7 @@ import {Footer} from "@/components/layout/Footer";
 import {getLang} from "@/lib/i18n/getLang";
 import {t} from "@/lib/i18n/dict";
 import {SkipLink} from "@/components/layout/SkipLink";
+import {ChunkLoadRecovery} from "@/components/shared/ChunkLoadRecovery";
 import TopLoader from "@/components/layout/TopLoader";
 import {SpeedInsights} from "@vercel/speed-insights/next";
 import {Analytics} from "@vercel/analytics/react";
@@ -93,6 +94,8 @@ export default async function RootLayout({children}: { children: React.ReactNode
         </head>
         <body className="text-[#333333] min-h-screen flex flex-col">
         <SkipLink />
+        {/* 部署后旧 chunk 404 / RSC 流中断等瞬态错误的全局自愈（渲染 null） */}
+        <ChunkLoadRecovery />
         <TopLoader />
         <Providers initialLang={lang}>
             {/* Navbar 用 Suspense 包裹 — auth() 不阻塞首屏渲染 */}
