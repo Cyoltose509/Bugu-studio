@@ -22,7 +22,7 @@ import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
 import { typeLabel, TYPE_OPTIONS, buildUrl } from "@/lib/works/filters";
-import { tagDisplayName } from "@/lib/tags/tag-names";
+import { tagDisplayName, DEFAULT_TAG_GROUP_ORDER } from "@/lib/tags/tag-names";
 import {
     isMockDataEnabled,
     mockListProjects,
@@ -139,10 +139,10 @@ async function WorksSidebarData({ params, lang }: { params: Record<string, any>;
         (acc[key] ??= []).push(tag);
         return acc;
     }, {});
-    const groupOrder = ["引擎", "大类", "要素", "活动&赛事", "其他"];
+    const groupOrder = DEFAULT_TAG_GROUP_ORDER;
     const sortedGroups = Object.keys(tagGroups).sort((a, b) => {
-        const ia = groupOrder.indexOf(a);
-        const ib = groupOrder.indexOf(b);
+        const ia = groupOrder.indexOf(a as any);
+        const ib = groupOrder.indexOf(b as any);
         if (ia === -1 && ib === -1) return a.localeCompare(b);
         if (ia === -1) return 1;
         if (ib === -1) return -1;
@@ -333,7 +333,10 @@ function buildWhere(params: Record<string, any>) {
     }
     if (params.year) where.developYear = parseInt(params.year);
     if (params.q) where.OR = [{title: {contains: params.q, mode: "insensitive"}}, {description: {contains: params.q, mode: "insensitive"}}];
-    if (params.tag) where.tags = {some: {tag: {slug: params.tag}}};
+    if (params.tag) {
+        const tagSlug = params.tag === "project" ? "touhou" : params.tag;
+        where.tags = {some: {tag: {slug: tagSlug}}};
+    }
     return where;
 }
 

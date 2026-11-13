@@ -19,6 +19,7 @@ export default function PrivacyPage() {
   const CONFIRM_WORD = lang === "en" ? "DELETE" : "注销";
 
   // ── 修改密码 ──
+  const [pwdOpen, setPwdOpen] = useState(false);
   const [currentPwd, setCurrentPwd] = useState("");
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
@@ -97,11 +98,34 @@ export default function PrivacyPage() {
 
       <h1 className="text-2xl font-bold text-brand-navy">{t(lang, "profile.privacy.title")}</h1>
 
-      {/* ══════════ 修改密码 ══════════ */}
+      {/* ══════════ 修改密码（默认收起，点击卡片头展开） ══════════ */}
       <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-        <h2 className="font-semibold mb-1 text-brand-navy">{t(lang, "profile.privacy.changePassword")}</h2>
-        <p className="text-xs text-brand-text-muted mb-5">{t(lang, "profile.privacy.changePasswordDesc")}</p>
-        <form onSubmit={handlePasswordChange} className="space-y-3 max-w-sm">
+        <button
+          type="button"
+          onClick={() => setPwdOpen((v) => !v)}
+          aria-expanded={pwdOpen}
+          aria-controls="change-password-panel"
+          className="w-full flex items-start justify-between gap-3 text-left"
+        >
+          <span>
+            <span className="block font-semibold text-brand-navy">{t(lang, "profile.privacy.changePassword")}</span>
+            <span className="block text-xs text-brand-text-muted mt-1">{t(lang, "profile.privacy.changePasswordDesc")}</span>
+          </span>
+          <svg
+            className={`mt-0.5 h-4 w-4 shrink-0 text-brand-text-muted transition-transform duration-200 ${pwdOpen ? "rotate-180" : ""}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        {pwdOpen && (
+        <form id="change-password-panel" onSubmit={handlePasswordChange} className="mt-5 space-y-3 max-w-sm animate-fade-in">
           <div>
             <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="currentPwd">{t(lang, "profile.privacy.currentPwd")}</label>
             <input
@@ -119,13 +143,20 @@ export default function PrivacyPage() {
               id="newPwd"
               type="password"
               value={newPwd}
-              onChange={(e) => setNewPwd(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setNewPwd(v);
+                // 新密码清空时确认框收起，残留输入一并清掉，避免隐藏字段参与提交
+                if (!v) setConfirmPwd("");
+              }}
               className={inputClass}
               autoComplete="new-password"
             />
             <p className="text-[11px] text-brand-text-muted mt-1">{t(lang, "profile.privacy.pwdHint")}</p>
           </div>
-          <div>
+          {/* 确认新密码：仅在已输入新密码时展开 */}
+          {newPwd.length > 0 && (
+          <div className="animate-fade-in">
             <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="confirmPwd">{t(lang, "profile.privacy.confirmPwd")}</label>
             <input
               id="confirmPwd"
@@ -136,6 +167,7 @@ export default function PrivacyPage() {
               autoComplete="new-password"
             />
           </div>
+          )}
           {pwdError && (
             <div className="text-sm px-4 py-2.5 rounded-lg bg-[var(--ui-bg-red-light)] text-[var(--ui-text-red)]">
               {pwdError}
@@ -154,6 +186,7 @@ export default function PrivacyPage() {
             {pwdLoading ? t(lang, "profile.privacy.changing") : t(lang, "profile.privacy.changePassword")}
           </button>
         </form>
+        )}
       </div>
 
       {/* ══════════ 注销账号 ══════════ */}

@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import Link from "next/link";
 import { updateMemberDetails } from "@/app/admin/members/actions";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 interface Props {
   memberId: string;
@@ -70,8 +71,8 @@ export default function AdminMemberEditor({ memberId, userId, currentGrade, curr
             <input type="number" name="grade" value={gradeVal ?? ""} onChange={e => setGradeVal(e.target.value ? Number(e.target.value) : null)}
               className="w-20 text-center text-sm rounded border px-2 py-1.5 bg-card border-brand-border-subtle"
               min={2000} max={2100} placeholder="未设置" />
-            <button type="button" onClick={() => setGradeVal(v => Math.min(2100, (v ?? new Date().getFullYear() - 1) + 1))}
-              className="w-8 h-8 rounded border flex items-center justify-center text-lg font-bold cursor-pointer hover:bg-muted border-brand-border-subtle">+</button>
+            <button type="button" onClick={() => setGradeVal(v => Math.min(2100, (v ?? new Date().getFullYear() - 1) + 1))} aria-label="年级加一"
+              className="w-8 h-8 rounded border flex items-center justify-center cursor-pointer hover:bg-muted border-brand-border-subtle"><PlusIcon size={17} strokeWidth={2.4} /></button>
             <span className="text-sm text-brand-text-secondary">{gradeVal != null ? `${gradeVal}级` : "未设置"}</span>
           </div>
         </div>
@@ -85,8 +86,8 @@ export default function AdminMemberEditor({ memberId, userId, currentGrade, curr
             <input type="number" name="joinYear" value={joinYearVal ?? ""} onChange={e => setJoinYearVal(e.target.value ? Number(e.target.value) : null)}
               className="w-20 text-center text-sm rounded border px-2 py-1.5 bg-card border-brand-border-subtle"
               min={2000} max={2100} placeholder="未设置" />
-            <button type="button" onClick={() => setJoinYearVal(v => Math.min(2100, (v ?? new Date().getFullYear() - 1) + 1))}
-              className="w-8 h-8 rounded border flex items-center justify-center text-lg font-bold cursor-pointer hover:bg-muted border-brand-border-subtle">+</button>
+            <button type="button" onClick={() => setJoinYearVal(v => Math.min(2100, (v ?? new Date().getFullYear() - 1) + 1))} aria-label="入社年份加一"
+              className="w-8 h-8 rounded border flex items-center justify-center cursor-pointer hover:bg-muted border-brand-border-subtle"><PlusIcon size={17} strokeWidth={2.4} /></button>
             <span className="text-sm text-brand-text-secondary">{joinYearVal ?? "未设置"}</span>
           </div>
         </div>

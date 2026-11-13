@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import crypto from "crypto";
 
 export async function createInviteCode(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const role = (formData.get("role") as string) || "MEMBER";
 
   const VALID_ROLES = ["USER", "MEMBER", "ADMIN"] as const;
@@ -33,6 +33,7 @@ export async function createInviteCode(formData: FormData) {
         ? new Date(Date.now() + parseInt(expiresDays) * 24 * 60 * 60 * 1000)
         : null,
       description: description || null,
+      createdBy: session.user.id,
     },
   });
   invalidateCache("admin:invites:");

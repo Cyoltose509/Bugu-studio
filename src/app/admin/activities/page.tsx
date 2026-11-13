@@ -12,6 +12,7 @@ import { deleteActivity, updateActivityStatus } from "./actions";
 import DeleteButton from "@/components/admin/ActivityDeleteButton";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import CreateBaituanButton from "@/components/activities/showcase/CreateBaituanButton";
+import PlusIcon from "@/components/ui/PlusIcon";
 import { activityNewestFirstOrder, activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
 
 export const metadata: Metadata = { title: "活动管理 - 管理后台" };
@@ -87,7 +88,7 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
           <CreateBaituanButton />
           <Link href="/admin/activities/course-settings" className="btn-secondary px-4 py-2 rounded-lg text-sm">公开课链接权限</Link>
           <Link href="/admin" className="btn-secondary px-4 py-2 rounded-lg text-sm">← 返回仪表盘</Link>
-          <Link href="/admin/activities/create" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">+ 创建活动</Link>
+          <Link href="/admin/activities/create" className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium"><PlusIcon size={16} />创建活动</Link>
         </div>
       </div>
 

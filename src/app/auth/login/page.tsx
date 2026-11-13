@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { Suspense, useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -40,20 +40,28 @@ function LoginForm() {
   const { lang } = useLang();
 
   // 检测是否已登录：已登录自动跳转（但 permission_denied 时不算 callbackUrl，避免再次跳回）
+  // 网络失败（Safari "Load failed" / "Failed to fetch"）不能让 Promise 变成未捕获拒绝，也不能卡在加载态
   useEffect(() => {
-    fetch("/api/auth/session")
-      .then((r) => r.json())
-      .then((s) => {
-        if (s?.user) {
-          if (error === "permission_denied") {
-            setChecking(false);
-            setMsg("你的账号权限不足，无法访问该页面。请联系管理员升级为社团成员。");
-            return;
-          }
-          router.push(callbackUrl);
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        const s = await res.json();
+        if (!alive || !s?.user) return;
+        if (error === "permission_denied") {
+          setMsg("你的账号权限不足，无法访问该页面。请联系管理员升级为社团成员。");
+          return;
         }
-      })
-      .finally(() => { if (error !== "permission_denied") setChecking(false); });
+        router.push(callbackUrl);
+      } catch {
+        // 网络抖动时直接落到登录表单，由用户重试
+      } finally {
+        if (alive) setChecking(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, [callbackUrl, router, error]);
 
   if (checking) {
@@ -61,11 +69,23 @@ function LoginForm() {
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setLoading(true); setMsg("");
-    const result = await signIn("credentials", { email: email.trim().toLowerCase(), password, redirect: false });
-    setLoading(false);
-    if (result?.ok) { router.push(callbackUrl); router.refresh(); }
-    else setMsg(getLoginErrorMsg(result?.error));
+    e.preventDefault();
+    setLoading(true);
+    setMsg("");
+    try {
+      const result = await signIn("credentials", { email: email.trim().toLowerCase(), password, redirect: false });
+      if (result?.ok) {
+        router.push(callbackUrl);
+        router.refresh();
+      } else {
+        setMsg(getLoginErrorMsg(result?.error));
+      }
+    } catch {
+      // 网络中断 / 请求被拦截：给出可重试提示，避免按钮一直转圈
+      setMsg(t(lang, "auth.networkError"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

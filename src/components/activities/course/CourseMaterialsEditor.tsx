@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import UserAvatar from "@/components/ui/UserAvatar";
+import PlusIcon from "@/components/ui/PlusIcon";
 import CourseAttachmentSorter from "./CourseAttachmentSorter";
+import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import { UPLOAD_LIMIT_BYTES } from "@/lib/utils/uploadLimits";
 import { courseParticipantKey, isCourseImage, moveCourseAttachment, type CourseAttachmentDraft, type CourseParticipantDraft, type CourseRole } from "@/lib/activities/course-materials";
 
@@ -123,7 +125,7 @@ export default function CourseMaterialsEditor({
     setError("");
   }
 
-  async function onFiles(list: FileList | null) {
+  async function onFiles(list: FileList | File[] | null) {
     if (!list?.length) return;
     setUploading(true);
     setError("");
@@ -146,6 +148,8 @@ export default function CourseMaterialsEditor({
           { name: payload.name || file.name, url: payload.url, mimeType: payload.mimeType, sizeBytes: payload.sizeBytes ?? file.size },
         ]);
       }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "附件上传失败，请重试");
     } finally {
       setUploading(false);
     }
@@ -196,10 +200,16 @@ export default function CourseMaterialsEditor({
         onRemove={(key) => setParticipants((current) => current.filter((item) => courseParticipantKey(item) !== key))}
       />}
 
-      <div>
+      <ImageDropZone
+        className="rounded-xl p-1"
+        hint="松开以上传图片"
+        disabled={uploading}
+        onFile={(file) => onFiles([file])}
+        onInvalid={setError}
+      >
         <div className="flex items-center justify-between gap-3 mb-2">
           <h3 className="text-sm font-semibold text-brand-navy">附件</h3>
-          <label className="text-xs px-3 py-1.5 rounded-lg border border-brand-blue text-brand-blue cursor-pointer">
+          <label className="cursor-pointer rounded-lg border border-brand-blue/40 bg-brand-blue/5 px-3 py-2 text-xs font-semibold text-brand-blue transition-colors hover:border-brand-blue hover:bg-brand-blue/10 focus-within:ring-2 focus-within:ring-brand-blue/30">
             {uploading ? "上传中..." : "上传附件"}
             <input
               type="file"
@@ -211,7 +221,7 @@ export default function CourseMaterialsEditor({
             />
           </label>
         </div>
-        <p className="text-xs text-brand-text-muted mb-4">PDF、Office、ZIP、文本或图片，单个不超过 {Math.floor(UPLOAD_LIMIT_BYTES / 1024 / 1024)}MB。直接拖动图片或文件排序。</p>
+        <p className="text-xs text-brand-text-muted mb-4">PDF、Office、ZIP、文本或图片，单个不超过 {Math.floor(UPLOAD_LIMIT_BYTES / 1024 / 1024)}MB。图片可点击选择、拖入或在此区域 Ctrl+V 粘贴；已上传条目可拖动排序。</p>
         <div className="space-y-5">
           <CourseAttachmentSorter
             title="图片"
@@ -227,7 +237,7 @@ export default function CourseMaterialsEditor({
             onRemove={(url) => setAttachments((current) => current.filter((item) => item.url !== url))}
           />
         </div>
-      </div>
+      </ImageDropZone>
     </section>
   );
 }
@@ -307,7 +317,7 @@ function PeopleList({
             className={`absolute inset-0 grid place-items-center text-brand-blue transition-[opacity,transform] duration-200 motion-reduce:transition-none ${active ? "pointer-events-none scale-75 rotate-90 opacity-0" : "scale-100 rotate-0 opacity-100"}`}
             onClick={onToggle}
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            <PlusIcon size={16} strokeWidth={2.5} />
           </button>
             <input
               ref={inputRef}

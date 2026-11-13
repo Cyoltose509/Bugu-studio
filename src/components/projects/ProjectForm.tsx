@@ -17,7 +17,7 @@ import {
 } from "@/lib/utils/clientUpload";
 import { getEngineChipClass, getEngineColor, isEngineTagSlug, sortTagsEngineFirst } from "@/lib/tags/engine-tags";
 import { getEventChipClass, getEventColor, isEventTagSlug } from "@/lib/tags/event-tags";
-import { tagDisplayName, tagGroupDisplayName } from "@/lib/tags/tag-names";
+import { tagDisplayName, tagGroupDisplayName, DEFAULT_TAG_GROUP_ORDER } from "@/lib/tags/tag-names";
 import { chipToneVars } from "@/lib/tags/chip-tone";
 
 // ── 作品类型 ──
@@ -956,9 +956,9 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
               (acc[key] ??= []).push(tag);
               return acc;
             }, {});
-            const groupOrder = ["引擎", "大类", "要素", "活动&赛事", "其他"];
+            const groupOrder = DEFAULT_TAG_GROUP_ORDER;
             const sortedKeys = Object.keys(grouped).sort((a, b) => {
-              const ia = groupOrder.indexOf(a), ib = groupOrder.indexOf(b);
+              const ia = groupOrder.indexOf(a as any), ib = groupOrder.indexOf(b as any);
               if (ia === -1 && ib === -1) return a.localeCompare(b);
               if (ia === -1) return 1; if (ib === -1) return -1;
               return ia - ib;

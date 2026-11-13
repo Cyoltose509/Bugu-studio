@@ -189,7 +189,7 @@ export default function EditActivityForm({
       <input type="hidden" name="type" value={type} />
       <div>
         <p className={label}>活动类型</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {TYPE_OPTIONS.filter((option) => option.value !== "ENGINE_COURSE").map((opt) => {
             const active = type === opt.value || (opt.value === "COURSE" && type === "ENGINE_COURSE");
             return (

@@ -34,10 +34,10 @@ export default function PosterGallery({ posters, featured = false }: {
       onClick={e => { if (e.target === dialog.current) dialog.current.close(); }}>
       <div className="mb-3 flex items-center justify-between gap-4 text-brand-text-heading">
         <span className="text-sm">{poster.title}</span>
-        <button type="button" onClick={() => dialog.current?.close()} aria-label={t(lang, "showcase.poster.closeAria")} className="rounded-lg border px-3 py-1">{t(lang, "showcase.poster.close")}</button>
+        <button type="button" onClick={() => dialog.current?.close()} aria-label={t(lang, "showcase.poster.closeAria")} className="rounded-lg border border-brand-border-subtle bg-card px-3 py-1.5 text-sm font-medium text-brand-text-secondary transition-colors hover:border-brand-blue/50 hover:bg-brand-blue/5 hover:text-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40">{t(lang, "showcase.poster.close")}</button>
       </div>
       <img src={poster.url} alt={poster.title} className="mx-auto max-h-[78dvh] max-w-full object-contain" />
-      <a href={poster.url} target="_blank" rel="noreferrer" className="mt-2 block text-center text-sm text-brand-blue underline">{t(lang, "showcase.poster.openFull")}</a>
+      <a href={poster.url} target="_blank" rel="noreferrer" className="mt-2 block rounded-lg py-1.5 text-center text-sm font-medium text-brand-blue transition-colors hover:bg-brand-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40">{t(lang, "showcase.poster.openFull")}</a>
     </dialog>
   </>;
 }

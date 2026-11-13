@@ -12,7 +12,7 @@ const navItems = [
   { href: "/admin/members", label: "成员管理", icon: "👥" },
   { href: "/admin/users", label: "用户管理", icon: "🔑" },
   { href: "/admin/invites", label: "邀请码", icon: "🎫" },
-  { href: "/admin/activities", label: "活动管理", icon: "📅" },
+  { href: "/admin/activities", label: "活动管理", icon: "🎪" },
   { href: "/admin/history-events", label: "历史事件", icon: "📆" },
   { href: "/admin/errors", label: "前端错误", icon: "🐞" },
   { href: "/admin/monitoring", label: "系统管理", icon: "🗄️" },
@@ -21,7 +21,7 @@ const navItems = [
 
 function SidebarNav({ pathname }: { pathname: string }) {
   return (
-    <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+    <nav className="flex-1 min-h-0 p-3 space-y-1 overflow-y-auto">
       {navItems.map((item) => (
         <Link
           key={item.href}
@@ -43,14 +43,14 @@ function SidebarNav({ pathname }: { pathname: string }) {
 function SidebarContent({ userEmail, pathname }: { userEmail: string; pathname: string }) {
   return (
     <>
-      <div className="p-5 border-b border-white/10">
+      <div className="p-5 shrink-0 border-b border-white/10">
         <Link href="/admin" className="flex items-center gap-2">
           <Image src="/images/logo.png" alt="" width={28} height={28} className="rounded" />
           <span className="font-bold">管理后台</span>
         </Link>
       </div>
       <SidebarNav pathname={pathname} />
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 shrink-0 border-t border-white/10">
         <div className="text-xs text-white/50">当前登录</div>
         <div className="text-sm text-white/80 truncate">{userEmail}</div>
       </div>
@@ -119,8 +119,8 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
           document.body
         )}
 
-      {/* 桌面端侧边栏 — 保持在 flex 布局内，sticky 正常跟随文档流 */}
-      <aside className="hidden lg:flex w-56 shrink-0 sticky top-0 h-screen text-white bg-brand-navy flex-col">
+      {/* 桌面端侧边栏 — 固定整屏高度，内部导航区单独滚动，底部「当前登录」始终可见 */}
+      <aside className="hidden lg:flex w-56 shrink-0 h-full text-white bg-brand-navy flex-col">
         <SidebarContent userEmail={userEmail} pathname={pathname} />
       </aside>
 

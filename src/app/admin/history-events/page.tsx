@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import MentionEditor from "@/components/ui/MentionEditor";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import { uploadImage, ACCEPT_ATTR, compressionNote } from "@/lib/utils/clientUpload";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 interface EventImage {
   id?: string;
@@ -135,8 +136,8 @@ export default function AdminHistoryEventsPage() {
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-brand-navy">历史事件管理</h1>
-        <button onClick={() => openEdit()} className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-brand-blue">
-          + 添加事件
+        <button onClick={() => openEdit()} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-blue px-4 py-2 text-sm font-medium text-white">
+          <PlusIcon size={16} />添加事件
         </button>
       </div>
 
@@ -168,27 +169,27 @@ export default function AdminHistoryEventsPage() {
                 <label className={labelClass}>图片 ({formImages.length}/5)</label>
                 <input ref={imgFileRef} type="file" accept={ACCEPT_ATTR} className="hidden"
                   onChange={(e) => void handleImageFile(e.target.files?.[0])} />
-                <ImageDropZone className="rounded-xl p-1" hint="松开以上传图片"
+                <ImageDropZone className="rounded-xl border-2 border-dashed border-brand-blue/25 bg-brand-blue/5 p-3 transition-colors hover:border-brand-blue/50" hint="松开以上传图片"
                   disabled={formImages.length >= 5 || imgUploading}
                   onFile={(file) => handleImageFile(file)}
                   onInvalid={(msg) => alert(msg)}>
                   {formImages.length > 0 && (
                     <div className="flex gap-2 mb-2 flex-wrap">
                       {formImages.map((img, i) => (
-                        <div key={i} className="relative w-16 h-12 rounded overflow-hidden border border-brand-border-subtle">
+                        <div key={i} className="relative h-14 w-20 overflow-hidden rounded-lg border border-brand-border-subtle bg-card">
                           <img src={img.url} alt="" className="w-full h-full object-cover" />
-                          <button onClick={() => setFormImages((prev) => prev.filter((_, j) => j !== i))}
-                            className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-bl">×</button>
+                          <button type="button" aria-label={`移除第 ${i + 1} 张图片`} onClick={() => setFormImages((prev) => prev.filter((_, j) => j !== i))}
+                            className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/65 text-sm text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue">×</button>
                         </div>
                       ))}
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
-                    <button onClick={() => imgFileRef.current?.click()} disabled={formImages.length >= 5 || imgUploading}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50 text-white bg-brand-green">
-                      {imgUploading ? "上传中..." : "+ 上传图片"}
+                    <button type="button" onClick={() => imgFileRef.current?.click()} disabled={formImages.length >= 5 || imgUploading}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-brand-blue px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-blue/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40 disabled:cursor-not-allowed disabled:opacity-50">
+                      {imgUploading ? "上传中..." : <><PlusIcon size={14} />上传图片</>}
                     </button>
-                    <span className="text-xs text-brand-text-muted">也可以把图片直接拖到这里</span>
+                    <span className="text-xs text-brand-text-muted">拖拽图片到此处，或聚焦后 Ctrl+V 粘贴</span>
                   </div>
                   {imgNote && <p className="text-xs mt-1 text-brand-text-muted">{imgNote}</p>}
                 </ImageDropZone>

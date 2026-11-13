@@ -413,6 +413,8 @@ export default function OrphanFilesDetector() {
                     <input
                       type="checkbox"
                       checked={selected.size === orphans.length && orphans.length > 0}
+                      aria-label="选择全部孤立文件"
+                      className="h-4 w-4 cursor-pointer rounded accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40"
                       onChange={() => {
                         if (selected.size === orphans.length) {
                           setSelected(new Set());
@@ -431,7 +433,7 @@ export default function OrphanFilesDetector() {
               <tbody>
                 {orphans.map((o) => (
                   <tr key={o.key} className="border-t border-[#E6F0F8]">
-                    <td className="px-3 py-2"><input type="checkbox" checked={selected.has(o.key)} onChange={() => toggle(o.key)} /></td>
+                    <td className="px-3 py-2"><input type="checkbox" checked={selected.has(o.key)} onChange={() => toggle(o.key)} aria-label={`选择 ${o.key}`} className="h-4 w-4 cursor-pointer rounded accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40" /></td>
                     <td className="px-2 py-2 text-center">
                       {isImage(o.key) ? (
                         <img

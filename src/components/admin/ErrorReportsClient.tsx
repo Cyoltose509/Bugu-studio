@@ -366,7 +366,7 @@ export default function ErrorReportsClient() {
           <div className="bg-card rounded-xl border shadow-sm border-brand-border-subtle dark:border-[#2a3045]">
             <div className="hidden md:grid grid-cols-[40px_80px_1fr_100px_120px] gap-3 px-4 py-2.5 bg-muted dark:bg-[#1a2030] text-xs font-medium text-brand-text-muted uppercase tracking-wider">
               <div className="flex items-center">
-                <input type="checkbox" checked={selectedIds.size === reports.length && reports.length > 0} onChange={toggleSelectAll} className="rounded" />
+                <input type="checkbox" checked={selectedIds.size === reports.length && reports.length > 0} onChange={toggleSelectAll} className="h-4 w-4 cursor-pointer rounded accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40" />
               </div>
               <div>编号</div>
               <div>错误信息</div>
@@ -402,7 +402,7 @@ export default function ErrorReportsClient() {
                         type="checkbox"
                         checked={groupSelected}
                         onChange={() => toggleSelectGroup(group)}
-                        className="rounded"
+                        className="h-4 w-4 cursor-pointer rounded accent-brand-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/40"
                         aria-label={`选择 #${r.reportId}`}
                       />
                     </div>

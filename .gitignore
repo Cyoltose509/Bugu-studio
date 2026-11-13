@@ -73,3 +73,4 @@ skills-lock.json
 # TypeScript 增量构建信息
 tsconfig.tsbuildinfo
 .dev-boot.log
+.tmp/

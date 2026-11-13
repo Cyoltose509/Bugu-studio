@@ -165,6 +165,8 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
           setUnread((prev) => ({ ...prev, count: json.data?.unreadCount ?? prev.count }));
         }
       }
+    } catch {
+      // 网络抖动/离线时保留上一批数据，不要把 unhandled rejection 抛给浏览器
     } finally {
       if (seq === requestSeq.current) setLoading(false);
     }
@@ -213,11 +215,15 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
 
   const markOneRead = useCallback(async (item: NotificationItem) => {
     if (item.read) return;
-    await fetch("/api/notifications/read", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: item.id }),
-    });
+    try {
+      await fetch("/api/notifications/read", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id }),
+      });
+    } catch {
+      // 网络失败也照常乐观更新，不抛未捕获 Promise
+    }
     setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
     setUnread((prev) => {
       const b = isAdmin ? bucketOf(item.type) : "activity";
@@ -243,11 +249,15 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
 
   const markAllRead = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch("/api/notifications/read", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(isAdmin ? { bucket: tab } : {}),
-    });
+    try {
+      await fetch("/api/notifications/read", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isAdmin ? { bucket: tab } : {}),
+      });
+    } catch {
+      // 网络失败也照常乐观更新
+    }
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnread((prev) => {
       if (!isAdmin) return EMPTY_UNREAD;
@@ -260,11 +270,15 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
     e.stopPropagation();
     e.preventDefault();
     const deleted = items.find((n) => n.id === id);
-    await fetch("/api/notifications", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [id] }),
-    });
+    try {
+      await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [id] }),
+      });
+    } catch {
+      // 网络失败也照常乐观更新
+    }
     setItems((prev) => prev.filter((n) => n.id !== id));
     if (deleted && !deleted.read) {
       setUnread((prev) => ({ ...prev, count: Math.max(0, prev.count - 1) }));
@@ -273,11 +287,15 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
 
   async function deleteAll(e: React.MouseEvent) {
     e.stopPropagation();
-    await fetch("/api/notifications", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(isAdmin ? { bucket: tab } : {}),
-    });
+    try {
+      await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isAdmin ? { bucket: tab } : {}),
+      });
+    } catch {
+      // 网络失败也照常乐观更新
+    }
     setItems([]);
     setUnread((prev) => {
       if (!isAdmin) return EMPTY_UNREAD;

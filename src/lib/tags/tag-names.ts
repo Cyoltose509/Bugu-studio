@@ -49,6 +49,9 @@ export const TAG_EN_NAMES: Record<string, string> = {
   ciga: "CiGA",
   cusga: "CUSGA",
   mengyabei: "Mengya Cup",
+  // 同人
+  touhou: "Touhou Project",
+  project: "Touhou Project",
   // 平台
   "platform-steam": "Steam",
   "platform-itch": "Itch",
@@ -83,10 +86,20 @@ export const TAG_GROUP_EN: Record<string, string> = {
   引擎: "Engine",
   大类: "Genre",
   要素: "Element",
+  同人: "Fan-made",
   "活动&赛事": "Event & Competition",
   平台: "Platform",
   其他: "Other",
 };
+
+export const DEFAULT_TAG_GROUP_ORDER = [
+  "引擎",
+  "大类",
+  "要素",
+  "同人",
+  "活动&赛事",
+  "其他",
+] as const;
 
 export function tagDisplayName(slug: string, name: string, lang: Lang): string {
   if (lang === "en") return TAG_EN_NAMES[slug] ?? TAG_EN_BY_NAME[name] ?? name;

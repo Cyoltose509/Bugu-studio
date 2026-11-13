@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
+import { attemptTransientRecovery, isRecoverableTransientError } from "@/lib/utils/transient-error";
+import { shouldSkipClientReport } from "@/lib/errors/report-filter";
 
 /**
  * Next.js 全局错误边界 — 捕获根布局中的未处理错误
@@ -16,6 +18,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   const [reportId, setReportId] = useState<number | null>(null);
+  // 瞬态错误命中且已触发自动刷新时，短暂显示"正在自动重试"提示
+  const [autoRetrying, setAutoRetrying] = useState(false);
   // 该组件渲染在根布局之外，拿不到 LangProvider，故直接读 cookie 判定语言
   const [lang, setLang] = useState<Lang>("cn");
 
@@ -37,23 +41,35 @@ export default function GlobalError({
     );
 
     // 自动上报错误给管理员。digest 是生产环境定位服务端错误的唯一线索。
-    fetch("/api/errors/report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: error.message,
-        stack: error.stack
-          ? `${error.stack}\n[digest: ${error.digest ?? "none"}]`
-          : `[digest: ${error.digest ?? "none"}]`,
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-      }),
-    })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.data?.reportId) setReportId(json.data.reportId);
+    // 瞬态错误（chunk 丢失 / RSC 流中断 / 本地开发来源）不落库：前者自动刷新即可恢复，
+    // 后者是开发噪声，混进生产错误列表会让真实问题不可见。
+    if (!shouldSkipClientReport(error.message, window.location.href).skip) {
+      fetch("/api/errors/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // keepalive：瞬态错误会立刻触发自动刷新，不加上报请求可能随页面卸载一起被中断
+        keepalive: true,
+        body: JSON.stringify({
+          message: error.message,
+          stack: error.stack
+            ? `${error.stack}\n[digest: ${error.digest ?? "none"}]`
+            : `[digest: ${error.digest ?? "none"}]`,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+        }),
       })
-      .catch(() => {});
+        .then((r) => r.json())
+        .then((json) => {
+          if (json?.data?.reportId) setReportId(json.data.reportId);
+        })
+        .catch(() => {});
+    }
+
+    // 瞬态错误（chunk 丢失 / RSC 流中断 / 网络抖动）：先自动刷新一次，
+    // 刷新频率上限与冷却由 attemptTransientRecovery 控制；失败则保留手动「重新加载」按钮。
+    if (isRecoverableTransientError(error) && attemptTransientRecovery()) {
+      setAutoRetrying(true);
+    }
   }, [error]);
 
   return (
@@ -82,6 +98,17 @@ export default function GlobalError({
                 </span>
               )}
             </p>
+            {autoRetrying && (
+              // dict 里没有"正在自动重试"的专用词条（dict.ts 有他人未提交改动，不新增），
+              // 用已有的 common.loading 作为自动刷新中的提示
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-sm text-[#999] dark:text-[#8898a8]"
+              >
+                {t(lang, "common.loading")}
+              </p>
+            )}
           </div>
           <button
             onClick={reset}

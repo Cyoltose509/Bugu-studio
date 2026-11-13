@@ -140,6 +140,56 @@
   }
 }
 
+/* ── 活动月历全屏视图：隐藏底栏，占满除导航栏外的全部视口空间 ─────────── */
+body:has([data-calendar-page="true"]) footer {
+  display: none !important;
+}
+@media (min-width: 1024px) {
+  body:has([data-calendar-page="true"]) {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  body:has([data-calendar-page="true"]) #main-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  body:has([data-calendar-page="true"]) #main-content > div:last-child {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+/* ── 管理后台：隐藏站点顶栏与底栏，整屏固定，仅内容区内部滚动 ─────────── */
+body:has([data-admin-shell="true"]) footer,
+body:has([data-admin-shell="true"]) header[data-site-navbar] {
+  display: none !important;
+}
+body:has([data-admin-shell="true"]) {
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+body:has([data-admin-shell="true"]) #main-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+body:has([data-admin-shell="true"]) #main-content > div:last-child {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* ── 活动推荐横排滚动条：与议程侧栏同风格的横向细胶囊 ─────────── */
 .reco-scroll {
   scrollbar-width: thin;
@@ -568,6 +618,12 @@ select:focus-visible {
 
 .btn-primary { background: linear-gradient(135deg,#E38043,#F09055); color: #fff; transition: opacity .2s,transform .15s; }
 .btn-primary:hover { opacity: .92; transform: translateY(-1px); }
+
+/* Brand add controls share fixed geometry; the SVG has no font baseline. */
+.brand-add-control { display: inline-grid; width: 2.75rem; height: 2.75rem; flex: none; place-items: center; border-radius: .75rem; line-height: 0; }
+.brand-add-control--compact { width: 2.5rem; height: 2.5rem; }
+.brand-add-control > svg { display: block; margin: 0; }
+.brand-add-control:focus-visible { outline: 2px solid var(--color-brand-orange); outline-offset: 2px; }
 
 .btn-secondary { background: transparent; color: #3388BB; border: 1.5px solid #3388BB; transition: all .2s; }
 .btn-secondary:hover { background: #fff; color: #3388BB; border-color: #3388BB; }

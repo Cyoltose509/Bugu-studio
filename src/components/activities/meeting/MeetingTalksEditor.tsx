@@ -7,6 +7,7 @@ import { saveMeetingTalks } from "@/app/admin/activities/actions";
 import { parseBvId, bilibiliWatchUrl } from "@/lib/activities/constants";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import UserAvatar from "@/components/ui/UserAvatar";
+import PlusIcon from "@/components/ui/PlusIcon";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
@@ -539,7 +540,7 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                     }}
                     className="inline-flex items-center gap-1 rounded-full border border-dashed border-brand-blue/40 px-2.5 py-1 text-xs font-medium text-brand-blue transition hover:border-brand-blue hover:bg-brand-blue/5"
                   >
-                    {t(lang, "meetingTalks.addSpeaker")} <span className="text-sm leading-none">＋</span>
+                    {t(lang, "meetingTalks.addSpeaker")} <PlusIcon size={14} />
                   </button>
                 )}
               </div>
@@ -563,12 +564,24 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                   onInvalid={setUploadError}
                   onFile={(file) => void handleAgendaImage(i, file)}
                 >
+                  <input
+                    id={`agenda-image-${talk.clientKey}`}
+                    type="file"
+                    accept={ACCEPT_ATTR}
+                    className="sr-only"
+                    disabled={uploadingImage === i}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void handleAgendaImage(i, file);
+                    }}
+                  />
                   {talk.imageUrl ? (
-                    <div className="group/image relative h-24 overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface">
+                    <div role="button" tabIndex={0} aria-label="点击更换配图" onClick={() => document.getElementById(`agenda-image-${talk.clientKey}`)?.click()} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); document.getElementById(`agenda-image-${talk.clientKey}`)?.click(); } }} className="group/image relative h-24 cursor-pointer overflow-hidden rounded-lg border border-brand-border-subtle bg-brand-surface focus-visible:ring-2 focus-visible:ring-brand-blue/40">
                       <CdnImage src={talk.imageUrl} alt="" className="h-full w-full object-cover" />
                       <button
                         type="button"
-                        onClick={() => update(i, { imageUrl: "" })}
+                        onClick={(event) => { event.stopPropagation(); update(i, { imageUrl: "" }); }}
                         className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-black/65 text-lg text-white transition hover:bg-black/85"
                         aria-label={t(lang, "meetingTalks.removeImage")}
                       >
@@ -576,20 +589,9 @@ export default function MeetingTalksEditor({ activityId, initialTalks = [], embe
                       </button>
                     </div>
                   ) : (
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-blue transition-colors hover:bg-brand-blue/5 focus-within:ring-2 focus-within:ring-brand-blue/30">
+                    <label htmlFor={`agenda-image-${talk.clientKey}`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-blue transition-colors hover:bg-brand-blue/5 focus-within:ring-2 focus-within:ring-brand-blue/30">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 5-5 4 4 4-6 5 7" /></svg>
                       <span>{uploadingImage === i ? t(lang, "meetingTalks.uploadingImage") : t(lang, "meetingTalks.addImage")}</span>
-                      <input
-                        type="file"
-                        accept={ACCEPT_ATTR}
-                        className="sr-only"
-                        disabled={uploadingImage === i}
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.target.value = "";
-                          if (file) void handleAgendaImage(i, file);
-                        }}
-                      />
                     </label>
                   )}
                 </ImageDropZone>

@@ -11,6 +11,7 @@ import CourseScheduleMenu from "@/components/activities/course/CourseScheduleMen
 import CourseScheduleInput from "@/components/activities/course/CourseScheduleInput";
 import CourseImagePicker from "@/components/activities/CourseImagePicker";
 import { TagChipButton } from "@/components/tags/TagChip";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 type TagOption = { id: string; slug: string; name: string; color: string; group: string | null };
 type AuthorOption = { id: string; name: string };
@@ -20,7 +21,7 @@ const blankClass = (): EngineCourseClassDraft => ({ name: "", description: "", c
 const blankLesson = (): EngineCourseLessonDraft => ({ instructorName: "", topic: "", title: "", date: "", startTime: "", endTime: "", meetingUrl: "", videoUrl: "" });
 const blankWork = (): EngineCourseShowcaseDraft => ({ title: "", imageUrl: "", projectId: null });
 function SymbolButton({ label, remove = false, onClick }: { label: string; remove?: boolean; onClick: () => void }) {
-  return <button type="button" aria-label={label} title={label} onClick={onClick} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue active:scale-95 ${remove ? "border-transparent text-brand-text-muted hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500" : "border-brand-blue/20 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20"}`}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={remove ? "M6 6l12 12M18 6 6 18" : "M12 5v14M5 12h14"} /></svg></button>;
+  return <button type="button" aria-label={label} title={label} onClick={onClick} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue active:scale-95 ${remove ? "border-transparent text-brand-text-muted hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500" : "border-brand-blue/20 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20"}`}>{remove ? <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg> : <PlusIcon size={18} strokeWidth={2} />}</button>;
 }
 function ClassNameEditor({ name, onChange }: { name: string; onChange: (name: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -124,8 +125,17 @@ export default function ProgramEditor({ activityId, activityTitle, initialClasse
       <div><h1 className="text-xl font-bold leading-snug text-brand-navy sm:text-2xl">{activityTitle}</h1></div>
     </div>
     {error && <p role="alert" className="rounded-lg bg-red-500/10 p-3 text-sm text-red-600">{error}</p>}
-    <div className="flex items-center gap-2 border-b border-brand-border-subtle pb-2">
-      <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">{classes.map((item, index) => <button type="button" key={index} onClick={() => setActiveClass(index)} className={`rounded-lg px-3 py-2 text-sm font-medium transition ${activeClass === index ? "bg-brand-blue/10 text-brand-blue" : "text-brand-text-muted hover:bg-brand-blue/5"}`}>{item.name || "新班级"}</button>)}<SymbolButton label="添加班级" onClick={() => { setActiveClass(classes.length); setClasses((rows) => [...rows, blankClass()]); setSaved(false); }} /></div>
+    {/* 班级页签：书签式，从内容面板上沿向下垂 */}
+    <div className="flex flex-wrap items-end gap-1.5 [&+section]:!mt-0 [&+section]:!rounded-t-none">
+      {classes.map((item, index) => {
+        const active = activeClass === index;
+        return <button type="button" key={index} onClick={() => setActiveClass(index)} aria-current={active ? "true" : undefined}
+          className={`relative -mb-px flex min-w-0 max-w-[13rem] items-center rounded-t-xl border border-b-0 px-4 pb-2.5 pt-3 text-sm transition-colors ${active ? "border-brand-border-subtle bg-card font-semibold text-brand-blue" : "border-brand-border-subtle bg-brand-surface text-brand-text-muted hover:bg-card hover:text-brand-text-body"}`}>
+          {active && <span aria-hidden className="absolute inset-x-2.5 top-0 h-0.5 rounded-full bg-brand-blue" />}
+          <span className="truncate">{item.name || "新班级"}</span>
+        </button>;
+      })}
+      <span className="mb-1 ml-auto"><SymbolButton label="添加班级" onClick={() => { setActiveClass(classes.length); setClasses((rows) => [...rows, blankClass()]); setSaved(false); }} /></span>
     </div>
     {classes.map((courseClass, classIndex) => (sorting || activeClass === classIndex) && <section key={classIndex} className="rounded-2xl border border-brand-border-subtle bg-card p-3 shadow-sm sm:p-4">
       <div className="mb-3 flex items-center gap-2" draggable={sorting} onDragStart={(event) => { drag.current = { kind: "class", classIndex, index: classIndex }; if (!sorting || (event.target as HTMLElement).closest("input,textarea,select,button,a")) { event.preventDefault(); return; } event.stopPropagation(); event.dataTransfer.effectAllowed = "move"; }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); drop("class", classIndex, classIndex); }}>

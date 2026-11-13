@@ -225,6 +225,7 @@ export const dict = {
   "activities.daysLater": { cn: "{n}天后开始", en: "Starts in {n} days" },
   "activities.hoursLater": { cn: "{n}小时后开始", en: "Starts in {n} hours" },
   "activities.create": { cn: "创建活动", en: "Create activity" },
+  "activities.agendaItems": { cn: "{n} 项", en: "{n} items" },
 
   // 成员
   "members.joinYearGroup": { cn: "{y}年入社", en: "Joined {y}" },
@@ -476,6 +477,7 @@ export const dict = {
   "form.group.engine": { cn: "引擎", en: "Engine" },
   "form.group.category": { cn: "大类", en: "Category" },
   "form.group.element": { cn: "要素", en: "Element" },
+  "form.group.fanwork": { cn: "同人", en: "Fan-made" },
   "form.group.event": { cn: "活动&赛事", en: "Event" },
   "form.group.other": { cn: "其他", en: "Other" },
   "form.customTagInputHint": { cn: "输入自定义标签，回车添加", en: "Type a custom tag and press Enter to add" },

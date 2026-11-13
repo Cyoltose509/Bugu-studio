@@ -12,6 +12,7 @@ import {ImageDropZone} from "@/components/ui/ImageDropZone";
 import {uploadImage, ACCEPT_ATTR, AVATAR_LIMIT_BYTES} from "@/lib/utils/clientUpload";
 import {useLang} from "@/lib/i18n/LangProvider";
 import type {DictKey} from "@/lib/i18n/dict";
+import PlusIcon from "@/components/ui/PlusIcon";
 
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false }) as any;
 
@@ -584,8 +585,9 @@ export default function EditForm({
                                     <button
                                         type="button"
                                         onClick={() => setJoinYearVal(Math.min(2100, (joinYearVal ?? 2024) + 1))}
+                                        aria-label={`${t("members.joinYearLabel")} +1`}
                                         className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
-                                    >+</button>
+                                    ><PlusIcon size={15} strokeWidth={2.3} /></button>
                                     <span className="text-xs flex-shrink-0 text-brand-text-secondary">{joinYearVal != null ? t("profile.edit.yearValue", { n: joinYearVal }) : t("common.unset")}</span>
                                 </div>
                             </div>
@@ -611,8 +613,9 @@ export default function EditForm({
                                     <button
                                         type="button"
                                         onClick={() => setGradeValue(Math.min(2100, (gradeValue ?? 2024) + 1))}
+                                        aria-label={`${t("members.gradeLabel")} +1`}
                                         className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
-                                    >+</button>
+                                    ><PlusIcon size={15} strokeWidth={2.3} /></button>
                                     <span className="text-xs flex-shrink-0 text-brand-text-secondary">{gradeValue != null ? t("profile.edit.gradeValue", { n: gradeValue }) : t("common.unset")}</span>
                                 </div>
                             </div>

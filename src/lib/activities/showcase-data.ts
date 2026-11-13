@@ -6,8 +6,14 @@ export async function getActivityShowcase(id: string, slug: string) {
   if (isMockDataEnabled()) {
     return slug === BAITUAN_SLUG ? baituanShowcase(getMockSnapshot().projects) : null;
   }
-  const setting = await prisma.siteSetting.findUnique({ where: { key: showcaseKey(id) } });
-  return parseShowcase(setting?.value);
+  try {
+    const setting = await prisma.siteSetting.findUnique({ where: { key: showcaseKey(id) } });
+    return parseShowcase(setting?.value);
+  } catch {
+    // 展示页配置是「锦上添花」：数据库抖动时直接当没配置，
+    // 让活动详情页按默认版式渲染，不要因为一个可选配置整页抛错。
+    return null;
+  }
 }
 
 export async function getShowcaseProjects(ids: string[]) {
