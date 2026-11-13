@@ -4,6 +4,28 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-13 — 后台与活动页交互打磨 + 活动首页右栏议程【本地完成，未部署】
+
+- 隐私设置：`修改密码` 卡片改可点击折叠（chevron 180°、aria-expanded/controls），默认收起；`确认新密码` 仅在新密码非空时渲染并淡入，清空新密码同步清空确认值，避免隐藏字段参与提交。
+- 邀请码管理：表格新增「创建者」列（20px 头像 + 名字，createdBy 无 relation，批量查 User 装表一起进缓存，key 升 `admin:invites:v2`）；`createInviteCode` 补写 `createdBy`；操作列改 `items-center` + `leading-none`，禁用橙 / 删除红 / 启用绿并排对齐。
+- 活动创建：日期框右侧切出 44px 方形时钟块（与输入框共用边框），弹出时 / 分双列面板（时 00–23、分 5 分钟一档，可清除 / 完成 / 点外关闭）；`input[type=date]` 不带 name，完整值（含 `T HH:mm`）走同名 hidden input。例会新增「自动推算」：取最新一场 MEETING +14 天的 14:30–17:30 并锁定（日期框 pointer-events-none、时钟 disabled），点日期框保留已填值退回「指定日期」。活动类型 5 项改 `grid-cols-2 sm:3 lg:5` 并排一行（创建页与编辑页同步）。
+- 后台外壳：`flex h-dvh overflow-hidden` + 内容区独立滚动；侧栏 `h-full`、头尾 shrink-0、nav min-h-0 overflow-y-auto，修掉「当前登录」溢出；`body:has([data-admin-shell])` 隐藏站点头尾并锁 100dvh。`活动管理` 图标换 🎪。
+- 班节目签：改书签式 `rounded-t-xl border-b-0 -mb-px`，激活项白底与面板连成一体 + 2px 主题蓝顶线，去掉容器边线避免 2px 缝。
+- 活动首页：主推区 `lg:grid-cols-5`（左 3 右 2）；右栏上方议程（MeetingTalk，最多 6 条 + `+N · 查看全部`，缓存 `activity:sidebar-talks:{id}` 60s）弹性占高、下方活动卡 `mt-auto` 贴主活动底边；无第二活动时整栏为议程且**不加卡片外框**，直接排在页面背景上。补 `min-w-0` 修掉 390px 视口整页 44px 横向溢出。
+- 验证：tsc 通过；vitest unit+ui 44 文件 258 用例通过；next build 通过；Edge 实测后台 1440/1280/1024/390 无整页滚动、footer/navbar 隐藏、侧栏贴底；活动首页 1440 主卡与右栏底边 663/663、1280 623/623；390 视口 scrollWidth=clientWidth=390。
+- 未部署：需合并 main 后生效。已知边界：课程勾「精确到时分」时后端以 `startClock` 为准；编辑页时钟按钮初始为灰（只回填日期）；历史邀请码 createdBy 为 null，创建者列显示 `—`。
+
+## 2026-11-11 — 生产前端错误集中修复：瞬态错误自愈 + 服务端错误可诊断 + 创建活动健壮性【本地完成，未部署】
+
+- 排查范围：生产库 ErrorReport 共 79 条（20 UNREAD / 21 类，2026-08-31 ~ 11-10）。分类：RSC render 报错 20 条（生产只剩 digest，无法定位）；ChunkLoadError 11 条（部署后旧 chunk 404，/tools、/、活动页）；RSC 流中断/网络类 15 条（Connection closed. 6 / network error 7 / Load failed 2）；i18n 缺词条崩溃 3 条（读 en/cn）；MembersList 读 tone.idle 3 条；hooks 顺序 5 条（Next dev Router + React Refresh，非业务代码）；Prisma 连不上库 18 条（本地开发网络）；其余 4 条为 HMR 旧 chunk/旧代码（dragOver、SubmitProposalForm、t is not a function、meetingTalk 事务）。
+- 已确认历史修复、本次未再改：10-31 事务改写覆盖 #67/#68/#69；MembersList tone 兜底、YearNewspaper 取词重写、MeetingTalksEditor 更新已随版本解决。
+- 新增瞬态错误自愈：`src/lib/utils/transient-error.ts`（识别 chunk 加载失败 / RSC 流中断 / 网络失败；20s 冷却、10 分钟内最多 3 次自动刷新；离线与 SSR 不刷）+ `src/components/shared/ChunkLoadRecovery.tsx`（全局监听 error/unhandledrejection），挂到根 layout；RouteError / global-error 命中时自动刷新并保留手动按钮，上报 fetch 加 keepalive。
+- 新增服务端错误落库：`src/lib/errors/report-store.ts` 抽出「10 分钟去重 + 递增编号 + 30 分钟通知去重」；`/api/errors/report` 改薄封装；`src/instrumentation.ts` 增 `onRequestError`，把 RSC 渲染 / Server Action / Route Handler 的真实 message + 堆栈（含 routerKind/routePath/routeType/digest）写进 ErrorReport（通知标题区分「服务端错误」）；过滤 NEXT_REDIRECT / NOT_FOUND / HTTP_FALLBACK、构建期与 /api/errors/report 递归；Edge 只打日志不落库（已从构建产物确认 edge-instrumentation.js 无 Prisma）；4s 超时不拖慢请求。
+- 客户端健壮性：LangProvider t() 缺词条回退为 key（不再整页崩溃，对应 en/cn 3 条）；登录页 session 探测与 signIn 网络失败不再产生未捕获 rejection、不再卡加载态并提示「网络错误」；NotificationBell 5 处 fetch 失败不再产生未捕获 rejection。
+- 创建活动健壮性：Activity.slug 唯一化（同一天同类型留空标题建第二个活动不再撞唯一键 P2002 崩到错误边界）；非预期 DB 错误改为行内提示。
+- 验证：tsc 通过；vitest unit+ui 40 文件 / 233 用例通过（新增 transient-error 18、error-report-store 10、lang-provider 3）；next build 通过；生产模式 next start 冒烟 `/`、`/tools` 均 200，启动无 instrumentation 告警。
+- 未部署：需推送上线后生效；生效后 RSC 类错误会带真实堆栈。#72（11-02 /admin/activities/create）根因待下次带堆栈后确认；历史 UNREAD 可在后台错误报告页批量标记已解决。
+
 ## 2026-11-03 — 工具页扩条目 + favicon 链 + 溢出修复【本地完成，未推送】
 
 - 默认条目扩充：游戏引擎加 Unity / Unreal Engine / Cocos；三维创作加 Tripo AI 本站（用户自加的 Tripo 提示词库深链保留并更名区分）；itch.io 单列新分栏"游戏平台"。
