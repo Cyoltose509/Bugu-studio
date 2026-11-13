@@ -143,9 +143,10 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
                     {new Date(u.createdAt).toLocaleDateString("zh-CN")}
                   </td>
                   <td className="p-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/profile?id=${u.id}`} className="text-xs hover:underline text-brand-blue">查看</Link>
-                      <Link href={`/admin/users/${u.id}/claims`} className="text-xs hover:underline text-brand-blue">认领关联</Link>
+                    {/* 四个操作统一成 20px 高的行内块，靠 items-center 对齐；whitespace-nowrap 防止「认领关联」折行把整行撑高 */}
+                    <div className="flex items-center justify-end gap-3 whitespace-nowrap">
+                      <Link href={`/profile?id=${u.id}`} className="text-xs leading-5 hover:underline text-brand-blue">查看</Link>
+                      <Link href={`/admin/users/${u.id}/claims`} className="text-xs leading-5 hover:underline text-brand-blue">认领关联</Link>
                       <ToggleActiveButton userId={u.id} isActive={u.isActive} />
                       <DeleteButton userId={u.id} userName={u.name || u.email} />
                     </div>

@@ -15,6 +15,7 @@ import LinkIcon from "@/components/icons/LinkIcon";
 import ShareButton from "@/components/share/ShareButton";
 import { shareDescription } from "@/lib/share";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
+import ActivityCard, { type ActivityCardData } from "@/components/activities/ActivityCard";
 import { positionLabel, positionColor } from "@/lib/position";
 import LogoLoading from "@/components/ui/LogoLoading";
 import { getLang } from "@/lib/i18n/getLang";
@@ -64,7 +65,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
   let member: any;
   let userProjects: any[];
   let likedProjects: any[];
-  let userActivities: { id: string; title: string; type: string; startTime: Date | null }[] = [];
+  let userActivities: ActivityCardData[] = [];
 
   if (isMockDataEnabled() && !isAdminView) {
     const mockUser = getMockAuthUser();
@@ -199,7 +200,19 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
         { talks: { some: { OR: [{ userId }, { speakers: { some: { userId } } }] } } },
         { courseClasses: { some: { showcase: { some: { authorUserId: userId } } } } },
       ] },
-      select: { id: true, title: true, type: true, startTime: true },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        summary: true,
+        location: true,
+        meetingUrl: true,
+        coverImage: true,
+        startTime: true,
+        endTime: true,
+        timePending: true,
+        courseHasClock: true,
+      },
       orderBy: { startTime: "desc" },
       take: 30,
     }), 30);
@@ -484,10 +497,17 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
         )}
       </div>
 
-      {userActivities.length > 0 && <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
-        <h2 className="mb-4 font-semibold text-brand-navy">参与活动</h2>
-        <ul className="space-y-2">{userActivities.map((activity) => <li key={activity.id}><Link href={`/activities/${activity.id}`} className="text-sm text-brand-blue hover:underline">{activity.title}</Link></li>)}</ul>
-      </div>}
+      {userActivities.length > 0 && (
+        <div className="bg-card rounded-xl border border-brand-border-subtle p-6 shadow-sm">
+          <h2 className="font-semibold mb-4 text-brand-navy">参与活动</h2>
+          {/* 与「我的作品 / 我喜欢的作品」同一套橱窗网格 */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
+            {userActivities.map((a) => (
+              <ActivityCard key={a.id} a={a} lang={lang} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 我喜欢的作品 */}
       {likedProjects.length > 0 && (

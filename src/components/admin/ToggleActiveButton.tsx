@@ -15,11 +15,11 @@ export default function ToggleActiveButton({ userId, isActive }: { userId: strin
   }
 
   return (
-    <form action={handleSubmit} className="inline">
+    <form action={handleSubmit} className="flex items-center">
       <button
         type="submit"
         disabled={pending || submitted}
-        className={`text-xs hover:underline cursor-pointer transition-opacity ${(pending || submitted) ? "opacity-50 cursor-not-allowed" : ""} ${isActive ? "text-[var(--ui-text-red)]" : "text-brand-green"}`}
+        className={`text-xs leading-5 whitespace-nowrap hover:underline cursor-pointer transition-opacity ${(pending || submitted) ? "opacity-50 cursor-not-allowed" : ""} ${isActive ? "text-[var(--ui-text-red)]" : "text-brand-green"}`}
       >
         {pending ? (
           <span className="inline-flex items-center gap-1">

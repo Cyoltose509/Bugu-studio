@@ -115,7 +115,7 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="animate-fade-in flex flex-col gap-8">
+    <div className="animate-fade-in flex flex-col gap-5">
       <div>
         <h1 className="text-2xl font-bold text-brand-navy">仪表盘</h1>
 
@@ -220,25 +220,27 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* 快捷操作：竖屏时提到最上面一栏 */}
-      <div className="order-4 [@media(orientation:portrait)]:order-2 bg-card rounded-xl border p-5 shadow-sm border-brand-border-subtle">
-        <h2 className="font-semibold mb-4 text-brand-navy">快捷操作</h2>
-        <div className="flex flex-wrap gap-3 items-center">
-          <Link href="/admin/projects" className="btn-primary px-4 py-2 rounded-lg text-sm font-medium">
-            管理作品
-          </Link>
-          <Link href="/admin/members" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">
-            管理成员
-          </Link>
-          <Link href="/admin/users" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">
-            管理用户
-          </Link>
-          <Link href="/admin/activities" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">
-            管理活动
-          </Link>
-          <Link href="/" className="btn-secondary px-4 py-2 rounded-lg text-sm font-medium">
-            返回前台
-          </Link>
+      {/* 快捷操作：标题与按钮同一行，按钮右对齐；竖屏时提到最上面一栏 */}
+      <div className="order-4 [@media(orientation:portrait)]:order-2 bg-card rounded-xl border px-5 py-4 shadow-sm border-brand-border-subtle">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 className="font-semibold text-brand-navy">快捷操作</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/admin/projects" className="btn-primary px-3 py-1.5 rounded-lg text-sm font-medium">
+              管理作品
+            </Link>
+            <Link href="/admin/members" className="btn-secondary px-3 py-1.5 rounded-lg text-sm font-medium">
+              管理成员
+            </Link>
+            <Link href="/admin/users" className="btn-secondary px-3 py-1.5 rounded-lg text-sm font-medium">
+              管理用户
+            </Link>
+            <Link href="/admin/activities" className="btn-secondary px-3 py-1.5 rounded-lg text-sm font-medium">
+              管理活动
+            </Link>
+            <Link href="/" className="btn-secondary px-3 py-1.5 rounded-lg text-sm font-medium">
+              返回前台
+            </Link>
+          </div>
         </div>
       </div>
     </div>
