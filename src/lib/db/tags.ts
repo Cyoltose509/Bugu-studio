@@ -52,6 +52,8 @@ const DEFAULT_TAGS: {
   { name: "CiGA", slug: "ciga", color: "#E38043", sortOrder: 51, group: "活动&赛事" },
   { name: "CUSGA", slug: "cusga", color: "#88C232", sortOrder: 52, group: "活动&赛事" },
   { name: "萌芽杯", slug: "mengyabei", color: "#25547A", sortOrder: 53, group: "活动&赛事" },
+  // 同人
+  { name: "东方Project", slug: "touhou", color: "#e11d48", sortOrder: 60, group: "同人" },
 ];
 
 const ENGINE_SLUGS = ["godot", "unity", "gamemaker", "unreal"] as const;
@@ -88,6 +90,60 @@ export async function ensureDefaultTags(): Promise<void> {
       gamejamRow.group = gamejamDef.group ?? null;
       gamejamRow.sortOrder = gamejamDef.sortOrder;
     }
+
+    // 同人标签 / 东方Project：处理别名/重复并统一规范为「同人」组
+    const touhouDef = DEFAULT_TAGS.find((t) => t.name === "东方Project");
+    if (touhouDef) {
+      const touhouByName = existing.find((t) => t.name === touhouDef.name);
+      const touhouBySlug = existing.find((t) => t.slug === touhouDef.slug);
+      if (touhouByName && touhouBySlug && touhouByName.id !== touhouBySlug.id) {
+        // 重复项合并：将 touhouByName 的项目迁移到 touhouBySlug 并删除冗余项
+        const rels = await prisma.projectTag.findMany({ where: { tagId: touhouByName.id } });
+        for (const r of rels) {
+          const exists = await prisma.projectTag.findUnique({
+            where: { projectId_tagId: { projectId: r.projectId, tagId: touhouBySlug.id } },
+          });
+          if (!exists) {
+            await prisma.projectTag.create({
+              data: { projectId: r.projectId, tagId: touhouBySlug.id },
+            });
+          }
+        }
+        await prisma.projectTag.deleteMany({ where: { tagId: touhouByName.id } });
+        await prisma.tag.delete({ where: { id: touhouByName.id } });
+        existing = existing.filter((t) => t.id !== touhouByName.id);
+      }
+
+      const touhouRow = existing.find(
+        (t) => t.name === touhouDef.name || t.slug === touhouDef.slug || t.slug === "project",
+      );
+      if (touhouRow) {
+        if (
+          touhouRow.name !== touhouDef.name ||
+          touhouRow.slug !== touhouDef.slug ||
+          touhouRow.group !== touhouDef.group ||
+          touhouRow.color !== touhouDef.color ||
+          touhouRow.sortOrder !== touhouDef.sortOrder
+        ) {
+          await prisma.tag.update({
+            where: { id: touhouRow.id },
+            data: {
+              name: touhouDef.name,
+              slug: touhouDef.slug,
+              color: touhouDef.color,
+              group: touhouDef.group,
+              sortOrder: touhouDef.sortOrder,
+            },
+          });
+          touhouRow.name = touhouDef.name;
+          touhouRow.slug = touhouDef.slug;
+          touhouRow.color = touhouDef.color;
+          touhouRow.group = touhouDef.group ?? null;
+          touhouRow.sortOrder = touhouDef.sortOrder;
+        }
+      }
+    }
+
     const existingSlugs = new Set(existing.map((t) => t.slug));
     const missing = DEFAULT_TAGS.filter((t) => !existingSlugs.has(t.slug));
 

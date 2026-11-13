@@ -72,7 +72,10 @@ function matchesFilters(
   }
   if (filters.year && String(p.developYear) !== String(filters.year)) return false;
   if (filters.tag) {
-    const has = (p.tags || []).some((t: any) => t.tag?.slug === filters.tag);
+    const tagSlug = filters.tag === "project" ? "touhou" : filters.tag;
+    const has = (p.tags || []).some(
+      (t: any) => t.tag?.slug === tagSlug || (tagSlug === "touhou" && t.tag?.slug === "project"),
+    );
     if (!has) return false;
   }
   if (filters.q) {

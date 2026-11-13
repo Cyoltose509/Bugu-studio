@@ -77,7 +77,10 @@ export async function GET(request: NextRequest) {
         { description: { contains: q, mode: "insensitive" } },
         { subtitle: { contains: q, mode: "insensitive" } },
     ];
-    if (tag) where.tags = { some: { tag: { slug: tag } } };
+    if (tag) {
+        const tagSlug = tag === "project" ? "touhou" : tag;
+        where.tags = { some: { tag: { slug: tagSlug } } };
+    }
 
     // 排序：时间/名称走索引友好字段；喜欢用 _count，并用 id 保底保证分页稳定
     // 名称排序例外：数据库排不出拼音序，改成取全量后在内存里排（见 name-sort.ts）
