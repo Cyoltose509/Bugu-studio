@@ -12,6 +12,7 @@ import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-da
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 import ActivityCalendar, { BAR_TONE } from "@/components/activities/ActivityCalendar";
+import { AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import PlusIcon from "@/components/ui/PlusIcon";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
@@ -48,6 +49,15 @@ function activityTypeLabel(lang: Lang, type: string): string {
   const k = ACTIVITY_TYPE_KEYS[type];
   return k ? t(lang, k) : type;
 }
+
+// 右侧栏议程条目（只取展示所需字段）
+type SidebarTalk = {
+  id: string;
+  title: string;
+  talkType: string;
+  speaker: string;
+  speakers: { name: string }[];
+};
 
 // ── 倒计时 ──────────────────────────────────────────────────
 function Countdown({ startTime, lang }: { startTime: Date; lang: Lang }) {
@@ -177,33 +187,89 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
       </Link>
   );
 }
-function UpcomingItem({ a, lang }: { a: any; lang: Lang }) {
-  const thumbSrc = a.coverImage || DEFAULT_COVER;
-  const displayTitle = localizeActivityTitle(a.title, lang);
+// ── 右侧栏议程：主推活动没有别的活动占位时，用它填这块空白 ──────────
+const AGENDA_PREVIEW_MAX = 6;
+
+function SidebarAgenda({ items, lang, activityId }: {
+  items: SidebarTalk[]; lang: Lang; activityId: string;
+}) {
+  const shown = items.slice(0, AGENDA_PREVIEW_MAX);
+  const rest = items.length - shown.length;
+  const href = `/activities/${activityId}#agenda`;
+
   return (
-      <Link href={`/activities/${a.id}`} className="group block">
-        <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface shadow-sm">
-          <Image src={thumbSrc} alt={displayTitle} fill className="object-cover transition-transform duration-300 group-hover:scale-[1.03]" sizes="(max-width: 1280px) 50vw, 360px" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          <ActivityTypeCorner type={a.type} label={activityTypeLabel(lang, a.type)} />
-          <div className="absolute right-3 top-3">
-            {!a.timePending && a.startTime ? <Countdown startTime={a.startTime} lang={lang} /> : (
-              <span className="rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">{lang === "en" ? "TBD" : "待定"}</span>
-            )}
-          </div>
-          <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-            <div className="min-w-0">
-              <h3 className="text-base font-semibold line-clamp-2">{displayTitle}</h3>
-              <p className="mt-1 text-xs text-white/80">
-                {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
-              </p>
-            </div>
-            {a.summary ? <p className="mt-2 text-xs leading-relaxed text-white/80 line-clamp-2">{a.summary}</p> : null}
-          </div>
-        </div>
-      </Link>
+    <div className="flex max-h-[22rem] min-h-0 flex-col overflow-hidden lg:max-h-none lg:flex-1">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-brand-navy">{t(lang, "activityDetail.agenda")}</h3>
+        <span className="shrink-0 text-xs tabular-nums text-brand-text-muted">
+          {t(lang, "activities.agendaItems", { n: items.length })}
+        </span>
+      </div>
+      <ol className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain">
+        {shown.map((talk, index) => {
+          const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+          const names = (talk.speakers?.length
+            ? talk.speakers.map((s) => s.name)
+            : (talk.speaker || "").split(/[、,，/]/)
+          ).map((n) => n.trim()).filter(Boolean);
+          return (
+            <li key={talk.id} className="flex gap-2">
+              <span className="mt-0.5 w-3.5 shrink-0 text-right text-[11px] font-semibold tabular-nums text-brand-text-muted">{index + 1}</span>
+              <div className="min-w-0 flex-1">
+                <Link href={href} className="group flex min-w-0 items-center gap-1.5">
+                  <AgendaTypeTag
+                    type={type}
+                    label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
+                  />
+                  <span className="truncate text-sm font-medium text-brand-text-heading group-hover:text-brand-blue">{talk.title}</span>
+                </Link>
+                {names.length > 0 && (
+                  <p className="mt-0.5 truncate text-xs text-brand-text-muted">
+                    {t(lang, "meeting.by")} {names.join("、")}
+                  </p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {rest > 0 && (
+        <Link href={href} className="mt-2 shrink-0 text-xs font-medium text-brand-blue hover:underline">
+          +{rest} · {t(lang, "activityDetail.viewAll")}
+        </Link>
+      )}
+    </div>
   );
 }
+
+/** 右侧栏的第二张活动卡：紧凑横排，底边与左侧主活动对齐 */
+function SidebarActivityItem({ a, lang }: { a: any; lang: Lang }) {
+  const displayTitle = localizeActivityTitle(a.title, lang);
+  return (
+    <Link href={`/activities/${a.id}`} className="group flex items-center gap-3 rounded-xl border border-brand-border-subtle bg-card p-2.5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg bg-brand-surface">
+        <Image
+          src={a.coverImage || DEFAULT_COVER}
+          alt={displayTitle}
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="96px"
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-1 text-sm font-medium text-brand-text-heading group-hover:text-brand-blue">{displayTitle}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs text-brand-text-muted">
+          {a.timePending || !a.startTime ? (lang === "en" ? "TBD" : "待定") : formatActivityDay(a.startTime, lang)}
+          {a.location ? ` · ${a.location}` : ""}
+        </p>
+        {!a.timePending && a.startTime && (
+          <div className="mt-1"><Countdown startTime={a.startTime} lang={lang} /></div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 // ── 活动推荐卡片：紧凑横排卡，类别小标签 + 倒计时 ────────────
 function RecoCard({ a, lang }: { a: any; lang: Lang }) {
   const coverSrc = a.coverImage || DEFAULT_COVER;
@@ -361,6 +427,32 @@ export default async function ActivitiesPage({
           ? safeOngoing.filter((a) => a.id !== hero.id)
           : safeOngoing;
 
+  // 主推活动的议程：右侧栏空着时用它填内容（只有例会才有逐条议程）
+  const heroTalks: SidebarTalk[] = !isCalendar && hero
+    ? isMockDataEnabled()
+      ? []
+      : await cachedQuery(
+          `activity:sidebar-talks:${hero.id}`,
+          () =>
+            prisma.meetingTalk.findMany({
+              where: { activityId: hero.id },
+              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+              select: {
+                id: true,
+                title: true,
+                talkType: true,
+                speaker: true,
+                speakers: { orderBy: { sortOrder: "asc" }, select: { name: true } },
+              },
+            }),
+          60,
+        ).catch(() => [] as SidebarTalk[])
+    : [];
+
+  // 右侧栏只放一张活动卡，剩下的「即将开始」下移到独立分区，避免信息丢失
+  const sidebarActivity = hero ? upcomingList[0] ?? null : null;
+  const restUpcoming = upcomingList.slice(sidebarActivity ? 1 : 0);
+
   // 月历视图：全部已发布/归档活动（含推荐类），取排期与悬浮卡片所需字段，按开始时间升序
   const calendarAllRaw: any[] = isCalendar
     ? isMockDataEnabled()
@@ -464,17 +556,21 @@ export default async function ActivitiesPage({
 
         {hero && (
             <section className="mb-12">
-              {upcomingList.length > 0 ? (
-              <div className="grid lg:grid-cols-5 gap-10">
-                <div className="lg:col-span-3">
+              {sidebarActivity || heroTalks.length > 0 ? (
+              <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
+                <div className="min-w-0 lg:col-span-3">
                   <HeroCard a={hero} lang={lang} status={heroStatus} />
                 </div>
-                <div className="lg:col-span-2">
-                  <div className="space-y-3">
-                    {upcomingList.slice(0, 5).map(a => (
-                      <UpcomingItem key={a.id} a={a} lang={lang} />
-                    ))}
-                  </div>
+                {/* 右侧栏：上方议程弹性占位，下方活动卡贴住主活动底边 */}
+                <div className="min-w-0 lg:col-span-2 lg:flex lg:h-full lg:flex-col lg:gap-4">
+                  {heroTalks.length > 0 && (
+                    <SidebarAgenda items={heroTalks} lang={lang} activityId={hero.id} />
+                  )}
+                  {sidebarActivity && (
+                    <div className="mt-4 shrink-0 lg:mt-auto">
+                      <SidebarActivityItem a={sidebarActivity} lang={lang} />
+                    </div>
+                  )}
                 </div>
               </div>
               ) : (
@@ -483,6 +579,17 @@ export default async function ActivitiesPage({
                 </div>
               )}
             </section>
+        )}
+
+        {restUpcoming.length > 0 && (
+          <section className="mb-12">
+            <SectionTitle emoji="" title={t(lang, "activity.upcoming")} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
+              {restUpcoming.map((a) => (
+                <ActivityCard key={a.id} a={a} lang={lang} badge="upcoming" />
+              ))}
+            </div>
+          </section>
         )}
 
         {otherOngoing.length > 0 && (
