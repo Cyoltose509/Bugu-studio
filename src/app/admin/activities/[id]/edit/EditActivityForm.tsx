@@ -16,6 +16,8 @@ import ShowcaseEditor from "@/components/activities/showcase/ShowcaseEditor";
 import CourseMaterialsEditor from "@/components/activities/course/CourseMaterialsEditor";
 import type { CourseAttachmentDraft, CourseParticipantDraft } from "@/lib/activities/course-materials";
 import type { ActivityShowcase } from "@/lib/activities/showcase";
+import { DraftNotice } from "@/components/ui/AutosaveStatus";
+import { useFormDraft, applyFormFields } from "@/lib/hooks/use-form-draft";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",     label: "例会",     hint: "议程与分享报名" },
@@ -153,6 +155,37 @@ export default function EditActivityForm({
   const [endTime, setEndTime] = useState(activity.endTime);
   const [error, setError] = useState("");
 
+  // 草稿：这个表单分散在封面/地点/富文本/议程等多个子编辑器里，
+  // 直接自动提交会和各自独立的保存逻辑打架，所以先存本地兜底
+  const [formEl, setFormEl] = useState<HTMLFormElement | null>(null);
+  const [seeds, setSeeds] = useState({ cover: "", location: "", description: "", theme: "" });
+
+  const draft = useFormDraft({
+    key: `bugoo:draft:activity-edit:${activity.id}:v1`,
+    container: formEl,
+    watch: JSON.stringify([type, recoTag, status, title, summary, timePending, startTime, endTime]),
+    getSnapshot: () => ({ type, recoTag, status, title, summary, timePending, startTime, endTime }),
+    applySnapshot: (s, fields) => {
+      setType(s.type ?? activity.type);
+      setRecoTag(s.recoTag ?? activity.recoTag ?? "GAME_JAM");
+      setStatus(s.status ?? activity.status);
+      setTitle(s.title ?? "");
+      setSummary(s.summary ?? "");
+      setTimePending(Boolean(s.timePending));
+      setStartTime(s.startTime ?? "");
+      setEndTime(s.endTime ?? "");
+      // 这几个组件的值在自己内部，换 key 让它们用草稿值重新初始化
+      setSeeds({
+        cover: typeof fields.coverImage === "string" ? fields.coverImage : "",
+        location: typeof fields.location === "string" ? fields.location : "",
+        description: typeof fields.description === "string" ? fields.description : "",
+        theme: typeof fields.theme === "string" ? fields.theme : "",
+      });
+      // 等这一次重渲染落地再写非受控字段，否则会被子组件换 key 引起的重建覆盖
+      setTimeout(() => applyFormFields(formEl, fields, ["coverImage", "location", "description", "theme"]), 0);
+    },
+  });
+
   const field =
     "w-full rounded-lg border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue border-brand-border-subtle text-brand-text-heading bg-card";
   const label = "block text-sm mb-1.5 text-brand-text-body";
@@ -164,12 +197,13 @@ export default function EditActivityForm({
       setError(result.error);
       return;
     }
+    draft.clear();
     router.push("/admin/activities");
     router.refresh();
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form ref={setFormEl} action={handleSubmit} className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/admin/activities" className="btn-secondary px-3 py-1.5 rounded-lg text-sm shrink-0">
           ← 返回列表
@@ -183,6 +217,10 @@ export default function EditActivityForm({
           保存
         </SubmitButton>
       </div>
+
+      {draft.draft && (
+        <DraftNotice at={draft.draft.at} onRestore={draft.restore} onDiscard={draft.discard} />
+      )}
 
       {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-500/10 rounded-lg px-3 py-2">{error}</p>}
 
@@ -259,7 +297,7 @@ export default function EditActivityForm({
               <div className="grid grid-cols-2 gap-2"><label className={label}>开始时间<input type="time" name="startClock" defaultValue={activity.startClock} className={field} /></label><label className={label}>结束时间（可选）<input type="time" name="endClock" defaultValue={activity.endClock} className={field} /></label></div>
             </div>}
 
-            <LocationPresetInput defaultValue={activity.location} />
+            <LocationPresetInput key={`location-${seeds.location}`} defaultValue={seeds.location || activity.location} />
 
             <div>
               <label className={label}>
@@ -311,8 +349,9 @@ export default function EditActivityForm({
                     比赛题目
                   </label>
                   <MentionEditor
+                    key={`theme-${seeds.theme.slice(0, 24)}`}
                     name="theme"
-                    defaultValue={activity.theme}
+                    defaultValue={seeds.theme || activity.theme}
                     rows={3}
                     richPreview={false}
                     className="w-full"
@@ -363,12 +402,13 @@ export default function EditActivityForm({
             </div>
             <div>
               <label className={label}>详细描述</label>
-              <DescriptionEditor defaultValue={activity.description} />
+              <DescriptionEditor key={`desc-${seeds.description.slice(0, 24)}`} defaultValue={seeds.description || activity.description} />
             </div>
             <div>
               <label className={label}>封面</label>
               <CoverUploadInput
-                defaultValue={activity.coverImage || undefined}
+                key={`cover-${seeds.cover}`}
+                defaultValue={seeds.cover || activity.coverImage || undefined}
                 previewClassName="max-w-none"
                 title={title}
                 summary={summary}

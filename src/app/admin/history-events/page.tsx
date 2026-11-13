@@ -5,6 +5,9 @@ import MentionEditor from "@/components/ui/MentionEditor";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import { uploadImage, ACCEPT_ATTR, compressionNote } from "@/lib/utils/clientUpload";
 import PlusIcon from "@/components/ui/PlusIcon";
+import { AutosaveStatus, DraftNotice } from "@/components/ui/AutosaveStatus";
+import { useAutosave } from "@/lib/hooks/use-autosave";
+import { useFormDraft } from "@/lib/hooks/use-form-draft";
 
 interface EventImage {
   id?: string;
@@ -39,6 +42,8 @@ export default function AdminHistoryEventsPage() {
   const [imgUploading, setImgUploading] = useState(false);
   const [imgNote, setImgNote] = useState("");
   const imgFileRef = useRef<HTMLInputElement>(null);
+  // 弹窗容器：草稿 hook 靠它监听输入、读写非受控字段
+  const [formEl, setFormEl] = useState<HTMLDivElement | null>(null);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
@@ -54,6 +59,76 @@ export default function AdminHistoryEventsPage() {
   }, []);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
+
+  const editingId = editing?.id;
+
+  // 新建的事件还没有数据库记录，只能先落在本地
+  const draft = useFormDraft({
+    key: "bugoo:draft:history-event:new:v1",
+    container: formEl,
+    watch: JSON.stringify([formTitle, formBody, formDate, formEndDate, formImages]),
+    enabled: Boolean(editing && !editingId),
+    getSnapshot: () => ({
+      title: formTitle,
+      body: formBody,
+      date: formDate,
+      endDate: formEndDate,
+      images: formImages,
+    }),
+    applySnapshot: (s) => {
+      setFormTitle(s.title ?? "");
+      setFormBody(s.body ?? "");
+      setFormDate(s.date ?? "");
+      setFormEndDate(s.endDate ?? "");
+      setFormImages(Array.isArray(s.images) ? s.images : []);
+    },
+  });
+
+  // 已有的事件：停手 1.5s 就把标题/正文/日期写进库。
+  // 图片不进自动保存——自动保存做到一半点「取消」时不该把 R2 上的图删掉，改图仍然走「保存」。
+  const autosave = useAutosave({
+    data: { title: formTitle, body: formBody, eventDate: formDate, eventEndDate: formEndDate },
+    enabled: Boolean(editingId) && formTitle.trim().length > 0 && formDate.length > 0 && !saving,
+    save: async (d) => {
+      const res = await fetch(`/api/admin/history-events/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: d.title,
+          body: d.body,
+          eventDate: d.eventDate,
+          eventEndDate: d.eventEndDate || null,
+          autosave: true,
+        }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(j?.error || "自动保存失败");
+      }
+    },
+    onSaved: (d) => {
+      setEvents((prev) =>
+        prev.map((ev) =>
+          ev.id === editingId
+            ? {
+                ...ev,
+                title: d.title,
+                body: d.body || null,
+                eventDate: d.eventDate || null,
+                eventEndDate: d.eventEndDate || null,
+                year: new Date(d.eventDate).getFullYear(),
+              }
+            : ev,
+        ),
+      );
+    },
+  });
+
+  /** 关闭弹窗：把还在排队的那一次改动先写掉 */
+  async function closeEditor() {
+    await autosave.flush();
+    setEditing(null);
+  }
 
   function openEdit(ev?: HistoryEvent) {
     if (ev) {
@@ -111,6 +186,7 @@ export default function AdminHistoryEventsPage() {
         const j = await res.json();
         throw new Error(j.error || "保存失败");
       }
+      draft.clear();
       setEditing(null);
       fetchEvents();
     } catch (err: any) {
@@ -146,8 +222,19 @@ export default function AdminHistoryEventsPage() {
       {/* 编辑弹窗 */}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50">
-          <div className="bg-card rounded-xl p-6 w-[95vw] max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold mb-4 text-brand-navy">{editing.id ? "编辑事件" : "新建事件"}</h2>
+          <div ref={setFormEl} className="bg-card rounded-xl p-6 w-[95vw] max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex min-w-0 items-center gap-3">
+              <h2 className="min-w-0 flex-1 text-lg font-semibold text-brand-navy">{editing.id ? "编辑事件" : "新建事件"}</h2>
+              <AutosaveStatus status={autosave.status} lastSavedAt={autosave.lastSavedAt} error={autosave.error} />
+            </div>
+            {!editing.id && draft.draft && (
+              <DraftNotice
+                className="mb-4"
+                at={draft.draft.at}
+                onRestore={draft.restore}
+                onDiscard={draft.discard}
+              />
+            )}
             <div className="space-y-4">
               <div>
                 <label className={labelClass}>标题 *</label>
@@ -195,8 +282,13 @@ export default function AdminHistoryEventsPage() {
                 </ImageDropZone>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-lg text-sm text-brand-text-secondary border border-brand-border-subtle">取消</button>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <p className="mr-auto text-xs leading-relaxed text-brand-text-muted">
+                {editing.id ? "标题、正文、日期会自动保存" : "内容会定时存到本地，误关后可恢复"}
+              </p>
+              <button onClick={() => void closeEditor()} className="px-4 py-2 rounded-lg text-sm text-brand-text-secondary border border-brand-border-subtle">
+                {editing.id ? "关闭" : "取消"}
+              </button>
               <button onClick={save} disabled={saving} className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 bg-brand-blue">
                 {saving ? "保存中..." : "保存"}
               </button>
