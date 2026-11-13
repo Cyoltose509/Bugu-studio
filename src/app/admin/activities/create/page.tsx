@@ -15,6 +15,8 @@ import ActivityTimeChoice from "@/components/activities/ActivityTimeChoice";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 import MentionEditor from "@/components/ui/MentionEditor";
+import { DraftNotice } from "@/components/ui/AutosaveStatus";
+import { useFormDraft, applyFormFields } from "@/lib/hooks/use-form-draft";
 
 const TYPE_OPTIONS = [
   { value: "MEETING",     label: "例会",     hint: "议程与分享报名" },
@@ -43,6 +45,31 @@ export default function CreateActivityPage() {
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
 
+  // 草稿：新建状态没有数据库记录，只能先存本地
+  const [formEl, setFormEl] = useState<HTMLFormElement | null>(null);
+  const [coverSeed, setCoverSeed] = useState("");
+  const [locationSeed, setLocationSeed] = useState("");
+
+  const draft = useFormDraft({
+    key: "bugoo:draft:activity-create:v1",
+    container: formEl,
+    watch: JSON.stringify([type, recoTag, startTime, endTime, timePending, title, summary]),
+    getSnapshot: () => ({ type, recoTag, startTime, endTime, timePending, title, summary }),
+    applySnapshot: (s, fields) => {
+      setType(s.type ?? "GENERAL");
+      setRecoTag(s.recoTag ?? "GAME_JAM");
+      setStartTime(s.startTime ?? "");
+      setEndTime(s.endTime ?? "");
+      setTimePending(Boolean(s.timePending));
+      setTitle(s.title ?? "");
+      setSummary(s.summary ?? "");
+      // 封面与地点把值存在自己组件内部，只能靠换 key 重新初始化
+      setCoverSeed(typeof fields.coverImage === "string" ? fields.coverImage : "");
+      setLocationSeed(typeof fields.location === "string" ? fields.location : "");
+      applyFormFields(formEl, fields, ["coverImage", "location"]);
+    },
+  });
+
   function handleStartTimeChange(val: string) {
     setStartTime(val);
     if (val && !endTime) setEndTime(val.slice(0, 10));
@@ -66,6 +93,7 @@ export default function CreateActivityPage() {
     if (result && "error" in result && result.error) {
       setError(result.error);
     } else if (result && "success" in result && result.id) {
+      draft.clear();
       // 例会创建后进入编辑页，方便录入分享条目
       router.push(
         type === "MEETING" || type === "COURSE" || type === "ENGINE_COURSE"
@@ -89,8 +117,12 @@ export default function CreateActivityPage() {
 
       {error && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-      <form action={handleSubmit} className="space-y-8">
+      <form ref={setFormEl} action={handleSubmit} className="space-y-8">
         <input type="hidden" name="type" value={type} />
+
+        {draft.draft && (
+          <DraftNotice at={draft.draft.at} onRestore={draft.restore} onDiscard={draft.discard} />
+        )}
 
         <div>
           <p className={label}>活动类型 *</p>
@@ -168,7 +200,7 @@ export default function CreateActivityPage() {
               <div className="grid grid-cols-2 gap-2"><label className={label}>开始时间<input type="time" name="startClock" className={field} /></label><label className={label}>结束时间（可选）<input type="time" name="endClock" className={field} /></label></div>
             </div>}
 
-            <LocationPresetInput />
+            <LocationPresetInput key={`location-${locationSeed}`} defaultValue={locationSeed} />
 
             <div>
               <label className={label} htmlFor="meetingUrl">
@@ -240,6 +272,8 @@ export default function CreateActivityPage() {
             <div>
               <label className={label}>封面</label>
               <CoverUploadInput
+                key={`cover-${coverSeed}`}
+                defaultValue={coverSeed || undefined}
                 previewClassName="max-w-none"
                 title={title.trim() || getDefaultTitle()}
                 summary={summary}

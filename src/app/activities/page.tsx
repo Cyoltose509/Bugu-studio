@@ -11,8 +11,12 @@ import { ActivityType, ActivityStatus } from "@prisma/client";
 import { isMockDataEnabled, mockActivitiesBuckets } from "@/lib/mock/frontend-data";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
+import ActivityCard, {
+  activityTypeLabel,
+  ACTIVITY_STATUS_LABEL,
+} from "@/components/activities/ActivityCard";
 import ActivityCalendar, { BAR_TONE } from "@/components/activities/ActivityCalendar";
-import { AgendaTypeTag, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
+import { AgendaTypeTag, AgendaSpeaker, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import PlusIcon from "@/components/ui/PlusIcon";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
@@ -31,32 +35,22 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_COVER = DEFAULT_ACTIVITY_COVER;
 
-// 活动类型 / 状态 → 双语标签
-const ACTIVITY_TYPE_KEYS: Record<string, "activity.type.MEETING" | "activity.type.COURSE" | "activity.type.ENGINE_COURSE" | "activity.type.COMPETITION" | "activity.type.GENERAL" | "activity.type.RECOMMENDATION"> = {
-  MEETING:     "activity.type.MEETING",
-  COURSE:      "activity.type.COURSE",
-  ENGINE_COURSE: "activity.type.ENGINE_COURSE",
-  COMPETITION: "activity.type.COMPETITION",
-  GENERAL:     "activity.type.GENERAL",
-  RECOMMENDATION: "activity.type.RECOMMENDATION",
-};
-const STATUS_LABEL: Record<string, { cn: string; en: string }> = {
-  ongoing:  { cn: "进行中", en: "Ongoing" },
-  upcoming: { cn: "即将开始", en: "Upcoming" },
-  past:     { cn: "已结束", en: "Ended" },
-};
-function activityTypeLabel(lang: Lang, type: string): string {
-  const k = ACTIVITY_TYPE_KEYS[type];
-  return k ? t(lang, k) : type;
-}
+// 活动类型 / 状态 → 双语标签（与卡片一起抽到 components/activities/ActivityCard）
+const STATUS_LABEL = ACTIVITY_STATUS_LABEL;
 
 // 右侧栏议程条目（只取展示所需字段）
+type SidebarSpeakerRow = {
+  name: string;
+  userId: string | null;
+  user: { id: string; image: string | null; member: { id: string; displayName: string } | null } | null;
+};
 type SidebarTalk = {
   id: string;
   title: string;
   talkType: string;
   speaker: string;
-  speakers: { name: string }[];
+  speakers: SidebarSpeakerRow[];
+  user: SidebarSpeakerRow["user"];
 };
 
 // ── 倒计时 ──────────────────────────────────────────────────
@@ -75,62 +69,6 @@ function Countdown({ startTime, lang }: { startTime: Date; lang: Lang }) {
     <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 text-brand-orange">
       {t(lang, "activities.hoursLater").replace("{n}", String(hours))}
     </span>
-  );
-}
-
-// ── 卡片组件 ──────────────────────────────────────────────
-function ActivityCard({ a, lang, badge, countdown }: {
-  a: any; lang: Lang; badge?: "ongoing" | "upcoming" | "past"; countdown?: React.ReactNode;
-}) {
-  const coverSrc = a.coverImage || DEFAULT_COVER;
-  const displayTitle = localizeActivityTitle(a.title, lang);
-
-  return (
-    <Link href={`/activities/${a.id}`} className="group h-full">
-      <div className="bg-card rounded-xl border border-brand-border-subtle overflow-hidden shadow-sm hover:shadow-md transition-all h-full flex flex-col">
-
-        {/* 封面图 */}
-        <div className="relative aspect-video overflow-hidden bg-brand-surface shrink-0">
-          <Image
-            src={coverSrc}
-            alt={displayTitle}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-          <ActivityTypeCorner type={a.type} label={activityTypeLabel(lang, a.type)} />
-          {(badge || countdown) && (
-            <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-              {badge && (
-                <span className={`text-xs px-2 py-0.5 rounded-full text-white backdrop-blur-sm ${
-                  badge === "past" ? "bg-black/50" : "bg-green-500/80"
-                }`}>{STATUS_LABEL[badge][lang]}</span>
-              )}
-              {countdown}
-            </div>
-          )}
-          {a.meetingUrl && a.type !== "COURSE" && a.type !== "ENGINE_COURSE" && a.type !== "RECOMMENDATION" && (
-            <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
-              {t(lang, "activity.online")}
-            </div>
-          )}
-        </div>
-
-        {/* 信息区：固定三行，避免有/无简介、地点长短导致卡片高低不一 */}
-        <div className="p-3 flex flex-col gap-1 flex-1 min-h-[4.75rem]">
-          <h3 className="text-sm font-semibold group-hover:text-brand-blue transition-colors line-clamp-1 text-brand-text-heading">
-            {displayTitle}
-          </h3>
-          <p className="text-xs text-brand-text-muted line-clamp-1">
-            {formatActivitySchedule(a.startTime, a.endTime, lang, a.timePending, a.courseHasClock)}
-            {a.location ? ` · ${a.location}` : ""}
-          </p>
-          <p className="text-xs line-clamp-1 text-brand-text-secondary min-h-[1rem]">
-            {a.summary || "\u00A0"}
-          </p>
-        </div>
-      </div>
-    </Link>
   );
 }
 
@@ -190,49 +128,80 @@ function HeroCard({ a, lang, status }: { a: any; lang: Lang; status: "ongoing" |
 // ── 右侧栏议程：主推活动没有别的活动占位时，用它填这块空白 ──────────
 const AGENDA_PREVIEW_MAX = 6;
 
+/** 讲者展示信息（与详情页 speakerMeta 同规则：有成员页链成员页，否则链个人资料） */
+function sidebarSpeakerList(talk: SidebarTalk, lang: Lang) {
+  const meta = (name: string, userId: string | null, user: SidebarSpeakerRow["user"]) => {
+    const memberId = user?.member?.id;
+    const uid = userId ?? user?.id ?? null;
+    return {
+      name: name || t(lang, "activityDetail.speakerFallback"),
+      href: memberId ? `/members/${memberId}` : uid ? `/profile?id=${uid}` : null,
+      image: user?.image ?? null,
+    };
+  };
+
+  if (talk.speakers?.length) return talk.speakers.map((s) => meta(s.name, s.userId, s.user));
+
+  // 没有讲者表记录时退回 speaker 字段，按分隔符拆成多个名字
+  const names = (talk.speaker || "").split(/[、,，/]/).map((n) => n.trim()).filter(Boolean);
+  return names.map((name, index) => meta(name, null, names.length === 1 && index === 0 ? talk.user : null));
+}
+
 function SidebarAgenda({ items, lang, activityId }: {
   items: SidebarTalk[]; lang: Lang; activityId: string;
 }) {
   const shown = items.slice(0, AGENDA_PREVIEW_MAX);
   const rest = items.length - shown.length;
-  const href = `/activities/${activityId}#agenda`;
+  const href = `/activities/${activityId}#meeting-agenda`;
 
   return (
-    <div className="flex max-h-[22rem] min-h-0 flex-col overflow-hidden lg:max-h-none lg:flex-1">
+    <div id="sidebar-agenda" className="flex max-h-[22rem] min-h-0 flex-col lg:max-h-none lg:flex-1">
       <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-brand-navy">{t(lang, "activityDetail.agenda")}</h3>
         <span className="shrink-0 text-xs tabular-nums text-brand-text-muted">
           {t(lang, "activities.agendaItems", { n: items.length })}
         </span>
       </div>
-      <ol className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain">
-        {shown.map((talk, index) => {
-          const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
-          const names = (talk.speakers?.length
-            ? talk.speakers.map((s) => s.name)
-            : (talk.speaker || "").split(/[、,，/]/)
-          ).map((n) => n.trim()).filter(Boolean);
-          return (
-            <li key={talk.id} className="flex gap-2">
-              <span className="mt-0.5 w-3.5 shrink-0 text-right text-[11px] font-semibold tabular-nums text-brand-text-muted">{index + 1}</span>
-              <div className="min-w-0 flex-1">
-                <Link href={href} className="group flex min-w-0 items-center gap-1.5">
+      {/* 与活动详情页同一套时间轴：细线贯穿 + 实心节点，分享蓝、展示橙 */}
+      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <ol className="relative py-1 pl-1.5">
+          <span aria-hidden className="absolute bottom-2 left-[6px] top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
+          {shown.map((talk) => {
+            const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+            const speakers = sidebarSpeakerList(talk, lang);
+            return (
+              <li key={talk.id} className="relative pb-4 pl-6 last:pb-0">
+                <span
+                  aria-hidden
+                  className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
+                />
+                <div className="flex min-w-0 flex-wrap items-start gap-1.5">
                   <AgendaTypeTag
                     type={type}
                     label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
                   />
-                  <span className="truncate text-sm font-medium text-brand-text-heading group-hover:text-brand-blue">{talk.title}</span>
-                </Link>
-                {names.length > 0 && (
-                  <p className="mt-0.5 truncate text-xs text-brand-text-muted">
-                    {t(lang, "meeting.by")} {names.join("、")}
-                  </p>
+                  <Link href={href} className="min-w-0 flex-1 line-clamp-2 text-sm font-medium text-brand-text-heading hover:text-brand-blue">
+                    {talk.title}
+                  </Link>
+                </div>
+                {speakers.length > 0 && (
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {speakers.map((speaker, index) => (
+                      <AgendaSpeaker
+                        key={`${speaker.href || speaker.name}-${index}`}
+                        name={speaker.name}
+                        href={speaker.href}
+                        image={speaker.image}
+                        byLabel={index === 0 ? t(lang, "meeting.by") : "&"}
+                      />
+                    ))}
+                  </div>
                 )}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
       {rest > 0 && (
         <Link href={href} className="mt-2 shrink-0 text-xs font-medium text-brand-blue hover:underline">
           +{rest} · {t(lang, "activityDetail.viewAll")}
@@ -442,7 +411,15 @@ export default async function ActivitiesPage({
                 title: true,
                 talkType: true,
                 speaker: true,
-                speakers: { orderBy: { sortOrder: "asc" }, select: { name: true } },
+                user: { select: { id: true, image: true, member: { select: { id: true, displayName: true } } } },
+                speakers: {
+                  orderBy: { sortOrder: "asc" },
+                  select: {
+                    name: true,
+                    userId: true,
+                    user: { select: { id: true, image: true, member: { select: { id: true, displayName: true } } } },
+                  },
+                },
               },
             }),
           60,
@@ -497,40 +474,42 @@ export default async function ActivitiesPage({
         }
       >
 
-        {/* 页面头：非日历视图（网格档案）保留顶栏大标题 */}
+        {/* 页面头：非日历视图（网格档案）保留顶栏大标题
+            标题与按钮同一行（竖屏也如此），简介另起一行，窄屏时缩小字号 */}
         {!isCalendar && (
-          <div className="flex items-center justify-between gap-3 sm:gap-4 shrink-0 mb-10">
-            <div>
-              <h1 className="text-3xl font-bold text-brand-navy">
+          <div className="mb-8 shrink-0 sm:mb-10">
+            <div className="flex items-center justify-between gap-3 sm:gap-4">
+              <h1 className="min-w-0 text-2xl font-bold leading-tight text-brand-navy sm:text-3xl">
                 {t(lang, "page.activities.title")}
               </h1>
-              <p className="mt-2 text-brand-text-secondary">{t(lang, "activities.intro")}</p>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href="/activities?view=calendar"
+                  className="w-11 h-11 rounded-xl border border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-blue/40 hover:text-brand-blue transition-colors flex items-center justify-center shrink-0"
+                  title={t(lang, "activities.calendarView")}
+                  aria-label={t(lang, "activities.calendarView")}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="17" rx="2.5" />
+                    <path d="M3 9h18" />
+                    <path d="M8 2v4M16 2v4" />
+                  </svg>
+                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin/activities/create"
+                    className="btn-primary brand-add-control shrink-0"
+                    title={t(lang, "activities.create")}
+                    aria-label={t(lang, "activities.create")}
+                  >
+                    <PlusIcon size={24} />
+                  </Link>
+                )}
+              </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <Link
-                href="/activities?view=calendar"
-                className="w-11 h-11 rounded-xl border border-brand-border-subtle bg-card text-brand-text-secondary hover:border-brand-blue/40 hover:text-brand-blue transition-colors flex items-center justify-center shrink-0"
-                title={t(lang, "activities.calendarView")}
-                aria-label={t(lang, "activities.calendarView")}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="3" y="4" width="18" height="17" rx="2.5" />
-                  <path d="M3 9h18" />
-                  <path d="M8 2v4M16 2v4" />
-                </svg>
-              </Link>
-              {isAdmin && (
-                <Link
-                  href="/admin/activities/create"
-                  className="btn-primary brand-add-control shrink-0"
-                  title={t(lang, "activities.create")}
-                  aria-label={t(lang, "activities.create")}
-                >
-                  <PlusIcon size={24} />
-                </Link>
-              )}
-            </div>
+            <p className="mt-2 text-sm text-brand-text-secondary sm:text-base">{t(lang, "activities.intro")}</p>
           </div>
         )}
 

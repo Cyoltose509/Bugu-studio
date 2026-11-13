@@ -16,7 +16,6 @@ const navItems = [
   { href: "/admin/history-events", label: "历史事件", icon: "📆" },
   { href: "/admin/errors", label: "前端错误", icon: "🐞" },
   { href: "/admin/monitoring", label: "系统管理", icon: "🗄️" },
-  { href: "/", label: "返回前台", icon: "🏠" },
 ];
 
 function SidebarNav({ pathname }: { pathname: string }) {
@@ -50,6 +49,16 @@ function SidebarContent({ userEmail, pathname }: { userEmail: string; pathname: 
         </Link>
       </div>
       <SidebarNav pathname={pathname} />
+      {/* 「返回前台」是跳出后台的动作，不参与导航高亮，单独贴底放在账号信息上方 */}
+      <div className="px-3 py-3 shrink-0 border-t border-white/10">
+        <Link
+          href="/"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white/70 border border-white/15 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          <span>🏠</span>
+          <span>返回前台</span>
+        </Link>
+      </div>
       <div className="p-4 shrink-0 border-t border-white/10">
         <div className="text-xs text-white/50">当前登录</div>
         <div className="text-sm text-white/80 truncate">{userEmail}</div>

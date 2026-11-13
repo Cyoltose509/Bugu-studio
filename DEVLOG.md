@@ -4,6 +4,55 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-13 — 个人主页「参与活动」改卡片橱窗【本地完成，未部署】
+
+- 原来是 `ul > li > Link` 纯文字列表，现在与「我的作品 / 我喜欢的作品」同一套网格：`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch`。
+- 卡片不是新画一套：把活动首页里那份 `ActivityCard` 连同 `activityTypeLabel` / `STATUS_LABEL` 一起搬到 `src/components/activities/ActivityCard.tsx`（导出 `ACTIVITY_STATUS_LABEL`），首页改为 import，避免两处各写一份慢慢走形。首页 `HeroCard` / `RecoCard` 继续用本地 `STATUS_LABEL` 别名，行为不变。
+- 数据：`profile:activities:{id}` 的 select 从 `id/title/type/startTime` 扩到含 `summary/location/meetingUrl/coverImage/endTime/timePending/courseHasClock`，卡片才有封面、时间地点、简介三行；缓存 key 未变，30s TTL。
+- 验证：Edge 实测 1440 亮/暗（4 列，卡片 191.5×192.6）+ 390 亮（2 列 146×167），无横向溢出；活动首页滚动到「活动档案」卡片网格，封面/角标/标题/时间地点渲染与改动前一致。tsc 通过，vitest unit+ui 48 文件 286 用例全绿。
+- 踩坑记录（截图验证时）：伪造会话的 JWT 里必须带 `id` 字段，否则 `session.user.id` 为空，个人主页那些按 userId 的查询会报 `Argument userId is undefined`，页面只显示「加载失败」。管理后台页面不按 userId 查，所以之前没暴露。
+- 未部署：需合并 main 后生效。
+
+## 2026-11-13 — 用户管理：操作列四个动作对齐【本地完成，未部署】
+
+- 病根是「停用 / 激活」外面裹了一层 `<form className="inline">`：它在 flex 行里变成块级项，里面 16px 高的 `<button>` 顶着上沿，比旁边 20px 高的文字链接低 3px；`处理中` 带 spinner 时行高还会再跳一次。
+- 改法：操作列容器加 `items-center`、间距 `gap-2` → `gap-3`、`whitespace-nowrap`（防「认领关联」折行把整行撑高）；`form` 由 `inline` 改成 `flex items-center`；`停用` 与 `删除` 两个按钮补 `leading-5`，与链接统一成 20px 高的行内块。
+- 验证：Edge 实测首两行，四项 `top` 均为 414、高度均为 20，间距 12/12/12 均等。成员管理、作品管理两处操作列同为 16px 且 top 一致，没有这个问题，未改。
+- 未部署：需合并 main 后生效。
+
+## 2026-11-13 — 后台仪表盘：快捷操作并入标题行 + 整体压缩高度【本地完成，未部署】
+
+- 快捷操作卡片由「标题一行 + 按钮一行」改成同一行 `flex flex-wrap items-center justify-between`，按钮组右对齐；按钮内边距 `px-4 py-2` → `px-3 py-1.5`，卡片 `p-5` → `px-5 py-4`，高度 100 → 68px。
+- 根容器 `gap-8` → `gap-5`（4 块之间省 36px）。窄屏按钮组自动换行，标题独自占首行。
+- 验证：Edge 实测 1920×1080 / 1440×900 / 1366×768 / 1280×720 / 1024×768 亮色 + 1440 暗色，主内容区 `scrollHeight === clientHeight`（1280×720 下内容底边 712 ≤ 720），页面不再上下滚动；390×844 竖屏按钮 3+2 换行、仍可滚动（内容本就长）。
+- 未部署：需合并 main 后生效。
+
+## 2026-11-13 — 后台侧栏：「返回前台」从导航列表移到贴底独立块【本地完成，未部署】
+
+- `AdminSidebar` 里把 `/` 这条从 `navItems` 摘掉，改成 `SidebarNav` 之后单独一块：`px-3 py-3 border-t border-white/10` 包一个带 `border border-white/15` 的圆角链接，落在「当前登录」上方。nav 是 `flex-1`，所以这块和账号信息一起被压到侧栏底部，导航再长也不会把它挤走。
+- 动机：它不参与路由高亮（`pathname === "/"` 在后台永远不成立），留在列表末尾只是跟着最后一项「系统管理」看不出层级；现在作为「跳出后台」的动作单独成块。移动端抽屉共用 `SidebarContent`，一并生效。
+- 验证：tsc 通过；Edge 实测 1440 亮/暗 + 390 抽屉，按钮贴底、与「当前登录」不重叠、无裁切。
+- 未部署：需合并 main 后生效。
+
+## 2026-11-13 — 活动首页：页头对齐 + 右栏议程改时间轴【本地完成，未部署】
+
+- 页头：`h1` 与日历 / 新建按钮放进同一行（`items-center`），简介另起一行；窄屏标题 `text-2xl`、简介 `text-sm`（≥sm 恢复 `text-3xl` / `text-base`）。实测标题行中心与按钮中心在 1440/1280/1024 均为 118、390 均为 158.5，同一水平线。
+- 右栏议程去掉序号列表，改成与活动详情页同一套时间轴：`ol` 内一条 `1px` 竖轨（`bg-brand-border-subtle`）+ 每项实心节点（分享蓝 `bg-brand-blue` / 展示橙 `bg-brand-orange`），复用 `AgendaTypeTag` 与 `AgendaSpeaker`（类型标签 + 标题 + `by 头像 名字`）。标题 `line-clamp-2` 不再单行省略，标签 `items-start` 与首行对齐。
+- 数据：`prisma.meetingTalk.findMany` 追加 `user`、`speakers[].user`（含 `member.id/displayName`、`image`），讲者链接规则与详情页 `speakerMeta` 一致（有成员页链 `/members/[id]`，否则 `/profile?id=`）；锚点从无效的 `#agenda` 修正为详情页实际存在的 `#meeting-agenda`。
+- 滚动：竖轨放在不滚动的 `ol` 上、外层 `div` 承担 `overflow-y-auto`，否则绝对定位的轨道只会按可视高度画一截。
+- 验证：tsc 通过；Edge 实测 1440/1280/1024/390 亮暗共 6 组，`scrollWidth === clientWidth`，轨道高度随条目自适应（163.5 / 183 / 202.5），圆点 11px 全在容器内。
+- 未部署：需合并 main 后生效。暗色下竖轨仍用 `#D0DEE8`（与详情页一致，未加 `dark:` 覆盖），如嫌偏亮可两侧一起调。
+
+## 2026-11-13 — 表单自动保存：历史事件写库 + 新建/长表单本地草稿【本地完成，未部署】
+
+- 新增 `src/lib/hooks/use-autosave.ts`：停手 1.5s 写服务端，挂载首份数据当基线不首屏打接口，签名相同跳过，失败 5s 重试一次并停在 error，`flush()` 供关窗前补一次；`src/lib/hooks/use-form-draft.ts`：localStorage 草稿（800ms 落盘、7 天过期、恢复时把受控状态与非受控 DOM 字段一起写回）；`src/components/ui/AutosaveStatus.tsx`：状态小字 + 草稿恢复条。
+- 历史事件：已有事件走服务端自动保存（标题/正文/日期，`autosave: true` 透传），顶部显示「未保存的更改 / 自动保存中… / 已自动保存 HH:MM / 失败」，关闭前 `flush`；新建事件走本地草稿，重开弹窗出现「恢复草稿 / 丢弃」。图片不进自动保存，仍走「保存」，避免自动保存途中点取消把 R2 上的图删掉。
+- 顺带修 PATCH `/api/admin/history-events/[id]`：原来无条件先删后建 EventImage，图片没改也会把仍在引用的 R2 对象当旧图删掉；改为与库里比对，只删「新列表里已经没有」的 URL，一致时整段跳过。
+- 活动创建页、活动编辑页接本地草稿（新建没有数据库记录，编辑页字段分散在封面/地点/富文本/议程等各自独立保存的子编辑器里，服务端自动保存会和它们打架）；封面 `coverImage`、地点 `location`、详细描述、比赛题目这些把值存在组件内部，恢复时靠换 key 重新初始化。
+- 踩坑：开发模式 StrictMode 会把 effect 跑两遍，用布尔开关标记「首次运行」会在第二次误判成用户改动，把空表单写成草稿覆盖真草稿；改成和挂载时的 watch 值比对，并且记住最后一次挂上的容器元素（卸载时 ref 会先被置空）。
+- 验证：tsc 通过；vitest unit+ui 48 文件 286 用例通过（新增 autosave-hooks 8 例）；Edge 实测——历史事件编辑打字段 6s 后显示「已自动保存 17:04」且库中正文已更新；打完立刻关窗后库中为最后一段文字（flush 生效）；新建/编辑/活动创建三个草稿场景刷新后都能恢复标题、正文、简介、线上链接、人数等。测试用的临时事件两条已删除，库中事件数回到 11。
+- 未部署：需合并 main 后生效。
+
 ## 2026-11-13 — 后台与活动页交互打磨 + 活动首页右栏议程【本地完成，未部署】
 
 - 隐私设置：`修改密码` 卡片改可点击折叠（chevron 180°、aria-expanded/controls），默认收起；`确认新密码` 仅在新密码非空时渲染并淡入，清空新密码同步清空确认值，避免隐藏字段参与提交。

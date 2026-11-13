@@ -25,6 +25,9 @@ export async function PATCH(
 
   const { title, body: content, year: bodyYear, eventDate, eventEndDate, sortOrder, images } = body as Record<string, any>;
 
+  // 自动保存只同步文字，@提醒不该每 1.5 秒推一次
+  const autosave = body.autosave === true;
+
   const year = bodyYear || (eventDate ? new Date(eventDate).getFullYear() : undefined);
 
   // 过滤掉 url 为空的图片
@@ -33,15 +36,23 @@ export async function PATCH(
     : [];
 
   try {
-    // 如果传了 images，先捕获旧图片 URL 再删 DB 记录
-    let oldImageUrls: string[] = [];
+    // 传了 images 才动图片；和库里完全一致时整段跳过。
+    // 原来无条件「先删后建」，即使图片没改也会把仍在引用的 R2 文件当成旧图删掉。
+    let removedImageUrls: string[] = [];
+    let imagesChanged = false;
     if (images !== undefined) {
       const oldImages = await prisma.eventImage.findMany({
         where: { eventId: id },
         select: { url: true },
+        orderBy: { sortOrder: "asc" },
       });
-      oldImageUrls = oldImages.map((img) => img.url).filter(Boolean);
-      await prisma.eventImage.deleteMany({ where: { eventId: id } });
+      const oldUrls = oldImages.map((img) => img.url).filter(Boolean);
+      const nextUrls = validImages.map((img) => img.url);
+      imagesChanged = oldUrls.length !== nextUrls.length || oldUrls.some((u, i) => u !== nextUrls[i]);
+      if (imagesChanged) {
+        removedImageUrls = oldUrls.filter((url) => !nextUrls.includes(url));
+        await prisma.eventImage.deleteMany({ where: { eventId: id } });
+      }
     }
 
     const event = await prisma.yearEvent.update({
@@ -53,15 +64,15 @@ export async function PATCH(
         ...(eventDate !== undefined && { eventDate: eventDate ? new Date(eventDate) : null }),
         ...(eventEndDate !== undefined && { eventEndDate: eventEndDate ? new Date(eventEndDate) : null }),
         ...(sortOrder !== undefined && { sortOrder }),
-        ...(images !== undefined && validImages.length > 0
+        ...(images !== undefined && imagesChanged && validImages.length > 0
           ? { images: { create: validImages.slice(0, 5).map((img, i) => ({ url: img.url, altText: img.altText, sortOrder: i })) } }
           : {}),
       },
       include: { images: { orderBy: { sortOrder: "asc" } } },
     });
 
-    // @mention 通知
-    if (content) {
+    // @mention 通知（自动保存不推）
+    if (content && !autosave) {
       await notifyMentions(content, session.user.name || "未知用户", session.user.id, {
         type: "HistoryEvent",
         id: event.id,
@@ -72,9 +83,9 @@ export async function PATCH(
     revalidatePath("/history");
     invalidateCache("history:"); // 覆盖 history:allEvents / eventYears 等
 
-    // ── 清理 R2 旧图片（best-effort）──
-    if (oldImageUrls.length > 0) {
-      deleteManyFromR2(oldImageUrls).catch(() => {});
+    // ── 清理被移除的 R2 旧图（best-effort，仍被引用的不删）──
+    if (removedImageUrls.length > 0) {
+      deleteManyFromR2(removedImageUrls).catch(() => {});
     }
 
     return apiResponse(event);
