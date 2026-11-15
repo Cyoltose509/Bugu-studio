@@ -5,6 +5,10 @@ const TONE: Record<string, string> = {
   COMPETITION: "bg-brand-orange",
   GENERAL: "bg-[#6D5B9A]",
   RECOMMENDATION: "bg-[#C2447C]",
+  HACKATHON: "bg-[#C2447C]",
+  GAME_JAM: "bg-brand-orange",
+  TRAINING: "bg-[#3D9B8F]",
+  OTHER: "bg-[#C2447C]",
 };
 
 /** 封面左上角三角角标：例会 / 大事件 / Game Jam / 公开课 */

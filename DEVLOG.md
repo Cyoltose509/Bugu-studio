@@ -4,6 +4,112 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-16 — 前端错误报告 Hover 弹层边界感知自适应翻转（彻底修复页面抽搐与抖动循环）【本地完成，未部署】
+
+- 需求背景：在「管理后台 - 前端错误」页面中，当鼠标悬停在列表下半部分或接近视口底部的条目（如 `#23`）时，页面发生高频抽搐抖动。根本原因：Hover 详情弹层原写死为 `top-full`（向下弹出），在页面底部展开时溢出视口并大幅增加滚动容器的 `scrollHeight`，触发浏览器的滚动锚定（Scroll Anchoring）或视口滚动，将当前条目向上推离鼠标光标，导致鼠标脱离条目触发 `onMouseLeave` 弹层关闭；弹层关闭后页面高度收缩并回落，条目重新回到鼠标下方触发 `onMouseEnter` 再次展开，从而产生无限循环的高频抽搐。
+- 优化实现：
+  - `src/components/admin/ErrorReportsClient.tsx`：
+    - 增加动态方位感知：在 `onMouseEnter` 事件中读取当前行元素的 `getBoundingClientRect()`，动态计算视口剩余空间 `spaceBelow` 与 `spaceAbove`；
+    - 当下方空间不足（`spaceBelow < 380 && spaceAbove > spaceBelow`）时，自适应向上翻转为 `bottom-full mb-1.5`，确保弹层完全在条目上方展开，彻底杜绝向下撑大页面高度与滚动条产生；
+    - 样式升级：为弹层显式添加 `style={{ overflowAnchor: "none" }}`，从 CSS 层面完全禁用浏览器的滚动锚定位移计算；配置 `max-h-[min(420px,calc(100vh-140px))] overflow-y-auto overscroll-contain`，在极端窄屏下也安全内部滚动，不会越过视口边界。
+- 验证证据：
+  - TypeScript 检查：`npx tsc --noEmit` 0 错误通过。
+  - 自动化测试：新增 `__tests__/ui/error-reports-hover.test.tsx`（2 项单元用例，分别覆盖视口底部向上翻转、上方充足向下弹出以及 `overflowAnchor: none` 属性断言）；全量 52 个测试套件（316 项用例）100% 绿灯通过。
+- 未部署：需合并发布后生效。
+
+## 2026-11-16 — Game Jam 活动评委与评审系统完善（支持外部评审、不公开评委阵容、特邀评委与移除强制入队机制）【本地完成，未部署】
+
+- 需求背景：用户反馈 Game Jam 活动的“评委管理”等功能尚不完善，要求排查问题并继续开发完善，同时重点考虑以下现实赛事场景：
+  1. 不使用官网进行线上评分评审（如纯线下路演、闭门打分、外部平台如 itch.io / B站评分，或纯展示不打分）；
+  2. 不公开评委构成/评委名单保密（如盲审、防公关作弊、外部专家评委隐私保护等）；
+  3. 邀请校外嘉宾、行业导师等特邀评委（对方在本站无账号或无社员档案）；
+  4. 历史硬编码问题排查与修复（如打开页面强制自动将全站管理员加入评委名单、限制已毕业社员无法担任评委等反常逻辑）。
+- 架构设计与数据库改造（Prisma & PostgreSQL Migration）：
+  - `Activity` 模型扩充字段：
+    - `judgingMode String @default("ONLINE")`：支持 `"ONLINE"`（站内打分矩阵/排名）、`"EXTERNAL"`（外部/线下评审）与 `"DISABLED"`（仅展示交流，不设打分评审）。
+    - `judgesPublic Boolean @default(true)`：评委阵容是否对公众公开。若为 `false`，仅管理员可见，公众页面展示保密提示。
+    - `externalJudgingUrl String?`：当选用外部评审时的跳转链接或说明。
+  - `JamJudge` 模型扩充与解耦：
+    - 将 `userId` 改为可选（`String?`），解除对站内用户体系的强绑定。
+    - 新增 `externalName String?` 与 `title String?`，支持添加无站内账号的外部/特邀评委及称号头衔（如“前社长 / 资深独立开发者”、“某知名游戏工作室主策划”）。
+  - 执行迁移：生成并部署 `20261116020000_gamejam_judging_flexibility` 数据库迁移脚本，重新生成 Prisma Client。
+- 业务逻辑与安全交互升级：
+  - **彻底移除 `ensureAdminJudges` 强制入队 Bug**：原实现进入评审页会自动遍历全站管理员并写入 `JamJudge` 表，导致管理员退赛或无法以选手身份参赛。现改造为管理员可在管理栏通过“将我加入评委团”按钮自主选择是否入队，不再强制注入；同步修复课程活动（Course）评审页的同类隐患。
+  - **解除毕业社员限制**：移除针对 `member.graduated` 的硬性拒绝，支持校友与业界前辈参与评审。
+  - **支持特邀/外部评委**：`AddJudgeForm` 提供“社内/站内成员”与“外部/特邀评委”双 Tab 切换，外部评委支持录入姓名与头衔（最长 80 字，查重防抖）。
+  - **评审模式配置面板（`JudgingSettingsForm`）**：在评审管理页提供评审模式切换、外部评分链接配置与评委阵容公开/保密开关，支持即时保存与缓存刷新。
+  - **活动详情页与结果页权限适配**：
+    - 针对 `judgesPublic: false`：普通访客展示“🔒 本次活动评委阵容保密 / 未公开”，管理员显示“未向公众公开（仅管理可见）”警示标识。
+    - 针对 `judgingMode`：`ONLINE` 保持原有线上打分入口；`EXTERNAL` 展现外部评审通道与直达外链；`DISABLED` 隐藏打分按钮与评分状态标签。
+  - **管理端活动列表与创建/编辑同步**：
+    - 在管理员活动列表页（`/admin/activities`）针对比赛活动新增“评审管理”直达入口。
+    - 在活动创建与编辑页面增加评审模式、外部评审链接与阵容公开选项。
+- 验证证据：
+  - 数据库迁移成功：`prisma migrate deploy` 成功应用 `20261116020000_gamejam_judging_flexibility`。
+  - TypeScript 类型检查：`npx tsc --noEmit` 0 错误全部通过。
+  - 单元与回归测试：新建 `__tests__/unit/gamejam-judging.test.ts` 14 项用例全部通过，覆盖特邀评委添加、查重、毕业社员评审、管理员主动入队、阵容公开切换及非管理越权防御等分支；全量 37 个测试文件、232 项单元测试 100% 通过；全量 14 个 UI 测试套件 82 项测试 100% 通过。
+- 未部署：需合并发布后生效。
+
+
+## 2026-11-16 — 活动推荐卡片左上角标签升级为全站统一绶带样式【本地完成，未部署】
+
+- 需求背景：活动首页「活动推荐」横排栏的推荐卡片左上角原采用黑色半透明胶囊样式（如“黑客松”），与「活动档案」卡片及全站活动封面统一的对角斜向彩色绶带（Ribbon）视觉风格不一致，需要改造为绶带样式。
+- 样式与组件重构：
+  - `src/components/activities/ActivityTypeCorner.tsx`：色系映射表 `TONE` 扩展推荐活动细分类支持（`HACKATHON: "bg-[#C2447C]"`、`GAME_JAM: "bg-brand-orange"`、`TRAINING: "bg-[#3D9B8F]"`、`OTHER: "bg-[#C2447C]"`），确保细分类型具备对应的品牌绶带色。
+  - `src/app/activities/page.tsx`：`RecoCard` 组件移除原 `<span className="... rounded-full bg-black/45 ...">` 胶囊，接入 `<ActivityTypeCorner type={ribbonType} label={ribbonLabel} />`，优先展示 `recoTagLabel`（如“黑客松”/“Hackathon”），无细分类时回退为“活动推荐”。
+  - `src/components/activities/ActivityCard.tsx` 与 `src/app/activities/[id]/page.tsx`：同步支持对 `RECOMMENDATION` 类型且带有 `recoTag` 的活动在封面角标中呈现对应的细分类绶带与文案。
+- 验证证据：
+  - TypeScript 类型检查：`npx tsc --noEmit` 0 错误通过。
+  - 单元与组件测试：`__tests__/unit/activity-recommendation.test.ts` 扩充 4 项用例全部通过；全量 50 个单元与 UI 测试套件（300 项测试）100% 通过。
+  - 本地 Turbopack 服务：`/activities` 请求返回 HTTP 200，成功包含带有 `rotate-[-45deg]` 类的角标绶带结构。
+- 未部署：需合并发布后生效。
+
+## 2026-11-16 — 社团活动页首页议程复用活动详情页时间线交互样式【本地完成，未部署】
+
+- 需求背景：活动首页主推区右侧栏的议程列表未完全对齐详情页的时间线交互与视觉表现，需要统一为活动详情页的时间线样式（轨道细线贯穿 + 蓝/橙实心节点 + 讲者头像与身份 + 详情与大图 hover/pin 展开）。
+- 组件统一与字段补齐：
+  - `src/app/activities/page.tsx` 中 `heroTalks` 查询追加 `description`、`imageUrl`、`bvId`，并更新缓存 key 为 `activity:sidebar-talks:v2:${hero.id}`，确保具备完整的详情与媒体数据。
+  - 右侧栏议程 `SidebarAgenda` 全面接入 `AgendaTimeline`，不再重复手写简化结构，实现时间线轨道、节点着色、讲者头像、Bilibili TV 标识与 hover 交互效果与详情页 100% 统一。
+  - `AgendaTimeline.tsx` 支持可选 `href` 参数：当传入详情页锚点时，标题显示为链接（hover 蓝字并跳转对应议程），不影响卡片单击展开/固定交互；`<ol>` 显式声明 `list-none`，彻底杜绝默认序号列表干扰。
+- 验证证据：
+  - TypeScript 检查：`npx tsc --noEmit` 0 错误通过。
+  - 单元测试：36 个测试文件、217 项用例全部通过。
+  - 本地 Turbopack 服务：`/activities` 请求返回 HTTP 200，成功包含 `sidebar-agenda`、时间线竖轨与实心圆点节点。
+- 未部署：需合并发布后生效。
+
+## 2026-11-15 — 作品外部链接分组、favicon 图标、预设快捷填充与网盘提取码【本地完成，未部署】
+
+- 需求背景：创建新作品时添加外部链接选项平铺杂乱，缺少清晰分组与对应网站图标；网盘类链接缺少密码/提取码专属输入体验，且作品详情页右侧快捷跳转块未直观展现网盘密码。
+- 下拉分组与选项扩展：
+  - 在 `src/lib/constants/links.ts` 中结构化定义 5 个标准分类：游戏平台（Steam、itch.io）、网盘下载（百度网盘、蓝奏云、Google Drive、夸克网盘、阿里云盘）、项目源码（GitHub、Gitee）、视频网站（B站、YouTube）、个人网站（“官网”改称“游戏官方网站”、个人网站），保留“自定义”文本输入；加入新选项“蓝奏云”。
+  - i18n 词典同步扩展 `form.link.official`（“游戏官方网站”）、`form.link.lanzou`（“蓝奏云”）以及各分组名称。
+- 图标/Favicon 配套：
+  - `LinkIcon.tsx` 支持全套高清品牌图标与 favicon：引入/下载百度网盘（官方 SVG 矢量双色路径）、蓝奏云（`.ico`）、Google Drive（SVG 矢量）、夸克网盘（`.ico`）、阿里云盘（`.ico`）、Gitee（`.ico`）、Steam、itch.io、B站、GitHub 等。
+  - 下拉框每个选项前、下拉触发按钮当前选中项前均配上对应图标。
+- 快捷选择填充：
+  - 将第一个框（类型选择框）右侧区域让出，放置核心预设网站的高清图标快捷选择栏（Steam、itch.io、百度网盘、蓝奏云、GitHub、B站、游戏官方网站）。用户点击图标即可一键选中类型并自动对齐输入焦点。
+- 网盘密码输入与自动识别：
+  - 选中网盘类链接（百度网盘、蓝奏云、Google Drive、夸克、阿里等，或含网盘关键字的自定义链接）时，自动在第二个框（URL 输入框）右侧切出宽度适中（~4-6 字符宽度）的密码/提取码选填框。
+  - 智能粘贴支持：若用户粘贴带 `?pwd=`、`#pwd=` 或“提取码: xxx”的链接，自动提取密码填入密码框并净化 URL。
+  - 采用通用 `?pwd=` 规范兼容存储，既免除数据库 schema 侵入性风险，又与库内既有历史 9 条百度网盘记录完美向下兼容。
+- 作品详情页右侧快捷跳转与 Hover 展示：
+  - 侧边栏作品链接组件升级为 `ProjectQuickLinks.tsx`，使用高清品牌图标。
+  - 鼠标悬停（Hover）在带密码的网盘链接块时，浮现精致的提取码气泡卡片（含提取码与一键复制按钮），点击复制即可将提取码写入剪贴板并即时反馈“已复制”，不影响点击直达链接。
+- 统一组件封装：
+  - 抽取通用组件 `ProjectLinksEditor.tsx`，在创建作品（`SubmitForm`）、编辑作品（`ProjectForm`）以及 Game Jam 提交（`JamSubmitForm`）三处无缝复用。
+- 验证证据：
+  - 单元测试：新增 `link-presets.test.ts`（9 项全过）、`project-links-ui.test.tsx`（4 项全过）；全量单元测试 36 个测试文件、217 项用例全绿通过。
+  - TypeScript 校验：`npx tsc --noEmit` 0 错误通过。
+- 未部署：需合并发布后生效。
+
+## 2026-11-14 — 实用工具：新增 Polyfork Kits【本地完成，未部署】
+
+- `DEFAULT_TOOL_SITES` 加一条 `polyfork-kits`（`https://polyfork.dev/kits`），归到「3D 模型」，排在 Poly Pizza 之后。描述按站内一行版式压到 50 字内，1280 宽下不折行。
+- 图标没有留空：用 `resolveFavicon` 现抓目标站图标、转 64px PNG 存 R2，得到 `cdn.bugoostudio.com/toolss/6136df…png`，与其他条目一致（不是字标兜底）。
+- 背景：`tools:sites` 这条 SiteSetting 在库里不存在，`getToolsData` 一直回退 `DEFAULT_TOOLS_DATA`，所以改默认数组即可上线；等管理员在页面里点保存才会把整表固化进库。
+- 验证：`/tools` 1440/390 实测，「3D 模型」计数 4→5，图标正常加载，条目行高 71px 与其他一致。
+- 未部署：需合并 main 后生效。
+
 ## 2026-11-13 — 个人主页「参与活动」改卡片橱窗【本地完成，未部署】
 
 - 原来是 `ul > li > Link` 纯文字列表，现在与「我的作品 / 我喜欢的作品」同一套网格：`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch`。

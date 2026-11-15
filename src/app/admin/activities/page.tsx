@@ -166,6 +166,11 @@ export default async function AdminActivitiesPage({ searchParams }: PageProps) {
                     <SubmitButton type="submit" className="text-xs px-3 py-1.5 rounded-lg border transition-colors border-[#EAB308] text-[#EAB308]" pendingText="归档中...">归档</SubmitButton>
                   </form>
                 )}
+                {activity.type === "COMPETITION" && (
+                  <Link href={`/activities/${activity.id}/game-jam/judging`} className="text-xs px-3 py-1.5 rounded-lg border transition-colors border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/20">
+                    评审管理
+                  </Link>
+                )}
                 <Link href={`/admin/activities/${activity.id}/edit`} className="text-xs px-3 py-1.5 rounded-lg border transition-colors border-brand-blue text-brand-blue">编辑</Link>
                 <DeleteButton id={activity.id} title={activity.title} />
               </div>

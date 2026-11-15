@@ -6,7 +6,7 @@ import { PublishResultsButton } from "@/components/activities/judging/PublishRes
 import { AddJudgeForm } from "@/components/activities/judging/AddJudgeForm";
 import { RemoveJudgeButton } from "@/components/activities/judging/RemoveJudgeButton";
 import { SubmitScoreForm } from "@/components/activities/judging/SubmitScoreForm";
-import { Suspense } from "react";
+import { JudgingSettingsForm } from "@/components/activities/judging/JudgingSettingsForm";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { resolveActivityId } from "@/lib/activities/resolve";
 import { getLang } from "@/lib/i18n/getLang";
@@ -22,33 +22,6 @@ function LightboxLink({ src, children, className }: { src: string; children: Rea
   );
 }
 
-/* ── 自动确保所有非毕业管理员加入评委团 ── */
-
-async function ensureAdminJudges(activityId: string) {
-  const adminUsers = await prisma.user.findMany({
-    where: {
-      role: "ADMIN",
-      NOT: { member: { graduated: true } },
-    },
-    select: { id: true },
-  });
-  if (adminUsers.length === 0) return;
-
-  const existingJudges = await prisma.jamJudge.findMany({
-    where: { activityId },
-    select: { userId: true },
-  });
-  const existingIds = new Set(existingJudges.map(j => j.userId));
-
-  const toAdd = adminUsers.filter(u => !existingIds.has(u.id));
-  if (toAdd.length > 0) {
-    await prisma.jamJudge.createMany({
-      data: toAdd.map(u => ({ activityId, userId: u.id })),
-      skipDuplicates: true,
-    });
-  }
-}
-
 /* ── 页面主体 ── */
 
 export default async function JamJudgingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -57,18 +30,13 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
   const activityId = await resolveActivityId((await params).id);
   if (!activityId) notFound();
 
-  // 自动将非毕业管理员加入评委团
-  if (session?.user) {
-    const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
-    if (isAdmin) {
-      await ensureAdminJudges(activityId);
-    }
-  }
-
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },
     include: {
-      jamJudges: { include: { user: { select: { id: true, name: true, image: true } } } },
+      jamJudges: {
+        include: { user: { select: { id: true, name: true, image: true } } },
+        orderBy: { createdAt: "asc" },
+      },
       jamSubmissions: {
         include: {
           team: {
@@ -91,6 +59,21 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
   const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
   const canAccess = isAdmin || isJudge;
 
+  if (!canAccess) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <p className="text-lg font-semibold text-brand-navy">{t(lang, "judging.judgesOnly")}</p>
+        <Link href={`/activities/${activityId}`} className="text-sm mt-4 inline-block text-brand-blue hover:underline">
+          ← {t(lang, "gamejam.backToActivity")}
+        </Link>
+      </div>
+    );
+  }
+
+  const isOnlineJudging = activity.judgingMode === "ONLINE";
+  const isExternalJudging = activity.judgingMode === "EXTERNAL";
+  const isJudgingDisabled = activity.judgingMode === "DISABLED";
+
   // 计算排名
   const rankedSubmissions = activity.jamSubmissions
     .map(s => ({
@@ -109,31 +92,117 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
         </Link>
       </div>
 
-      {/* 评委管理（管理员） */}
+      {/* 评审管理 & 评委管理（管理员） */}
       {isAdmin && (
-        <div className="bg-card rounded-xl border border-brand-border-subtle p-6 mb-6">
-          <h2 className="font-semibold mb-3 text-brand-navy">{t(lang, "judging.judgeManagement")}</h2>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {activity.jamJudges.map(j => (
-              <span key={j.id} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA]">
-                <UserAvatar src={j.user.image} name={j.user.name} size={24} />
-                <span className="text-brand-navy">{j.user.name}</span>
-                <RemoveJudgeButton activityId={activityId} judgeId={j.id} />
-              </span>
-            ))}
+        <div className="space-y-4 mb-6">
+          <JudgingSettingsForm
+            activityId={activityId}
+            initialMode={activity.judgingMode}
+            initialPublic={activity.judgesPublic}
+            initialExternalUrl={activity.externalJudgingUrl}
+          />
+
+          <div className="bg-card rounded-xl border border-brand-border-subtle p-6">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-brand-navy">{t(lang, "judging.judgeManagement")}</h2>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-surface text-brand-text-muted">
+                  {activity.jamJudges.length} 人
+                </span>
+                {!activity.judgesPublic && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20">
+                    🔒 {t(lang, "judging.judgesConfidentialAdminBadge")}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {activity.jamJudges.length === 0 ? (
+              <p className="text-xs text-brand-text-muted py-2">暂无评委，可通过下方表单添加社内成员或外部评委。</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {activity.jamJudges.map(j => (
+                  <span key={j.id} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA] dark:bg-white/5 border border-brand-border-subtle">
+                    {j.user ? (
+                      <UserAvatar src={j.user.image} name={j.user.name} size={24} />
+                    ) : (
+                      <span className="w-6 h-6 rounded-full bg-brand-blue/10 text-brand-blue flex items-center justify-center text-xs font-semibold">
+                        外
+                      </span>
+                    )}
+                    <span className="text-brand-navy font-medium">
+                      {j.user?.name || j.externalName}
+                    </span>
+                    {j.title && (
+                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-brand-surface text-brand-text-muted">
+                        {j.title}
+                      </span>
+                    )}
+                    <RemoveJudgeButton activityId={activityId} judgeId={j.id} />
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <AddJudgeForm
+              activityId={activityId}
+              existingJudgeIds={activity.jamJudges.map(j => j.userId).filter(Boolean) as string[]}
+              canJoinSelf={session?.user?.id ? !activity.jamJudges.some(j => j.userId === session.user.id) : false}
+            />
           </div>
-          <AddJudgeForm activityId={activityId} existingJudgeIds={activity.jamJudges.map(j => j.userId)} />
+        </div>
+      )}
+
+      {/* 评审模式非线上打分时的提示 */}
+      {isExternalJudging && (
+        <div className="mb-6 p-4 rounded-xl border border-blue-200 bg-blue-50/70 dark:bg-blue-500/10 dark:border-blue-500/20 text-sm">
+          <div className="flex items-center gap-2 font-medium text-brand-blue mb-1">
+            <span>🌐</span>
+            <span>{t(lang, "judging.modeExternal")}</span>
+          </div>
+          <p className="text-xs text-brand-text-secondary leading-relaxed">
+            {t(lang, "judging.modeExternalNotice")}
+          </p>
+          {activity.externalJudgingUrl && (
+            <div className="mt-2 pt-2 border-t border-blue-200/60 flex items-center gap-2">
+              <span className="text-xs text-brand-text-muted">说明 / 链接：</span>
+              {activity.externalJudgingUrl.startsWith("http") ? (
+                <a
+                  href={activity.externalJudgingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-brand-blue hover:underline break-all"
+                >
+                  {activity.externalJudgingUrl} ↗
+                </a>
+              ) : (
+                <span className="text-xs text-brand-text-body font-medium">{activity.externalJudgingUrl}</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isJudgingDisabled && (
+        <div className="mb-6 p-4 rounded-xl border border-gray-200 bg-gray-50/70 dark:bg-white/5 dark:border-white/10 text-sm">
+          <div className="flex items-center gap-2 font-medium text-brand-text-heading mb-1">
+            <span>⏸️</span>
+            <span>{t(lang, "judging.modeDisabled")}</span>
+          </div>
+          <p className="text-xs text-brand-text-muted leading-relaxed">
+            {t(lang, "judging.modeDisabledNotice")}
+          </p>
         </div>
       )}
 
       {/* 参赛作品 */}
       <div className="bg-card rounded-xl border border-brand-border-subtle p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div>
             <h2 className="font-semibold text-brand-navy">{t(lang, "activityDetail.jamEntries", { n: rankedSubmissions.length })}</h2>
             {rankedSubmissions.length > 0 && (
               <p className="text-xs mt-1 text-brand-text-muted">
-                {t(lang, "judging.expandHint")}
+                {isOnlineJudging ? t(lang, "judging.expandHint") : "点击作品可展开详情并查阅资料"}
               </p>
             )}
           </div>
@@ -162,8 +231,8 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
 
               return (
                 <details key={sub.id} className="group">
-                    {/* ---- 摘要行（收起时显示） ---- */}
-                  <summary className={`list-none cursor-pointer flex items-center gap-4 p-4 rounded-xl border transition-colors hover:bg-[#F8FAFB] ${idx === 0 && sub.avgScore > 0 ? "border-[#FFCC80]" : "border-brand-border-subtle"}`}>
+                  {/* ---- 摘要行（收起时显示） ---- */}
+                  <summary className={`list-none cursor-pointer flex items-center gap-4 p-4 rounded-xl border transition-colors hover:bg-[#F8FAFB] dark:hover:bg-white/5 ${idx === 0 && sub.avgScore > 0 && isOnlineJudging ? "border-[#FFCC80]" : "border-brand-border-subtle"}`}>
                     {/* 缩略图 */}
                     <div className="w-16 h-12 shrink-0 rounded-lg overflow-hidden flex items-center justify-center text-xs bg-brand-surface text-brand-text-muted">
                       {coverImage ? (
@@ -180,7 +249,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm truncate text-brand-navy">{sub.title}</span>
                         {sub.projectId && (
-                            <Link href={`/works/${sub.projectId}`} className="text-[10px] px-1.5 py-0.5 rounded-full border border-brand-green text-brand-green shrink-0 hover:bg-[#E6F0F8]">
+                          <Link href={`/works/${sub.projectId}`} className="text-[10px] px-1.5 py-0.5 rounded-full border border-brand-green text-brand-green shrink-0 hover:bg-[#E6F0F8]">
                             {t(lang, "judging.workPageShort")}
                           </Link>
                         )}
@@ -194,8 +263,8 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                       </div>
                     </div>
 
-                    {/* 排名&均分 */}
-                        {sub.avgScore > 0 && (
+                    {/* 排名&均分（仅线上打分时展示） */}
+                    {isOnlineJudging && sub.avgScore > 0 && (
                       <div className="text-right shrink-0">
                         <div className={`text-lg font-bold ${idx === 0 ? "text-brand-orange" : "text-brand-blue"}`}>{sub.avgScore}</div>
                         <div className="text-[10px] text-brand-text-muted">
@@ -204,10 +273,12 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                       </div>
                     )}
 
-                    {/* 打分状态指示 */}
-                    <div className={`text-xs shrink-0 text-right ${myScore ? "text-[var(--ui-text-green)]" : "text-brand-text-muted"}`}>
-                      {myScore ? t(lang, "judging.scored") : t(lang, "judging.pending")}
-                    </div>
+                    {/* 打分状态指示（仅线上打分时展示） */}
+                    {isOnlineJudging && (
+                      <div className={`text-xs shrink-0 text-right ${myScore ? "text-[var(--ui-text-green)]" : "text-brand-text-muted"}`}>
+                        {myScore ? t(lang, "judging.scored") : t(lang, "judging.pending")}
+                      </div>
+                    )}
 
                     {/* 展开指示 */}
                     <span className="text-sm shrink-0 text-[#ccc]">▸</span>
@@ -236,8 +307,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                   {imageFiles.map((url: string, i: number) => (
                                     <LightboxLink key={i} src={url}>
-                                      <div className="aspect-video rounded-lg overflow-hidden border border-brand-border-subtle hover:ring-2 transition-all"
-                                      >
+                                      <div className="aspect-video rounded-lg overflow-hidden border border-brand-border-subtle hover:ring-2 transition-all">
                                         <img src={url} alt={t(lang, "form.screenshotAlt", { n: i + 1 })} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                       </div>
                                     </LightboxLink>
@@ -263,7 +333,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                             <div className="flex flex-wrap gap-2">
                               {links.map((l, i) => (
                                 <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
-                                  className="text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors hover:shadow-sm bg-[#F0F6FA] text-brand-blue">
+                                  className="text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors hover:shadow-sm bg-[#F0F6FA] dark:bg-white/10 text-brand-blue">
                                   {l.label} <span className="text-brand-text-muted">↗</span>
                                 </a>
                               ))}
@@ -290,19 +360,19 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                       {/* 右侧：队伍 + 创作者 */}
                       <div className="lg:col-span-2 space-y-4">
                         {/* 队伍信息 */}
-                        <div className="rounded-xl p-4 bg-[#F0F5FA]">
+                        <div className="rounded-xl p-4 bg-[#F0F5FA] dark:bg-white/5">
                           <h3 className="text-sm font-semibold mb-3 text-brand-navy">{t(lang, "judging.team")}</h3>
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-sm font-medium text-brand-text-heading">{sub.team.name}</span>
                             {sub.team.members.find(m => m.role === "LEADER") && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FFF3E0] text-brand-orange">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FFF3E0] dark:bg-brand-orange/20 text-brand-orange">
                                 {t(lang, "activityDetail.leader")}
                               </span>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {sub.team.members.map(m => (
-                              <span key={m.user.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-card text-brand-text-body">
+                              <span key={m.user.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-card text-brand-text-body border border-brand-border-subtle">
                                 <UserAvatar src={m.user.image} name={m.user.name} size={24} />
                                 {m.user.name}
                               </span>
@@ -312,7 +382,7 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
 
                         {/* 制作者（metadata.creators） */}
                         {creators.length > 0 && (
-                          <div className="rounded-xl p-4 bg-[#F0F5FA]">
+                          <div className="rounded-xl p-4 bg-[#F0F5FA] dark:bg-white/5">
                             <h3 className="text-sm font-semibold mb-2 text-brand-navy">{t(lang, "judging.creators")}</h3>
                             <div className="space-y-1.5">
                               {creators.map((c, i) => (
@@ -327,42 +397,48 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                       </div>
                     </div>
 
-                    {/* 分隔线 */}
-                    <div className="my-5 border-t border-brand-border-subtle" />
-
-                    {/* 已有评分 */}
-                    {sub.scores.length > 0 && (
-                      <div className="space-y-2 mb-4">
-                        <h3 className="text-sm font-semibold mb-2 text-brand-navy"><TrophyIcon size={14} className="mr-1 align-[-0.15em]" />{t(lang, "judging.scores", { n: sub.scores.length })}</h3>
-                        {sub.scores.map(sc => {
-                          const c = (sc.criteria || {}) as Record<string, number>;
-                          return (
-                            <div key={sc.id} className="text-xs p-3 rounded flex flex-wrap items-center gap-x-4 gap-y-1 bg-card border border-[#E6F0F8]">
-                              <span className="font-medium text-brand-text-body">{sc.judge.name}</span>
-                              <div className="flex gap-3">
-                                <span>🎨 {(c.art ?? c.creativity ?? "-")}</span>
-                                <span>📖 {(c.story ?? c.execution ?? "-")}</span>
-                                <span>🎮 {(c.gameplay ?? c.theme ?? "-")}</span>
+                    {/* 已有评分（仅线上评审且有打分时展示） */}
+                    {isOnlineJudging && sub.scores.length > 0 && (
+                      <>
+                        <div className="my-5 border-t border-brand-border-subtle" />
+                        <div className="space-y-2 mb-4">
+                          <h3 className="text-sm font-semibold mb-2 text-brand-navy flex items-center">
+                            <TrophyIcon size={14} className="mr-1.5 text-brand-orange" />
+                            {t(lang, "judging.scores", { n: sub.scores.length })}
+                          </h3>
+                          {sub.scores.map(sc => {
+                            const c = (sc.criteria || {}) as Record<string, number>;
+                            return (
+                              <div key={sc.id} className="text-xs p-3 rounded-lg flex flex-wrap items-center gap-x-4 gap-y-1 bg-card border border-brand-border-subtle">
+                                <span className="font-medium text-brand-text-body">{sc.judge.name}</span>
+                                <div className="flex gap-3">
+                                  <span>🎨 {(c.art ?? c.creativity ?? "-")}</span>
+                                  <span>📖 {(c.story ?? c.execution ?? "-")}</span>
+                                  <span>🎮 {(c.gameplay ?? c.theme ?? "-")}</span>
+                                </div>
+                                <span className="font-bold text-brand-orange">{t(lang, "activityDetail.scorePoints", { n: sc.totalScore })}</span>
+                                {sc.comment && (
+                                  <span className="w-full italic text-brand-text-muted mt-1">"{sc.comment}"</span>
+                                )}
                               </div>
-                              <span className="font-bold text-brand-orange">{t(lang, "activityDetail.scorePoints", { n: sc.totalScore })}</span>
-                              {sc.comment && (
-                                <span className="w-full italic text-brand-text-muted">"{sc.comment}"</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
 
-                    {/* 评分表单 */}
-                    {canAccess && (
-                      <div className="rounded-xl p-4 bg-card border border-[#E6F0F8]">
-                        <SubmitScoreForm
-                          activityId={activityId}
-                          submissionId={sub.id}
-                          myScore={myScore}
-                        />
-                      </div>
+                    {/* 评分表单（仅线上评审时开放） */}
+                    {isOnlineJudging && canAccess && (
+                      <>
+                        <div className="my-5 border-t border-brand-border-subtle" />
+                        <div className="rounded-xl p-4 bg-card border border-brand-border-subtle">
+                          <SubmitScoreForm
+                            activityId={activityId}
+                            submissionId={sub.id}
+                            myScore={myScore}
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
                 </details>

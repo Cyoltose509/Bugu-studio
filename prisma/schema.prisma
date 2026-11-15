@@ -694,6 +694,9 @@ model Activity {
   theme            String?        @db.Text // Game Jam — 比赛题目
   themeRevealedAt  DateTime?               // Game Jam — 题目公布时间
   maxTeamSize      Int?          @default(6) // Game Jam — 每队最大人数
+  judgesPublic     Boolean       @default(true) // Game Jam — 评委名单是否公开
+  judgingMode      String        @default("ONLINE") // Game Jam — 评审模式: ONLINE (本站线上打分) | EXTERNAL (站外/线下评审) | DISABLED (不设评审)
+  externalJudgingUrl String?     // Game Jam — 站外/线下评审说明或外部链接
   /// 活动推荐细分类：GAME_JAM / HACKATHON / TRAINING / OTHER（字符串而非枚举，扩类别免迁移）
   recoTag          String?
   status           ActivityStatus @default(DRAFT)
@@ -998,13 +1001,15 @@ model JamSubmission {
 
 // Game Jam — 评委
 model JamJudge {
-  id         String   @id @default(cuid())
-  activityId String
-  userId     String
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  activityId   String
+  userId       String?
+  externalName String?
+  title        String?  // 评委身份/头衔，如 "独立游戏制作人"、"指导老师"
+  createdAt    DateTime @default(now())
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([activityId, userId])
   @@index([activityId])

@@ -150,6 +150,10 @@ export async function createActivity(formData: FormData) {
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
+  const rawJudgingMode = (formData.get("judgingMode") as string || "ONLINE").trim();
+  const judgingMode = ["ONLINE", "EXTERNAL", "DISABLED"].includes(rawJudgingMode) ? rawJudgingMode : "ONLINE";
+  const judgesPublic = formData.has("judgesPublic") ? formData.get("judgesPublic") === "on" || formData.get("judgesPublic") === "true" : true;
+  const externalJudgingUrl = (formData.get("externalJudgingUrl") as string || "").trim() || null;
   // 活动推荐细分类：仅推荐类型生效，其余类型强制清空
   const recoTagRaw = (formData.get("recoTag") as string || "").trim();
   const recoTag = type === "RECOMMENDATION" && isRecoTag(recoTagRaw) ? recoTagRaw : null;
@@ -187,6 +191,9 @@ export async function createActivity(formData: FormData) {
     themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
     maxTeamSize,
     recoTag,
+    judgingMode,
+    judgesPublic,
+    externalJudgingUrl,
   };
 
   let activity: { id: string; slug: string };
@@ -239,6 +246,10 @@ export async function updateActivity(id: string, formData: FormData) {
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
+  const rawJudgingMode = (formData.get("judgingMode") as string || "ONLINE").trim();
+  const judgingMode = ["ONLINE", "EXTERNAL", "DISABLED"].includes(rawJudgingMode) ? rawJudgingMode : "ONLINE";
+  const judgesPublic = formData.has("judgesPublic") ? formData.get("judgesPublic") === "on" || formData.get("judgesPublic") === "true" : true;
+  const externalJudgingUrl = (formData.get("externalJudgingUrl") as string || "").trim() || null;
   // 活动推荐细分类：仅推荐类型生效，其余类型强制清空
   const recoTagRaw = (formData.get("recoTag") as string || "").trim();
   const recoTag = type === "RECOMMENDATION" && isRecoTag(recoTagRaw) ? recoTagRaw : null;
@@ -280,6 +291,9 @@ export async function updateActivity(id: string, formData: FormData) {
       themeRevealedAt: themeRevealedAt ? parseActivityDateTime(themeRevealedAt, "start") : undefined,
       maxTeamSize: newMaxTeamSize,
       recoTag,
+      judgingMode,
+      judgesPublic,
+      externalJudgingUrl,
     },
   });
 

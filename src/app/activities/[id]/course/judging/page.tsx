@@ -11,44 +11,12 @@ import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import TrophyIcon from "@/components/icons/TrophyIcon";
 
-async function ensureAdminJudges(activityId: string) {
-  const adminUsers = await prisma.user.findMany({
-    where: {
-      role: "ADMIN",
-      NOT: { member: { graduated: true } },
-    },
-    select: { id: true },
-  });
-  if (adminUsers.length === 0) return;
-
-  const existingJudges = await prisma.jamJudge.findMany({
-    where: { activityId },
-    select: { userId: true },
-  });
-  const existingIds = new Set(existingJudges.map(j => j.userId));
-
-  const toAdd = adminUsers.filter(u => !existingIds.has(u.id));
-  if (toAdd.length > 0) {
-    await prisma.jamJudge.createMany({
-      data: toAdd.map(u => ({ activityId, userId: u.id })),
-      skipDuplicates: true,
-    });
-  }
-}
-
 export default async function CourseJudgingPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const lang = await getLang();
   const activityId = await resolveActivityId((await params).id);
   if (!activityId) notFound();
   const currentUserId = session?.user?.id;
-
-  if (session?.user) {
-    const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
-    if (isAdmin) {
-      await ensureAdminJudges(activityId);
-    }
-  }
 
   const activity = await prisma.activity.findUnique({
     where: { id: activityId },
@@ -130,15 +98,24 @@ export default async function CourseJudgingPage({ params }: { params: Promise<{ 
         <div className="bg-card rounded-xl border border-brand-border-subtle p-6 mb-6">
           <h2 className="font-semibold mb-3 text-brand-navy">{t(lang, "judging.judgeManagement")}</h2>
           <div className="flex flex-wrap gap-2 mb-4">
-            {jamJudges.map(j => (
-              <span key={j.id} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA]">
-                <UserAvatar src={j.user.image} name={j.user.name} size={24} />
-                <span className="text-brand-navy">{j.user.name}</span>
-                <RemoveJudgeButton activityId={activityId} judgeId={j.id} />
-              </span>
-            ))}
+            {jamJudges.map(j => {
+              const name = j.user?.name || j.externalName || "评委";
+              const avatar = j.user?.image || null;
+              return (
+                <span key={j.id} className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA] dark:bg-brand-surface-card">
+                  <UserAvatar src={avatar} name={name} size={24} />
+                  <span className="text-brand-navy dark:text-brand-text-body">{name}</span>
+                  {j.title && <span className="text-xs text-brand-text-muted">({j.title})</span>}
+                  <RemoveJudgeButton activityId={activityId} judgeId={j.id} />
+                </span>
+              );
+            })}
           </div>
-          <AddJudgeForm activityId={activityId} existingJudgeIds={jamJudges.map(j => j.userId)} />
+          <AddJudgeForm
+            activityId={activityId}
+            existingJudgeIds={jamJudges.map(j => j.userId).filter((id): id is string => Boolean(id))}
+            canJoinSelf={isAdmin && !isJudge}
+          />
         </div>
       )}
 

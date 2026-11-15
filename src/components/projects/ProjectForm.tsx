@@ -8,6 +8,7 @@ import MentionEditor from "@/components/ui/MentionEditor";
 import EngineTagIcon from "@/components/tags/EngineTagIcon";
 import EventTagIcon from "@/components/tags/EventTagIcon";
 import TrophyIcon from "@/components/icons/TrophyIcon";
+import ProjectLinksEditor from "@/components/projects/ProjectLinksEditor";
 import { ImageDropZone } from "@/components/ui/ImageDropZone";
 import {
   uploadImage,
@@ -52,15 +53,7 @@ const ROLE_LABELS: Record<string, DictKey> = {
   "制作": "form.role.production",
 };
 
-const LINK_LABEL_PRESETS: { v: string; k?: DictKey }[] = [
-  { v: "Steam" },
-  { v: "itch.io" },
-  { v: "官网", k: "form.link.official" },
-  { v: "百度网盘", k: "form.link.baidu" },
-  { v: "Google Drive" },
-  { v: "GitHub" },
-  { v: "B站", k: "form.link.bilibili" },
-];
+
 
 // ── 通用类型 ──
 interface Tag { id: string; name: string; slug: string; group?: string | null; color?: string | null; sortOrder?: number; }
@@ -173,10 +166,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const [externalName, setExternalName] = useState("");
   const [externalRole, setExternalRole] = useState("");
 
-  // ── 链接 ──
-  const [newLinkLabel, setNewLinkLabel] = useState("");
-  const [newLinkUrl, setNewLinkUrl] = useState("");
-  const [showCustomLabel, setShowCustomLabel] = useState(false);
+
   const [showCustomRole, setShowCustomRole] = useState(false);
 
   const isEdit = mode === "edit";
@@ -393,20 +383,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
     });
   }
 
-  // ── 链接 ──
-  function addLink() {
-    const label = newLinkLabel.trim();
-    const url = newLinkUrl.trim();
-    if (!label || !url) return;
-    setLinks((prev) => [...prev, { label, url }]);
-    setNewLinkLabel("");
-    setNewLinkUrl("");
-    setShowCustomLabel(false);
-  }
 
-  function removeLink(index: number) {
-    setLinks((prev) => prev.filter((_, i) => i !== index));
-  }
 
   // ── 标签 ──
   function toggleTag(tagId: string) {
@@ -633,7 +610,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-brand-navy">🤖 {t("form.aiDeclare")}</h2>
         <p className="text-xs text-brand-text-muted">{t("form.aiHint")}</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { value: "AI_GENERATED", label: "form.aiGenerated", desc: "form.aiGeneratedDesc" },
             { value: "AI_ART", label: "form.aiArt", desc: "form.aiArtDesc" },
@@ -645,14 +622,14 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
                 onClick={() => setSelectedAiUsages(prev =>
                   prev.includes(item.value) ? prev.filter(v => v !== item.value) : [...prev, item.value]
                 )}
-                className={`text-sm px-3 py-2 rounded-lg border transition-all cursor-pointer text-left ${
+                className={`w-full text-sm px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer text-left flex flex-col justify-start ${
                   active
                     ? "border-brand-purple bg-brand-purple/10 text-brand-purple ring-1 ring-brand-purple"
                     : "border-brand-border-subtle hover:border-brand-purple/40 text-brand-text-secondary"
                 }`}
               >
                 <div className="font-medium">{t(item.label as DictKey)}</div>
-                <div className="text-xs mt-0.5 opacity-75">{t(item.desc as DictKey)}</div>
+                <div className="text-xs mt-1 opacity-75 leading-relaxed">{t(item.desc as DictKey)}</div>
               </button>
             );
           })}
@@ -907,43 +884,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-brand-navy">🔗 {t("form.links")}</h2>
         <p className="text-xs text-brand-text-muted">{t("form.linksHint")}</p>
-        {links.length > 0 && (
-          <div className="space-y-1.5">
-            {links.map((link, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-2 bg-[var(--ui-surface-alt2)] rounded-lg text-sm">
-                <span className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 bg-brand-navy text-white">{link.label}</span>
-                <span className="truncate flex-1 text-brand-blue">{link.url}</span>
-                <button type="button" onClick={() => removeLink(i)} className="text-xs flex-shrink-0 hover:text-red-500 text-brand-text-muted">{t("profile.edit.remove")}</button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex flex-wrap items-end gap-2">
-          {!showCustomLabel ? (
-            <select value={newLinkLabel} onChange={(e) => {
-              const v = e.target.value;
-              if (v === "__custom__") { setShowCustomLabel(true); setNewLinkLabel(""); }
-              else setNewLinkLabel(v);
-            }} className={`${inputClass} w-36`}>
-              <option value="">{t("form.selectType")}</option>
-              {LINK_LABEL_PRESETS.map((l) => <option key={l.v} value={l.v}>{l.k ? t(l.k) : l.v}</option>)}
-              <option value="__custom__">{t("form.customEllipsis")}</option>
-            </select>
-          ) : (
-            <div className="flex items-center gap-1">
-              <input type="text" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
-                placeholder={t("form.linkLabel")} className={`${inputClass} w-36`} />
-              <button type="button" onClick={() => { setShowCustomLabel(false); setNewLinkLabel(""); }}
-                className="text-xs px-2 py-1.5 rounded hover:bg-muted whitespace-nowrap text-brand-blue">{t("form.backToPreset")}</button>
-            </div>
-          )}
-          <input type="url" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
-            placeholder="https://..." className={`${inputClass} flex-1 min-w-[200px]`} />
-          <button type="button" onClick={addLink} disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-all bg-brand-green text-white">{t("profile.edit.add")}</button>
-        </div>
+        <ProjectLinksEditor links={links} onChange={setLinks} />
       </section>
 
       {/* ═══════════════ 标签 ═══════════════ */}

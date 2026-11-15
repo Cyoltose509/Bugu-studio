@@ -203,6 +203,7 @@ export default function ErrorReportsClient() {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [popoverPlacement, setPopoverPlacement] = useState<"down" | "up">("down");
 
   const groups = useMemo(() => groupReports(reports), [reports]);
 
@@ -385,8 +386,14 @@ export default function ErrorReportsClient() {
               return (
                 <div
                   key={group.key}
-                  className={`relative border-t border-brand-border-subtle dark:border-[#2a3045] ${hovered ? "z-20" : "z-0"}`}
-                  onMouseEnter={() => setHoveredKey(group.key)}
+                  className={`relative border-t border-brand-border-subtle dark:border-[#2a3045] ${hovered ? "z-30" : "z-0"}`}
+                  onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const spaceBelow = window.innerHeight - rect.bottom;
+                    const spaceAbove = rect.top;
+                    setPopoverPlacement(spaceBelow < 380 && spaceAbove > spaceBelow ? "up" : "down");
+                    setHoveredKey(group.key);
+                  }}
                   onMouseLeave={() => setHoveredKey((k) => (k === group.key ? null : k))}
                 >
                   <div
@@ -436,10 +443,13 @@ export default function ErrorReportsClient() {
                       )}
                       {showDetails && (
                         <div
+                          style={{ overflowAnchor: "none" }}
                           className={
                             pinned
                               ? "mt-3 p-3 rounded-lg border border-brand-border-subtle dark:border-[#2a3045] bg-black/[0.03] dark:bg-white/[0.04]"
-                              : "absolute left-0 right-0 top-full z-20 mt-1 p-3 rounded-lg border border-brand-border-subtle dark:border-[#2a3045] bg-card shadow-lg"
+                              : `absolute left-0 right-0 z-30 p-3 rounded-lg border border-brand-border-subtle dark:border-[#2a3045] bg-card shadow-xl max-h-[min(420px,calc(100vh-140px))] overflow-y-auto overscroll-contain ${
+                                  popoverPlacement === "up" ? "bottom-full mb-1.5" : "top-full mt-1.5"
+                                }`
                           }
                         >
                           <GroupDetails group={group} timeAgo={timeAgo} />

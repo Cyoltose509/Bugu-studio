@@ -11,6 +11,7 @@ import {
   compressionNote,
 } from "@/lib/utils/clientUpload";
 import { useLang } from "@/lib/i18n/LangProvider";
+import ProjectLinksEditor from "@/components/projects/ProjectLinksEditor";
 import { tagDisplayName, tagGroupDisplayName } from "@/lib/tags/tag-names";
 import type { DictKey } from "@/lib/i18n/dict";
 
@@ -37,15 +38,7 @@ const ROLE_CN_TO_KEY: Record<string, DictKey> = {
   ...Object.fromEntries(ROLE_PRESETS.map((r) => [r.cn, r.k])),
 };
 
-const LINK_LABEL_PRESETS: { v: string; k?: DictKey }[] = [
-  { v: "Steam" },
-  { v: "itch.io" },
-  { v: "官网", k: "form.link.official" },
-  { v: "百度网盘", k: "form.link.baidu" },
-  { v: "Google Drive" },
-  { v: "GitHub" },
-  { v: "B站", k: "form.link.bilibili" },
-];
+
 
 interface TeamMember {
   id: string;
@@ -103,9 +96,7 @@ export function JamSubmitForm({
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
   const [links, setLinks] = useState<LinkEntry[]>(existing?.links || []);
-  const [newLinkLabel, setNewLinkLabel] = useState("");
-  const [newLinkUrl, setNewLinkUrl] = useState("");
-  const [showCustomLabel, setShowCustomLabel] = useState(false);
+
 
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(existing?.tagIds || []);
   const [customTagInput, setCustomTagInput] = useState("");
@@ -182,19 +173,7 @@ export function JamSubmitForm({
     );
   };
 
-  const addLink = () => {
-    const label = newLinkLabel.trim();
-    const url = newLinkUrl.trim();
-    if (!label || !url) return;
-    setLinks((prev) => [...prev, { label, url }]);
-    setNewLinkLabel("");
-    setNewLinkUrl("");
-    setShowCustomLabel(false);
-  };
 
-  const removeLink = (idx: number) => {
-    setLinks((prev) => prev.filter((_, i) => i !== idx));
-  };
 
   const toggleTag = (tagId: string) => {
     setSelectedTagIds((prev) =>
@@ -548,78 +527,11 @@ export function JamSubmitForm({
         <h2 className="text-lg font-semibold text-brand-navy">
           {t("gamejam.links")}
         </h2>
-        {links.length > 0 && (
-          <div className="space-y-1.5">
-            {links.map((link, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-[#F0F5F9]"
-              >
-                <span
-                  className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 text-white bg-brand-navy"
-                >
-                  {link.label}
-                </span>
-                <span className="truncate flex-1 text-brand-blue">{link.url}</span>
-                <button
-                  type="button"
-                  onClick={() => removeLink(i)}
-                  className="text-xs flex-shrink-0 hover:text-red-500 text-brand-text-muted"
-                  disabled={!isOngoing || loading}
-                >
-                  {t("profile.edit.remove")}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2 flex-wrap">
-          {!showCustomLabel ? (
-            <select
-              value={newLinkLabel}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === "__custom__") { setShowCustomLabel(true); setNewLinkLabel(""); }
-                else setNewLinkLabel(v);
-              }}
-              className={`${inputClass} w-36`}
-              disabled={!isOngoing || loading}
-            >
-              <option value="">{t("gamejam.selectLabel")}</option>
-              {LINK_LABEL_PRESETS.map((l) => (
-                <option key={l.v} value={l.v}>{l.k ? t(l.k) : l.v}</option>
-              ))}
-              <option value="__custom__">{t("form.customEllipsis")}</option>
-            </select>
-          ) : (
-            <input
-              type="text"
-              value={newLinkLabel}
-              onChange={(e) => setNewLinkLabel(e.target.value)}
-              placeholder={t("gamejam.linkLabelPlaceholder")}
-              className={`${inputClass} w-36`}
-              disabled={!isOngoing || loading}
-            />
-          )}
-          <input
-            type="url"
-            value={newLinkUrl}
-            onChange={(e) => setNewLinkUrl(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
-            placeholder="https://..."
-            className={`${inputClass} flex-1 min-w-[200px]`}
-
-            disabled={!isOngoing || loading}
-          />
-          <button
-            type="button"
-            onClick={addLink}
-            disabled={!newLinkLabel.trim() || !newLinkUrl.trim() || !isOngoing || loading}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-40 text-white bg-brand-green"
-          >
-            {t("gamejam.add")}
-          </button>
-        </div>
+        <ProjectLinksEditor
+          links={links}
+          onChange={setLinks}
+          disabled={!isOngoing || loading}
+        />
       </section>
 
       {/* 标签 */}

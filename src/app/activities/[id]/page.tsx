@@ -308,7 +308,10 @@ async function ActivityDetailContent({ params }: { params: Promise<{ id: string 
           sizes="(max-width: 768px) 100vw, 896px"
           priority
         />
-        <ActivityTypeCorner type={activity.type} label={activityTypeLabel(lang, activity.type)} />
+        <ActivityTypeCorner
+          type={activity.type === "RECOMMENDATION" && activity.recoTag ? activity.recoTag : activity.type}
+          label={(activity.type === "RECOMMENDATION" && activity.recoTag ? recoTagLabel(lang, activity.recoTag) : null) || activityTypeLabel(lang, activity.type)}
+        />
       </div>
 
       {/* ── 标题区 ──────────────────────────────────── */}
@@ -1064,16 +1067,42 @@ async function CompetitionSection({
 
       {/* ── 评委列表 ─────────────────────────── */}
       {jamJudges.length > 0 && (
-        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
-          <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "activityDetail.judges")}</h3>
-          <div className="flex flex-wrap gap-2">
-            {jamJudges.map((j: any) => (
-              <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA] text-brand-navy">
-                <UserAvatar src={j.user.image} name={j.user.name} size={24} /> {j.user.name}
-              </span>
-            ))}
+        activity.judgesPublic !== false || isAdmin ? (
+          <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="font-semibold text-brand-navy">{t(lang, "activityDetail.judges")}</h3>
+              {activity.judgesPublic === false && isAdmin && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20">
+                  🔒 {t(lang, "judging.judgesConfidentialAdminBadge")}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {jamJudges.map((j: any) => (
+                <span key={j.id} className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-[#F0F6FA] dark:bg-white/5 border border-brand-border-subtle text-brand-navy">
+                  {j.user ? (
+                    <UserAvatar src={j.user.image} name={j.user.name} size={24} />
+                  ) : (
+                    <span className="w-5 h-5 rounded-full bg-brand-blue/10 text-brand-blue flex items-center justify-center text-[10px] font-semibold">
+                      外
+                    </span>
+                  )}
+                  <span>{j.user?.name || j.externalName}</span>
+                  {j.title && (
+                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-brand-surface text-brand-text-muted">
+                      {j.title}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-card rounded-xl border p-4 border-brand-border-subtle flex items-center gap-2 text-xs text-brand-text-muted">
+            <span>🔒</span>
+            <span>{t(lang, "judging.judgesConfidentialNotice")}</span>
+          </div>
+        )
       )}
 
       {/* ── 参赛作品 ───────────────────────────── */}
@@ -1110,13 +1139,13 @@ async function CompetitionSection({
                     />
                   )}
                   <div className="text-right min-w-[60px]">
-                    {sub.scores.length > 0 ? (
+                    {sub.scores.length > 0 && activity.judgingMode === "ONLINE" ? (
                       <span className="text-sm font-semibold text-brand-orange">
                         {t(lang, "activityDetail.scorePoints", { n: Math.round(sub.scores.reduce((a: number, b: any) => a + b.totalScore, 0) / sub.scores.length) })}
                       </span>
-                    ) : (
+                    ) : activity.judgingMode === "ONLINE" ? (
                       <span className="text-xs text-brand-text-muted">{t(lang, "activityDetail.pendingScore")}</span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -1135,8 +1164,35 @@ async function CompetitionSection({
         </div>
       )}
 
-      {/* ── 评委入口 ────────────────────────────── */}
-      {isJudge && isPast && (
+      {/* ── 评审入口 / 说明 ────────────────────────────── */}
+      {activity.judgingMode === "EXTERNAL" && (
+        <div className="bg-card rounded-xl border border-brand-border-subtle p-6 text-center space-y-2">
+          <h3 className="font-semibold text-brand-navy flex items-center justify-center gap-1.5 text-sm">
+            <span>🌐</span> {t(lang, "judging.modeExternal")}
+          </h3>
+          <p className="text-xs text-brand-text-secondary max-w-md mx-auto">
+            {t(lang, "judging.modeExternalNotice")}
+          </p>
+          {activity.externalJudgingUrl && (
+            <div className="pt-2">
+              {activity.externalJudgingUrl.startsWith("http") ? (
+                <a
+                  href={activity.externalJudgingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-xs px-5 py-2 rounded-lg text-white font-medium bg-brand-blue hover:bg-brand-blue-hover transition-colors"
+                >
+                  前往评审地址 ↗
+                </a>
+              ) : (
+                <p className="text-xs font-semibold text-brand-text-heading">{activity.externalJudgingUrl}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activity.judgingMode !== "EXTERNAL" && activity.judgingMode !== "DISABLED" && isJudge && isPast && (
         <div className="text-center">
           <Link
             href={`/activities/${activityId}/game-jam/judging`}

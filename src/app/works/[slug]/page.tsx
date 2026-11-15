@@ -24,6 +24,7 @@ import ProjectLikeButton from "@/components/projects/ProjectLikeButton";
 import { RichContent } from "@/components/ui/RichContent";
 import LinkIcon from "@/components/icons/LinkIcon";
 import TrophyIcon from "@/components/icons/TrophyIcon";
+import ProjectQuickLinks from "@/components/works/ProjectQuickLinks";
 import LogoLoading from "@/components/ui/LogoLoading";
 import PrefetchNav from "@/components/works/PrefetchNav";
 import { TagChipLink } from "@/components/tags/TagChip";
@@ -388,13 +389,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
           {externalLinks.length > 0 && (
             <div className="rounded-xl p-5 border bg-brand-surface-page border-brand-border-subtle">
               <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "works.detail.getGame")}</h3>
-              <div className="space-y-2">
-                {externalLinks.map((link) => (
-                  <a key={link.label} href={link.url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg transition-colors hover:shadow-sm hover:bg-brand-border-subtle text-brand-text-heading bg-brand-surface">
-                    <LinkIcon label={link.label} url={link.url} size={16} /><span>{link.label}</span><span className="ml-auto text-brand-text-muted">↗</span>
-                  </a>
-                ))}
-              </div>
+              <ProjectQuickLinks links={externalLinks} />
             </div>
           )}
 

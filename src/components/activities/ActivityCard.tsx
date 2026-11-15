@@ -10,6 +10,7 @@ import type { Lang } from "@/lib/i18n/config";
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
 import { formatActivitySchedule } from "@/lib/activities/datetime";
 import { localizeActivityTitle } from "@/lib/activities/title";
+import { recoTagLabel } from "@/lib/activities/recommendation";
 import ActivityTypeCorner from "./ActivityTypeCorner";
 
 /** 卡片只需要这些字段，调用方传 Prisma 整行也能直接过 */
@@ -17,6 +18,7 @@ export type ActivityCardData = {
   id: string;
   title: string;
   type: string;
+  recoTag?: string | null;
   summary?: string | null;
   location?: string | null;
   meetingUrl?: string | null;
@@ -81,7 +83,10 @@ export default function ActivityCard({
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
-          <ActivityTypeCorner type={a.type} label={activityTypeLabel(lang, a.type)} />
+          <ActivityTypeCorner
+            type={a.recoTag || a.type}
+            label={(a.recoTag ? recoTagLabel(lang, a.recoTag) : null) || activityTypeLabel(lang, a.type)}
+          />
           {(badge || countdown) && (
             <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
               {badge && (

@@ -2,8 +2,11 @@
  * 活动推荐（RECOMMENDATION）辅助函数防回归。
  * @vitest-environment happy-dom
  */
+import React from "react";
 import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { isRecoTag, recoTagLabel, RECO_TAGS } from "@/lib/activities/recommendation";
+import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 
 describe("活动推荐 recoTag", () => {
   it("预设细分类齐全：Game Jam / 黑客松 / 合作培训 / 其他", () => {
@@ -26,5 +29,18 @@ describe("活动推荐 recoTag", () => {
     expect(recoTagLabel("cn", "WHATEVER")).toBeNull();
     expect(recoTagLabel("cn", null)).toBeNull();
     expect(recoTagLabel("en", undefined)).toBeNull();
+  });
+
+  it("ActivityTypeCorner 绶带支持推荐细分类样式渲染", () => {
+    const { container, rerender } = render(React.createElement(ActivityTypeCorner, { type: "HACKATHON", label: "黑客松" }));
+    const span = container.querySelector("span");
+    expect(span?.textContent).toBe("黑客松");
+    expect(span?.className).toContain("rotate-[-45deg]");
+    expect(span?.className).toContain("bg-[#C2447C]");
+
+    rerender(React.createElement(ActivityTypeCorner, { type: "GAME_JAM", label: "Game Jam" }));
+    const spanJam = container.querySelector("span");
+    expect(spanJam?.textContent).toBe("Game Jam");
+    expect(spanJam?.className).toContain("bg-brand-orange");
   });
 });

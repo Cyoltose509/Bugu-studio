@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import CdnImage from "@/components/ui/CdnImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgendaSpeaker, AgendaTypeTag } from "@/components/activities/meeting/AgendaRow";
@@ -18,6 +19,7 @@ export type AgendaTimelineItem = {
   imageUrl: string;
   bvId: string;
   speakers: { name: string; href: string | null; image: string | null; byLabel: string }[];
+  href?: string;
   /** 传入即可让上传者本人编辑这张卡 */
   ownEdit?: OwnTalkDraft;
   /** 传入则在标题行显示删除按钮（管理员对未入议程申请） */
@@ -91,7 +93,7 @@ export default function AgendaTimeline({
 
   return (
     <>
-      <ol className="relative py-1 pl-1.5">
+      <ol className="relative py-1 pl-1.5 list-none">
         {/* 时间轴轨道：细线贯穿，分享=蓝节点、展示=橙节点（实心圆）。无外框，直接落在页面上。
             pl-1.5 给节点留出左半半径，避免被 aside 滚动容器的 overflow 裁掉 */}
         <span aria-hidden className="absolute bottom-2 left-[6px] top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
@@ -113,7 +115,16 @@ export default function AgendaTimeline({
               />
               <div className="flex flex-wrap items-center gap-2">
                 <AgendaTypeTag type={item.type} label={item.typeLabel} />
-                <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy">{item.title}</p>
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    className="min-w-0 flex-1 text-sm font-medium text-brand-navy hover:text-brand-blue transition-colors line-clamp-2"
+                  >
+                    {item.title}
+                  </Link>
+                ) : (
+                  <p className="min-w-0 flex-1 text-sm font-medium text-brand-navy">{item.title}</p>
+                )}
                 {item.bvId ? <BilibiliTvLink bvId={item.bvId} /> : null}
                 <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                   {item.speakers.map((speaker, index) => (

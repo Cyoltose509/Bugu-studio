@@ -236,6 +236,26 @@ export default function CreateActivityPage() {
                   <label className={label} htmlFor="maxTeamSize">每队最大人数 <span className="text-xs text-brand-text-muted">(默认 6)</span></label>
                   <input id="maxTeamSize" name="maxTeamSize" type="number" min={1} max={50} defaultValue={6} className={`${field} max-w-[8rem]`} />
                 </div>
+                <div className="pt-2 border-t border-brand-border-subtle space-y-3">
+                  <div>
+                    <label className={label} htmlFor="judgingMode">评审方式</label>
+                    <select id="judgingMode" name="judgingMode" defaultValue="ONLINE" className={field}>
+                      <option value="ONLINE">本站线上打分（默认）</option>
+                      <option value="EXTERNAL">站外或线下评审</option>
+                      <option value="DISABLED">不设评审环节（仅展示作品）</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={label} htmlFor="externalJudgingUrl">站外/线下评审说明或链接</label>
+                    <input id="externalJudgingUrl" name="externalJudgingUrl" type="text" placeholder="例如：https://... 或 现场路演评审" className={field} />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-brand-text-body">
+                      <input name="judgesPublic" type="checkbox" defaultChecked className="rounded border-brand-border-subtle text-brand-blue focus:ring-brand-blue" />
+                      <span>公开展示评委名单（取消勾选则匿名评审，仅管理员可见）</span>
+                    </label>
+                  </div>
+                </div>
               </>
             )}
           </aside>

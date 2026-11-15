@@ -1,3 +1,4 @@
+import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,6 +6,8 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { resolveActivityId } from "@/lib/activities/resolve";
 
 export default async function JamResultsPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  const isAdmin = (session?.user?.role as string) === "ADMIN" || (session?.user?.role as string) === "SUPER_ADMIN";
   const activityId = await resolveActivityId((await params).id);
   if (!activityId) notFound();
 
@@ -144,17 +147,38 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
           </div>
 
           {/* 评委列表 */}
-          {activity.jamJudges.length > 0 && (
+          {activity.jamJudges.length > 0 && (activity.judgesPublic || isAdmin) && (
             <div className="bg-card rounded-xl border border-brand-border-subtle p-6 mt-6">
-              <h2 className="font-semibold mb-3 text-brand-navy">🎯 评审团</h2>
-              <div className="flex flex-wrap gap-3">
-                {activity.jamJudges.map(j => (
-                  <div key={j.id} className="flex items-center gap-2">
-                    <UserAvatar src={j.user.image} name={j.user.name} size={32} />
-                    <span className="text-sm text-brand-text-body">{j.user.name}</span>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-brand-navy">🎯 评审团</h2>
+                {!activity.judgesPublic && isAdmin && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 font-normal">
+                    评委名单未向公众公开（仅管理可见）
+                  </span>
+                )}
               </div>
+              <div className="flex flex-wrap gap-3">
+                {activity.jamJudges.map(j => {
+                  const name = j.user?.name || j.externalName || "评委";
+                  const avatar = j.user?.image || null;
+                  return (
+                    <div key={j.id} className="flex items-center gap-2">
+                      <UserAvatar src={avatar} name={name} size={32} />
+                      <span className="text-sm text-brand-text-body">{name}</span>
+                      {j.title && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-brand-surface-card text-brand-text-muted">
+                          {j.title}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {activity.jamJudges.length > 0 && !activity.judgesPublic && !isAdmin && (
+            <div className="bg-card rounded-xl border border-brand-border-subtle p-5 mt-6 text-center text-sm text-brand-text-muted">
+              🔒 本次活动评委阵容保密 / 未公开
             </div>
           )}
         </>

@@ -113,6 +113,9 @@ export default async function EditActivityPage({ params }: PageProps) {
           themeRevealedAt: activity.themeRevealedAt ? fmt(activity.themeRevealedAt) : "",
           maxTeamSize: activity.maxTeamSize ?? 6,
           recoTag: activity.recoTag || "",
+          judgesPublic: activity.judgesPublic ?? true,
+          judgingMode: activity.judgingMode || "ONLINE",
+          externalJudgingUrl: activity.externalJudgingUrl || "",
         }}
         talks={talks}
         showcase={showcase}

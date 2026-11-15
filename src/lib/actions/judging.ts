@@ -16,28 +16,69 @@ export async function addJudge(activityId: string, formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
 
-  if (session.user.role === "GUEST") return { error: t(lang, "works.edit.forbidden") };
+  const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
+  if (!isAdmin) return { error: t(lang, "works.edit.forbidden") };
 
   const judgeUserId = (formData.get("judgeUserId") as string || "").trim();
-  if (!judgeUserId) return { error: t(lang, "judging.errSelectJudge") };
+  const externalName = (formData.get("externalName") as string || "").trim();
+  const title = (formData.get("title") as string || "").trim() || undefined;
 
-  const judge = await prisma.user.findUnique({
-    where: { id: judgeUserId },
-    include: { member: { select: { graduated: true } } },
-  });
-  if (!judge) return { error: t(lang, "judging.errUserNotFound") };
-  if (judge.role === "GUEST") return { error: t(lang, "judging.errGuestJudge") };
-  if (judge.member && judge.member.graduated) return { error: t(lang, "judging.errGraduatedJudge") };
+  if (externalName) {
+    if (externalName.length > 80) return { error: "评委姓名过长（最多80字）" };
+    const existing = await prisma.jamJudge.findFirst({
+      where: {
+        activityId,
+        externalName: { equals: externalName, mode: "insensitive" },
+      },
+    });
+    if (existing) return { error: t(lang, "judging.errAlreadyJudge") };
+
+    await prisma.jamJudge.create({
+      data: { activityId, externalName, title },
+    });
+  } else if (judgeUserId) {
+    const judge = await prisma.user.findUnique({
+      where: { id: judgeUserId },
+    });
+    if (!judge) return { error: t(lang, "judging.errUserNotFound") };
+    if (judge.role === "GUEST") return { error: t(lang, "judging.errGuestJudge") };
+
+    const existing = await prisma.jamJudge.findFirst({
+      where: { activityId, userId: judge.id },
+    });
+    if (existing) return { error: t(lang, "judging.errAlreadyJudge") };
+
+    await prisma.jamJudge.create({
+      data: { activityId, userId: judge.id, title },
+    });
+  } else {
+    return { error: t(lang, "judging.errSelectJudge") };
+  }
+
+  revalidatePath(`/activities/${activityId}`);
+  revalidatePath(`/activities/${activityId}/game-jam/judging`);
+  revalidatePath(`/activities/${activityId}/course/judging`);
+  return { success: true };
+}
+
+export async function joinAdminAsJudge(activityId: string) {
+  const lang = await getLang();
+  const session = await auth();
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
+
+  const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
+  if (!isAdmin) return { error: t(lang, "works.edit.forbidden") };
 
   const existing = await prisma.jamJudge.findFirst({
-    where: { activityId, userId: judge.id },
+    where: { activityId, userId: session.user.id },
   });
   if (existing) return { error: t(lang, "judging.errAlreadyJudge") };
 
   await prisma.jamJudge.create({
-    data: { activityId, userId: judge.id },
+    data: { activityId, userId: session.user.id },
   });
 
+  revalidatePath(`/activities/${activityId}`);
   revalidatePath(`/activities/${activityId}/game-jam/judging`);
   revalidatePath(`/activities/${activityId}/course/judging`);
   return { success: true };
@@ -47,12 +88,49 @@ export async function removeJudge(activityId: string, judgeId: string) {
   const lang = await getLang();
   const session = await auth();
   if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
-  if (session.user.role === "GUEST") return { error: t(lang, "works.edit.forbidden") };
+
+  const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
 
   const judge = await prisma.jamJudge.findFirst({ where: { id: judgeId, activityId } });
   if (!judge) return { error: t(lang, "judging.errJudgeNotFound") };
 
+  // 仅管理员或评委本人可以移除评委
+  if (!isAdmin && judge.userId !== session.user.id) {
+    return { error: t(lang, "works.edit.forbidden") };
+  }
+
   await prisma.jamJudge.delete({ where: { id: judgeId } });
+  revalidatePath(`/activities/${activityId}`);
+  revalidatePath(`/activities/${activityId}/game-jam/judging`);
+  revalidatePath(`/activities/${activityId}/course/judging`);
+  return { success: true };
+}
+
+export async function updateJudgingSettings(activityId: string, formData: FormData) {
+  const lang = await getLang();
+  const session = await auth();
+  if (!session?.user?.id) return { error: t(lang, "profile.edit.loginFirst") };
+
+  const isAdmin = (session.user.role as string) === "ADMIN" || (session.user.role as string) === "SUPER_ADMIN";
+  if (!isAdmin) return { error: t(lang, "works.edit.forbidden") };
+
+  const rawMode = (formData.get("judgingMode") as string || "ONLINE").trim();
+  const judgingMode = ["ONLINE", "EXTERNAL", "DISABLED"].includes(rawMode) ? rawMode : "ONLINE";
+  const judgesPublic = formData.get("judgesPublic") === "on" || formData.get("judgesPublic") === "true";
+  const externalJudgingUrl = (formData.get("externalJudgingUrl") as string || "").trim() || null;
+
+  await prisma.activity.update({
+    where: { id: activityId },
+    data: {
+      judgingMode,
+      judgesPublic,
+      externalJudgingUrl,
+    },
+  });
+
+  invalidateCache("activities:list");
+  invalidateCache("home:activities");
+  revalidatePath(`/activities/${activityId}`);
   revalidatePath(`/activities/${activityId}/game-jam/judging`);
   revalidatePath(`/activities/${activityId}/course/judging`);
   return { success: true };

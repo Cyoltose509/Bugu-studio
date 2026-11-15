@@ -16,6 +16,7 @@ import ActivityCard, {
   ACTIVITY_STATUS_LABEL,
 } from "@/components/activities/ActivityCard";
 import ActivityCalendar, { BAR_TONE } from "@/components/activities/ActivityCalendar";
+import AgendaTimeline, { type AgendaTimelineItem } from "@/components/activities/meeting/AgendaTimeline";
 import { AgendaTypeTag, AgendaSpeaker, agendaTypeLabel } from "@/components/activities/meeting/AgendaRow";
 import PlusIcon from "@/components/ui/PlusIcon";
 import { getLang } from "@/lib/i18n/getLang";
@@ -49,6 +50,9 @@ type SidebarTalk = {
   title: string;
   talkType: string;
   speaker: string;
+  description: string | null;
+  imageUrl: string | null;
+  bvId: string | null;
   speakers: SidebarSpeakerRow[];
   user: SidebarSpeakerRow["user"];
 };
@@ -130,21 +134,22 @@ const AGENDA_PREVIEW_MAX = 6;
 
 /** 讲者展示信息（与详情页 speakerMeta 同规则：有成员页链成员页，否则链个人资料） */
 function sidebarSpeakerList(talk: SidebarTalk, lang: Lang) {
-  const meta = (name: string, userId: string | null, user: SidebarSpeakerRow["user"]) => {
+  const meta = (name: string, userId: string | null, user: SidebarSpeakerRow["user"], index: number) => {
     const memberId = user?.member?.id;
     const uid = userId ?? user?.id ?? null;
     return {
       name: name || t(lang, "activityDetail.speakerFallback"),
       href: memberId ? `/members/${memberId}` : uid ? `/profile?id=${uid}` : null,
       image: user?.image ?? null,
+      byLabel: index === 0 ? t(lang, "meeting.by") : "&",
     };
   };
 
-  if (talk.speakers?.length) return talk.speakers.map((s) => meta(s.name, s.userId, s.user));
+  if (talk.speakers?.length) return talk.speakers.map((s, index) => meta(s.name, s.userId, s.user, index));
 
   // 没有讲者表记录时退回 speaker 字段，按分隔符拆成多个名字
   const names = (talk.speaker || "").split(/[、,，/]/).map((n) => n.trim()).filter(Boolean);
-  return names.map((name, index) => meta(name, null, names.length === 1 && index === 0 ? talk.user : null));
+  return names.map((name, index) => meta(name, null, names.length === 1 && index === 0 ? talk.user : null, index));
 }
 
 function SidebarAgenda({ items, lang, activityId }: {
@@ -154,53 +159,37 @@ function SidebarAgenda({ items, lang, activityId }: {
   const rest = items.length - shown.length;
   const href = `/activities/${activityId}#meeting-agenda`;
 
+  const timelineItems: AgendaTimelineItem[] = shown.map((talk) => {
+    const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
+    const speakers = sidebarSpeakerList(talk, lang);
+    return {
+      key: talk.id,
+      type,
+      typeLabel: agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase")),
+      title: talk.title,
+      description: talk.description || "",
+      imageUrl: talk.imageUrl || "",
+      bvId: talk.bvId || "",
+      href,
+      speakers,
+    };
+  });
+
   return (
     <div id="sidebar-agenda" className="flex max-h-[22rem] min-h-0 flex-col lg:max-h-none lg:flex-1">
       <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-brand-navy">{t(lang, "activityDetail.agenda")}</h3>
+        <h3 className="text-sm font-semibold text-brand-navy">
+          <Link href={href} className="hover:text-brand-blue transition-colors">
+            {t(lang, "activityDetail.agenda")}
+          </Link>
+        </h3>
         <span className="shrink-0 text-xs tabular-nums text-brand-text-muted">
           {t(lang, "activities.agendaItems", { n: items.length })}
         </span>
       </div>
-      {/* 与活动详情页同一套时间轴：细线贯穿 + 实心节点，分享蓝、展示橙 */}
+      {/* 采用与活动详细页完全一致的时间线样式：细线贯穿 + 实心节点（蓝/橙） + hover 展开 */}
       <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <ol className="relative py-1 pl-1.5">
-          <span aria-hidden className="absolute bottom-2 left-[6px] top-2 w-px -translate-x-1/2 rounded bg-brand-border-subtle" />
-          {shown.map((talk) => {
-            const type = talk.talkType === "SHOWCASE" ? "SHOWCASE" : "SHARE";
-            const speakers = sidebarSpeakerList(talk, lang);
-            return (
-              <li key={talk.id} className="relative pb-4 pl-6 last:pb-0">
-                <span
-                  aria-hidden
-                  className={`absolute left-0 top-[7px] h-[11px] w-[11px] -translate-x-1/2 rounded-full ${type === "SHOWCASE" ? "bg-brand-orange" : "bg-brand-blue"}`}
-                />
-                <div className="flex min-w-0 flex-wrap items-start gap-1.5">
-                  <AgendaTypeTag
-                    type={type}
-                    label={agendaTypeLabel(type, t(lang, "activityDetail.proposalShare"), t(lang, "activityDetail.proposalShowcase"))}
-                  />
-                  <Link href={href} className="min-w-0 flex-1 line-clamp-2 text-sm font-medium text-brand-text-heading hover:text-brand-blue">
-                    {talk.title}
-                  </Link>
-                </div>
-                {speakers.length > 0 && (
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    {speakers.map((speaker, index) => (
-                      <AgendaSpeaker
-                        key={`${speaker.href || speaker.name}-${index}`}
-                        name={speaker.name}
-                        href={speaker.href}
-                        image={speaker.image}
-                        byLabel={index === 0 ? t(lang, "meeting.by") : "&"}
-                      />
-                    ))}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ol>
+        <AgendaTimeline items={timelineItems} activityId={activityId} />
       </div>
       {rest > 0 && (
         <Link href={href} className="mt-2 shrink-0 text-xs font-medium text-brand-blue hover:underline">
@@ -239,11 +228,13 @@ function SidebarActivityItem({ a, lang }: { a: any; lang: Lang }) {
   );
 }
 
-// ── 活动推荐卡片：紧凑横排卡，类别小标签 + 倒计时 ────────────
+// ── 活动推荐卡片：紧凑横排卡，类别绶带 + 倒计时 ────────────
 function RecoCard({ a, lang }: { a: any; lang: Lang }) {
   const coverSrc = a.coverImage || DEFAULT_COVER;
   const displayTitle = localizeActivityTitle(a.title, lang);
   const tagLabel = recoTagLabel(lang, a.recoTag);
+  const ribbonLabel = tagLabel || activityTypeLabel(lang, a.type);
+  const ribbonType = a.recoTag || a.type;
   const now = Date.now();
   const isLive = !a.timePending && a.startTime && a.endTime &&
     new Date(a.startTime).getTime() <= now && new Date(a.endTime).getTime() >= now;
@@ -258,11 +249,7 @@ function RecoCard({ a, lang }: { a: any; lang: Lang }) {
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="300px"
           />
-          {tagLabel && (
-            <span className="absolute top-2 left-2 text-[11px] font-medium px-2 py-0.5 rounded-full bg-black/45 text-white backdrop-blur-sm">
-              {tagLabel}
-            </span>
-          )}
+          <ActivityTypeCorner type={ribbonType} label={ribbonLabel} />
           <div className="absolute top-2 right-2">
             {isLive ? (
               <span className="text-[11px] px-2 py-0.5 rounded-full text-white bg-green-500/80 backdrop-blur-sm">{STATUS_LABEL.ongoing[lang]}</span>
@@ -401,7 +388,7 @@ export default async function ActivitiesPage({
     ? isMockDataEnabled()
       ? []
       : await cachedQuery(
-          `activity:sidebar-talks:${hero.id}`,
+          `activity:sidebar-talks:v2:${hero.id}`,
           () =>
             prisma.meetingTalk.findMany({
               where: { activityId: hero.id },
@@ -411,6 +398,9 @@ export default async function ActivitiesPage({
                 title: true,
                 talkType: true,
                 speaker: true,
+                description: true,
+                imageUrl: true,
+                bvId: true,
                 user: { select: { id: true, image: true, member: { select: { id: true, displayName: true } } } },
                 speakers: {
                   orderBy: { sortOrder: "asc" },

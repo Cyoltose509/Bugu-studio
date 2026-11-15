@@ -231,6 +231,16 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         description: "免费低多边形 3D 模型库：CC0 授权为主，下载即用，搜索体验轻快。",
     },
     {
+        id: "polyfork-kits",
+        name: "Polyfork Kits",
+        url: "https://polyfork.dev/kits",
+        iconUrl: "https://cdn.bugoostudio.com/toolss/6136df600216e5e66147ac495dfdd1c4.png",
+        color: "#2E7D9A",
+        letter: "P",
+        category: "3D 模型",
+        description: "面向 three.js 的低模主题素材包：按题材成套打包，免费套件可直接下载，也能投票决定下一套做什么。",
+    },
+    {
         id: "sketchfab",
         name: "Sketchfab",
         url: "https://sketchfab.com/",

@@ -67,6 +67,9 @@ export type EditActivityValues = {
   themeRevealedAt: string;
   maxTeamSize: number;
   recoTag: string;
+  judgesPublic?: boolean;
+  judgingMode?: string;
+  externalJudgingUrl?: string;
 };
 
 function StatusTimeline({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -153,6 +156,9 @@ export default function EditActivityForm({
   const [timePending, setTimePending] = useState(activity.timePending);
   const [startTime, setStartTime] = useState(activity.startTime);
   const [endTime, setEndTime] = useState(activity.endTime);
+  const [judgingMode, setJudgingMode] = useState(activity.judgingMode || "ONLINE");
+  const [judgesPublic, setJudgesPublic] = useState(activity.judgesPublic ?? true);
+  const [externalJudgingUrl, setExternalJudgingUrl] = useState(activity.externalJudgingUrl || "");
   const [error, setError] = useState("");
 
   // 草稿：这个表单分散在封面/地点/富文本/议程等多个子编辑器里，
@@ -338,6 +344,9 @@ export default function EditActivityForm({
                 <input type="hidden" name="theme" value={activity.theme} />
                 <input type="hidden" name="themeRevealedAt" value={activity.themeRevealedAt} />
                 <input type="hidden" name="maxTeamSize" value={activity.maxTeamSize} />
+                <input type="hidden" name="judgingMode" value={activity.judgingMode || "ONLINE"} />
+                <input type="hidden" name="judgesPublic" value={activity.judgesPublic !== false ? "on" : "off"} />
+                <input type="hidden" name="externalJudgingUrl" value={activity.externalJudgingUrl || ""} />
               </>
             )}
 
@@ -378,6 +387,57 @@ export default function EditActivityForm({
                     defaultValue={activity.maxTeamSize}
                     className={`${field} max-w-[8rem]`}
                   />
+                </div>
+
+                {/* 评审设置 */}
+                <div className="pt-2 border-t border-brand-border-subtle space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className={label}>评审方式</label>
+                    <Link
+                      href={`/activities/${activity.id}/game-jam/judging`}
+                      target="_blank"
+                      className="text-xs text-brand-blue hover:underline font-medium"
+                    >
+                      评委管理面板 ↗
+                    </Link>
+                  </div>
+                  <select
+                    name="judgingMode"
+                    value={judgingMode}
+                    onChange={(e) => setJudgingMode(e.target.value)}
+                    className={field}
+                  >
+                    <option value="ONLINE">本站线上打分（默认）</option>
+                    <option value="EXTERNAL">站外或线下评审</option>
+                    <option value="DISABLED">不设评审环节（仅展示作品）</option>
+                  </select>
+
+                  {judgingMode === "EXTERNAL" && (
+                    <div>
+                      <label className={label}>站外/线下评审说明或链接</label>
+                      <input
+                        name="externalJudgingUrl"
+                        type="text"
+                        value={externalJudgingUrl}
+                        onChange={(e) => setExternalJudgingUrl(e.target.value)}
+                        placeholder="例如：https://... 或 现场路演评审"
+                        className={field}
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-brand-text-body">
+                      <input
+                        name="judgesPublic"
+                        type="checkbox"
+                        checked={judgesPublic}
+                        onChange={(e) => setJudgesPublic(e.target.checked)}
+                        className="rounded border-brand-border-subtle text-brand-blue focus:ring-brand-blue"
+                      />
+                      <span>公开展示评委名单（取消勾选则匿名评审，仅管理员可见）</span>
+                    </label>
+                  </div>
                 </div>
               </>
             )}
