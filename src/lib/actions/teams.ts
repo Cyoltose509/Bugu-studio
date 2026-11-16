@@ -161,7 +161,7 @@ export async function applyToTeam(teamId: string, activityId: string, formData: 
         userId: team.leaderId,
         type: "JAM_APPLICATION",
         title: "新的入队申请",
-        content: `有人申请加入队伍「${team.name}」`,
+        content: `${session.user.name || "有成员"} 申请加入队伍「${team.name}」`,
         relatedId: `${activityId}:${teamId}`,
         relatedType: "JamTeam",
       },

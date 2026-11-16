@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "@/components/ui/SiteImage";
+import NotificationBell from "@/components/layout/NotificationBell";
 import { usePathname } from "next/navigation";
 
 const navItems = [
@@ -39,21 +40,22 @@ function SidebarNav({ pathname }: { pathname: string }) {
   );
 }
 
-function SidebarContent({ userEmail, pathname }: { userEmail: string; pathname: string }) {
+function SidebarContent({ userEmail, pathname, bellId }: { userEmail: string; pathname: string; bellId: string }) {
   return (
     <>
-      <div className="p-5 shrink-0 border-b border-white/10">
-        <Link href="/admin" className="flex items-center gap-2">
+      <div className="p-4 shrink-0 border-b border-white/10 flex items-center justify-between gap-2">
+        <Link href="/admin" className="flex items-center gap-2 min-w-0">
           <Image src="/images/logo.png" alt="" width={28} height={28} className="rounded" />
-          <span className="font-bold">管理后台</span>
+          <span className="font-bold truncate">管理后台</span>
         </Link>
+        <NotificationBell isAdmin variant="sidebar" id={bellId} />
       </div>
       <SidebarNav pathname={pathname} />
       {/* 「返回前台」是跳出后台的动作，不参与导航高亮，单独贴底放在账号信息上方 */}
-      <div className="px-3 py-3 shrink-0 border-t border-white/10">
+      <div className="px-3 py-2 shrink-0 border-t border-white/10">
         <Link
           href="/"
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white/70 border border-white/15 hover:bg-white/10 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
         >
           <span>🏠</span>
           <span>返回前台</span>
@@ -122,7 +124,7 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
                 open ? "translate-x-0" : "-translate-x-full"
               }`}
             >
-              <SidebarContent userEmail={userEmail} pathname={pathname} />
+              <SidebarContent userEmail={userEmail} pathname={pathname} bellId="notif-bell-admin-mobile" />
             </aside>
           </>,
           document.body
@@ -130,7 +132,7 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
 
       {/* 桌面端侧边栏 — 固定整屏高度，内部导航区单独滚动，底部「当前登录」始终可见 */}
       <aside className="hidden lg:flex w-56 shrink-0 h-full text-white bg-brand-navy flex-col">
-        <SidebarContent userEmail={userEmail} pathname={pathname} />
+        <SidebarContent userEmail={userEmail} pathname={pathname} bellId="notif-bell-admin-desktop" />
       </aside>
 
       {/* 移动端左侧占位 */}

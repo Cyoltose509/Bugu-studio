@@ -171,13 +171,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // 与 POST /api/projects/submit 保持一致：管理员提交直接发布，成员提交才进审核队列
+  const isAdminUser = session.user.role === "ADMIN";
   const project = await prisma.project.create({
     data: {
       ...projectData,
       slug,
       submitterId: session.user.id,
       submittedAt: new Date(),
-      status: ProjectStatus.PENDING,
+      status: isAdminUser ? ProjectStatus.PUBLISHED : ProjectStatus.PENDING,
+      publishedAt: isAdminUser ? new Date() : null,
       tags: {
         create: tagIds.map((tagId) => ({ tagId })),
       },

@@ -4,6 +4,82 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-16 — 管理员提交作品直接发布，去掉「你是管理员可以直接通过」的绕口提示【本地完成，未部署】
+
+- 诉求：管理员看自己提交的作品，横幅写着「这是你提交的作品，正在等待审核。你是管理员，可以直接通过。」——既然管理员本来就能直发，这句等于让用户自己绕一圈审批。
+- 根因：
+  - `POST /api/projects/submit` 已有「管理员直发」逻辑，但另一个创建入口 `POST /api/projects` 仍无条件写 `PENDING`，管理员走这个入口就会掉回待审。
+  - 提交成功页对所有角色都显示「你的作品已提交审核，管理员会尽快处理」，管理员明明已经发布，提示却让他等自己处理。
+  - 详情页 `pendingDescOwnerAdmin` 文案在解释身份，而不是陈述结果。
+- 改动：
+  - `src/app/api/projects/route.ts`：POST 创建与 submit 入口统一，管理员提交 `PUBLISHED` 并写 `publishedAt`。
+  - `src/app/api/projects/submit/route.ts`：响应回传 `status`，供前端区分成功文案。
+  - `src/components/projects/ProjectForm.tsx`：管理员提交成功后显示「已提交并通过 / 作品已直接发布，无需再等审核」。
+  - `src/lib/i18n/dict.ts`：新增 `form.successPublished` / `form.successPublishedDesc`；`works.detail.pendingDescOwnerAdmin` 改为「作品已提交，点「通过」即可发布。」（兜底异常态，不再解释身份）。
+- 验证：`tsc --noEmit` 通过，337 测试全绿；实测管理员调用 `/api/projects/submit` 返回 `201 {"status":"PUBLISHED"}`；临时造管理员 PENDING 作品，详情页横幅渲染为新文案，测试数据已删除（当前 PENDING 仅剩成员《末班突围》1 件）。
+- 未部署：需合并发布后生效。
+
+## 2026-11-16 — 后台侧栏加通知铃铛【本地完成，未部署】
+
+- 背景：后台是独立外壳，站点 Navbar 在 `/admin` 下被 CSS 隐藏，里面的通知铃铛一起被藏掉；管理员一直待在后台就看不到新通知提醒。
+- 改动：
+  - `NotificationBell` 抽出 `isAdmin`/`id`/`variant` 三个 props。`variant="sidebar"` 时面板通过 `createPortal` 挂到 `document.body` 并用 `fixed` 按按钮位置定位，避免被侧栏 `overflow-hidden` / 移动端抽屉 `transform` 裁剪；点击外部与 ESC 关闭改用 ref 判断，支持同页多实例互不干扰。共享的未读计数缓存改为缓存 data 本体，命中时也写入每个实例（原来只缓存时间戳，第二个实例会跳过请求、不显示角标）。
+  - `AdminSidebar` 顶部「管理后台」标题行右侧挂一个 `isAdmin variant="sidebar"` 铃铛，桌面/移动端抽屉各一个（`id` 分别为 `notif-bell-admin-desktop` / `notif-bell-admin-mobile`），复用前台铃铛的全部审核/动态/bug 分桶逻辑。
+- 验证证据：`tsc --noEmit` 通过，`vitest run __tests__/unit __tests__/ui` 55 文件 337 例全绿。Playwright（Edge + 伪造管理员会话）实测 `/admin` 顶部铃铛可见、点击弹出三栏面板、点击外部关闭、无 pageerror。
+- 未部署：需合并发布后生效。
+
+## 2026-11-16 — 通知回执按身份分流：操作者不再收到自己的「请审核」【本地完成，未部署】
+
+- 现象：管理员自己操作时会收到写给提交者的文案（「你的作品等待审核」「仅你和审核人员可查看」），管理员代提交/把 Jam 作品转进作品库时会收到自己的「有新作品待审核」。
+- 根因：所有通知都只按「作品是谁的」生成，没有区分「谁点下的按钮」。作品通知函数只接收 `submitterName` 一个名字，管理员集合也从不排除操作者；页面横幅只有一句写死的第二人称文案。
+- 改动：
+  - `src/lib/services/notification.ts`：
+    - 作品类通知统一改用 `ProjectNotifyContext`（projectId / projectTitle / submitterId / submitterName / actorId / actorName）。
+    - `notifyNewProject` 管理员列表排除操作者；作品其他作者（`ProjectMember.userId` 或 `member.userId`）收到新的 `PROJECT_SUBMIT_ACK`「你参与的作品已提交」——代提交时真正的作者才知道作品进了审核。关注上新的成员不再在 PENDING 阶段收到「已发布」（那是错的，发布由 `notifyProjectPublished` 负责）。
+    - `notifyProjectEdit` 提交者通知仅在「操作者 ≠ 提交者」时发送；管理员列表同时排除操作者与提交者。
+    - 新增 `notifyProjectReviewResult`：审核结果文案统一一处，审核人等于提交者时直接跳过（不再自审自己的作品还给自己发「已通过」）。
+    - `notifyProjectPublished` 支持 `excludeUserIds`，提交者自己不订阅自己的作品。
+  - 三处审核实现（`admin/projects/actions.ts`、`lib/actions/works.ts`、`api/projects/[id]` PATCH）、提交入口（`api/projects/submit`）、Jam 转库（`lib/actions/submissions.ts`，origin=jam，文案改为「把 Game Jam 参赛作品转入作品库」）全部改传完整上下文。
+  - `src/app/works/[slug]/page.tsx`：待审/驳回横幅按 `isSubmitter × isReviewer` 选词条。管理员看到「你是管理员，可以直接通过或驳回」，管理员兼提交者看到「这是你提交的作品…可以直接通过」，普通提交者仍是「仅你和审核人员可见」。
+  - `src/lib/i18n/dict.ts`：新增 `works.detail.pendingDescReviewer` / `pendingDescOwnerAdmin` / `rejectedDescReviewer`。
+  - `src/lib/actions/teams.ts`：Jam 入队申请由「有人申请加入队伍」改成带申请人名字。
+  - `NotificationBell`：补 `PROJECT_SUBMIT_ACK` 图标。
+- 验证证据：新增 `__tests__/unit/notification-audience.test.ts`（9 例：操作者排除、代投作者回执、管理员不重复收、自审跳过、发布排除本人）。`tsc --noEmit` 通过，`vitest run __tests__/unit __tests__/ui` 55 文件 337 例全绿。dev 实测：成员提交临时作品 → 7 位管理员各 1 条、提交者 0 条；管理员作为 actor 调 `notifyNewProject` → 只发给其余 6 位；`/works/zz` 用管理员/成员/管理员兼提交者三种身份分别渲染出三套文案。测试作品与通知已清理，PENDING 归零。
+- 未部署：需合并发布后生效。
+
+## 2026-11-16 — 成员提交作品后管理员收不到通知（待审核作品变「野数据」）【本地完成，未部署】
+
+- 现象：成员 wsxcf 提交《布谷》后前端显示提交成功、作品状态为 PENDING，但管理员通知中心没有任何「有新作品待审核」。库里另有《别花》同样漏发。
+- 根因：`src/app/api/projects/submit/route.ts` 里 `notifyNewProject(...).catch(() => {})` 是浮空调用，没有 await。Vercel 在响应返回后立即冻结函数实例，未被 await 的 Promise 直接丢弃，通知就不会落库；`notifyNewProject` 内部又是全 try/catch，失败只写 console，前端和库表都看不出异常，呈现为「提交成功但没通知」。
+- 修复：
+  - `src/app/api/projects/submit/route.ts`：改为 `await notifyNewProject(...)`，并加注释说明为什么不能浮空。
+  - `src/lib/actions/submissions.ts`：`submitToWorksLibrary`（Jam 作品转入作品库）同样产出 PENDING 作品，此前完全不通知管理员；补 `await notifyNewProject`。
+  - 删除 `src/app/submit/actions.ts`：旧版 `submitProject` server action 已无任何引用，且逻辑与 API 路由重复、也不发通知，留着是同类事故的伏笔。
+  - 数据修复：对库里所有 PENDING 且没有 NEW_PROJECT 通知的作品补发（本次补到《别花》《布谷》，各 7 位管理员）。
+- 验证证据：本地起 dev，用 MEMBER 会话 POST `/api/projects/submit` 提交临时作品 → 201 且库里生成 7 条 NEW_PROJECT（随后连同临时作品一起清理）；前台通知中心「审核」栏目已能看到《布谷》《别花》。`tsc --noEmit` 通过，`vitest run __tests__/unit __tests__/ui` 54 文件 328 例全绿。
+- 顺带修掉的同类问题：审核通过时三处实现（`admin/projects/actions.ts`、`lib/actions/works.ts`、`api/projects/[id]`）都调 `notifyNewProject`，等于作品审完又给管理员发一遍「有新作品待审核」。新增 `notifyProjectPublished`（只通知关注上新的成员，不发管理员），三处一并替换；同一动作存在三份并行实现本身就是这类事故的温床。
+- 数据收尾：2026-11-16 19:14 两件作品均已审核通过（`PUBLISHED`，`publishedAt` 已写，Review 记录 `approved=true`），随后清掉 21 条已失效的「请审核」通知，PENDING 归零。
+- 遗留问题（未改）：`/admin` 是独立外壳，站点导航被 `[data-admin-shell]` 规则隐藏，**后台内没有通知铃铛**，管理员不切回前台就看不到通知；后台目前只有仪表盘「待审核」计数卡片能间接暴露待审作品。
+- 未部署：需合并发布后生效。
+
+## 2026-11-16 — Game Jam 参赛作品占位条目、金银铜奖杯、隐形分栏拖拽名次与作品库关联【本地完成，未部署】
+
+- 需求背景：趁 2026 BUGOO GAMEJAM 刚结束，打磨 Game Jam 类活动的相关预设：
+  1. 参赛作品除了专门活动提交页提交外，允许管理员使用“+”按钮直接创建包含封面、至多 3 张至少 0 张游戏截图、游戏名、游戏相关开发人员关联的条目（逻辑类同“上传游戏”，UI 排布专门适配隶属于 Game Jam 活动的紧凑占位条目）；
+  2. 支持设置金/银/铜奖杯（用不同颜色的奖杯 icon 表示，数目不限，页面内排序时置顶获奖作品条目）；
+  3. 支持名次管理（隐形分“排序栏”与“未排序栏”两栏，拖拽排序，自动标排序 `#1, #2...`，未排序栏的游戏显示顺序随机）；
+  4. 支持将隶属于活动页的游戏条目直接关联（或取消关联/一键转入）到作品库游戏。
+- 核心实现：
+  - `src/components/icons/TrophyIcon.tsx`：扩充 `variant="gold" | "silver" | "bronze"`，使用定制金属渐变矢量奖杯渲染金、银、铜三色奖杯图标（保留默认图片奖杯行为向后兼容）。
+  - `src/lib/activities/jam-entries.ts`：封装截图数量校验（`0~3` 张）、条目元数据解析、排序栏/未排序栏拆分与自动标号（`#1, #2, #3...`）、获奖作品置顶（金 → 银 → 铜）以及未排序栏 Fisher-Yates 随机洗牌逻辑。
+  - `src/lib/actions/submissions.ts`：新增管理员 Server Actions：`adminSaveJamEntry`（创建/编辑活动页作品占位条目，自动维护内部占位队伍标识 `JAM_ADMIN_ENTRY_TOPIC` 避免污染常规报名队伍列表）、`adminSetJamEntryTrophy`（设置/取消金银铜奖杯）、`adminUpdateJamRankings`（保存排序栏与未排序栏顺序）、`adminLinkJamSubmissionProject`（关联/取消关联作品库已有游戏）、`adminDeleteJamEntry` 与 `searchWorksForJamLink`。
+  - `src/components/activities/jam/JamEntriesSection.tsx`、`JamEntryEditorModal.tsx`、`JamProjectLinkModal.tsx`：实现适配 Game Jam 活动页的横排图文占位卡片、管理员 `+` 创建/编辑弹窗（复用站内成员/用户搜索与外部开发者姓名+角色分工选择）、作品库搜索关联弹窗，以及隐形分栏拖拽排序交互。
+  - `src/app/activities/[id]/page.tsx`、`game-jam/results/page.tsx`、`game-jam/judging/page.tsx`、`game-jam/teams/page.tsx`：全面接入新版参赛作品组件与奖杯/名次排序展示，修正作品库跳转链接使用 `project.slug`。
+- 验证证据：
+  - TypeScript 检查：`npx tsc --noEmit` 0 错误通过。
+  - 自动化测试：新增 `__tests__/unit/gamejam-entries.test.ts`（9 项单元用例）与 `__tests__/ui/gamejam-entries-ui.test.tsx`（3 项 UI 用例）；全量 54 个单元与 UI 测试套件（328 项测试）100% 通过。
+- 未部署：需合并发布后生效。
+
 ## 2026-11-16 — 前端错误报告 Hover 弹层边界感知自适应翻转（彻底修复页面抽搐与抖动循环）【本地完成，未部署】
 
 - 需求背景：在「管理后台 - 前端错误」页面中，当鼠标悬停在列表下半部分或接近视口底部的条目（如 `#23`）时，页面发生高频抽搐抖动。根本原因：Hover 详情弹层原写死为 `top-full`（向下弹出），在页面底部展开时溢出视口并大幅增加滚动容器的 `scrollHeight`，触发浏览器的滚动锚定（Scroll Anchoring）或视口滚动，将当前条目向上推离鼠标光标，导致鼠标脱离条目触发 `onMouseLeave` 弹层关闭；弹层关闭后页面高度收缩并回落，条目重新回到鼠标下方触发 `onMouseEnter` 再次展开，从而产生无限循环的高频抽搐。

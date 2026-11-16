@@ -123,6 +123,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
   const { t, lang } = useLang();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  // 管理员提交会直接发布，成功页要显示「已发布」而不是「等待审核」
+  const [publishedOnSubmit, setPublishedOnSubmit] = useState(false);
   const [loading, setLoading] = useState(false);
   const submittingRef = useRef(false);
 
@@ -469,6 +471,7 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
           if (!res.ok) {
             setError(json?.error || `${t("submit.fail")} (${res.status})`);
           } else {
+            setPublishedOnSubmit(json?.data?.status === "PUBLISHED");
             setSuccess(true);
             // 重置表单
             setCoverPreview(null);
@@ -495,7 +498,15 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
       <div className="animate-fade-in text-center py-16">
         <div className="text-5xl mb-4">{isReEdit ? "📝" : isResubmit ? "📤" : isEdit ? "✅" : "🎉"}</div>
         <h2 className="text-2xl font-bold mb-2 text-brand-navy">
-          {isReEdit ? t("form.successReEdit") : isResubmit ? t("form.successResubmit") : isEdit ? t("form.successSaved") : t("form.successSubmitted")}
+          {isReEdit
+            ? t("form.successReEdit")
+            : isResubmit
+            ? t("form.successResubmit")
+            : isEdit
+            ? t("form.successSaved")
+            : publishedOnSubmit
+            ? t("form.successPublished")
+            : t("form.successSubmitted")}
         </h2>
         <p className="mb-6 text-brand-text-secondary">
           {isReEdit
@@ -504,6 +515,8 @@ export default function ProjectForm({ mode, tags, initialData, projectStatus, on
             ? t("form.successResubmitDesc")
             : isEdit
             ? t("form.successSavedDesc")
+            : publishedOnSubmit
+            ? t("form.successPublishedDesc")
             : t("form.successSubmittedDesc")}
         </p>
         {isEdit && initialData ? (
