@@ -14,7 +14,7 @@ import {canEditProject, isAdmin} from "@/lib/auth/rbac";
 import {createAuditLog, extractRequestInfo} from "@/lib/utils/audit";
 import {apiResponse, apiError, generateSlug} from "@/lib/utils";
 import {invalidateCache} from "@/lib/db/cache";
-import {createNotification, notifyNewProject, notifyProjectEdit, notifyMentions} from "@/lib/services/notification";
+import {notifyNewProject, notifyProjectPublished, notifyProjectEdit, notifyProjectReviewResult, notifyMentions} from "@/lib/services/notification";
 import {cachedQuery} from "@/lib/db/cache";
 import {ProjectStatus} from "@prisma/client";
 import { deleteFromR2, deleteManyFromR2 } from "@/lib/utils/upload";
@@ -130,22 +130,24 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
             select: {title: true, submitterId: true},
         });
         if (projectForNotif) {
-            await createNotification({
-                userId: projectForNotif.submitterId,
-                type: "PROJECT_REVIEW",
-                title: approved ? "作品审核通过 ✅" : "作品审核未通过 ❌",
-                content: `你的作品《${projectForNotif.title}》${approved ? "已通过审核并发布" : `被驳回：${note || "无备注"}`}`,
-                relatedId: id,
-                relatedType: "Project",
+            await notifyProjectReviewResult({
+                projectId: id,
+                projectTitle: projectForNotif.title,
+                submitterId: projectForNotif.submitterId,
+                approved,
+                note,
+                reviewerId: session.user.id,
             });
 
-            // ── 通知管理员 & 关注上新的成员 ──
+            // ── 通过时只通知关注上新的成员，不再给管理员发"待审核" ──
             if (approved) {
                 const submitter = await prisma.user.findUnique({
                     where: {id: projectForNotif.submitterId},
                     select: {name: true},
                 });
-                await notifyNewProject(id, projectForNotif.title, submitter?.name || "未知用户");
+                await notifyProjectPublished(id, projectForNotif.title, submitter?.name || "未知用户", {
+                    excludeUserIds: [projectForNotif.submitterId, session.user.id],
+                });
             }
         }
 
@@ -303,14 +305,26 @@ export async function PATCH(request: NextRequest, {params}: RouteParams) {
 
     // ── 重新提交时通知管理员 ──
     if (isResubmit) {
-        const submitterName = session.user.name || "未知用户";
-        await notifyNewProject(id, project.title, submitterName);
+        await notifyNewProject({
+            projectId: id,
+            projectTitle: project.title,
+            submitterId: project.submitterId,
+            submitterName: session.user.name || "未知用户",
+            actorId: session.user.id,
+            actorName: session.user.name || "未知用户",
+        });
     }
 
     // ── 已发布作品编辑后通知提交者和管理员 ──
     if (isReEdit) {
-        const submitterName = session.user.name || "未知用户";
-        await notifyProjectEdit(id, updated.title, session.user.id, submitterName);
+        await notifyProjectEdit({
+            projectId: id,
+            projectTitle: updated.title,
+            submitterId: project.submitterId,
+            submitterName: session.user.name || "未知用户",
+            actorId: session.user.id,
+            actorName: session.user.name || "未知用户",
+        });
     }
 
     // ── @mention 通知 ──

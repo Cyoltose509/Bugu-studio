@@ -180,8 +180,18 @@ export const POST = withAuditContext(async function (request: NextRequest) {
   });
 
   // ── 成员提交后通知管理员审核 ──
+  // 必须 await：Vercel 在响应返回后立刻冻结函数实例，浮空的 Promise 会被直接丢弃，
+  // 表现为作品进了待审核队列但管理员收不到任何通知（2026-11 布谷/别花 就是这么丢的）。
+  // notifyNewProject 内部已 try/catch，不会因通知失败中断提交。
   if (projectStatus === ProjectStatus.PENDING) {
-    notifyNewProject(created.id, parsed.data.title, session.user.name || "未知用户").catch(() => {});
+    await notifyNewProject({
+      projectId: created.id,
+      projectTitle: parsed.data.title,
+      submitterId: session.user.id,
+      submitterName: session.user.name || "未知用户",
+      actorId: session.user.id,
+      actorName: session.user.name || "未知用户",
+    });
   }
 
   await Promise.all([
@@ -197,5 +207,6 @@ export const POST = withAuditContext(async function (request: NextRequest) {
   revalidatePath("/works");
   revalidatePath("/members");
 
-  return apiResponse({ slug }, 201);
+  // 回传状态：管理员直发时前端要显示「已发布」，不能再提示「等管理员审核」
+  return apiResponse({ slug, status: projectStatus }, 201);
 });

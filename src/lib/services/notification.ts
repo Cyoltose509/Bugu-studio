@@ -58,22 +58,71 @@ export async function createNotifications(
   }
 }
 
+/** 作品通知的公共上下文：谁提交的、谁在操作。 */
+export interface ProjectNotifyContext {
+  projectId: string;
+  projectTitle: string;
+  /** 作品归属者（Project.submitterId） */
+  submitterId: string;
+  submitterName: string;
+  /** 实际点下按钮的人。管理员代提交/代编辑时它和 submitterId 不同 */
+  actorId?: string;
+  actorName?: string;
+}
+
+/** 通知里给「操作者」用的名字，缺省回落到提交者名。 */
+function actorOf(ctx: ProjectNotifyContext) {
+  return {
+    id: ctx.actorId || ctx.submitterId,
+    name: ctx.actorName || ctx.submitterName,
+  };
+}
+
 /**
- * 作品上新通知：
- * - 通知所有管理员
- * - 通知所有开启"关注作品上新"的成员
+ * 列出作品里的其他作者（排除提交者本人与操作者）。
+ * 管理员代提交时，被代投的成员才是真正作者，理应知道作品进了审核。
  */
-export async function notifyNewProject(projectId: string, projectTitle: string, submitterName: string) {
+async function otherAuthorIds(projectId: string, exclude: Set<string>) {
+  const { prisma } = await import("@/lib/db/prisma");
+  const rows = await prisma.projectMember.findMany({
+    where: { projectId },
+    select: { userId: true, member: { select: { userId: true } } },
+  });
+  const ids = new Set<string>();
+  for (const row of rows) {
+    const userId = row.userId || row.member?.userId;
+    if (userId && !exclude.has(userId)) ids.add(userId);
+  }
+  return [...ids];
+}
+
+/**
+ * 提交 → 待审核通知。
+ *
+ * 只发给「需要处理的人」和「被代投的作者」：
+ * - 管理员：排除操作者本人（管理员代提交时不该收到自己的「请审核」）
+ * - 作品其他作者：排除提交者与操作者
+ * - 关注上新的成员：不发。作品还在待审核，说「已发布」是错的；
+ *   发布成功由 notifyProjectPublished 负责。
+ */
+export async function notifyNewProject(
+  ctx: ProjectNotifyContext,
+  opts?: { origin?: "club" | "jam" }
+) {
   try {
     const { prisma } = await import("@/lib/db/prisma");
+    const actor = actorOf(ctx);
+    const skip = new Set([actor.id, ctx.submitterId]);
 
-    const [admins, notifMembers] = await Promise.all([
-      prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } }),
-      prisma.clubMember.findMany({
-        where: { notifyNewProjects: true },
-        select: { userId: true },
-      }),
-    ]);
+    const admins = await prisma.user.findMany({
+      where: { role: "ADMIN" },
+      select: { id: true },
+    });
+
+    const content =
+      opts?.origin === "jam"
+        ? `${ctx.submitterName} 把 Game Jam 参赛作品《${ctx.projectTitle}》转入了作品库，请审核`
+        : `${ctx.submitterName} 提交了新作品《${ctx.projectTitle}》，请审核`;
 
     const items: Array<{
       userId: string; type: string; title: string;
@@ -81,28 +130,30 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
     }> = [];
 
     for (const a of admins) {
+      if (skip.has(a.id)) continue;
       items.push({
         userId: a.id,
         type: "NEW_PROJECT",
         title: "有新作品待审核 🎮",
-        content: `${submitterName} 提交了新作品《${projectTitle}》，请审核`,
-        relatedId: projectId,
+        content,
+        relatedId: ctx.projectId,
         relatedType: "Project",
       });
     }
 
-    const notifUserIds = new Set(admins.map((a) => a.id));
-    for (const m of notifMembers) {
-      if (!notifUserIds.has(m.userId)) {
-        items.push({
-          userId: m.userId,
-          type: "PROJECT_PUBLISHED",
-          title: "有新的社团作品 🎮",
-          content: `${submitterName} 发布了新作品《${projectTitle}》`,
-          relatedId: projectId,
-          relatedType: "Project",
-        });
-      }
+    const authors = await otherAuthorIds(
+      ctx.projectId,
+      new Set([...skip, ...admins.map((a) => a.id)])
+    );
+    for (const userId of authors) {
+      items.push({
+        userId,
+        type: "PROJECT_SUBMIT_ACK",
+        title: "你参与的作品已提交",
+        content: `${actor.name} 提交了《${ctx.projectTitle}》，等待管理员审核`,
+        relatedId: ctx.projectId,
+        relatedType: "Project",
+      });
     }
 
     if (items.length > 0) {
@@ -117,40 +168,83 @@ export async function notifyNewProject(projectId: string, projectTitle: string, 
 }
 
 /**
- * 作品编辑后通知（已发布作品被编辑 → 回到待审核）
- * - 通知提交者：你的作品已更新，等待重新审核
- * - 通知所有在线管理员（排除已毕业）
+ * 作品正式发布通知 —— 只通知关注上新的成员。
+ *
+ * 用在「审核通过」这一步：作品已经审核完了，再给管理员发「有新作品待审核」
+ * 只会把已经处理掉的活儿重新标成待办。提交者自己的订阅不该弹自己的作品。
  */
-export async function notifyProjectEdit(projectId: string, projectTitle: string, submitterId: string, submitterName: string) {
+export async function notifyProjectPublished(
+  projectId: string,
+  projectTitle: string,
+  submitterName: string,
+  opts?: { excludeUserIds?: string[] }
+) {
   try {
     const { prisma } = await import("@/lib/db/prisma");
+
+    const notifMembers = await prisma.clubMember.findMany({
+      where: { notifyNewProjects: true },
+      select: { userId: true },
+    });
+    const skip = new Set(opts?.excludeUserIds || []);
+    const targets = notifMembers.filter((m) => !skip.has(m.userId));
+    if (targets.length === 0) return;
+
+    await prisma.notification.createMany({
+      data: targets.map((m) => ({
+        userId: m.userId,
+        type: "PROJECT_PUBLISHED",
+        title: "有新的社团作品 🎮",
+        content: `${submitterName} 发布了新作品《${projectTitle}》`,
+        relatedId: projectId,
+        relatedType: "Project",
+      })),
+      skipDuplicates: true,
+    });
+  } catch (err) {
+    console.error("[Notification] 作品发布通知失败:", err);
+  }
+}
+
+/**
+ * 作品编辑后通知（已发布作品被编辑 → 回到待审核）
+ * - 提交者：作品已更新，等待重新审核（操作者就是提交者时不发，没必要通知自己）
+ * - 其他管理员：作品更新待审（排除操作者与提交者）
+ */
+export async function notifyProjectEdit(ctx: ProjectNotifyContext) {
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+    const actor = actorOf(ctx);
+    const skip = new Set([actor.id, ctx.submitterId]);
+
+    const items: Array<{
+      userId: string; type: string; title: string;
+      content: string; relatedId: string; relatedType: string;
+    }> = [];
+
+    if (ctx.submitterId !== actor.id) {
+      items.push({
+        userId: ctx.submitterId,
+        type: "PROJECT_RESUBMIT",
+        title: "作品已更新，等待重新审核",
+        content: `你的作品《${ctx.projectTitle}》已被 ${actor.name} 更新，等待管理员重新审核`,
+        relatedId: ctx.projectId,
+        relatedType: "Project",
+      });
+    }
 
     const admins = await prisma.user.findMany({
       where: { role: "ADMIN" },
       select: { id: true },
     });
-
-    const items: Array<{
-      userId: string; type: string; title: string;
-      content: string; relatedId: string; relatedType: string;
-    }> = [
-      {
-        userId: submitterId,
-        type: "PROJECT_RESUBMIT",
-        title: "作品已更新，等待重新审核",
-        content: `你的作品《${projectTitle}》已更新，等待管理员重新审核`,
-        relatedId: projectId,
-        relatedType: "Project",
-      },
-    ];
-
     for (const a of admins) {
+      if (skip.has(a.id)) continue;
       items.push({
         userId: a.id,
         type: "PROJECT_UPDATE",
         title: "作品更新待审",
-        content: `${submitterName} 更新了作品《${projectTitle}》，需要重新审核`,
-        relatedId: projectId,
+        content: `${actor.name} 更新了作品《${ctx.projectTitle}》，需要重新审核`,
+        relatedId: ctx.projectId,
         relatedType: "Project",
       });
     }
@@ -164,6 +258,42 @@ export async function notifyProjectEdit(projectId: string, projectTitle: string,
   } catch (err) {
     console.error("[Notification] 作品编辑通知失败:", err);
   }
+}
+
+/**
+ * 审核结果通知 —— 只发给提交者。
+ *
+ * 审核人自己就是提交者时（管理员审自己的作品）直接跳过：给自己发
+ * 「你的作品已通过审核」没有任何意义。
+ */
+export async function notifyProjectReviewResult(params: {
+  projectId: string;
+  projectTitle: string;
+  submitterId: string;
+  approved: boolean;
+  note?: string | null;
+  /** 重新审核通过（编辑后复审）时文案略有不同 */
+  reReview?: boolean;
+  reviewerId?: string;
+}) {
+  if (params.reviewerId && params.reviewerId === params.submitterId) return;
+
+  const verb = params.approved
+    ? params.reReview
+      ? "重新审核通过"
+      : "审核通过"
+    : "审核未通过";
+
+  await createNotification({
+    userId: params.submitterId,
+    type: "PROJECT_REVIEW",
+    title: params.approved ? `作品${verb} ✅` : `作品${verb} ❌`,
+    content: params.approved
+      ? `你的作品《${params.projectTitle}》已${verb}，现在可以在社团主页公开展示了`
+      : `你的作品《${params.projectTitle}》未通过审核${params.note ? `：${params.note}` : "，你可以修改后重新提交"}`,
+    relatedId: params.projectId,
+    relatedType: "Project",
+  });
 }
 
 /**

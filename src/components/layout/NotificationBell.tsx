@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
 import TrophyIcon from "@/components/icons/TrophyIcon";
@@ -34,7 +35,17 @@ interface UnreadBuckets {
 const EMPTY_UNREAD: UnreadBuckets = { count: 0, review: 0, activity: 0, bug: 0 };
 
 let _lastFetched = 0;
+let _cachedUnread: Record<string, number> | null = null;
 const CACHE_TTL = 10_000;
+
+function applyUnread(data: Record<string, number>, isAdmin: boolean, set: (v: UnreadBuckets) => void) {
+  set({
+    count: data.count ?? 0,
+    review: isAdmin ? (data.review ?? 0) : 0,
+    activity: data.activity ?? 0,
+    bug: isAdmin ? (data.bug ?? 0) : 0,
+  });
+}
 
 function formatTime(iso: string, lang: "cn" | "en") {
   const d = new Date(iso);
@@ -52,6 +63,7 @@ function getIcon(type: string) {
   if (type === "COMMENT_REPLY" || type === "COMMENT_LIKE") return "💬";
   if (type === "ROLE_CHANGE") return "🏷️";
   if (type === "NEW_PROJECT" || type === "PROJECT_PUBLISHED") return "🎮";
+  if (type === "PROJECT_SUBMIT_ACK") return "📤";
   if (type === "PROJECT_UPDATE" || type === "PROJECT_RESUBMIT") return "🔄";
   if (type === "NEW_USER") return "👤";
   if (type === "ACTIVITY_PROPOSAL") return "🎤";
@@ -110,7 +122,19 @@ function destination(item: NotificationItem, isAdmin: boolean): string | null {
   return null;
 }
 
-export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolean }) {
+interface NotificationBellProps {
+  isAdmin?: boolean;
+  /** 同一页面可能有两个铃铛（Navbar + 后台侧栏），id 需唯一 */
+  id?: string;
+  /** sidebar 模式把面板 Portal 到 body 并 fixed 定位，避免被侧栏 overflow / transform 裁剪 */
+  variant?: "navbar" | "sidebar";
+}
+
+export default function NotificationBell({
+  isAdmin = false,
+  id = "notif-bell",
+  variant = "navbar",
+}: NotificationBellProps) {
   const { lang } = useLang();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotifBucket>("review");
@@ -121,22 +145,25 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
 
   const fetchUnreadCount = useCallback(async (force = false) => {
     const now = Date.now();
-    if (!force && now - _lastFetched < CACHE_TTL) return;
+    if (!force && _cachedUnread && now - _lastFetched < CACHE_TTL) {
+      applyUnread(_cachedUnread, isAdmin, setUnread);
+      return;
+    }
     _lastFetched = now;
     try {
       const res = await fetch("/api/notifications/unread-count");
       if (res.ok) {
         const json = await res.json();
         const data = json.data || {};
-        setUnread({
-          count: data.count ?? 0,
-          review: isAdmin ? (data.review ?? 0) : 0,
-          activity: data.activity ?? 0,
-          bug: isAdmin ? (data.bug ?? 0) : 0,
-        });
+        _cachedUnread = data;
+        applyUnread(data, isAdmin, setUnread);
       }
     } catch { /* ignore */ }
   }, [isAdmin]);
@@ -186,12 +213,42 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent) {
-      const bell = document.getElementById("notif-bell");
-      if (bell && !bell.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
     }
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
+
+  // sidebar 模式：面板 Portal 到 body，按按钮位置 fixed 定位，避免被侧栏 overflow / transform 裁剪
+  useEffect(() => {
+    if (!open || variant !== "sidebar" || !buttonRef.current) return;
+    function place() {
+      const rect = buttonRef.current!.getBoundingClientRect();
+      const width = isAdmin ? 416 : 320;
+      const maxLeft = Math.max(8, window.innerWidth - width - 8);
+      setPanelStyle({
+        left: Math.min(rect.right + 8, maxLeft),
+        top: Math.max(8, Math.min(rect.top, window.innerHeight - 428)),
+      });
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, variant, isAdmin]);
 
   useEffect(() => {
     if (open || unread.count === 0) return;
@@ -398,9 +455,92 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
     </>
   );
 
+  const panelContent = isAdmin ? (
+    <div className="flex max-h-[420px]">
+      <aside className="w-[4.25rem] shrink-0 border-r border-brand-border-subtle py-2 flex flex-col gap-0.5">
+        {tabs.map((tb) => (
+          <button
+            key={tb.id}
+            type="button"
+            onClick={() => {
+              if (tb.id === tab) return;
+              requestSeq.current += 1;
+              setTab(tb.id);
+              setItems([]);
+              setLoading(true);
+              setExpandedId(null);
+            }}
+            className={`mx-1 px-1.5 py-2 rounded-lg text-xs leading-tight text-center transition-colors ${
+              tab === tb.id
+                ? "bg-[#E8F4FD] text-brand-blue font-medium"
+                : "text-brand-text-secondary hover:bg-brand-surface"
+            }`}
+          >
+            <span className="block">{tb.label}</span>
+            {tb.count > 0 && (
+              <span className="mt-0.5 inline-flex min-w-[1.1rem] h-4 px-1 items-center justify-center rounded-full text-[10px] text-white bg-brand-orange">
+                {tb.count > 99 ? "99+" : tb.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </aside>
+      <div className="min-w-0 flex-1 flex flex-col max-h-[420px]">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-brand-border-subtle shrink-0">
+          <span className="font-semibold text-sm text-brand-navy">{tabLabel[tab]}</span>
+          <div className="flex items-center gap-2">
+            {unread.count > 0 && (
+              <button onClick={markAllRead} className="text-xs hover:underline text-brand-blue">
+                {t(lang, "notification.markAllRead")}
+              </button>
+            )}
+            {items.length > 0 && (
+              <button onClick={deleteAll} className="text-xs hover:underline text-[var(--ui-text-red)]">
+                {t(lang, "notification.deleteAll")}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1">{list}</div>
+      </div>
+    </div>
+  ) : (
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border-subtle">
+        <span className="font-semibold text-sm text-brand-navy">{t(lang, "notification.title")}</span>
+        <div className="flex items-center gap-2">
+          {unread.count > 0 && (
+            <button onClick={markAllRead} className="text-xs hover:underline text-brand-blue">
+              {t(lang, "notification.markAllRead")}
+            </button>
+          )}
+          {items.length > 0 && (
+            <button onClick={deleteAll} className="text-xs hover:underline text-[var(--ui-text-red)]">
+              {t(lang, "notification.deleteAll")}
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="max-h-[360px] overflow-y-auto">{list}</div>
+    </>
+  );
+
+  const panel = (
+    <div
+      ref={panelRef}
+      className={`${variant === "sidebar" ? "fixed z-[70]" : "absolute right-0 top-full mt-2 z-50"} ${
+        isAdmin ? "w-[min(26rem,calc(100vw-1rem))]" : "w-80"
+      } max-h-[420px] rounded-xl border bg-card shadow-xl border-brand-border-subtle overflow-hidden`}
+      style={variant === "sidebar" ? panelStyle : undefined}
+    >
+      {panelContent}
+    </div>
+  );
+
   return (
-    <div id="notif-bell" className="relative">
+    <div id={id} ref={rootRef} className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setOpen(!open)}
         className="relative p-2 rounded-lg hover:bg-white/10 transition-colors text-white/80 hover:text-white"
         title={t(lang, "notification.title")}
@@ -443,79 +583,7 @@ export default function NotificationBell({ isAdmin = false }: { isAdmin?: boolea
         )}
       </button>
 
-      {open && (
-        <div className={`absolute right-0 top-full mt-2 ${isAdmin ? "w-[min(26rem,calc(100vw-1rem))]" : "w-80"} max-h-[420px] rounded-xl border bg-card shadow-xl z-50 border-brand-border-subtle overflow-hidden`}>
-          {isAdmin ? (
-            <div className="flex max-h-[420px]">
-              <aside className="w-[4.25rem] shrink-0 border-r border-brand-border-subtle py-2 flex flex-col gap-0.5">
-                {tabs.map((tb) => (
-                  <button
-                    key={tb.id}
-                    type="button"
-                    onClick={() => {
-                      if (tb.id === tab) return;
-                      requestSeq.current += 1;
-                      setTab(tb.id);
-                      setItems([]);
-                      setLoading(true);
-                      setExpandedId(null);
-                    }}
-                    className={`mx-1 px-1.5 py-2 rounded-lg text-xs leading-tight text-center transition-colors ${
-                      tab === tb.id
-                        ? "bg-[#E8F4FD] text-brand-blue font-medium"
-                        : "text-brand-text-secondary hover:bg-brand-surface"
-                    }`}
-                  >
-                    <span className="block">{tb.label}</span>
-                    {tb.count > 0 && (
-                      <span className="mt-0.5 inline-flex min-w-[1.1rem] h-4 px-1 items-center justify-center rounded-full text-[10px] text-white bg-brand-orange">
-                        {tb.count > 99 ? "99+" : tb.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </aside>
-              <div className="min-w-0 flex-1 flex flex-col max-h-[420px]">
-                <div className="flex items-center justify-between px-3 py-2.5 border-b border-brand-border-subtle shrink-0">
-                  <span className="font-semibold text-sm text-brand-navy">{tabLabel[tab]}</span>
-                  <div className="flex items-center gap-2">
-                    {unread.count > 0 && (
-                      <button onClick={markAllRead} className="text-xs hover:underline text-brand-blue">
-                        {t(lang, "notification.markAllRead")}
-                      </button>
-                    )}
-                    {items.length > 0 && (
-                      <button onClick={deleteAll} className="text-xs hover:underline text-[var(--ui-text-red)]">
-                        {t(lang, "notification.deleteAll")}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="overflow-y-auto flex-1">{list}</div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between px-4 py-3 border-b border-brand-border-subtle">
-                <span className="font-semibold text-sm text-brand-navy">{t(lang, "notification.title")}</span>
-                <div className="flex items-center gap-2">
-                  {unread.count > 0 && (
-                    <button onClick={markAllRead} className="text-xs hover:underline text-brand-blue">
-                      {t(lang, "notification.markAllRead")}
-                    </button>
-                  )}
-                  {items.length > 0 && (
-                    <button onClick={deleteAll} className="text-xs hover:underline text-[var(--ui-text-red)]">
-                      {t(lang, "notification.deleteAll")}
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="max-h-[360px] overflow-y-auto">{list}</div>
-            </>
-          )}
-        </div>
-      )}
+      {open && (variant === "sidebar" ? createPortal(panel, document.body) : panel)}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth/adminGuard";
 import { invalidateCache } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { createNotification, notifyNewProject } from "@/lib/services/notification";
+import { notifyProjectPublished, notifyProjectReviewResult } from "@/lib/services/notification";
 import { courseActivityIdsForProject, invalidateCourseActivities } from "@/lib/activities/course-showcase-cache";
 
 async function invalidateProjectCaches(id?: string) {
@@ -68,26 +68,25 @@ export async function updateProjectStatus(id: string, status: ProjectStatus) {
   revalidatePath("/works");
   revalidatePath(`/works/${project.slug}`);
 
-  // ── 通知提交者审核结果 ──
+  // ── 通知提交者审核结果（审核人就是提交者时内部会跳过） ──
   if (project.submitterId) {
-    await createNotification({
-      userId: project.submitterId,
-      type: "PROJECT_REVIEW",
-      title: approved ? "作品审核通过 ✅" : "作品审核未通过 ❌",
-      content: approved
-        ? `你的作品《${project.title}》已审核通过，现在可以在社团主页公开展示了`
-        : `你的作品《${project.title}》未通过审核，你可以修改后重新提交`,
-      relatedId: id,
-      relatedType: "Project",
+    await notifyProjectReviewResult({
+      projectId: id,
+      projectTitle: project.title,
+      submitterId: project.submitterId,
+      approved,
+      reviewerId: session!.user.id,
     });
 
-    // ── 通过时通知管理员 & 关注上新的成员 ──
+    // ── 通过时通知关注上新的成员（不再给管理员发"待审核"） ──
     if (approved) {
       const submitter = await prisma.user.findUnique({
         where: { id: project.submitterId },
         select: { name: true },
       });
-      await notifyNewProject(id, project.title, submitter?.name || "未知用户");
+      await notifyProjectPublished(id, project.title, submitter?.name || "未知用户", {
+        excludeUserIds: [project.submitterId, session!.user.id],
+      });
     }
   }
 }

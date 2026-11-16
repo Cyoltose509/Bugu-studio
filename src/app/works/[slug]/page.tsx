@@ -234,13 +234,11 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
   // ── 非 PUBLISHED 作品：仅提交者 / ADMIN 可查看
   const session = project.status !== ProjectStatus.PUBLISHED ? await auth() : null;
   if (!session && project.status !== ProjectStatus.PUBLISHED) notFound();
-  if (project.status !== ProjectStatus.PUBLISHED) {
-    const role = session!.user?.role as string | undefined;
-    const userId = session!.user?.id;
-    const isSubmitter = userId === project.submitterId;
-    const isStaff = role === "ADMIN";
-    if (!isSubmitter && !isStaff) notFound();
-  }
+  const viewerId = session?.user?.id;
+  const viewerRole = session?.user?.role as string | undefined;
+  const isSubmitter = !!viewerId && viewerId === project.submitterId;
+  const isReviewer = viewerRole === "ADMIN";
+  if (project.status !== ProjectStatus.PUBLISHED && !isSubmitter && !isReviewer) notFound();
 
   // ── 并行：点赞状态 + 相邻导航 ──
   const [likeResult, navResult] = await Promise.all([
@@ -271,6 +269,22 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
     REJECTED: { title: "work.badge.REJECTED", desc: "works.detail.rejectedDesc" },
   };
   const pendingInfo = PENDING_INFO[project.status];
+
+  // 待审/驳回横幅的说明文字按「看的人是谁」切换：
+  // 管理员本来就能通过，跟他说「仅你和审核人员可查看」等于自问自答。
+  const bannerDescKey: DictKey | null = pendingInfo
+    ? project.status === ProjectStatus.PENDING
+      ? isReviewer && isSubmitter
+        ? "works.detail.pendingDescOwnerAdmin"
+        : isReviewer
+          ? "works.detail.pendingDescReviewer"
+          : "works.detail.pendingDesc"
+      : project.status === ProjectStatus.REJECTED
+        ? isReviewer && !isSubmitter
+          ? "works.detail.rejectedDescReviewer"
+          : "works.detail.rejectedDesc"
+        : pendingInfo.desc
+    : null;
 
   const externalLinks = [
     ...project.links.map((l: { label: string; url: string }) => ({
@@ -327,7 +341,7 @@ async function WorkDetailContent({ params, searchParams }: PageProps) {
               {pendingInfo ? t(lang, pendingInfo.title) : project.status}
             </div>
             <div className="text-xs mt-0.5 text-orange-900">
-              {pendingInfo ? t(lang, pendingInfo.desc) : ""}
+              {bannerDescKey ? t(lang, bannerDescKey) : ""}
             </div>
           </div>
         </div>
