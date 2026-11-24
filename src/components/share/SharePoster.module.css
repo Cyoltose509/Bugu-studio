@@ -19,7 +19,7 @@
 .poster[data-header-color="green"] { --share-blue: #3388BB; --share-navy: #25547A; --share-orange: #E38043; --share-mask: #5A7F1F; --share-mask-deep: #44611A; }
 .poster[data-header-color="navy"] { --share-blue: #3388BB; --share-navy: #25547A; --share-orange: #E38043; --share-mask: #25547A; --share-mask-deep: #1b3348; }
 .hero { position: relative; min-height: 216px; padding: 26px 28px 42px; background: #D6EDF6; }
-.poster[data-header-color="orange"] .hero { background: #D96F3E; color: #25547A; }
+.poster[data-header-color="orange"] .hero { background: #D96F3E; color: #fff; }
 .poster[data-header-color="green"] .hero { background: #88C232; color: #25547A; }
 .poster[data-header-color="orange"] .brand { color: white; }
 .poster[data-header-color="navy"] .hero { background: #25547A; color: white; }

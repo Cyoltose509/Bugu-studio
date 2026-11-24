@@ -200,7 +200,7 @@ export default function PrivacyPage() {
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-colors bg-red-600 hover:bg-red-700"
+            className="px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-colors bg-brand-orange hover:bg-[#F09055]"
           >
             {t(lang, "profile.privacy.deleteAccount")}
           </button>

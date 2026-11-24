@@ -114,7 +114,6 @@ export default function ShareDialog({ data, lang, onClose }: { data: ShareCardDa
             </div>
             {!!headerImages.length && <div className="mt-2 grid grid-cols-4 gap-2">{headerImages.slice(0, 8).map(item => <button key={item.url} type="button" title={item.title} aria-label={en ? `Use cover: ${item.title}` : `使用封面：${item.title}`} aria-pressed={header.kind === "image" && header.url === item.url} onClick={() => selectImage(item.url)} className={`h-12 overflow-hidden rounded-lg border-2 bg-black/25 transition-transform hover:-translate-y-0.5 ${header.kind === "image" && header.url === item.url ? "border-white" : "border-transparent"}`}><img src={item.url} alt="" className="h-full w-full object-cover" /></button>)}</div>}
             {header.kind === "image" && <div className="mt-4 space-y-3">
-              <p className="text-[11px] leading-relaxed text-white/65">{en ? `Faded area uses the selected header colour (${SHARE_HEADER_COLOR_LABELS[activeColor].en}). Pick another colour above to change it.` : `图片淡出区域沿用所选卡头颜色（当前：${SHARE_HEADER_COLOR_LABELS[activeColor].cn}），点上方色块可更换。`}</p>
               <label className="block text-xs text-white/80">
                 <span className="mb-2 flex justify-between"><span>{en ? "Image opacity" : "图片整体不透明度"}</span><span>{header.opacity}%</span></span>
                 <span className="mx-3 block"><input type="range" min="0" max="100" value={header.opacity} onChange={event => updateImage({ opacity: Number(event.target.value) })} className="m-0 block w-full accent-[#E38043]" /></span>
