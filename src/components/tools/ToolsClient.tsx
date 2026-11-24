@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveToolsData } from "@/app/tools/actions";
 import {
@@ -42,6 +42,84 @@ function GripIcon({ size = 14 }: { size?: number }) {
       <circle cx="9" cy="18" r="1.6" />
       <circle cx="15" cy="18" r="1.6" />
     </svg>
+  );
+}
+
+/**
+ * 左侧类别导航：桌面端固定悬浮的目录，点击平滑滚动到对应分栏，滚动时高亮当前分类。
+ * 小屏隐藏——窄屏下分栏标题本身就是目录，再挤一列只会压缩条目宽度。
+ */
+function CategoryNav({
+  sections,
+  counts,
+}: {
+  sections: ToolSection[];
+  counts: Record<string, number>;
+}) {
+  const [active, setActive] = useState<string | null>(null);
+  // visibleSections 每次渲染都是新数组，用 id 串当依赖避免 effect 反复重挂
+  const sig = sections.map((s) => s.id).join(",");
+
+  useEffect(() => {
+    const ids = sig ? sig.split(",") : [];
+    if (ids.length === 0) return;
+    const compute = () => {
+      let current = ids[0];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        // 140px ≈ 站点头部高度 + 余量：越过这条线即算进入该栏
+        if (el.getBoundingClientRect().top <= 140) current = id;
+      }
+      setActive(current);
+    };
+    compute();
+    window.addEventListener("scroll", compute, { passive: true });
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute);
+      window.removeEventListener("resize", compute);
+    };
+  }, [sig]);
+
+  return (
+    <nav aria-label="分类导航" className="hidden w-40 shrink-0 lg:block">
+      <div className="sticky top-24">
+        <p className="mb-2 pl-3 text-[10px] font-bold uppercase tracking-widest text-brand-text-muted/70">
+          分类
+        </p>
+        <ul className="border-l border-brand-border-subtle">
+          {sections.map((s) => {
+            const on = active === s.id;
+            return (
+              <li key={s.id}>
+                <a
+                  href={`#${s.id}`}
+                  onClick={(e) => {
+                    const el = document.getElementById(s.id);
+                    if (!el) return;
+                    e.preventDefault();
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    history.replaceState(null, "", `#${s.id}`);
+                  }}
+                  aria-current={on ? "true" : undefined}
+                  className={`-ml-px flex items-center justify-between gap-2 border-l-2 py-1.5 pl-3 pr-2 text-xs transition-colors ${
+                    on
+                      ? "border-brand-blue font-medium text-brand-blue"
+                      : "border-transparent text-brand-text-secondary hover:border-brand-border-subtle hover:text-brand-navy"
+                  }`}
+                >
+                  <span className="truncate">{s.name}</span>
+                  <span className="shrink-0 text-[10px] tabular-nums text-brand-text-muted/50">
+                    {counts[s.id] || ""}
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </nav>
   );
 }
 
@@ -507,7 +585,13 @@ export default function ToolsClient({ initialData, isAdmin }: { initialData: Too
         )}
       </div>
 
-      <div className="mx-auto max-w-3xl">
+      {/* 60rem = 10rem 导航 + 2rem 间距 + 48rem 内容，加导航后条目宽度与改动前一致 */}
+      <div className="mx-auto flex max-w-[60rem] gap-8">
+        <CategoryNav
+          sections={visibleSections}
+          counts={Object.fromEntries(visibleSections.map((s) => [s.id, sitesOf(s).length]))}
+        />
+        <div className="min-w-0 flex-1">
         {visibleSections.map((section, sIdx) => {
           const items = sitesOf(section);
           const nextSectionId = visibleSections[sIdx + 1]?.id ?? null;
@@ -516,7 +600,7 @@ export default function ToolsClient({ initialData, isAdmin }: { initialData: Too
             !!dragSiteId && siteDrop?.sectionName === section.name && siteDrop.beforeId === null;
           const sectionDropTarget = !!dragSectionId && sectionDrop?.beforeId === section.id;
           return (
-            <section key={section.id} className="mt-7 first:mt-0">
+            <section key={section.id} id={section.id} className="mt-7 scroll-mt-24 first:mt-0">
               {/* 分栏标题：管理模式可拖拽排序 / 原位改名 / 添加条目 / 删除空栏 */}
               <div
                 onDragOver={(e) => sectionDragOver(e, section, nextSectionId)}
@@ -839,6 +923,7 @@ export default function ToolsClient({ initialData, isAdmin }: { initialData: Too
             </button>
           )
         )}
+        </div>
       </div>
 
       {error ? <p className="mt-4 text-center text-sm text-red-600">{error}</p> : null}

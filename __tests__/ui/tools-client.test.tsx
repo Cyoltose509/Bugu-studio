@@ -34,18 +34,32 @@ function renderClient({ data = DATA, isAdmin = true }: { data?: ToolsData; isAdm
 describe("ToolsClient", () => {
   it("展示态按分栏分组渲染，空分栏不出现在展示态", () => {
     renderClient({ isAdmin: false });
-    expect(screen.getByText("游戏引擎")).toBeTruthy();
-    expect(screen.getByText("三维创作")).toBeTruthy();
-    expect(screen.queryByText("空栏")).toBeNull();
+    // 左侧导航与分栏标题同名，断言标题（heading）才唯一
+    expect(screen.getByRole("heading", { name: "游戏引擎" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "三维创作" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "空栏" })).toBeNull();
     expect(screen.getByText("Godot Engine")).toBeTruthy();
     expect(screen.getByText("Blender")).toBeTruthy();
+  });
+
+  it("左侧分类导航只列出可见分栏，锚点与计数对应", () => {
+    renderClient({ isAdmin: false });
+    const nav = screen.getByRole("navigation", { name: "分类导航" });
+    const links = within(nav).getAllByRole("link");
+    // 展示态跳过空分栏，导航必须同步跳过，否则会出现点了没反应的死链
+    expect(links).toHaveLength(2);
+    expect(links[0].getAttribute("href")).toBe("#s1");
+    expect(links[1].getAttribute("href")).toBe("#s2");
+    expect(links[0].textContent).toContain("游戏引擎");
+    expect(links[0].textContent).toContain("1");
+    expect(within(nav).queryByText("空栏")).toBeNull();
   });
 
   it("管理模式显示空分栏与新增分栏入口，非空分栏删除按钮禁用", () => {
     renderClient();
     fireEvent.click(screen.getByLabelText("管理工具"));
     // 空栏出现，且有"暂无条目"占位
-    expect(screen.getByText("空栏")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "空栏" })).toBeTruthy();
     expect(screen.getByText("暂无条目")).toBeTruthy();
     // 新增分栏入口
     expect(screen.getByText("新增分栏")).toBeTruthy();
@@ -89,7 +103,7 @@ describe("ToolsClient", () => {
     expect(input.value).toBe("游戏引擎");
     fireEvent.change(input, { target: { value: "引擎工具" } });
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(screen.getByText("引擎工具")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "引擎工具" })).toBeTruthy();
   });
 
   it("顶部 + 打开独立新增横幅，按所选分栏归类（不再固定落在第一栏）", async () => {
