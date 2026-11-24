@@ -125,6 +125,14 @@ describe("ToolsClient", () => {
     expect(last.sites.at(-1)?.name).toBe("新站点");
   });
 
+  it("图标未加载完之前不渲染首字母字标（字标只在候选全部失败后出现）", () => {
+    const { container } = renderClient({ isAdmin: false });
+    // 有 iconUrl 时直接渲染 <img>；此时字标不该出现在 DOM 里，
+    // 否则 66 张图 0.5～1s 的加载窗口里整屏都是首字母，看着像图标全丢了
+    expect(container.querySelector('img[src="/images/tools/godot.png"]')).toBeTruthy();
+    expect(screen.queryByText("G")).toBeNull();
+  });
+
   it("管理模式给条目和分栏都挂上拖动把手", () => {
     renderClient();
     fireEvent.click(screen.getByLabelText("管理工具"));

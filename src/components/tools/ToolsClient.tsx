@@ -123,10 +123,10 @@ function CategoryNav({
   );
 }
 
-/** 图标块：favicon / 上传图像优先（撑满行高），失败链式回退，字标常驻兜底。
+/** 图标块：favicon / 上传图像优先（撑满行高），失败链式回退，字标兜底。
  *  抓取链：iconUrl → 目标站 /favicon.ico → 品牌色字标。
- *  分层渲染（字标垫底、图标加载成功才覆盖）：Google s2 在部分网络下水合前就
- *  加载失败，React 的 onError 接不住——字标垫底可保证任何时刻都不出现破图。 */
+ *  字标只在候选全部失败后才出现——加载期间留白，否则 66 张图各 0.5～1s 的加载窗口里
+ *  整屏都是首字母，看起来像图标全丢了。 */
 function IconBlock({ tool }: { tool: Pick<ToolSite, "url" | "iconUrl" | "color" | "letter" | "name"> }) {
   const candidates: string[] = [];
   if (tool.iconUrl) candidates.push(tool.iconUrl);
@@ -135,37 +135,43 @@ function IconBlock({ tool }: { tool: Pick<ToolSite, "url" | "iconUrl" | "color" 
     if (!candidates.includes(direct)) candidates.push(direct);
   } catch { /* 非法 url 时不追加候选 */ }
   const [idx, setIdx] = useState(0);
-  const [loaded, setLoaded] = useState(false);
-  // iconUrl 已全部本地化（R2/本地文件），SSR 可直出 <img>；onError 链兜底
+  const imgRef = useRef<HTMLImageElement>(null);
+  // 图片若在 hydration 之前就失败，React 的 onError 接不住，这里补一刀。
+  // 等一拍再查：还在下载的图 complete 为 false，不会误判成失败。
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    const timer = setTimeout(() => {
+      if (img.complete && img.naturalWidth <= 2) setIdx((i) => i + 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [idx]);
   const showImg = idx < candidates.length;
   return (
     <span
       aria-hidden
       className="relative flex w-16 shrink-0 items-center justify-center overflow-hidden select-none"
     >
-      <span
-        className="text-2xl font-bold text-brand-navy dark:text-white"
-        style={{ visibility: loaded ? "hidden" : "visible" }}
-      >
-        {tool.letter}
-      </span>
+      {!showImg && (
+        <span className="text-2xl font-bold text-brand-navy dark:text-white">
+          {tool.letter}
+        </span>
+      )}
       {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={imgRef}
           key={candidates[idx]}
           src={candidates[idx]}
           alt=""
           width={44}
           height={44}
-          onError={() => {
-            setLoaded(false);
-            setIdx((i) => i + 1);
-          }}
+          decoding="async"
+          onError={() => setIdx((i) => i + 1)}
           onLoad={(e) => {
             // 极小的占位图（s2 对无 favicon 站点返回 1×1）视为失败
             const img = e.currentTarget;
             if (img.naturalWidth <= 2) setIdx((i) => i + 1);
-            else setLoaded(true);
           }}
           className="absolute inset-0 h-full w-full object-contain p-2.5"
           referrerPolicy="no-referrer"
