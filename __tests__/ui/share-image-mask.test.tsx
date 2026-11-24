@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import ImageMaskControl from "@/components/share/ImageMaskControl";
+import { SHARE_HEADER_COLORS, SHARE_HEADER_MASK_COLORS } from "@/lib/share";
 
 afterEach(cleanup);
 
@@ -38,5 +39,16 @@ describe("share image opacity mask", () => {
     zero.hasPointerCapture = () => true;
     fireEvent.pointerDown(zero, { pointerId: 1, clientX: 120 });
     expect(zero).toHaveAttribute("aria-valuenow", "50");
+  });
+
+  it("tints the preview strip with the selected header colour", () => {
+    const { container } = render(<ImageMaskControl zero={0} full={12} en maskColor={SHARE_HEADER_MASK_COLORS.green} onChange={() => {}} />);
+    const styles = [...container.querySelectorAll("div")].map(el => el.getAttribute("style") || "").join(" | ");
+    expect(styles).toMatch(/90,\s*127,\s*31|5A7F1F/i);
+  });
+
+  it("keeps blue as the default fade colour and covers every header colour", () => {
+    expect(SHARE_HEADER_MASK_COLORS.blue).toBe("#25547A");
+    expect(Object.keys(SHARE_HEADER_MASK_COLORS).sort()).toEqual(Object.keys(SHARE_HEADER_COLORS).sort());
   });
 });

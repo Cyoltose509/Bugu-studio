@@ -2,7 +2,7 @@
 
 import Image from "@/components/ui/SiteImage";
 import { useState } from "react";
-import { shareImageMask, type ShareCardData, type ShareHeader } from "@/lib/share";
+import { shareImageMask, type ShareCardData, type ShareHeader, type ShareHeaderColor } from "@/lib/share";
 import type { Lang } from "@/lib/i18n/config";
 import { toPlainCardText } from "@/lib/rich-content";
 import { t, type DictKey } from "@/lib/i18n/dict";
@@ -26,16 +26,18 @@ const WORK_TYPE_KEYS: Record<string, DictKey> = {
   OFFICIAL_RELEASE: "work.status.OFFICIAL_RELEASE",
 };
 
-export default function SharePoster({ data, lang, header, qr }: { data: ShareCardData; lang: Lang; header: ShareHeader; qr: string }) {
+export default function SharePoster({ data, lang, header, qr, headerColor }: { data: ShareCardData; lang: Lang; header: ShareHeader; qr: string; headerColor?: ShareHeaderColor }) {
   const en = lang === "en";
   const member = data.kind === "member";
   const imageHeader = header.kind === "image";
+  // 图片卡头沿用上一次选的纯色作为淡出底色（默认蓝），不再固定蓝色。
+  const color: ShareHeaderColor = headerColor || (header.kind === "color" ? header.color : "blue");
   const imageStyle = header.kind === "image" ? {
     opacity: header.opacity / 100,
     WebkitMaskImage: shareImageMask(header.maskZero, header.maskFull),
     maskImage: shareImageMask(header.maskZero, header.maskFull),
   } : undefined;
-  return <article data-share-poster className={styles.poster} data-header-color={header.kind === "color" ? header.color : "blue"} data-header-mode={imageHeader ? "image" : "color"} data-card={member ? "member" : "activity"}>
+  return <article data-share-poster className={styles.poster} data-header-color={color} data-header-mode={imageHeader ? "image" : "color"} data-card={member ? "member" : "activity"}>
     <div className={styles.hero}>
       {imageHeader ? <div className={styles.heroImageLayer} style={imageStyle}><PosterImage key={header.url} src={header.url} alt="" className={member ? `${styles.heroImage} ${styles.heroImageFit}` : styles.heroImage} /></div> : <div className={styles.pattern} aria-hidden />}
       <header className={styles.brand}>

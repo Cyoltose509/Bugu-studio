@@ -5,11 +5,12 @@ import { shareImageMask } from "@/lib/share";
 
 type Stop = "maskZero" | "maskFull";
 
-export default function ImageMaskControl({ zero, full, onChange, en }: {
+export default function ImageMaskControl({ zero, full, onChange, en, maskColor = "#25547A" }: {
   zero: number;
   full: number;
   onChange: (stop: Stop, value: number) => void;
   en: boolean;
+  maskColor?: string;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const move = (event: PointerEvent<HTMLButtonElement>, stop: Stop) => {
@@ -30,7 +31,7 @@ export default function ImageMaskControl({ zero, full, onChange, en }: {
     <span className="sr-only">{en ? "Opacity mask gradient" : "遮罩渐变映射"}</span>
     <div ref={trackRef} className="relative mx-3 mb-6 h-2 rounded-full border border-white/50" style={{ touchAction: "none" }}>
       <div className="pointer-events-none absolute inset-0 rounded-full" style={{ background: "repeating-conic-gradient(#e8edf1 0% 25%, #a5b2bc 0% 50%) 0 0 / 8px 8px" }} aria-hidden />
-      <div className="pointer-events-none absolute inset-0 rounded-full bg-[#25547A]" style={{ WebkitMaskImage: shareImageMask(zero, full), maskImage: shareImageMask(zero, full) }} aria-hidden />
+      <div className="pointer-events-none absolute inset-0 rounded-full" style={{ background: maskColor, WebkitMaskImage: shareImageMask(zero, full), maskImage: shareImageMask(zero, full) }} aria-hidden />
       {([ ["maskZero", zero], ["maskFull", full] ] as const).map(([stop, value]) => <button
         key={stop}
         type="button"
