@@ -3,7 +3,13 @@ import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import UserAvatar from "@/components/ui/UserAvatar";
+import TrophyIcon from "@/components/icons/TrophyIcon";
 import { resolveActivityId } from "@/lib/activities/resolve";
+import {
+  JAM_ADMIN_ENTRY_TOPIC,
+  resolveJamEntryTeamName,
+  sortJamSubmissionsForDisplay,
+} from "@/lib/activities/jam-entries";
 
 export default async function JamResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -17,7 +23,8 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
       jamJudges: { include: { user: { select: { id: true, name: true, image: true } } } },
       jamSubmissions: {
         include: {
-          team: { select: { id: true, name: true, members: { select: { user: { select: { id: true, name: true, image: true } } } } } },
+          project: { select: { id: true, slug: true, title: true } },
+          team: { select: { id: true, name: true, topic: true, members: { select: { user: { select: { id: true, name: true, image: true } } } } } },
           scores: { include: { judge: { select: { id: true, name: true } } } },
         },
       },
@@ -25,18 +32,40 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
   });
   if (!activity) notFound();
 
-  // 计算排名
-  const ranked = activity.jamSubmissions
-    .map(s => ({
-      ...s,
-      avgScore: s.scores.length > 0
-        ? Math.round(s.scores.reduce((a, b) => a + b.totalScore, 0) / s.scores.length)
-        : 0,
-    }))
-    .sort((a, b) => b.avgScore - a.avgScore);
+  const withScores = activity.jamSubmissions.map(s => ({
+    ...s,
+    avgScore: s.scores.length > 0
+      ? Math.round(s.scores.reduce((a, b) => a + b.totalScore, 0) / s.scores.length)
+      : 0,
+  }));
+
+  // 若配置了奖杯或名次，则按奖杯置顶 + 排序栏名次 + 未排序栏随机；否则回退到均分排序
+  const hasCustomRankOrTrophy = withScores.some(s => {
+    const m = (s.metadata || {}) as Record<string, unknown>;
+    return m.trophy != null || typeof m.sortOrder === "number";
+  });
+
+  const ranked = hasCustomRankOrTrophy
+    ? sortJamSubmissionsForDisplay(withScores)
+    : [...withScores]
+        .sort((a, b) => b.avgScore - a.avgScore)
+        .map((s, idx) => ({
+          ...s,
+          rank: idx + 1,
+          parsedMeta: {
+            coverImage: undefined,
+            creators: [],
+            trophy: idx === 0 ? ("GOLD" as const) : idx === 1 ? ("SILVER" as const) : idx === 2 ? ("BRONZE" as const) : null,
+            sortOrder: idx,
+            isAdminPlaceholder: false,
+            links: [],
+            tagIds: [],
+            customTags: [],
+          },
+        }));
 
   const medalColors = ["#FFD700", "#C0C0C0", "#CD7F32"];
-  const medalLabels = ["🥇", "🥈", "🥉"];
+  const medalVariants: ("gold" | "silver" | "bronze")[] = ["gold", "silver", "bronze"];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -65,27 +94,45 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
         </div>
       ) : (
         <>
-          {/* 前三名 */}
+          {/* 前三名 / 获奖展示 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {ranked.slice(0, 3).map((sub, idx) => (
-              <div key={sub.id} className={`bg-card rounded-xl border p-6 text-center relative overflow-hidden ${idx === 0 ? "border-[#FFD700]" : "border-brand-border-subtle"}`}>
-                {idx === 0 && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-[linear-gradient(90deg,#FFD700,#FFA500)]" />
-                )}
-                <div className="text-4xl mb-3">{medalLabels[idx]}</div>
-                <h2 className="text-lg font-bold mb-1 text-brand-navy">{sub.title}</h2>
-                <p className="text-sm mb-3 text-brand-text-secondary">{sub.team.name}</p>
-                <div className="text-3xl font-bold text-brand-orange">
-                  {sub.avgScore}
-                  <span className="text-sm font-normal text-brand-text-muted"> 分</span>
+            {ranked.slice(0, 3).map((sub, idx) => {
+              const isPlaceholder = sub.team.topic === JAM_ADMIN_ENTRY_TOPIC || sub.parsedMeta.isAdminPlaceholder;
+              const teamLabel =
+                resolveJamEntryTeamName(sub) ||
+                sub.parsedMeta.creators.map(c => c.name).join("、") ||
+                "独立开发者";
+              const trophyVariant = sub.parsedMeta.trophy
+                ? (sub.parsedMeta.trophy.toLowerCase() as "gold" | "silver" | "bronze")
+                : medalVariants[idx];
+              return (
+                <div key={sub.id} className={`bg-card rounded-xl border p-6 text-center relative overflow-hidden ${idx === 0 ? "border-[#FFD700]" : "border-brand-border-subtle"}`}>
+                  {idx === 0 && (
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-[linear-gradient(90deg,#FFD700,#FFA500)]" />
+                  )}
+                  <div className="mb-3 flex justify-center">
+                    <TrophyIcon variant={trophyVariant} size={36} />
+                  </div>
+                  <h2 className="text-lg font-bold mb-1 text-brand-navy">{sub.title}</h2>
+                  <p className="text-sm mb-3 text-brand-text-secondary">{teamLabel}</p>
+                  {sub.scores.length > 0 && (
+                    <div className="text-3xl font-bold text-brand-orange">
+                      {sub.avgScore}
+                      <span className="text-sm font-normal text-brand-text-muted"> 分</span>
+                    </div>
+                  )}
+                  <div className="flex justify-center gap-1 mt-3">
+                    {isPlaceholder
+                      ? sub.parsedMeta.creators.map((c, cIdx) => (
+                          <UserAvatar key={`${c.name}-${cIdx}`} src={c.avatar || null} name={c.name} size={32} />
+                        ))
+                      : sub.team.members.map(m => (
+                          <UserAvatar key={m.user.id} src={m.user.image} name={m.user.name} size={32} />
+                        ))}
+                  </div>
                 </div>
-                <div className="flex justify-center gap-1 mt-3">
-                  {sub.team.members.map(m => (
-                    <UserAvatar key={m.user.id} src={m.user.image} name={m.user.name} size={32} />
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* 完整排名 */}
@@ -94,29 +141,52 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
               <h2 className="font-semibold text-brand-navy">完整排名</h2>
             </div>
             <div className="divide-y divide-[#F0F0F0]">
-              {ranked.map((sub, idx) => (
+              {ranked.map((sub, idx) => {
+                const isPlaceholder = sub.team.topic === JAM_ADMIN_ENTRY_TOPIC || sub.parsedMeta.isAdminPlaceholder;
+                const teamLabel =
+                  resolveJamEntryTeamName(sub) ||
+                  sub.parsedMeta.creators.map(c => c.name).join("、") ||
+                  "独立开发者";
+                const trophyVariant = sub.parsedMeta.trophy
+                  ? (sub.parsedMeta.trophy.toLowerCase() as "gold" | "silver" | "bronze")
+                  : null;
+                return (
                 <details key={sub.id} className="p-4">
                   <summary className="flex items-center gap-4 cursor-pointer list-none">
-                    <div className={`font-bold shrink-0 w-10 text-center ${idx < 3 ? `text-[${medalColors[idx]}] text-2xl` : "text-brand-text-muted text-base"}`}>
-                      {idx < 3 ? medalLabels[idx] : `#${idx + 1}`}
+                    <div className={`font-bold shrink-0 w-10 text-center flex items-center justify-center ${idx < 3 ? `text-[${medalColors[idx]}] text-2xl` : "text-brand-text-muted text-base"}`}>
+                      {trophyVariant ? (
+                        <TrophyIcon variant={trophyVariant} size={22} />
+                      ) : sub.rank !== null ? (
+                        `#${sub.rank}`
+                      ) : (
+                        "—"
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm text-brand-navy">{sub.title}</span>
-                        <span className="text-xs text-brand-text-muted">— {sub.team.name}</span>
+                        <span className="text-xs text-brand-text-muted">— {teamLabel}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-1 mt-1">
-                        {sub.team.members.map(m => (
-                          <span key={m.user.id} className="text-xs text-brand-text-secondary">
-                            <UserAvatar src={m.user.image} name={m.user.name} size={32} />
-                          </span>
-                        ))}
+                        {isPlaceholder
+                          ? sub.parsedMeta.creators.map((c, cIdx) => (
+                              <span key={`${c.name}-${cIdx}`} className="text-xs text-brand-text-secondary">
+                                <UserAvatar src={c.avatar || null} name={c.name} size={28} />
+                              </span>
+                            ))
+                          : sub.team.members.map(m => (
+                              <span key={m.user.id} className="text-xs text-brand-text-secondary">
+                                <UserAvatar src={m.user.image} name={m.user.name} size={32} />
+                              </span>
+                            ))}
                       </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-xl font-bold text-brand-orange">{sub.avgScore}</div>
-                      <div className="text-xs text-brand-text-muted">{sub.scores.length} 位评委</div>
-                    </div>
+                    {sub.scores.length > 0 && (
+                      <div className="shrink-0 text-right">
+                        <div className="text-xl font-bold text-brand-orange">{sub.avgScore}</div>
+                        <div className="text-xs text-brand-text-muted">{sub.scores.length} 位评委</div>
+                      </div>
+                    )}
                   </summary>
 
                   {/* 各评委详评 */}
@@ -142,7 +212,8 @@ export default async function JamResultsPage({ params }: { params: Promise<{ id:
                     </div>
                   )}
                 </details>
-              ))}
+                );
+              })}
             </div>
           </div>
 

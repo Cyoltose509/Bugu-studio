@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { resolveActivityId } from "@/lib/activities/resolve";
+import { JAM_ADMIN_ENTRY_TOPIC } from "@/lib/activities/jam-entries";
 import { notFound } from "next/navigation";
 
 export default async function JamTeamsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +26,9 @@ export default async function JamTeamsPage({ params }: { params: Promise<{ id: s
 
   if (!activity) return <p className="text-center text-sm py-12 text-brand-text-muted">活动不存在</p>;
 
-  const myTeam = activity.jamTeams.find(t =>
+  const realTeams = activity.jamTeams.filter(t => t.topic !== JAM_ADMIN_ENTRY_TOPIC);
+
+  const myTeam = realTeams.find(t =>
     t.members.some(m => m.userId === session?.user?.id)
   ) || null;
 
@@ -39,14 +42,14 @@ export default async function JamTeamsPage({ params }: { params: Promise<{ id: s
 
       <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold text-brand-navy">👥 参赛队伍（{activity.jamTeams.length}）</h1>
+          <h1 className="text-lg font-semibold text-brand-navy">👥 参赛队伍（{realTeams.length}）</h1>
         </div>
 
-        {activity.jamTeams.length === 0 ? (
+        {realTeams.length === 0 ? (
           <p className="text-sm py-8 text-center text-brand-text-muted">暂无队伍</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {activity.jamTeams.map(team => (
+            {realTeams.map(team => (
               <Link
                 key={team.id}
                 href={`/activities/${activityId}/game-jam/teams/${team.id}`}

@@ -4,6 +4,20 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-17 — Game Jam 条目后台：R2 清理改 await、编辑弹窗加本地草稿【本地完成，未部署】
+
+- R2 清理统一改 `try { await deleteManyFromR2(...) } catch {}`（4 处，含 2 处存量）：
+  原先是浮空 Promise，server action 返回后 Vercel 冻结实例，删除请求直接丢。不用 `.catch()` 是因为单测
+  `vi.resetAllMocks()` 会把 mock 实现清掉、退化成 undefined，`.catch` 反而炸。
+- `JamEntryEditorModal` 接入 `useFormDraft`：按 `jam-entry-draft:v1:<activityId>:<submissionId|new>` 分桶，
+  800ms 落盘，重开自动写回并在顶部提示「已恢复上次未保存的草稿（时间）」+ 清除草稿按钮，保存成功调 `clear()`。
+  容器用 callback ref 存 state（ref.current 赋值不触发重渲染，hook 拿不到容器就不落盘）。
+- 验证：tsc 通过；55 文件 337 例全绿；Playwright（Edge + 伪造 JWT）实测新建条目填一半误点遮罩关闭，
+  重开标题/队名完整恢复、提示条出现、清除草稿后回到空、localStorage 键消失；保存后键自动清空。
+  测试条目与占位队伍已删除（剩余 0 提交、0 占位队伍）。
+- 未处理：新组件与 5 个 admin action 的错误文案仍是硬编码中文，未走 i18n（用户已确认后续再议）；
+  `searchWorksForJamLink` 只校验登录未校验管理员（详情页有 PUBLISHED 守卫，影响限于能看到待审标题）。
+
 ## 2026-11-16 22:2x — 上线记录：PR #21 已合并，生产部署成功【已上线】
 
 - 合并 PR #21（`feat/autosave-and-admin-polish` → `main`），merge commit `98fb02d`。
