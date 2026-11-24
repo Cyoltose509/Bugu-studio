@@ -301,16 +301,6 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         description: "免费风格化低模 3D 模型包：角色、道具与场景，定期更新。",
     },
     {
-        id: "polyfork",
-        name: "Polyfork",
-        url: "https://polyfork.com",
-        iconUrl: "",
-        color: "#00B8A9",
-        letter: "P",
-        category: "3D 模型",
-        description: "Web 3D 低模素材库：约 2700 个免费模型，以 Three.js ES 模块直接导入。",
-    },
-    {
         id: "ambientcg",
         name: "AmbientCG",
         url: "https://ambientcg.com",

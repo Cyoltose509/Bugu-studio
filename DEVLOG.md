@@ -4,6 +4,13 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-25 — 实用工具页：删掉重复的 Polyfork 条目
+
+用户发现 3D 模型分组里 `Polyfork`（polyfork.com）与已有的 `Polyfork Kits`（polyfork.dev/kits）重复。
+两边一起清：`src/lib/tools/shared.ts` 的 `DEFAULT_TOOL_SITES` 删掉 `polyfork`，
+生产库 `tools:sites` 同步删掉该条（66 → 65，13 个分组不变）。
+剩 `効果音源` 一条无图标，用户确认保留字标兜底。
+
 ## 2026-11-25 — 实用工具页图标：去掉加载期的首字母字标
 
 现象：/tools 上大量条目显示首字母字标，看起来像 favicon 全丢了。实测（Playwright + Edge）：
