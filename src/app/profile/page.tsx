@@ -16,6 +16,8 @@ import ShareButton from "@/components/share/ShareButton";
 import { shareDescription } from "@/lib/share";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import ActivityCard, { type ActivityCardData } from "@/components/activities/ActivityCard";
+import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
+import { getProfileMissingItems } from "@/lib/profile/onboarding";
 import { positionLabel, positionColor } from "@/lib/position";
 import LogoLoading from "@/components/ui/LogoLoading";
 import { getLang } from "@/lib/i18n/getLang";
@@ -238,6 +240,22 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
       )}
 
       {/* 头部 */}
+      {!isAdminView && (() => {
+        const completion = getProfileMissingItems({
+          isMember: Boolean(member),
+          grade: member?.grade ?? null,
+          image: user?.image ?? null,
+          skills: member?.skills ?? [],
+          bio: member?.bio ?? user?.bio ?? null,
+        });
+        return (
+          <ProfileCompletionBanner
+            percent={completion.percent}
+            missing={completion.missing}
+          />
+        );
+      })()}
+
       <div className="bg-card rounded-xl border border-brand-border-subtle p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* 头像 */}

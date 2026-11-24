@@ -13,6 +13,7 @@ import {uploadImage, ACCEPT_ATTR, AVATAR_LIMIT_BYTES} from "@/lib/utils/clientUp
 import {useLang} from "@/lib/i18n/LangProvider";
 import type {DictKey} from "@/lib/i18n/dict";
 import PlusIcon from "@/components/ui/PlusIcon";
+import GradeYearPicker from "@/components/profile/GradeYearPicker";
 
 const Cropper = dynamic(() => import("react-easy-crop"), { ssr: false }) as any;
 
@@ -591,33 +592,17 @@ export default function EditForm({
                                     <span className="text-xs flex-shrink-0 text-brand-text-secondary">{joinYearVal != null ? t("profile.edit.yearValue", { n: joinYearVal }) : t("common.unset")}</span>
                                 </div>
                             </div>
-                            <div>
+                            <div className="sm:col-span-2">
                                 <label className="block text-sm mb-1.5 text-brand-text-body" htmlFor="grade">
                                     {t("members.gradeLabel")}
+                                    <span className="ml-1.5 text-xs text-brand-text-muted">（按本科入学年份）</span>
                                 </label>
-                                <div className="flex items-center gap-1.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => setGradeValue(Math.max(2000, (gradeValue ?? 2024) - 1))}
-                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
-                                    >-</button>
-                                    <input
-                                        id="grade"
-                                        type="number"
-                                        value={gradeValue ?? ""}
-                                        onChange={(e) => setGradeValue(e.target.value ? Number(e.target.value) : null)}
-                                        min={2000}
-                                        max={2100}
-                                        className="w-20 text-center rounded-lg bg-card border px-2 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue/50 focus:border-transparent text-sm border-brand-border-subtle text-brand-text-heading"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setGradeValue(Math.min(2100, (gradeValue ?? 2024) + 1))}
-                                        aria-label={`${t("members.gradeLabel")} +1`}
-                                        className="w-7 h-7 flex items-center justify-center rounded border text-sm font-medium hover:bg-gray-100 transition-colors flex-shrink-0 border-brand-border-subtle text-brand-text-heading"
-                                    ><PlusIcon size={15} strokeWidth={2.3} /></button>
-                                    <span className="text-xs flex-shrink-0 text-brand-text-secondary">{gradeValue != null ? t("profile.edit.gradeValue", { n: gradeValue }) : t("common.unset")}</span>
-                                </div>
+                                <GradeYearPicker
+                                    id="grade"
+                                    compact
+                                    value={gradeValue}
+                                    onChange={(y) => setGradeValue(y)}
+                                />
                             </div>
                         </div>
 
