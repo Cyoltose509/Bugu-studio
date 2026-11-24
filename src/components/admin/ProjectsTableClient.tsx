@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ProjectStatus } from "@prisma/client";
 import { updateProjectStatus } from "@/app/admin/projects/actions";
 import DeleteProjectButton from "@/components/admin/DeleteProjectButton";
@@ -48,35 +49,38 @@ export default function ProjectsTableClient({
   statusCounts,
   allCount,
 }: Props) {
-  // 并发锁：useRef 提供同步读取，useState 驱动 UI 禁用
+  const router = useRouter();
+  // 并发锁：useRef 提供同步读取，processingId 驱动当前行「处理中...」与整表禁用
   const processingRef = useRef(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const isProcessing = processingId !== null;
 
-  const withLock = useCallback(async (fn: () => Promise<void>) => {
+  const withLock = useCallback(async (id: string, fn: () => Promise<void>) => {
     // ref 同步守卫，杜绝同帧内两次点击
     if (processingRef.current) return;
     processingRef.current = true;
-    setIsProcessing(true);
+    setProcessingId(id);
 
     try {
       await fn();
+      router.refresh();
     } catch (e) {
-      // 出错时释放锁，让用户可以重试
+      alert(e instanceof Error ? e.message : "操作失败，请重试");
+    } finally {
+      // Next.js App Router 的 revalidatePath 会就地更新 props 而不会卸载客户端组件，
+      // 必须在 finally 里释放锁，否则按钮会永久停留在「处理中...」
       processingRef.current = false;
-      setIsProcessing(false);
-      throw e;
+      setProcessingId(null);
     }
-    // 成功后不解锁：revalidatePath 会触发页面重渲染，
-    // 组件重新挂载时 processingRef 和 isProcessing 自然重置为 false
-  }, []);
+  }, [router]);
 
   const handleApprove = useCallback(
-    (id: string) => withLock(() => updateProjectStatus(id, "PUBLISHED")),
+    (id: string) => withLock(id, () => updateProjectStatus(id, "PUBLISHED")),
     [withLock]
   );
 
   const handleReject = useCallback(
-    (id: string) => withLock(() => updateProjectStatus(id, "REJECTED")),
+    (id: string) => withLock(id, () => updateProjectStatus(id, "REJECTED")),
     [withLock]
   );
 
@@ -189,7 +193,7 @@ export default function ProjectsTableClient({
                             disabled={isProcessing}
                             className="text-xs hover:underline cursor-pointer active:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed text-brand-green"
                           >
-                            {isProcessing ? "处理中..." : "通过"}
+                            {processingId === p.id ? "处理中..." : "通过"}
                           </button>
                         )}
                         {p.status === "PENDING" && (
@@ -199,7 +203,7 @@ export default function ProjectsTableClient({
                             disabled={isProcessing}
                             className="text-xs hover:underline cursor-pointer active:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed text-[var(--ui-text-red)]"
                           >
-                            {isProcessing ? "处理中..." : "拒绝"}
+                            {processingId === p.id ? "处理中..." : "拒绝"}
                           </button>
                         )}
                         <DeleteProjectButton projectId={p.id} disabled={isProcessing} />

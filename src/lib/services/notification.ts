@@ -1,4 +1,30 @@
 /**
+ * 新通知入库后立即清理对应用户的通知列表缓存和未读数缓存，
+ * 避免管理员刚打开过通知铃铛时新提交的作品要等缓存过期才出现。
+ */
+async function invalidateNotificationCaches(userIds: Iterable<string>) {
+  const uniqueIds = [...new Set(userIds)].filter(Boolean);
+  if (uniqueIds.length === 0) return;
+  try {
+    const [{ invalidateCache }, { invalidateUnreadCache }] = await Promise.all([
+      import("@/lib/db/cache"),
+      import("@/lib/cache/unread-count-cache"),
+    ]);
+    await Promise.all(
+      uniqueIds.flatMap((uid) => {
+        invalidateUnreadCache(uid);
+        return [
+          invalidateCache(`api:notifications:${uid}`),
+          invalidateCache(`notifications:${uid}`),
+        ];
+      }),
+    );
+  } catch (err) {
+    console.error("[Notification] 清理通知缓存失败:", err);
+  }
+}
+
+/**
  * 创建通知（安全版：不会因通知失败中断主流程）
  */
 export async function createNotification(params: {
@@ -21,6 +47,7 @@ export async function createNotification(params: {
         relatedType: params.relatedType || null,
       },
     });
+    await invalidateNotificationCaches([params.userId]);
   } catch (err) {
     // 通知失败不影响主流程，仅静默记录
     console.error("[Notification] 创建失败:", err);
@@ -53,6 +80,7 @@ export async function createNotifications(
       })),
       skipDuplicates: true,
     });
+    await invalidateNotificationCaches(items.map((item) => item.userId));
   } catch (err) {
     console.error("[Notification] 批量创建失败:", err);
   }
@@ -161,6 +189,7 @@ export async function notifyNewProject(
         data: items,
         skipDuplicates: true,
       });
+      await invalidateNotificationCaches(items.map((item) => item.userId));
     }
   } catch (err) {
     console.error("[Notification] 作品上新通知失败:", err);
@@ -201,6 +230,7 @@ export async function notifyProjectPublished(
       })),
       skipDuplicates: true,
     });
+    await invalidateNotificationCaches(targets.map((m) => m.userId));
   } catch (err) {
     console.error("[Notification] 作品发布通知失败:", err);
   }
@@ -254,6 +284,7 @@ export async function notifyProjectEdit(ctx: ProjectNotifyContext) {
         data: items,
         skipDuplicates: true,
       });
+      await invalidateNotificationCaches(items.map((item) => item.userId));
     }
   } catch (err) {
     console.error("[Notification] 作品编辑通知失败:", err);
