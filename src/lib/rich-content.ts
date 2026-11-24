@@ -50,8 +50,12 @@ const NEW_MENTION_RE = /@([^(@\s]+)\(([a-zA-Z0-9_]+)\)/g;
  * - 识别新版 @displayName(memberId) 格式的成员提及 → 携带 memberId
  * - 识别旧版 @xxx 格式的成员提及（向后兼容）
  */
-export function parseRichContent(text: string): TextSegment[] {
-  if (!text) return [];
+export function parseRichContent(rawText: string): TextSegment[] {
+  if (!rawText) return [];
+  // Windows 下保存的文本多为 CRLF。渲染时 \n 会被转成 <br/>，剩下的 \r 在
+  // whitespace-pre-wrap 容器里仍算一次换行，两者叠加就凭空多出一整行空行。
+  // 先统一换行符，再切分片段。
+  const text = rawText.replace(/\r\n?/g, "\n");
 
   const segments: TextSegment[] = [];
 

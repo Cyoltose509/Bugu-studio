@@ -27,11 +27,24 @@ export const SHARE_HEADER_COLORS = {
   navy: "#25547A",
 } as const;
 
-export const SHARE_HEADER_COLOR_LABELS: Record<keyof typeof SHARE_HEADER_COLORS, { cn: string; en: string }> = {
+export type ShareHeaderColor = keyof typeof SHARE_HEADER_COLORS;
+
+export const SHARE_HEADER_COLOR_LABELS: Record<ShareHeaderColor, { cn: string; en: string }> = {
   blue: { cn: "蓝色", en: "Blue" },
   orange: { cn: "橙色", en: "Orange" },
   green: { cn: "绿色", en: "Green" },
   navy: { cn: "深蓝色", en: "Navy" },
+};
+
+/**
+ * 图片卡头的底色：图片按遮罩淡出后透出来的颜色。
+ * 跟随当前选中的纯色卡头，默认蓝；绿/橙的纯色底太亮，图片模式下压深保证白字可读。
+ */
+export const SHARE_HEADER_MASK_COLORS: Record<ShareHeaderColor, string> = {
+  blue: "#25547A",
+  orange: "#D96F3E",
+  green: "#5A7F1F",
+  navy: "#25547A",
 };
 
 /** 卡头第二排：活动图或成员已上传作品封面，按 URL 去重。 */

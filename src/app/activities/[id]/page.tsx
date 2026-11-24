@@ -25,7 +25,8 @@ import EditTopicForm from "@/components/activities/course/EditTopicForm";
 import CourseMaterials from "@/components/activities/course/CourseMaterials";
 import EngineCoursePage from "@/components/activities/course/EngineCoursePage";
 import { canViewCourseMeetingLinks, getCourseMeetingVisibility, isCourseActivity, redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
-import SubmitToWorksButton from "@/components/activities/submit/SubmitToWorksButton";
+import JamEntriesSection from "@/components/activities/jam/JamEntriesSection";
+import { JAM_ADMIN_ENTRY_TOPIC } from "@/lib/activities/jam-entries";
 import { cachedQuery } from "@/lib/db/cache";
 import UserAvatar from "@/components/ui/UserAvatar";
 import LogoLoading from "@/components/ui/LogoLoading";
@@ -186,9 +187,36 @@ const getActivity = cache(async (id: string) => {
               select: {
                 id: true,
                 title: true,
+                description: true,
+                files: true,
+                metadata: true,
                 projectId: true,
+                project: {
+                  select: {
+                    id: true,
+                    slug: true,
+                    title: true,
+                    subtitle: true,
+                    coverImage: true,
+                    status: true,
+                  },
+                },
                 teamId: true,
-                team: { select: { name: true } },
+                team: {
+                  select: {
+                    id: true,
+                    name: true,
+                    topic: true,
+                    members: {
+                      select: {
+                        id: true,
+                        userId: true,
+                        role: true,
+                        user: { select: { id: true, name: true, image: true } },
+                      },
+                    },
+                  },
+                },
                 scores: { select: { totalScore: true } },
               },
             },
@@ -883,7 +911,13 @@ async function CompetitionSection({
   const now = new Date();
   const themeRevealed = activity.themeRevealedAt ? now >= activity.themeRevealedAt : isOngoing || isPast;
 
-  const myTeam = activity.jamTeams?.find((t: any) =>
+  const jamSubmissions = activity.jamSubmissions || [];
+  const jamJudges = activity.jamJudges || [];
+  const jamTeams = (activity.jamTeams || []).filter(
+    (t: any) => t.topic !== JAM_ADMIN_ENTRY_TOPIC
+  );
+
+  const myTeam = jamTeams.find((t: any) =>
     t.members.some((m: any) => m.userId === userId)
   ) || null;
 
@@ -899,10 +933,6 @@ async function CompetitionSection({
       })
       .catch(() => []);
   }
-
-  const jamSubmissions = activity.jamSubmissions || [];
-  const jamJudges = activity.jamJudges || [];
-  const jamTeams = activity.jamTeams || [];
 
   return (
     <div className="space-y-6" id="jam">
@@ -1106,52 +1136,14 @@ async function CompetitionSection({
       )}
 
       {/* ── 参赛作品 ───────────────────────────── */}
-      {(isPast || isAdmin || isJudge) && jamSubmissions.length > 0 && (
-        <div className="bg-card rounded-xl border p-6 border-brand-border-subtle">
-          <h3 className="font-semibold mb-3 text-brand-navy">{t(lang, "activityDetail.jamEntries", { n: jamSubmissions.length })}</h3>
-          <div className="grid gap-3">
-            {jamSubmissions.map((sub: any) => (
-              <div
-                key={sub.id}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors border border-brand-border-subtle"
-              >
-                <Link
-                  href={`/activities/${activityId}/game-jam/judging`}
-                  className="flex-1 min-w-0"
-                >
-                  <span className="text-sm font-medium text-brand-navy">{sub.title}</span>
-                  <span className="text-xs ml-2 text-brand-text-muted">— {sub.team?.name || t(lang, "activityDetail.unknownTeam")}</span>
-                </Link>
-                <div className="flex items-center gap-3 shrink-0 ml-3">
-                  {sub.projectId ? (
-                    <Link
-                      href={`/works/${sub.projectId}`}
-                      target="_blank"
-                      className="text-xs hover:underline text-brand-blue"
-                    >
-                      {t(lang, "activityDetail.workPage")}
-                    </Link>
-                  ) : (
-                    <SubmitToWorksButton
-                      activityId={activityId}
-                      submissionId={sub.id}
-                      title={sub.title}
-                    />
-                  )}
-                  <div className="text-right min-w-[60px]">
-                    {sub.scores.length > 0 && activity.judgingMode === "ONLINE" ? (
-                      <span className="text-sm font-semibold text-brand-orange">
-                        {t(lang, "activityDetail.scorePoints", { n: Math.round(sub.scores.reduce((a: number, b: any) => a + b.totalScore, 0) / sub.scores.length) })}
-                      </span>
-                    ) : activity.judgingMode === "ONLINE" ? (
-                      <span className="text-xs text-brand-text-muted">{t(lang, "activityDetail.pendingScore")}</span>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {(isPast || isAdmin || isJudge || jamSubmissions.length > 0) && (
+        <JamEntriesSection
+          activityId={activityId}
+          submissions={jamSubmissions}
+          isAdmin={isAdmin}
+          isJudge={isJudge}
+          judgingMode={activity.judgingMode}
+        />
       )}
 
       {/* ── 结果页入口 ──────────────────────────── */}

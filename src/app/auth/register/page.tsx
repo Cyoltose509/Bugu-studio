@@ -1,6 +1,7 @@
 "use client";
 import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useLang } from "@/lib/i18n/LangProvider";
 import { t } from "@/lib/i18n/dict";
@@ -95,7 +96,23 @@ function RegisterForm() {
       if (res.ok) {
         sessionStorage.removeItem(STORAGE_KEY);
         setMsg(t(lang, "auth.emailVerified")); setMsgOk(true);
-        setTimeout(() => router.push("/auth/login"), 1500);
+
+        // 验证成功后自动登录并直接进入 30 秒社团名片建档页（减少重新登录的流失）
+        const normalizedEmail = email.trim().toLowerCase();
+        if (password) {
+          const loginRes = await signIn("credentials", {
+            email: normalizedEmail,
+            password,
+            redirect: false,
+          }).catch(() => null);
+          if (loginRes?.ok) {
+            router.push("/onboarding");
+            router.refresh();
+            return;
+          }
+        }
+        // 若验证前刷新过页面（内存中已无密码），登录后仍直达 /onboarding
+        setTimeout(() => router.push("/auth/login?callbackUrl=%2Fonboarding"), 1200);
       } else {
         setMsg(data.error || t(lang, "auth.errVerifyFailed"));
       }

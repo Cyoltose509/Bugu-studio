@@ -63,6 +63,7 @@ export async function updateProjectStatus(id: string, status: ProjectStatus) {
 
   await invalidateProjectCaches(project.slug);
   await invalidateCourseActivities(await courseActivityIdsForProject(id));
+  revalidatePath("/admin");
   revalidatePath("/admin/projects");
   revalidatePath("/members");
   revalidatePath("/works");
@@ -98,6 +99,7 @@ export async function deleteProject(id: string) {
   await prisma.project.delete({ where: { id } });
   await invalidateProjectCaches(project?.slug);
   await invalidateCourseActivities(courseActivityIds);
+  revalidatePath("/admin");
   revalidatePath("/admin/projects");
   revalidatePath("/members");
   revalidatePath("/works");

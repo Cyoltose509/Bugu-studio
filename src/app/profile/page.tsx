@@ -16,6 +16,8 @@ import ShareButton from "@/components/share/ShareButton";
 import { shareDescription } from "@/lib/share";
 import ProjectCoverImage from "@/components/projects/ProjectCoverImage";
 import ActivityCard, { type ActivityCardData } from "@/components/activities/ActivityCard";
+import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
+import { getProfileMissingItems } from "@/lib/profile/onboarding";
 import { positionLabel, positionColor } from "@/lib/position";
 import LogoLoading from "@/components/ui/LogoLoading";
 import { getLang } from "@/lib/i18n/getLang";
@@ -222,22 +224,38 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
     <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in space-y-8">
       {/* 管理员视图横幅 */}
       {isAdminView && (
-        <div className="rounded-xl border p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm border-red-100 bg-red-50">
+        <div className="rounded-xl border p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm border-brand-orange/30 bg-brand-orange/[0.08]">
           <div className="flex items-center gap-3">
             <span className="text-lg">🛡️</span>
             <div>
-              <p className="text-sm font-medium text-red-700">{t(lang, "profile.adminViewBanner", { name: user?.name || user?.email || t(lang, "profile.unknownUser") })}</p>
-              <p className="text-xs text-red-600">{t(lang, "profile.adminViewHint")}</p>
+              <p className="text-sm font-medium text-[var(--ui-text-orange)]">{t(lang, "profile.adminViewBanner", { name: user?.name || user?.email || t(lang, "profile.unknownUser") })}</p>
+              <p className="text-xs text-brand-text-secondary">{t(lang, "profile.adminViewHint")}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">{t(lang, "profile.backToUsers")}</Link>
-            <Link href={`/admin/users/${userId}/claims`} className="text-sm px-3 py-1.5 rounded-lg border border-red-100 text-red-700 hover:bg-card transition-colors">认领关联</Link>
+            <Link href="/admin/users" className="text-sm px-3 py-1.5 rounded-lg border border-brand-orange/30 text-[var(--ui-text-orange)] hover:bg-card transition-colors">{t(lang, "profile.backToUsers")}</Link>
+            <Link href={`/admin/users/${userId}/claims`} className="text-sm px-3 py-1.5 rounded-lg border border-brand-orange/30 text-[var(--ui-text-orange)] hover:bg-card transition-colors">认领关联</Link>
           </div>
         </div>
       )}
 
       {/* 头部 */}
+      {!isAdminView && (() => {
+        const completion = getProfileMissingItems({
+          isMember: Boolean(member),
+          grade: member?.grade ?? null,
+          image: user?.image ?? null,
+          skills: member?.skills ?? [],
+          bio: member?.bio ?? user?.bio ?? null,
+        });
+        return (
+          <ProfileCompletionBanner
+            percent={completion.percent}
+            missing={completion.missing}
+          />
+        );
+      })()}
+
       <div className="bg-card rounded-xl border border-brand-border-subtle p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           {/* 头像 */}
@@ -277,7 +295,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
                   </span>
                 )}
                 {user?.isActive === false && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--ui-bg-orange-light)] text-[var(--ui-text-orange)]">
                     {t(lang, "profile.disabled")}
                   </span>
                 )}
@@ -300,7 +318,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
                 <Link href="/profile/privacy" className="btn-secondary px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2">{t(lang, "profile.privacy.title")}</Link>
                 <Link
                   href="/auth/signout"
-                  className={`px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2 border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-400/50 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors ${
+                  className={`px-3 py-2.5 rounded-lg text-sm font-medium text-center sm:px-4 sm:py-2 border border-brand-orange/40 text-[var(--ui-text-orange)] hover:bg-brand-orange/[0.08] transition-colors ${
                     user?.role === "ADMIN" ? "col-span-2 sm:col-span-1" : ""
                   }`}
                 >
@@ -409,7 +427,7 @@ async function ProfileContent({ searchParams }: { searchParams: Promise<{ id?: s
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-brand-text-heading">{member.realName}</span>
-                <span className="text-[10px] px-1 py-0.5 rounded bg-red-100 text-red-700">{t(lang, "profile.edit.sensitive")}</span>
+                <span className="text-[10px] px-1 py-0.5 rounded bg-[var(--ui-bg-orange-light)] text-[var(--ui-text-orange)]">{t(lang, "profile.edit.sensitive")}</span>
               </div>
             </div>
           )}
@@ -539,7 +557,7 @@ function ContactRow({ label, value }: { label: string; value: string }) {
 
 function roleBadge(role?: string): string {
   const map: Record<string, string> = {
-    ADMIN: "bg-red-100 text-red-700",
+    ADMIN: "bg-[var(--ui-bg-orange-light)] text-[var(--ui-text-orange)]",
     MEMBER: "bg-green-50 text-green-800",
     USER: "bg-brand-surface text-brand-navy",
   };

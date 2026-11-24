@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { publicShareUrl, shareHeaderImages, SHARE_HEADER_COLORS, SHARE_HEADER_COLOR_LABELS, type ShareCardData, type ShareHeader } from "@/lib/share";
+import { publicShareUrl, shareHeaderImages, SHARE_HEADER_COLORS, SHARE_HEADER_COLOR_LABELS, SHARE_HEADER_MASK_COLORS, type ShareCardData, type ShareHeader, type ShareHeaderColor } from "@/lib/share";
 import type { Lang } from "@/lib/i18n/config";
 import SharePoster from "./SharePoster";
 import ImageMaskControl from "./ImageMaskControl";
@@ -9,6 +9,8 @@ import ImageMaskControl from "./ImageMaskControl";
 export default function ShareDialog({ data, lang, onClose }: { data: ShareCardData; lang: Lang; onClose: () => void }) {
   const en = lang === "en";
   const [header, setHeader] = useState<ShareHeader>({ kind: "color", color: "blue" });
+  // 图片卡头的淡出底色沿用上一次选的纯色，默认蓝。
+  const [lastColor, setLastColor] = useState<ShareHeaderColor>("blue");
   const [qr, setQr] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -18,7 +20,9 @@ export default function ShareDialog({ data, lang, onClose }: { data: ShareCardDa
   const posterRef = useRef<HTMLDivElement>(null);
   const url = publicShareUrl(data.path);
   const headerImages = shareHeaderImages(data);
-  const colorKeys = Object.keys(SHARE_HEADER_COLORS) as Array<keyof typeof SHARE_HEADER_COLORS>;
+  const colorKeys = Object.keys(SHARE_HEADER_COLORS) as ShareHeaderColor[];
+  const activeColor: ShareHeaderColor = header.kind === "color" ? header.color : lastColor;
+  const pickColor = (color: ShareHeaderColor) => { setLastColor(color); setHeader({ kind: "color", color }); };
   const selectImage = (url: string) => setHeader(previous => ({
     kind: "image", url,
     opacity: previous.kind === "image" ? previous.opacity : 100,
@@ -101,20 +105,21 @@ export default function ShareDialog({ data, lang, onClose }: { data: ShareCardDa
     </button>
     <div onClick={event => { if (event.target === event.currentTarget) onClose(); }} className="flex min-h-dvh items-center justify-center px-5 pb-6 pt-16 sm:px-8 sm:py-20">
       <div className="grid w-full max-w-[448px] items-center gap-6 md:max-w-[760px] md:grid-cols-[minmax(0,448px)_240px] md:gap-12">
-        <div className="w-full overflow-hidden rounded-[20px] shadow-[0_24px_90px_rgba(0,0,0,0.3)]" ref={posterRef}><SharePoster data={data} lang={lang} header={header} qr={qr} /></div>
+        <div className="w-full overflow-hidden rounded-[20px] shadow-[0_24px_90px_rgba(0,0,0,0.3)]" ref={posterRef}><SharePoster data={data} lang={lang} header={header} headerColor={activeColor} qr={qr} /></div>
         <div className="flex flex-col gap-5" aria-label={en ? "Share controls" : "分享操作"}>
           <fieldset disabled={busy} className="min-w-0">
             <legend className="mb-2 text-xs font-medium text-white/75">{en ? "Card header" : "卡头样式"}</legend>
             <div className="grid grid-cols-4 gap-2">
-              {colorKeys.map(color => <button key={color} type="button" aria-label={en ? `${SHARE_HEADER_COLOR_LABELS[color].en} header` : `${SHARE_HEADER_COLOR_LABELS[color].cn}卡头`} aria-pressed={header.kind === "color" && header.color === color} onClick={() => setHeader({ kind: "color", color })} className={`h-10 rounded-lg border-2 transition-transform hover:-translate-y-0.5 ${header.kind === "color" && header.color === color ? "border-white" : "border-transparent"}`} style={{ background: SHARE_HEADER_COLORS[color] }} />)}
+              {colorKeys.map(color => <button key={color} type="button" aria-label={en ? `${SHARE_HEADER_COLOR_LABELS[color].en} header` : `${SHARE_HEADER_COLOR_LABELS[color].cn}卡头`} aria-pressed={header.kind === "color" && header.color === color} onClick={() => pickColor(color)} className={`h-10 rounded-lg border-2 transition-transform hover:-translate-y-0.5 ${header.kind === "color" && header.color === color ? "border-white" : "border-transparent"}`} style={{ background: SHARE_HEADER_COLORS[color] }} />)}
             </div>
             {!!headerImages.length && <div className="mt-2 grid grid-cols-4 gap-2">{headerImages.slice(0, 8).map(item => <button key={item.url} type="button" title={item.title} aria-label={en ? `Use cover: ${item.title}` : `使用封面：${item.title}`} aria-pressed={header.kind === "image" && header.url === item.url} onClick={() => selectImage(item.url)} className={`h-12 overflow-hidden rounded-lg border-2 bg-black/25 transition-transform hover:-translate-y-0.5 ${header.kind === "image" && header.url === item.url ? "border-white" : "border-transparent"}`}><img src={item.url} alt="" className="h-full w-full object-cover" /></button>)}</div>}
             {header.kind === "image" && <div className="mt-4 space-y-3">
+              <p className="text-[11px] leading-relaxed text-white/65">{en ? `Faded area uses the selected header colour (${SHARE_HEADER_COLOR_LABELS[activeColor].en}). Pick another colour above to change it.` : `图片淡出区域沿用所选卡头颜色（当前：${SHARE_HEADER_COLOR_LABELS[activeColor].cn}），点上方色块可更换。`}</p>
               <label className="block text-xs text-white/80">
                 <span className="mb-2 flex justify-between"><span>{en ? "Image opacity" : "图片整体不透明度"}</span><span>{header.opacity}%</span></span>
                 <span className="mx-3 block"><input type="range" min="0" max="100" value={header.opacity} onChange={event => updateImage({ opacity: Number(event.target.value) })} className="m-0 block w-full accent-[#E38043]" /></span>
               </label>
-              <ImageMaskControl en={en} zero={header.maskZero} full={header.maskFull} onChange={(stop, value) => updateImage({ [stop]: value })} />
+              <ImageMaskControl en={en} zero={header.maskZero} full={header.maskFull} maskColor={SHARE_HEADER_MASK_COLORS[activeColor]} onChange={(stop, value) => updateImage({ [stop]: value })} />
             </div>}
           </fieldset>
           <div className="flex overflow-hidden rounded-lg bg-[#E38043] text-white shadow-lg">

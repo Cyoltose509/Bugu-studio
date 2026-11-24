@@ -386,7 +386,7 @@ const Q: Record<string, string> = {
     activityHeader: "flex items-baseline gap-[10px] flex-wrap mb-1",
     activityTitle: "text-sm font-bold np-ink",
     activityDate: "text-[11px] np-gold italic ml-[10px]",
-    activityDesc: "text-[13px] np-ink3 leading-loose whitespace-pre-wrap text-justify np-rich",
+    activityDesc: "text-[13px] np-ink3 leading-[1.6] whitespace-pre-wrap text-justify np-rich",
 
     timeline: "flex flex-col gap-0",
     tlItem: "flex gap-4 relative",
@@ -787,7 +787,7 @@ function YearNewspaper({
                                         <div className={Q.sectionTitle}>{t(lang, "history.activitiesSection")}</div>
 
                                         {meetingCount > 0 && (
-                                            <p className="text-[13px] np-ink2 leading-loose text-justify mb-4">
+                                            <p className="text-[13px] np-ink2 leading-[1.6] text-justify mb-4">
                                                 {t(lang, "history.meetingsCount", { n: meetingCount })}
                                             </p>
                                         )}

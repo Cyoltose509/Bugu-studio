@@ -21,6 +21,7 @@ import { invalidateCache } from "@/lib/db/cache";
 import { cachedQuery } from "@/lib/db/cache";
 import { ProjectStatus } from "@prisma/client";
 import { PROJECT_DATE_ORDER_BY } from "@/lib/works/date-sort";
+import { notifyNewProject } from "@/lib/services/notification";
 
 // GET /api/projects
 export async function GET(request: NextRequest) {
@@ -206,6 +207,18 @@ export async function POST(request: NextRequest) {
       members: { include: { member: true } },
     },
   });
+
+  // 成员提交进待审核队列时通知管理员（必须 await，防止 serverless 响应后冻结丢通知）
+  if (project.status === ProjectStatus.PENDING) {
+    await notifyNewProject({
+      projectId: project.id,
+      projectTitle: project.title,
+      submitterId: session.user.id,
+      submitterName: session.user.name || "未知用户",
+      actorId: session.user.id,
+      actorName: session.user.name || "未知用户",
+    });
+  }
 
   // ── 清除成员相关缓存 & 触发页面刷新 ──
   await Promise.all([

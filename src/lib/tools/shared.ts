@@ -131,6 +131,16 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         description: "全球最大的独立游戏发行平台：发布作品、参加 Game Jam、发现与支持独立游戏。",
     },
     {
+        id: "gameparade",
+        name: "Game Parade",
+        url: "https://gameparade.creators-guild.com/works/?q=&school=&category=%E4%BC%81%E7%94%BB%E6%9B%B8&order=ranking",
+        iconUrl: "https://cdn.bugoostudio.com/toolss/bb7579173b8c49e73c16b90871f3c96f.png",
+        color: "#1B3B6F",
+        letter: "G",
+        category: "游戏平台",
+        description: "日本学生游戏竞赛「ゲームクリエイター甲子園」的作品平台：参赛作品可试玩，此链接直达「企画書」部门，写 Game Jam 企划时可参考获奖企划书。",
+    },
+    {
         id: "feishu-docs",
         name: "飞书文档",
         url: "https://docs.feishu.cn",

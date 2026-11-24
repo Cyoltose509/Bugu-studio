@@ -9,6 +9,7 @@ import { SubmitScoreForm } from "@/components/activities/judging/SubmitScoreForm
 import { JudgingSettingsForm } from "@/components/activities/judging/JudgingSettingsForm";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { resolveActivityId } from "@/lib/activities/resolve";
+import { JAM_ADMIN_ENTRY_TOPIC } from "@/lib/activities/jam-entries";
 import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import TrophyIcon from "@/components/icons/TrophyIcon";
@@ -39,10 +40,12 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
       },
       jamSubmissions: {
         include: {
+          project: { select: { id: true, slug: true, title: true } },
           team: {
             select: {
               id: true,
               name: true,
+              topic: true,
               members: {
                 select: { user: { select: { id: true, name: true, image: true } }, role: true },
               },
@@ -249,17 +252,25 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm truncate text-brand-navy">{sub.title}</span>
                         {sub.projectId && (
-                          <Link href={`/works/${sub.projectId}`} className="text-[10px] px-1.5 py-0.5 rounded-full border border-brand-green text-brand-green shrink-0 hover:bg-[#E6F0F8]">
+                          <Link href={`/works/${sub.project?.slug || sub.projectId}`} className="text-[10px] px-1.5 py-0.5 rounded-full border border-brand-green text-brand-green shrink-0 hover:bg-[#E6F0F8]">
                             {t(lang, "judging.workPageShort")}
                           </Link>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-brand-text-muted">{sub.team.name}</span>
-                        <span className="text-[10px] text-[#ccc]">·</span>
-                        <span className="text-xs text-brand-text-muted">
-                          {sub.team.members.map(m => m.user.name).join("、")}
-                        </span>
+                        {sub.team.topic === JAM_ADMIN_ENTRY_TOPIC ? (
+                          <span className="text-xs text-brand-text-muted">
+                            {creators.map(c => c.name).join("、") || "管理员录入条目"}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-xs text-brand-text-muted">{sub.team.name}</span>
+                            <span className="text-[10px] text-[#ccc]">·</span>
+                            <span className="text-xs text-brand-text-muted">
+                              {sub.team.members.map(m => m.user.name).join("、")}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -359,26 +370,28 @@ export default async function JamJudgingPage({ params }: { params: Promise<{ id:
 
                       {/* 右侧：队伍 + 创作者 */}
                       <div className="lg:col-span-2 space-y-4">
-                        {/* 队伍信息 */}
-                        <div className="rounded-xl p-4 bg-[#F0F5FA] dark:bg-white/5">
-                          <h3 className="text-sm font-semibold mb-3 text-brand-navy">{t(lang, "judging.team")}</h3>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-medium text-brand-text-heading">{sub.team.name}</span>
-                            {sub.team.members.find(m => m.role === "LEADER") && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FFF3E0] dark:bg-brand-orange/20 text-brand-orange">
-                                {t(lang, "activityDetail.leader")}
-                              </span>
-                            )}
+                        {/* 队伍信息（仅非管理员占位队伍显示） */}
+                        {sub.team.topic !== JAM_ADMIN_ENTRY_TOPIC && (
+                          <div className="rounded-xl p-4 bg-[#F0F5FA] dark:bg-white/5">
+                            <h3 className="text-sm font-semibold mb-3 text-brand-navy">{t(lang, "judging.team")}</h3>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-medium text-brand-text-heading">{sub.team.name}</span>
+                              {sub.team.members.find(m => m.role === "LEADER") && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FFF3E0] dark:bg-brand-orange/20 text-brand-orange">
+                                  {t(lang, "activityDetail.leader")}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {sub.team.members.map(m => (
+                                <span key={m.user.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-card text-brand-text-body border border-brand-border-subtle">
+                                  <UserAvatar src={m.user.image} name={m.user.name} size={24} />
+                                  {m.user.name}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {sub.team.members.map(m => (
-                              <span key={m.user.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-card text-brand-text-body border border-brand-border-subtle">
-                                <UserAvatar src={m.user.image} name={m.user.name} size={24} />
-                                {m.user.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+                        )}
 
                         {/* 制作者（metadata.creators） */}
                         {creators.length > 0 && (
