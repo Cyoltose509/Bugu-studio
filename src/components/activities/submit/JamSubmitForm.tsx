@@ -18,7 +18,6 @@ import type { DictKey } from "@/lib/i18n/dict";
 const PROJECT_TYPES: { value: string; k: DictKey }[] = [
   { value: "IN_DEVELOPMENT", k: "work.status.IN_DEVELOPMENT" },
   { value: "TRIAL_DEMO", k: "work.status.TRIAL_DEMO" },
-  { value: "MINI_GAME", k: "work.status.MINI_GAME" },
   { value: "OFFICIAL_RELEASE", k: "work.status.OFFICIAL_RELEASE" },
 ];
 

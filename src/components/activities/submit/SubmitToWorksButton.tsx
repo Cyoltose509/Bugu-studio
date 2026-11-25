@@ -49,7 +49,6 @@ export default function SubmitToWorksButton({
       >
         <option value="IN_DEVELOPMENT">{t("work.status.IN_DEVELOPMENT")}</option>
         <option value="TRIAL_DEMO">{t("work.status.TRIAL_DEMO")}</option>
-        <option value="MINI_GAME">{t("work.status.MINI_GAME")}</option>
         <option value="OFFICIAL_RELEASE">{t("work.status.OFFICIAL_RELEASE")}</option>
       </select>
       <input

@@ -22,11 +22,10 @@ import { tagDisplayName, tagGroupDisplayName, DEFAULT_TAG_GROUP_ORDER } from "@/
 import { chipToneVars } from "@/lib/tags/chip-tone";
 
 // ── 作品类型 ──
-const PROJECT_TYPES = ["IN_DEVELOPMENT", "TRIAL_DEMO", "MINI_GAME", "OFFICIAL_RELEASE"] as const;
+const PROJECT_TYPES = ["IN_DEVELOPMENT", "TRIAL_DEMO", "OFFICIAL_RELEASE"] as const;
 const PROJECT_TYPE_LABELS: Record<(typeof PROJECT_TYPES)[number], DictKey> = {
   IN_DEVELOPMENT: "work.status.IN_DEVELOPMENT",
   TRIAL_DEMO: "work.status.TRIAL_DEMO",
-  MINI_GAME: "work.status.MINI_GAME",
   OFFICIAL_RELEASE: "work.status.OFFICIAL_RELEASE",
 };
 

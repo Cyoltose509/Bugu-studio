@@ -4,6 +4,32 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-25 — 修 /works 因 MINI_GAME 报错 500（枚举漂移）
+
+**现象**：错误上报里 103 条命中 `invalid input value for enum "ProjectType": "MINI_GAME"`，
+URL 全是 `/works?types=MINI_GAME`（也带 `&tag=`），页面整片 500。
+
+**根因**：数据库的 `ProjectType` 已收缩成 `IN_DEVELOPMENT / TRIAL_DEMO / OFFICIAL_RELEASE`
+三档（进度模型重构的迁移已执行），但线上代码还留着「小游戏」筛选，URL 里的 `types`
+被原样拼进 `prisma.project.findMany/count({ where: { type: { in: [...] } } })`，
+Postgres 收到枚举外的值直接抛 22P02。旧链接、外站爬虫、手改 URL 都能触发。
+
+**改法**
+- 新增 `src/lib/works/query-params.ts`：`PROJECT_TYPE_VALUES` 白名单 + `parseProjectTypes`
+  （认不得的丢掉、老别名 STEAM/DEMO/ITCH 翻译到新值）+ `parseDevelopYear` +
+  `normalizeWorksParams`。规矩是「宁可退化成不筛，也不让枚举外的值进 Prisma」。
+- `src/app/works/page.tsx`：入口处 `normalizeWorksParams(await searchParams)` 统一洗参数；
+  `buildWhere` 用 `parseProjectTypes`；筛选栏只渲染白名单内的类型。
+- `src/app/api/works/route.ts`：同样换成 `parseProjectTypes`（无限滚动那条路也堵上）。
+- 写入路径同步收口：`projectCreateSchema` / `projectQuerySchema` 去掉 `MINI_GAME`，
+  `ProjectForm`、`JamSubmitForm`、`SubmitToWorksButton` 的「小游戏」选项删掉，
+  避免选它提交时撞同一个枚举错误。
+
+**验证**：新增 `__tests__/unit/works-query-params.test.ts`（10 例）。`tsc --noEmit` 通过；
+61 文件 365 例全绿；`next build` 成功。本地 `next start` 实测 `/works?types=MINI_GAME`、
+`/works?types=MINI_GAME,TRIAL_DEMO`、`/works?year=abc`、`/works?sort=zzz`、
+`/api/works?types=MINI_GAME` 全部 200，筛选栏只剩三档类型。
+
 ## 2026-11-25 — 结束日期可选 + Game Jam 条目弹窗双列【未上线 · 待推送】
 
 **活动结束日期改为非必填**

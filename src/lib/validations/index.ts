@@ -73,7 +73,7 @@ export const projectCreateSchema = z.object({
   title: z.string().min(1, "标题不能为空").max(200),
   subtitle: z.string().max(300).optional(),
   description: z.string().min(10, "简介至少 10 字").max(10000),
-  type: z.enum(["IN_DEVELOPMENT", "TRIAL_DEMO", "MINI_GAME", "OFFICIAL_RELEASE"]),
+  type: z.enum(["IN_DEVELOPMENT", "TRIAL_DEMO", "OFFICIAL_RELEASE"]),
   developYear: z
     .number()
     .int()
@@ -144,7 +144,7 @@ export const paginationSchema = z.object({
 export const projectQuerySchema = paginationSchema.extend({
   q: z.string().max(200).optional(),
   type: z
-    .enum(["IN_DEVELOPMENT", "TRIAL_DEMO", "MINI_GAME", "OFFICIAL_RELEASE", "DEMO", "STEAM", "ITCH", "OTHER"])
+    .enum(["IN_DEVELOPMENT", "TRIAL_DEMO", "OFFICIAL_RELEASE", "DEMO", "STEAM", "ITCH", "OTHER"])
     .optional(),
   tag: z.string().optional(),
   year: z.coerce.number().int().optional(),

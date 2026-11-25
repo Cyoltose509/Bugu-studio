@@ -10,6 +10,7 @@ import { checkRateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { isMockDataEnabled, mockListProjects } from "@/lib/mock/frontend-data";
 import { cachedQuery } from "@/lib/db/cache";
 import { sortByNameAndSlice } from "@/lib/works/name-sort";
+import { parseProjectTypes } from "@/lib/works/query-params";
 import { PROJECT_DATE_ORDER_BY } from "@/lib/works/date-sort";
 import { PROJECT_SELECT } from "@/lib/works/project-select";
 
@@ -63,14 +64,10 @@ export async function GET(request: NextRequest) {
 
     // 构建筛选条件
     const where: any = { status: ProjectStatus.PUBLISHED };
-    if (types) {
-        const typeList = types.split(",").filter(Boolean).map((t) => {
-            if (t === "STEAM") return "OFFICIAL_RELEASE";
-            if (t === "DEMO" || t === "ITCH") return "TRIAL_DEMO";
-            return t;
-        });
-        if (typeList.length > 0) where.type = { in: typeList };
-    }
+    // 类型只放行数据库枚举内的值：旧链接里的 MINI_GAME 之类会被丢掉，
+    // 否则 Postgres 抛 22P02 直接 500（2026-11-25 报错高峰的成因）
+    const typeList = parseProjectTypes(types);
+    if (typeList.length > 0) where.type = { in: typeList };
     if (yearNum) where.developYear = yearNum;
     if (q) where.OR = [
         { title: { contains: q, mode: "insensitive" } },

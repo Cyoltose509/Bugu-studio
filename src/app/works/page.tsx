@@ -22,6 +22,7 @@ import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
 import { typeLabel, TYPE_OPTIONS, buildUrl } from "@/lib/works/filters";
+import { normalizeWorksParams, parseProjectTypes, isProjectType } from "@/lib/works/query-params";
 import { tagDisplayName, DEFAULT_TAG_GROUP_ORDER } from "@/lib/tags/tag-names";
 import {
     isMockDataEnabled,
@@ -54,7 +55,8 @@ interface PageProps {
  */
 export default async function WorksPage({searchParams}: PageProps) {
     // 仅解析 URL 参数 — 无 DB 操作，瞬间完成
-    const params = await searchParams;
+    // 顺手洗一遍：枚举外的类型、非法年份在这里就被丢掉，后面谁都不用再防
+    const params = normalizeWorksParams(await searchParams);
     const lang = await getLang();
 
     return (
@@ -149,7 +151,9 @@ async function WorksSidebarData({ params, lang }: { params: Record<string, any>;
         return ia - ib;
     });
 
-    const typeOptions = TYPE_OPTIONS;
+    // 只渲染数据库枚举里真有的类型：常量里若残留已废弃的选项（如 MINI_GAME），
+    // 也不会再生成一条点了就 500 的死链接
+    const typeOptions = TYPE_OPTIONS.filter((o) => isProjectType(o.value));
 
     // 分组与排序在服务端算好，剩下的高亮/href 交给客户端按 URL 实时判定
     const tagGroupsForUi = sortedGroups
@@ -322,16 +326,13 @@ async function WorksFirstPage({ params }: { params: Record<string, any> }) {
 
 function buildWhere(params: Record<string, any>) {
     const where: any = {status: ProjectStatus.PUBLISHED};
-    if (params.types) {
-        const typeList = params.types.split(",").filter(Boolean)
-            .map((t: string) => {
-                if (t === "STEAM") return "OFFICIAL_RELEASE";
-                if (t === "DEMO" || t === "ITCH") return "TRIAL_DEMO";
-                return t;
-            });
-        if (typeList.length > 0) where.type = { in: typeList };
+    // 只放行枚举内的类型；认不得的直接当没传（Postgres 收到枚举外的值会整页 500）
+    const typeList = parseProjectTypes(params.types);
+    if (typeList.length > 0) where.type = { in: typeList };
+    if (params.year) {
+        const year = parseInt(params.year, 10);
+        if (Number.isInteger(year)) where.developYear = year;
     }
-    if (params.year) where.developYear = parseInt(params.year);
     if (params.q) where.OR = [{title: {contains: params.q, mode: "insensitive"}}, {description: {contains: params.q, mode: "insensitive"}}];
     if (params.tag) {
         const tagSlug = params.tag === "project" ? "touhou" : params.tag;
