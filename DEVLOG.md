@@ -30,7 +30,14 @@ Postgres 收到枚举外的值直接抛 22P02。旧链接、外站爬虫、手�
 `/works?types=MINI_GAME,TRIAL_DEMO`、`/works?year=abc`、`/works?sort=zzz`、
 `/api/works?types=MINI_GAME` 全部 200，筛选栏只剩三档类型。
 
-## 2026-11-25 — 结束日期可选 + Game Jam 条目弹窗双列【未上线 · 待推送】
+**已上线**（`c5f1548`）。线上复测：上面几个 URL 全部 200、页面完整 279KB、无 `digest`
+（原来的错误是在流式渲染阶段抛的，HTTP 状态还是 200，只能靠响应体里的 `digest` 认出来）。
+历史报错里 116 条 `MINI_GAME` 记录已标记 RESOLVED。
+
+**注意**：`Project.shelvedAt` 那条报错（`The column ... does not exist`）来自还没上线的
+进度模型重构，说明曾经有过「代码先上、迁移没跟」的窗口。那批要上线时，迁移必须先落到库上。
+
+## 2026-11-25 — 结束日期可选 + Game Jam 条目弹窗双列【已上线 · 2ff5a34】
 
 **活动结束日期改为非必填**
 - `src/app/admin/activities/actions.ts` 的 `readSchedule`：只校验开始日期；`endTime` 留空时取
@@ -56,9 +63,9 @@ Postgres 收到枚举外的值直接抛 22P02。旧链接、外站爬虫、手�
 
 验证：`tsc --noEmit` 通过；`__tests__/unit` + `__tests__/ui` 60 文件 355 例全绿
 （新增 `__tests__/unit/activity-create-endtime.test.ts` 4 例锁住默认结束时间与报错分支）。
-`next build` 本轮没跑通：本机另有一个 dev server 占着同一份 `.next`（3100），
-编译与类型检查都过了，卡在 page data 阶段被并发写坏
-（`ENOENT .next/server/middleware-manifest.json`），推送前再跑一次。
+`next build` 首次失败是本机另一个 dev server 占着同一份 `.next`（3100）并发写坏
+（`ENOENT .next/server/middleware-manifest.json`），清掉占用后重跑成功。
+已推送 `2ff5a34` 并上生产。
 
 ## 2026-11-25 — 实用工具页：删掉重复的 Polyfork 条目
 
