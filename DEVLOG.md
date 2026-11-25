@@ -4,6 +4,36 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-25 — 结束日期可选 + Game Jam 条目弹窗双列【未上线 · 待推送】
+
+**活动结束日期改为非必填**
+- `src/app/admin/activities/actions.ts` 的 `readSchedule`：只校验开始日期；`endTime` 留空时取
+  `startTime` 的日期部分，于是 `parseActivityDateTime(..., "end")` 补成当天 23:59:59。
+  创建与编辑共用这段，两边一致。
+- `ActivityTimeChoice`：结束日期去掉 `required` 和必填星号，标签改成「（可选）」，
+  具体行为写成 `title` 提示（不塞小字，避免窄列里标签换行把两个日期框挤得不对齐）。
+- 创建页 `handleStartTimeChange` 不再自动把结束日期填成开始日期，留空才生效。
+
+**Game Jam 参赛条目弹窗改双列**
+- 弹窗 `max-w-2xl` → `max-w-4xl`；主体改成 `md:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]`：
+  左列媒体（封面 16:9 + 截图网格 2 列），右列信息（名称 / 队名 / 奖杯 / 关联作品库）。
+- 截图区从「3 列网格、通常只填 1 格」改成 2 列缩略图；添加位在 0 张和 2 张时横跨整列
+  （固定 6rem 高），1 张时与缩略图同尺寸，3 张时自动消失。
+- 关联作品库块挪到右列底部并 `mt-auto`，让两列底边对齐；块内改成两行（标签 + 操作 / 状态），
+  避免窄列里「未关联（仅作为活动页占位条目）」被挤断行。
+- 开发人员关联保持通栏。
+
+**奖杯改成单图标直选**
+- 去掉「无奖杯」按钮和所有底框/文字：只留金/银/铜三个 26px 图标，未选中灰化 40%，
+  选中彩色；再点一次取消（`trophy = null` 即无奖杯，默认就是不选）。
+- 标签同步去掉「（可置顶展示，数目不限）」——旧文案与单选模型矛盾。
+
+验证：`tsc --noEmit` 通过；`__tests__/unit` + `__tests__/ui` 60 文件 355 例全绿
+（新增 `__tests__/unit/activity-create-endtime.test.ts` 4 例锁住默认结束时间与报错分支）。
+`next build` 本轮没跑通：本机另有一个 dev server 占着同一份 `.next`（3100），
+编译与类型检查都过了，卡在 page data 阶段被并发写坏
+（`ENOENT .next/server/middleware-manifest.json`），推送前再跑一次。
+
 ## 2026-11-25 — 实用工具页：删掉重复的 Polyfork 条目
 
 用户发现 3D 模型分组里 `Polyfork`（polyfork.com）与已有的 `Polyfork Kits`（polyfork.dev/kits）重复。

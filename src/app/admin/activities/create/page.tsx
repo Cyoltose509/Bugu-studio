@@ -72,7 +72,6 @@ export default function CreateActivityPage() {
 
   function handleStartTimeChange(val: string) {
     setStartTime(val);
-    if (val && !endTime) setEndTime(val.slice(0, 10));
   }
 
   // 生成默认标题

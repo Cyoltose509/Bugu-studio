@@ -187,8 +187,8 @@ export default function ActivityTimeChoice({
         </div>
 
         <div>
-          <label className={labelClass} htmlFor="endTime">
-            结束日期{isPending ? "" : " *"}
+          <label className={labelClass} htmlFor="endTime" title={isPending ? undefined : "留空则按开始日期当天（至 23:59）"}>
+            结束日期{isPending ? "" : <span className="ml-1 font-normal text-brand-text-muted">（可选）</span>}
             {clockPart(end) && (
               <span className="ml-1.5 font-normal text-brand-blue">{clockPart(end)}</span>
             )}
@@ -197,7 +197,6 @@ export default function ActivityTimeChoice({
             <input
               id="endTime"
               type="date"
-              required={!isPending}
               disabled={isPending}
               value={datePart(end)}
               onChange={(e) => handleDate(e.target.value, end, onEndChange)}

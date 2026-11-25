@@ -31,39 +31,15 @@ const ROLE_PRESETS = [
   "制作",
 ] as const;
 
+/** 奖杯：单选，图标直接点，不选中即为无奖杯 */
 const TROPHY_OPTIONS: {
-  value: JamTrophyType | null;
+  value: JamTrophyType;
   label: string;
-  variant?: "gold" | "silver" | "bronze";
-  chipClass: string;
+  variant: "gold" | "silver" | "bronze";
 }[] = [
-  {
-    value: null,
-    label: "无奖杯",
-    chipClass:
-      "border-brand-border-subtle text-brand-text-secondary hover:bg-brand-surface",
-  },
-  {
-    value: "GOLD",
-    label: "金奖",
-    variant: "gold",
-    chipClass:
-      "border-amber-400 bg-amber-50/80 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  },
-  {
-    value: "SILVER",
-    label: "银奖",
-    variant: "silver",
-    chipClass:
-      "border-slate-400 bg-slate-100/80 text-slate-700 dark:bg-slate-400/15 dark:text-slate-200",
-  },
-  {
-    value: "BRONZE",
-    label: "铜奖",
-    variant: "bronze",
-    chipClass:
-      "border-orange-400 bg-orange-50/80 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  },
+  { value: "GOLD", label: "金奖", variant: "gold" },
+  { value: "SILVER", label: "银奖", variant: "silver" },
+  { value: "BRONZE", label: "铜奖", variant: "bronze" },
 ];
 
 export interface JamEntryInitialData {
@@ -475,7 +451,7 @@ export default function JamEntryEditorModal({
         aria-modal="true"
         aria-label={isEdit ? "编辑 Game Jam 参赛条目" : "新建 Game Jam 参赛条目"}
         ref={attachDialog}
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-brand-border-subtle bg-card shadow-2xl"
+        className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-brand-border-subtle bg-card shadow-2xl"
       >
         {/* 顶部标题栏：紧凑适配 Game Jam 活动占位条目 */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-brand-border-subtle bg-card/95 px-5 py-3.5 backdrop-blur">
@@ -517,195 +493,275 @@ export default function JamEntryEditorModal({
             </div>
           )}
 
-          {/* 第一排：左侧封面（16:9 紧凑占位） + 右侧游戏名 & 奖杯设置 */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[220px_minmax(0,1fr)]">
-            {/* 封面上传 */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-brand-text-body">
-                游戏封面
-              </label>
-              <input
-                ref={coverFileRef}
-                type="file"
-                accept={ACCEPT_ATTR}
-                className="hidden"
-                onChange={(e) => {
-                  handleCoverSelect(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
-              {coverUrl ? (
-                <div className="group relative aspect-video w-full overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface">
-                  <img
-                    src={coverUrl}
-                    alt="游戏封面预览"
-                    className="h-full w-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
+          {/* 双列：左列媒体（封面 + 截图），右列信息（名称 / 队名 / 奖杯 / 关联作品） */}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]">
+            {/* ── 左列：游戏封面 + 游戏截图 ── */}
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-brand-text-body">
+                  游戏封面
+                </label>
+                <input
+                  ref={coverFileRef}
+                  type="file"
+                  accept={ACCEPT_ATTR}
+                  className="hidden"
+                  onChange={(e) => {
+                    handleCoverSelect(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+                {coverUrl ? (
+                  <div className="group relative aspect-video w-full overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface">
+                    <img
+                      src={coverUrl}
+                      alt="游戏封面预览"
+                      className="h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => coverFileRef.current?.click()}
+                        className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-white"
+                      >
+                        更换
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCoverUrl("")}
+                        className="rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-600"
+                      >
+                        移除
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <ImageDropZone
+                    onFile={(file) => handleCoverSelect(file)}
+                    disabled={coverUploading}
+                    className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-border-subtle bg-brand-surface/50 px-3 text-center transition-colors hover:border-brand-blue"
+                  >
                     <button
                       type="button"
                       onClick={() => coverFileRef.current?.click()}
-                      className="rounded-md bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-800 hover:bg-white"
+                      disabled={coverUploading}
+                      className="text-xs text-brand-text-muted"
                     >
-                      更换
+                      {coverUploading ? "封面上传中..." : "点击或拖拽上传封面 (16:9)"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setCoverUrl("")}
-                      className="rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-600"
-                    >
-                      移除
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <ImageDropZone
-                  onFile={(file) => handleCoverSelect(file)}
-                  disabled={coverUploading}
-                  className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-border-subtle bg-brand-surface/50 px-3 text-center transition-colors hover:border-brand-blue"
-                >
-                  <button
-                    type="button"
-                    onClick={() => coverFileRef.current?.click()}
-                    disabled={coverUploading}
-                    className="text-xs text-brand-text-muted"
-                  >
-                    {coverUploading ? "封面上传中..." : "点击或拖拽上传封面 (16:9)"}
-                  </button>
-                </ImageDropZone>
-              )}
-            </div>
-
-            {/* 游戏名 + 队名 + 奖杯设置 */}
-            <div className="flex flex-col justify-between space-y-3">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-brand-text-body">
-                    游戏名称 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="输入参赛游戏名称..."
-                    className="w-full rounded-lg border border-brand-border-subtle bg-card px-3 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-brand-text-body">
-                    队名
-                  </label>
-                  <input
-                    type="text"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
-                    placeholder="参赛队伍名称..."
-                    className="w-full rounded-lg border border-brand-border-subtle bg-card px-3 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-                  />
-                </div>
+                  </ImageDropZone>
+                )}
               </div>
 
-              {/* 金银铜奖杯选择 */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label className="text-sm font-medium text-brand-text-body">
+                    游戏截图
+                    <span className="ml-1 text-xs font-normal text-brand-text-muted">
+                      （可选，{screenshots.length}/3）
+                    </span>
+                  </label>
+                  {uploadNote && (
+                    <span className="shrink-0 text-xs text-brand-text-muted">{uploadNote}</span>
+                  )}
+                </div>
+                <input
+                  ref={screenshotFileRef}
+                  type="file"
+                  accept={ACCEPT_ATTR}
+                  className="hidden"
+                  onChange={(e) => {
+                    handleScreenshotSelect(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  {screenshots.map((url, idx) => (
+                    <div
+                      key={`${url}-${idx}`}
+                      className="group relative aspect-video overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface"
+                    >
+                      <img
+                        src={url}
+                        alt={`游戏截图 ${idx + 1}`}
+                        className="h-full w-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        #{idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setScreenshots((prev) => prev.filter((_, i) => i !== idx))
+                        }
+                        className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white opacity-90 hover:opacity-100"
+                        aria-label={`删除截图 ${idx + 1}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                  {screenshots.length < 3 && (
+                    <ImageDropZone
+                      onFile={(file) => handleScreenshotSelect(file)}
+                      disabled={screenshotUploading}
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-border-subtle bg-brand-surface/40 p-2 text-center transition-colors hover:border-brand-blue ${
+                        screenshots.length === 1 ? "aspect-video" : "col-span-2 h-24"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => screenshotFileRef.current?.click()}
+                        disabled={screenshotUploading}
+                        className="text-xs text-brand-text-muted"
+                      >
+                        {screenshotUploading ? "上传中..." : "+ 添加截图"}
+                      </button>
+                    </ImageDropZone>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 右列：名称 / 队名 / 奖杯 / 关联作品 ── */}
+            <div className="flex flex-col gap-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-brand-text-body">
-                  奖杯荣誉（可置顶展示，数目不限）
+                  游戏名称 <span className="text-red-500">*</span>
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="输入参赛游戏名称..."
+                  className="w-full rounded-lg border border-brand-border-subtle bg-card px-3 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-brand-text-body">
+                  队名
+                </label>
+                <input
+                  type="text"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  placeholder="参赛队伍名称..."
+                  className="w-full rounded-lg border border-brand-border-subtle bg-card px-3 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+              </div>
+
+              {/* 金银铜奖杯：单图标直选，再点一次取消 */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-brand-text-body">
+                  奖杯荣誉
+                </label>
+                <div className="flex items-center gap-1.5">
                   {TROPHY_OPTIONS.map((opt) => {
                     const active = trophy === opt.value;
                     return (
                       <button
-                        key={opt.label}
+                        key={opt.value}
                         type="button"
-                        onClick={() => setTrophy(opt.value)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
+                        onClick={() => setTrophy(active ? null : opt.value)}
+                        aria-pressed={active}
+                        aria-label={opt.label}
+                        title={active ? `取消${opt.label}` : opt.label}
+                        className={`rounded-lg p-1 transition-all ${
                           active
-                            ? `${opt.chipClass} ring-2 ring-brand-blue/30 font-semibold`
-                            : "border-brand-border-subtle text-brand-text-secondary hover:bg-brand-surface"
+                            ? "opacity-100"
+                            : "opacity-40 grayscale hover:opacity-70"
                         }`}
                       >
-                        {opt.variant && <TrophyIcon variant={opt.variant} size={15} />}
-                        <span>{opt.label}</span>
+                        <TrophyIcon variant={opt.variant} size={26} />
                       </button>
                     );
                   })}
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* 第二排：游戏截图（至多 3 张，至少 0 张） */}
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-sm font-medium text-brand-text-body">
-                游戏截图（{screenshots.length}/3，至少 0 张、至多 3 张）
-              </label>
-              {uploadNote && (
-                <span className="text-xs text-brand-text-muted">{uploadNote}</span>
-              )}
-            </div>
-            <input
-              ref={screenshotFileRef}
-              type="file"
-              accept={ACCEPT_ATTR}
-              className="hidden"
-              onChange={(e) => {
-                handleScreenshotSelect(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-            <div className="grid grid-cols-3 gap-3">
-              {screenshots.map((url, idx) => (
-                <div
-                  key={`${url}-${idx}`}
-                  className="group relative aspect-video overflow-hidden rounded-xl border border-brand-border-subtle bg-brand-surface"
-                >
-                  <img
-                    src={url}
-                    alt={`游戏截图 ${idx + 1}`}
-                    className="h-full w-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                    #{idx + 1}
+              {/* 关联作品库游戏（可选）：推到右列底部，与左列媒体底边对齐 */}
+              <div className="mt-auto rounded-xl border border-brand-border-subtle bg-brand-surface/20 p-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="shrink-0 text-sm font-medium text-brand-text-body">
+                    关联作品库游戏
                   </span>
                   <button
                     type="button"
-                    onClick={() =>
-                      setScreenshots((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                    className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white opacity-90 hover:opacity-100"
-                    aria-label={`删除截图 ${idx + 1}`}
+                    onClick={() => setShowProjectPicker((v) => !v)}
+                    className="shrink-0 text-sm font-medium text-brand-blue hover:underline"
                   >
-                    ×
+                    {showProjectPicker ? "收起选择" : projectId ? "更换关联作品" : "选择作品库游戏"}
                   </button>
                 </div>
-              ))}
+                <div className="mt-1.5 min-w-0">
+                  {projectId ? (
+                    <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-brand-blue/10 px-2.5 py-1 text-xs font-medium text-brand-blue">
+                      <span className="truncate">🎮 {projectTitle || projectId}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProjectId(null);
+                          setProjectTitle("");
+                        }}
+                        className="shrink-0 text-brand-text-muted hover:text-red-500"
+                        title="取消关联"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-brand-text-muted">未关联（仅作为活动页占位条目）</span>
+                  )}
+                </div>
 
-              {screenshots.length < 3 && (
-                <ImageDropZone
-                  onFile={(file) => handleScreenshotSelect(file)}
-                  disabled={screenshotUploading}
-                  className="flex aspect-video cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-brand-border-subtle bg-brand-surface/40 p-2 text-center transition-colors hover:border-brand-blue"
-                >
-                  <button
-                    type="button"
-                    onClick={() => screenshotFileRef.current?.click()}
-                    disabled={screenshotUploading}
-                    className="text-xs text-brand-text-muted"
-                  >
-                    {screenshotUploading
-                      ? "上传中..."
-                      : `+ 添加截图 (${screenshots.length}/3)`}
-                  </button>
-                </ImageDropZone>
-              )}
+                {showProjectPicker && (
+                  <div className="mt-2.5 space-y-2">
+                    <input
+                      type="text"
+                      value={projectQuery}
+                      onChange={(e) => setProjectQuery(e.target.value)}
+                      placeholder="输入作品库游戏名称搜索..."
+                      className="w-full rounded-lg border border-brand-border-subtle bg-card px-3 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none"
+                    />
+                    <div className="max-h-40 divide-y divide-brand-border-subtle overflow-y-auto rounded-lg border border-brand-border-subtle bg-card">
+                      {projectOptions.length === 0 ? (
+                        <p className="py-3 text-center text-xs text-brand-text-muted">
+                          未找到匹配的作品库游戏
+                        </p>
+                      ) : (
+                        projectOptions.map((proj) => (
+                          <button
+                            key={proj.id}
+                            type="button"
+                            onClick={() => {
+                              setProjectId(proj.id);
+                              setProjectTitle(proj.title);
+                              setShowProjectPicker(false);
+                            }}
+                            className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-brand-surface ${
+                              projectId === proj.id ? "bg-brand-blue/10 font-semibold" : ""
+                            }`}
+                          >
+                            <span className="truncate text-brand-navy">{proj.title}</span>
+                            <span className="ml-2 shrink-0 text-xs text-brand-text-muted">
+                              {proj.developYear}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* 第三排：游戏相关开发人员关联（逻辑类同“上传游戏”） */}
+          {/* 开发人员关联（通栏，需要横向空间排胶囊与角色） */}
           <div className="rounded-xl border border-brand-border-subtle bg-brand-surface/30 p-3.5 space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-brand-text-body">
@@ -881,81 +937,6 @@ export default function JamEntryEditorModal({
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* 第四排：关联作品库游戏（可选） */}
-          <div className="rounded-xl border border-brand-border-subtle bg-brand-surface/20 p-3.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-sm font-medium text-brand-text-body">
-                  关联作品库游戏：
-                </span>
-                {projectId ? (
-                  <span className="inline-flex items-center gap-1.5 truncate rounded-full bg-brand-blue/10 px-2.5 py-1 text-xs font-medium text-brand-blue">
-                    🎮 {projectTitle || projectId}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProjectId(null);
-                        setProjectTitle("");
-                      }}
-                      className="ml-1 text-brand-text-muted hover:text-red-500"
-                      title="取消关联"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ) : (
-                  <span className="text-xs text-brand-text-muted">未关联（仅作为活动页占位条目）</span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowProjectPicker((v) => !v)}
-                className="shrink-0 text-sm font-medium text-brand-blue hover:underline"
-              >
-                {showProjectPicker ? "收起选择" : projectId ? "更换关联作品" : "选择作品库游戏"}
-              </button>
-            </div>
-
-            {showProjectPicker && (
-              <div className="mt-2.5 space-y-2">
-                <input
-                  type="text"
-                  value={projectQuery}
-                  onChange={(e) => setProjectQuery(e.target.value)}
-                  placeholder="输入作品库游戏名称搜索..."
-                  className="w-full rounded-lg border border-brand-border-subtle bg-card px-3 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none"
-                />
-                <div className="max-h-40 overflow-y-auto divide-y divide-brand-border-subtle rounded-lg border border-brand-border-subtle bg-card">
-                  {projectOptions.length === 0 ? (
-                    <p className="py-3 text-center text-xs text-brand-text-muted">
-                      未找到匹配的作品库游戏
-                    </p>
-                  ) : (
-                    projectOptions.map((proj) => (
-                      <button
-                        key={proj.id}
-                        type="button"
-                        onClick={() => {
-                          setProjectId(proj.id);
-                          setProjectTitle(proj.title);
-                          setShowProjectPicker(false);
-                        }}
-                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-brand-surface ${
-                          projectId === proj.id ? "bg-brand-blue/10 font-semibold" : ""
-                        }`}
-                      >
-                        <span className="truncate text-brand-navy">{proj.title}</span>
-                        <span className="ml-2 shrink-0 text-xs text-brand-text-muted">
-                          {proj.developYear}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 底部操作按钮 */}

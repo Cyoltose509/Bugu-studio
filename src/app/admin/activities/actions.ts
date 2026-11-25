@@ -88,8 +88,9 @@ function readSchedule(formData: FormData):
     return { timePending: true, courseHasClock: false, startTime: null, endTime: null };
   }
   const startTime = ((formData.get("startTime") as string) || "").trim();
-  const endTime = ((formData.get("endTime") as string) || "").trim();
-  if (!startTime || !endTime) return { error: "请选择开始和结束日期，或改为待定" };
+  if (!startTime) return { error: "请选择开始日期，或改为待定" };
+  // 结束日期非必填：留空即开始日期当天（parse 时 end 侧补 23:59:59）
+  const endTime = ((formData.get("endTime") as string) || "").trim() || startTime.split("T")[0];
   const courseHasClock = formData.get("courseHasClock") === "on";
   const startClock = String(formData.get("startClock") || "");
   const endClock = String(formData.get("endClock") || "");
