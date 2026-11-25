@@ -6,6 +6,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
+import { isAuditAction } from "@/lib/db/enums";
 import AuditLogDeletePanel from "@/components/admin/AuditLogDeletePanel";
 import type { AuditAction } from "@prisma/client";
 
@@ -56,7 +57,9 @@ interface PageProps {
 
 export default async function AdminAuditLogsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const action = params.action || "";
+  // action 是数据库枚举，认不得的值会被 Prisma 拦成 ValidationError 让整页 500，
+  // 所以手改 URL 传进来的野值一律忽略，退化成「不筛操作类型」
+  const action = isAuditAction(params.action) ? params.action : "";
   const model = params.model || "";
   const userId = params.userId || "";
   const page = parseInt(params.page || "1", 10);

@@ -6,6 +6,7 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
+import { isUserRole } from "@/lib/db/enums";
 import { requireAdmin } from "@/lib/auth/adminGuard";
 import { invalidateCache } from "@/lib/db/cache";
 import { revalidatePath } from "next/cache";
@@ -14,7 +15,9 @@ const MEMBER_ROLES = ["MEMBER", "ADMIN"] as const;
 
 export async function updateUserRole(id: string, formData: FormData) {
   const session = await requireAdmin();
-  const role = formData.get("role") as string;
+  const role = formData.get("role");
+  // User.role 是数据库枚举，`role as any` 会绕过编译期检查，野值进 Prisma 就是 500
+  if (!isUserRole(role)) throw new Error("无效的角色类型");
 
   // 先获取当前角色用于对比
   const current = await prisma.user.findUnique({

@@ -6,6 +6,7 @@
 
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/db/prisma";
+import { isAuditAction } from "@/lib/db/enums";
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -24,7 +25,9 @@ export async function GET(req: NextRequest) {
     const skip     = (page - 1) * pageSize;
 
     const where: any = {};
-    if (action) where.action = action;
+    // action 是数据库枚举，野值会让 Prisma 抛 ValidationError（500），
+    // 认不得就当没传，退化成「不筛」
+    if (action && isAuditAction(action)) where.action = action;
     if (model)  where.targetType = model;
 
     const [logs, total] = await Promise.all([

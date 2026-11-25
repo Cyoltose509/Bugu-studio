@@ -4,6 +4,35 @@
 时区：Asia/Shanghai
 用途：本地开发复盘与 dev diary 文件读取入口。按日期倒序追加，记录用户要求、实现、验证证据、限制及下一步；未上线内容明确标记。不要写入密钥、环境变量值或私人数据。
 
+## 2026-11-25 — 补枚举白名单：审计日志筛选 / 用户角色 / 活动类型与状态
+
+**背景**：修完 `ProjectType` 之后做了一轮全量枚举对账，结论是数据库 10 个枚举里只有
+`ProjectType` 在 `schema.prisma` 里还多挂 5 个废弃值（`MINI_GAME / DEMO / STEAM / ITCH / OTHER`），
+其余 9 个与库完全一致；列级也没有「代码有列、库没列」的漂移。
+
+**但查到 4 处外部参数直通枚举字段**，机制和 MINI_GAME 不同：`schema.prisma` 与库一致时
+Prisma 会在客户端拦下（抛 `Invalid value for argument`，仍是 500），一旦哪天 schema 又漂了
+就直接落成 Postgres `22P02`。
+
+| 位置 | 字段 |
+| --- | --- |
+| `/admin/audit-logs?action=`（page + api 两处） | `AuditLog.action` |
+| `admin/users/actions.ts` `role as any` | `User.role` |
+| `admin/activities/actions.ts` `createActivity` / `updateActivity` 的 `type`、`status` | `Activity.type` / `Activity.status` |
+
+**改法**：新增 `src/lib/db/enums.ts`，手写四组白名单常量（不用 `Object.values(ActivityType)`，
+避免白名单跟着 schema 一起漂）加 `isActivityType / isActivityStatus / isUserRole / isAuditAction`。
+
+- 查询侧（审计日志）：认不得就忽略，退化成「不筛」，与 `/works` 的处理一致，页面不 500。
+- 写入侧（角色、活动）：认不得直接报错，不静默改写用户的输入。
+
+**没做**：`schema.prisma` 的 `ProjectType` 仍是 8 值。工作区那份未提交的进度模型重构已经把它
+改成 3 值，等那批上线自然收敛；现在所有入口都收敛了，没有路径能再传进废弃值。
+
+**验证**：新增 `__tests__/unit/enum-guards.test.ts` 8 例（白名单逐值对齐、旧值/野值/非字符串拒绝、
+非法 role 不读不写库、非法 type/status 不写库）。`tsc --noEmit` 通过；`__tests__/unit` + `__tests__/ui`
+62 文件 373 例全绿；`next build` 成功。
+
 ## 2026-11-25 — 修 /works 因 MINI_GAME 报错 500（枚举漂移）
 
 **现象**：错误上报里 103 条命中 `invalid input value for enum "ProjectType": "MINI_GAME"`，

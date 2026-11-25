@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
+import { isActivityStatus, isActivityType } from "@/lib/db/enums";
 import { requireAdmin } from "@/lib/auth/adminGuard";
 import { auth } from "@/lib/auth/auth";
 import { invalidateCache } from "@/lib/db/cache";
@@ -139,7 +140,10 @@ export async function createActivity(formData: FormData) {
   await requireAdmin();
 
   const title       = (formData.get("title") as string || "").trim();
-  const type        = (formData.get("type") as string || "GENERAL");
+  // type 直接落 Activity.type（数据库枚举），非法值会被 Prisma 拦成 500
+  const typeRaw     = (formData.get("type") as string || "").trim() || "GENERAL";
+  if (!isActivityType(typeRaw)) return { error: "活动类型无效" };
+  const type        = typeRaw;
   const summary     = (formData.get("summary") as string || "").trim();
   const description = (formData.get("description") as string || "").trim();
   const location    = (formData.get("location") as string || "").trim();
@@ -235,7 +239,10 @@ export async function updateActivity(id: string, formData: FormData) {
   await requireAdmin();
 
   const title       = (formData.get("title") as string || "").trim();
-  const type        = (formData.get("type") as string || "GENERAL");
+  // type / status 都直接落数据库枚举，走同一道白名单
+  const typeRaw     = (formData.get("type") as string || "").trim() || "GENERAL";
+  if (!isActivityType(typeRaw)) return { error: "活动类型无效" };
+  const type        = typeRaw;
   const summary     = (formData.get("summary") as string || "").trim();
   const description = (formData.get("description") as string || "").trim();
   const location    = (formData.get("location") as string || "").trim();
@@ -243,7 +250,9 @@ export async function updateActivity(id: string, formData: FormData) {
   const coverImage   = (formData.get("coverImage") as string || "").trim();
   const maxStr      = (formData.get("maxParticipants") as string || "").trim();
   const talkSubmissionOpen = formData.get("talkSubmissionOpen") === "on";
-  const status      = (formData.get("status") as string || "DRAFT");
+  const statusRaw   = (formData.get("status") as string || "").trim() || "DRAFT";
+  if (!isActivityStatus(statusRaw)) return { error: "活动状态无效" };
+  const status      = statusRaw;
   const theme       = (formData.get("theme") as string || "").trim();
   const themeRevealedAt = (formData.get("themeRevealedAt") as string || "").trim();
   const maxTeamSizeStr = (formData.get("maxTeamSize") as string || "").trim();
