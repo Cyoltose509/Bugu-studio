@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   clubMemberFindFirst: vi.fn(async () => null),
   clubMemberUpdate: vi.fn(async () => ({})),
   activityCreate: vi.fn(async () => ({ id: "a1", slug: "s1" })),
-  activityUpdate: vi.fn(async () => ({ id: "a1", slug: "s1" })),
+  activityUpdate: vi.fn(async (_args: { where?: unknown; data?: Record<string, unknown> }) => ({ id: "a1", slug: "s1" })),
   activityFindUnique: vi.fn(async () => ({ id: "a1", slug: "s1", type: "GENERAL", status: "DRAFT" })),
   auditLogCreate: vi.fn(async () => ({})),
 }));
@@ -166,7 +166,9 @@ describe("createActivity / updateActivity 的枚举校验", () => {
 
     const res = await updateActivity("a1", fd);
     expect(res).toMatchObject({ success: true });
-    const data = mocks.activityUpdate.mock.calls[0][0].data;
+    const [call] = mocks.activityUpdate.mock.calls;
+    expect(call).toBeDefined();
+    const data = call![0].data ?? {};
     expect(data.type).toBe("COMPETITION");
     expect(data.status).toBe("PUBLISHED");
   });
