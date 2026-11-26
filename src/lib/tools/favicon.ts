@@ -177,7 +177,7 @@ function iconLinksFromHtml(html: string, base: string): { icons: string[]; touch
     return { icons: order(icons), touchIcons: order(touchIcons) };
 }
 
-async function tryFetch(url: string): Promise<Buffer | null> {
+async function tryFetch(url: string, referer?: string): Promise<Buffer | null> {
     // 跨境访问经常偶发超时，网络层失败重试一次；HTTP 4xx/5xx 不重试（重试也没用）
     for (let attempt = 0; attempt < 2; attempt++) {
         try {
@@ -189,6 +189,8 @@ async function tryFetch(url: string): Promise<Buffer | null> {
                     "User-Agent":
                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
                     Accept: "image/avif,image/webp,image/png,image/svg+xml,image/*,*/*;q=0.8",
+                    // 带自家站点的 Referer：国内 CDN 常用 Referer ACL，空 Referer 直接 403
+                    ...(referer ? { Referer: referer } : {}),
                 },
                 redirect: "follow",
             });
@@ -229,7 +231,7 @@ export async function resolveFavicon(siteUrl: string): Promise<string> {
     ];
 
     for (const src of sources) {
-        const raw = await tryFetch(src);
+        const raw = await tryFetch(src, `https://${host}/`);
         if (!raw || raw.length < MIN_BYTES || raw.length > MAX_BYTES) continue;
 
         try {

@@ -141,6 +141,16 @@ export const DEFAULT_TOOL_SITES: ToolSite[] = [
         description: "日本学生游戏竞赛「ゲームクリエイター甲子園」的作品平台：参赛作品可试玩，此链接直达「企画書」部门，写 Game Jam 企划时可参考获奖企划书。",
     },
     {
+        id: "indienova",
+        name: "indienova",
+        url: "https://indienova.com/",
+        iconUrl: "/images/tools/indienova.png",
+        color: "#E4502A",
+        letter: "I",
+        category: "游戏平台",
+        description: "中文独立游戏社区与媒体：游戏库按平台与题材索引，开发日志、设计经验与行业资讯都在这里。",
+    },
+    {
         id: "feishu-docs",
         name: "飞书文档",
         url: "https://docs.feishu.cn",
