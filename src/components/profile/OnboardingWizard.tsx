@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -66,6 +66,15 @@ export default function OnboardingWizard({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // 简介文本框跟内容自动长高（站内文本域统一做法：不显示原生拖拽柄）
+  const bioRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = bioRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [bio]);
 
   const displayName = member?.displayName || user.name || "新成员";
 
@@ -343,12 +352,13 @@ export default function OnboardingWizard({
             </label>
             <textarea
               id="onboarding-bio"
+              ref={bioRef}
               rows={2}
               maxLength={500}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="介绍一下你喜欢的游戏类型、常用引擎或想做的项目..."
-              className="w-full rounded-lg border border-brand-border-subtle bg-card px-3.5 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25"
+              className="w-full min-h-[3.75rem] resize-none overflow-hidden rounded-lg border border-brand-border-subtle bg-card px-3.5 py-2 text-sm text-brand-text-heading focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/25"
             />
           </section>
 
@@ -414,7 +424,7 @@ export default function OnboardingWizard({
               </div>
             )}
             {bio.trim() ? (
-              <p className="mt-3 text-xs leading-relaxed text-brand-text-secondary line-clamp-3">
+              <p className="mt-3 whitespace-pre-line text-xs leading-relaxed text-brand-text-secondary line-clamp-3">
                 {bio.trim()}
               </p>
             ) : (
