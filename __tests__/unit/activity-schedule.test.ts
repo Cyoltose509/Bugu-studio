@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  activityNewestFirstOrder,
+  activitySoonestFirstOrder,
   activityPhase,
   compareActivitiesNewestFirst,
   compareActivitiesSoonestFirst,
@@ -62,5 +64,17 @@ describe("activity upcoming order", () => {
     expect([later, pending, sooner].sort(compareActivitiesSoonestFirst)).toEqual([sooner, later, pending]);
     expect(compareActivitiesSoonestFirst(later, sooner)).toBeGreaterThan(0);
     expect(compareActivitiesSoonestFirst(pending, sooner)).toBeGreaterThan(0);
+  });
+
+  it("首页与活动页共用同一套 Prisma 排序常量", () => {
+    // 常量本身没被任何函数覆盖，单独锁一下方向：待定 asc(垫底) + startTime asc(近到远)
+    expect(activitySoonestFirstOrder).toEqual([
+      { timePending: "asc" },
+      { startTime: "asc" },
+    ]);
+    expect(activityNewestFirstOrder).toEqual([
+      { timePending: "desc" },
+      { startTime: "desc" },
+    ]);
   });
 });

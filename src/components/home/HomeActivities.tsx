@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import Image from "@/components/ui/SiteImage";
+import FluentLink from "@/components/icons/fluent/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityStatus } from "@prisma/client";
@@ -13,7 +14,7 @@ import {t, type DictKey} from "@/lib/i18n/dict";
 import type {Lang} from "@/lib/i18n/config";
 
 import { DEFAULT_ACTIVITY_COVER } from "@/lib/activities/constants";
-import { activityNewestFirstOrder, activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
+import { activitySoonestFirstOrder, activityPhase, formatActivitySchedule } from "@/lib/activities/datetime";
 import ActivityTypeCorner from "@/components/activities/ActivityTypeCorner";
 import { redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
 import { localizeActivityTitle } from "@/lib/activities/title";
@@ -36,7 +37,7 @@ async function getHomeActivities() {
   const now = new Date();
   try {
     return await cachedQuery(
-      "home:activities:v4",
+      "home:activities:v5",
       async () => {
         // 活动推荐（外部活动）不进首页动态
         const [live, past] = await Promise.all([
@@ -49,7 +50,8 @@ async function getHomeActivities() {
                 { endTime: { gte: now } },
               ],
             },
-            orderBy: activityNewestFirstOrder,
+            // 进行中 + 即将开始：先开的在前（和 /activities 的「即将开展」同一口径）
+            orderBy: activitySoonestFirstOrder,
             take: 3,
           }),
           prisma.activity.findMany({
@@ -111,7 +113,7 @@ export default async function HomeActivities({lang = "cn"}: { lang?: Lang }) {
                     </div>
                   )}
                   {a.meetingUrl && a.type !== "COURSE" && a.type !== "ENGINE_COURSE" && (
-                    <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">{t(lang, "activity.online")}</div>
+                    <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm"><FluentLink size={12} /> {t(lang, "activity.online")}</div>
                   )}
                 </div>
                 {/* 信息 */}

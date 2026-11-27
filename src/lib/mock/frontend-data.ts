@@ -234,7 +234,7 @@ export function mockHomeActivities(take = 6) {
     .filter((a) => a.type !== "RECOMMENDATION");
   const live = dated
     .filter((a) => a.status === "PUBLISHED" && (a.timePending || a.endTime.getTime() >= now))
-    .sort(compareActivitiesNewestFirst)
+    .sort(compareActivitiesSoonestFirst)
     .slice(0, Math.min(3, take));
   const past = dated
     .filter((a) => !a.timePending && (a.status === "ARCHIVED" || a.endTime.getTime() < now))
