@@ -5,7 +5,6 @@
 
 import Link from "next/link";
 import Image from "@/components/ui/SiteImage";
-import FluentLink from "@/components/icons/fluent/link";
 import { prisma } from "@/lib/db/prisma";
 import { cachedQuery } from "@/lib/db/cache";
 import { ActivityStatus } from "@prisma/client";
@@ -113,7 +112,7 @@ export default async function HomeActivities({lang = "cn"}: { lang?: Lang }) {
                     </div>
                   )}
                   {a.meetingUrl && a.type !== "COURSE" && a.type !== "ENGINE_COURSE" && (
-                    <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm"><FluentLink size={12} /> {t(lang, "activity.online")}</div>
+                    <div className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">{t(lang, "activity.online")}</div>
                   )}
                 </div>
                 {/* 信息 */}
