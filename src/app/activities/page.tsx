@@ -23,7 +23,7 @@ import { getLang } from "@/lib/i18n/getLang";
 import { t } from "@/lib/i18n/dict";
 import type { Lang } from "@/lib/i18n/config";
 import { auth } from "@/lib/auth/auth";
-import { activityNewestFirstOrder, activityCalendar, formatActivityDay, formatActivitySchedule } from "@/lib/activities/datetime";
+import { activityNewestFirstOrder, activitySoonestFirstOrder, activityCalendar, formatActivityDay, formatActivitySchedule } from "@/lib/activities/datetime";
 import { redactCourseMeetingLinks } from "@/lib/activities/course-meeting-visibility";
 import { localizeActivityTitle } from "@/lib/activities/title";
 import { recoTagLabel } from "@/lib/activities/recommendation";
@@ -310,7 +310,7 @@ export default async function ActivitiesPage({
   const raw = isMockDataEnabled()
     ? mockActivitiesBuckets()
     : await cachedQuery(
-    "activities:list:v3",
+    "activities:list:v4",
     () =>
       Promise.all([
         // 进行中，开始时间从新到旧（活动推荐不进常规桶）
@@ -319,14 +319,14 @@ export default async function ActivitiesPage({
           orderBy: { startTime: "desc" },
           take: 6,
         }),
-        // 即将开始：待定是最新一档，其余从新到旧
+        // 即将开始：谁先开谁在前，待定垫底（用「最近发生的在前」会把最远的一场顶到主推位）
         prisma.activity.findMany({
           where:  {
             status: ActivityStatus.PUBLISHED,
             type: { not: ActivityType.RECOMMENDATION },
             OR: [{ timePending: true }, { startTime: { gt: now } }],
           },
-          orderBy: activityNewestFirstOrder,
+          orderBy: activitySoonestFirstOrder,
           take: 6,
         }),
         // 已结束 / 归档（最近 12 条，从新到旧；推荐类活动过期即隐，不进档案）
@@ -416,8 +416,10 @@ export default async function ActivitiesPage({
         ).catch(() => [] as SidebarTalk[])
     : [];
 
-  // 右侧栏只放一张活动卡，剩下的「即将开始」下移到独立分区，避免信息丢失
-  const sidebarActivity = hero ? upcomingList[0] ?? null : null;
+  // 右侧栏只在主推活动真有议程时才成立：没议程就不该空占一列，也不该把下一场活动
+  // 压成右侧的缩略条——那样主活动被挤窄、右栏上半截空着，看着像排版错位
+  const hasHeroAgenda = heroTalks.length > 0;
+  const sidebarActivity = hasHeroAgenda && hero ? upcomingList[0] ?? null : null;
   const restUpcoming = upcomingList.slice(sidebarActivity ? 1 : 0);
 
   // 月历视图：全部已发布/归档活动（含推荐类），取排期与悬浮卡片所需字段，按开始时间升序
@@ -525,16 +527,14 @@ export default async function ActivitiesPage({
 
         {hero && (
             <section className="mb-12">
-              {sidebarActivity || heroTalks.length > 0 ? (
+              {hasHeroAgenda ? (
               <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
                 <div className="min-w-0 lg:col-span-3">
                   <HeroCard a={hero} lang={lang} status={heroStatus} />
                 </div>
                 {/* 右侧栏：上方议程弹性占位，下方活动卡贴住主活动底边 */}
                 <div className="min-w-0 lg:col-span-2 lg:flex lg:h-full lg:flex-col lg:gap-4">
-                  {heroTalks.length > 0 && (
-                    <SidebarAgenda items={heroTalks} lang={lang} activityId={hero.id} />
-                  )}
+                  <SidebarAgenda items={heroTalks} lang={lang} activityId={hero.id} />
                   {sidebarActivity && (
                     <div className="mt-4 shrink-0 lg:mt-auto">
                       <SidebarActivityItem a={sidebarActivity} lang={lang} />

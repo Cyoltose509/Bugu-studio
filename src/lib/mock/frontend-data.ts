@@ -7,7 +7,7 @@ import path from "path";
 import { nameSortKey } from "@/lib/works/name-sort";
 import { compareProjectsByDate } from "@/lib/works/date-sort";
 import { extractAwardYear, groupAwardsByYear } from "@/lib/history/awards";
-import { compareActivitiesNewestFirst } from "@/lib/activities/datetime";
+import { compareActivitiesNewestFirst, compareActivitiesSoonestFirst } from "@/lib/activities/datetime";
 
 export type MockSnapshot = {
   fetchedAt: string;
@@ -255,7 +255,7 @@ export function mockActivitiesBuckets() {
     .slice(0, 6);
   const upcoming = list
     .filter((a) => !isReco(a) && a.status === "PUBLISHED" && (a.timePending || a.startTime.getTime() > now))
-    .sort(compareActivitiesNewestFirst)
+    .sort(compareActivitiesSoonestFirst)
     .slice(0, 6);
   const past = list
     .filter(

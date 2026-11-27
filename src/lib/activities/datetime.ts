@@ -105,3 +105,28 @@ export const activityNewestFirstOrder = [
   { timePending: "desc" as const },
   { startTime: "desc" as const },
 ];
+
+/**
+ * 即将开展专用：谁先开谁在前，待定（无日期）垫底。
+ *
+ * 不能用 activityNewestFirstOrder ——那套是「最近发生的在前」，用在未来的活动上
+ * 会把最远的一场排到第一位，主推位就落到几个月后的活动头上。
+ */
+export function compareActivitiesSoonestFirst(
+  a: { timePending?: boolean | null; startTime?: Date | string | null },
+  b: { timePending?: boolean | null; startTime?: Date | string | null },
+): number {
+  const pending = (item: { timePending?: boolean | null; startTime?: Date | string | null }) =>
+    !!item.timePending || !item.startTime;
+  const ap = pending(a);
+  const bp = pending(b);
+  if (ap !== bp) return ap ? 1 : -1;
+  if (ap || !a.startTime || !b.startTime) return 0;
+  return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+}
+
+/** Prisma 排序：有日期的按开始时间从近到远，待定垫底（NULL 在 ASC 下本就排最后）。 */
+export const activitySoonestFirstOrder = [
+  { timePending: "asc" as const },
+  { startTime: "asc" as const },
+];

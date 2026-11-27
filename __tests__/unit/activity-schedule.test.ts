@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activityPhase,
   compareActivitiesNewestFirst,
+  compareActivitiesSoonestFirst,
   formatActivitySchedule,
 } from "@/lib/activities/datetime";
 import { canSubmitActivityTalk } from "@/lib/activities/capabilities";
@@ -48,5 +49,18 @@ describe("activity schedule", () => {
     expect(card.date).toBe("待定");
     expect(card.status).toBe("即将开始");
     expect(card.talkSubmissionOpen).toBe(true);
+  });
+});
+
+describe("activity upcoming order", () => {
+  it("把最近要开的一场排在最前，待定垫底", () => {
+    const pending = { timePending: true, startTime: null };
+    const later = { timePending: false, startTime: "2027-02-01T00:00:00+08:00" };
+    const sooner = { timePending: false, startTime: "2026-12-06T14:30:00+08:00" };
+
+    // 主推位取第一个：必须是最近的一场，而不是最远的一场
+    expect([later, pending, sooner].sort(compareActivitiesSoonestFirst)).toEqual([sooner, later, pending]);
+    expect(compareActivitiesSoonestFirst(later, sooner)).toBeGreaterThan(0);
+    expect(compareActivitiesSoonestFirst(pending, sooner)).toBeGreaterThan(0);
   });
 });
